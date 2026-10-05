@@ -28,7 +28,11 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 
 <!-- one line per resolved ticket: [title](issues/NN-slug.md): gist -->
 
-- [Minimum OS versions](issues/06-minimum-os-versions.md): Android 8 (API 26) / iOS 13; GATT-only path mandatory, ML-KEM ships in the Rust core.
+- [Minimum OS versions](issues/06-minimum-os-versions.md): Android 8 (API 26) / iOS 15; a GATT-only path is mandatory and ML-KEM ships in the Rust core.
+- [FIPS-validated modules providing ML-KEM](issues/01-fips-validated-mlkem-modules.md): no module is validated on both mobile platforms yet; claim "approved algorithms" for now and keep the backend seam.
+- [FIPS-conformant hybrid KEM combiner](issues/02-fips-hybrid-kem-combiner.md): X-Wing is acceptable under SP 800-227; AES-256-GCM is required; truncated tags/PRFs ≥ 64 bit.
+- [Kotlin Multiplatform + Rust core + BLE toolchain viability](issues/03-kmp-rust-ble-toolchain.md): Gobley bindings; platform-specific BLE code; iOS floor is ≥ 15.
+- [Android↔iOS background discovery and transport feasibility](issues/04-android-ios-background-ble.md): fixed service UUID plus GATT-read beacon; GATT-first transport; L2CAP optional.
 - [Formal verification gate](issues/07-formal-verification-gate.md): symbolic model gates Resume, PQ ratchet mixing and SAS introduction only.
 - [Reference app scope](issues/08-reference-app-scope.md): minimal 1:1 chat with introduction flows plus a bytes/airtime debug panel.
 
