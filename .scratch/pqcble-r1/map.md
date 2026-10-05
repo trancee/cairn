@@ -39,6 +39,7 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 - [Data transport and fragmentation](issues/10-data-transport-and-framing.md): symmetric discovery, GATT beacon/rx/tx/psm, MORE-bit fragmentation, 4096/2560 B limits, flagged L2CAP CoC upgrade; see ADR 0003.
 - [Rust core architecture and crypto backend seam](issues/11-rust-core-architecture.md): sans-IO `handle(event)->actions` core, compile-time CryptoBackend with 2 adapters, keystore-sealed Persist/Restore, core/sdk/app monorepo; see ADR 0004.
 - [Wire-format byte layouts](issues/12-wire-format-layouts.md): 1 B header (MORE|type|sub), version only in QR/P1, 4-message pairing, S1 57 B / S2 49 B, record-based DATA with bucket padding, shared device beacon, doorbell = 8 B HMAC tag in beacon slot; see ADR 0005.
+- [Device test lab](issues/13-device-test-lab.md): 23 Android (SDK 26–36) + 4 iPhones (iOS 15–26), no sniffer; core matrix of 8 Android + 3 iPhones.
 - [Android↔iOS background discovery and transport feasibility](issues/04-android-ios-background-ble.md): fixed service UUID plus GATT-read beacon; GATT-first transport; L2CAP optional.
 - [Formal verification gate](issues/07-formal-verification-gate.md): symbolic model gates Resume, PQ ratchet mixing and SAS pairing only.
 - [Reference app scope](issues/08-reference-app-scope.md): minimal 1:1 chat with pairing flows plus a bytes/airtime debug panel.
