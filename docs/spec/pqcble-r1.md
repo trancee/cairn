@@ -1,6 +1,6 @@
 # `pqcble-r1` protocol specification
 
-Status: **draft 0.3** (ticket *Formal model: Resume*, 2026-10-05). It is not frozen: the remaining formal models (*Formal model: PQ ratchet mixing*, *Formal model: SAS pairing*) may change §5, §7 and §9, and test vectors are pending (§12). §6 is backed by the verified [Resume model](models/README.md).
+Status: **draft 0.4** (ticket *Formal model: SAS pairing*, 2026-10-05). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §7 and §9, and test vectors are pending (§12). §5 and §6 are backed by the verified [pairing and Resume models](models/README.md).
 
 This document consolidates, and is normative over:
 - [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md);
@@ -60,6 +60,7 @@ No other algorithms are used. There is no suite negotiation.
 ### 2.3 Roles
 
 - **Pairing role A** shows the QR code and sends P1. **Pairing role B** sends P2. The role is fixed per contact and stored.
+- In SAS and TOFU modes there is no QR: the phone whose user picks the peer from the nearby list is B, and the picked phone is A [OI-20].
 - **I** (initiator) and **R** (responder) are Resume roles: I is the GATT central of the connection.
 
 ## 3. Versioning
@@ -143,6 +144,7 @@ Pairing MUST only be accepted while the local user has the pairing screen open (
 | P4 | B→A | `Seal(K_card_B, 0^12, hdr ‖ th, confirm_B(16) ‖ card_B)` | ≤ 119 |
 
 - `mode` is `0x01` QR, `0x02` SAS or `0x03` TOFU. Any other value aborts.
+- B MUST abort unless `mode` equals the mode its user selected; scanning the QR selects QR mode [OI-19].
 - The sizes are maxima for a card with a 48 B name and no KCI key (86 B plaintext, §5.4) [OI-1]. A KCI card adds 1184 B.
 
 ### 5.2 Computation
@@ -385,7 +387,7 @@ door = Trunc8(HMAC(K_door_me→peer, lp("pqcble-r1 door") ‖ u64(w)))
 
 ## 13. Consolidation issues (resolved 2026-10-05)
 
-OI-1 to OI-15 come from spec consolidation and OI-16 to OI-18 from *Formal model: Resume*. The user accepted every proposal. OI-4 is accepted as *provisional*, pending *Formal model: PQ ratchet mixing*. The affected ADRs carry amendment notes.
+OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: Resume*, and OI-19 to OI-20 from *Formal model: SAS pairing*. The user accepted every proposal. OI-4 is accepted as *provisional*, pending *Formal model: PQ ratchet mixing*. The affected ADRs carry amendment notes.
 
 | # | Issue | Resolution |
 |---|---|---|
@@ -407,9 +409,12 @@ OI-1 to OI-15 come from spec consolidation and OI-16 to OI-18 from *Formal model
 | OI-16 | *Formal model: Resume* falsified reflection resistance and I's agreement: `K_id` and `K_auth_I` bind only the Resume role, and both peers share `CK_n`, so a relay can return A's own S1 to A. A accepts a session with itself and advances `CK`, which B never learns: a permanent desync (DoS until re-pairing). Session keys stay secret | Bind I's pairing role `ρ_I` into the `K_id` and `K_auth_I` labels; R computes with the contact's role. 0 bytes, same table size. All Resume lemmas verify (user's choice, 2026-10-05) |
 | OI-17 | Both devices can act as central and send S1 to each other at once. §4.6 closes duplicates "before Resume", but a device can't identify the peer before the pseudonym, and nothing stopped both Resumes from committing different `CK`s | At most one Resume per contact in flight; atomic commit; on collision pairing role A's attempt wins (§6). Matches §4.6 (user's choice, 2026-10-05) |
 | OI-18 | KCI profile: `th_s = H(S1 ‖ eR)` leaves `ct_I` unauthenticated. An attacker who replaces `ct_I` makes I derive different keys and retire `CK_n` while R keeps it: permanent desync without any key compromise | `th_s = H(S1 ‖ eR ‖ ct_I)` in the KCI profile; 0 bytes (§6) (user's choice, 2026-10-05) |
+| OI-19 | §5 doesn't require B to check `P1.mode`. An attacker rewrites `sas` to `tofu`, and B silently stores an Unverified, possibly intercepted contact although its user chose SAS | B MUST abort unless `mode` equals its user's selection (§5.1); 0 bytes (user's choice, 2026-10-05) |
+| OI-20 | Pairing roles are defined by who shows the QR, which leaves SAS and TOFU without a role rule | The phone whose user picks the peer from the nearby list is B; the picked phone is A (§2.3) (user's choice, 2026-10-05) |
 
 ## 14. Change log
 
+- 0.4 (2026-10-05): *Formal model: SAS pairing* verified §5 and found OI-19 (mode downgrade) and OI-20 (roles without a QR); both resolved and applied.
 - 0.3 (2026-10-05): *Formal model: Resume* verified §6 and found OI-16 (reflection), OI-17 (concurrent Resume) and OI-18 (unauthenticated `ct_I` in the KCI profile); all resolved and applied.
 - 0.2 (2026-10-05): consolidation issues OI-1 to OI-15 resolved and applied.
 - 0.1 (2026-10-05): first consolidation of ADRs 0001–0009, the wire-format draft and the threat model.

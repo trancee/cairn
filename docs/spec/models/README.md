@@ -6,7 +6,7 @@ Symbolic models of `pqcble-r1` ([spec](../pqcble-r1.md)). Under the strict forma
 |---|---|---|
 | [`resume.spthy`](resume.spthy) | §6 Resume | Verified (draft 0.3) |
 | PQ ratchet mixing | §9 | Not started |
-| SAS pairing | §5 | Not started |
+| [`sas.spthy`](sas.spthy) | §5 Pairing (QR, SAS, TOFU, Verify) | Verified (draft 0.4) |
 
 ## Tooling
 
@@ -62,9 +62,53 @@ For property 8, `I_key_secrecy` excludes one combination: a reveal of the confir
   - pseudonym unlinkability, which is an observational-equivalence property.
 - With `DESYNC`, R keeps the unused candidate when the other one advances. This over-approximation gives the attacker more power than the spec does.
 
-### Modelling notes
+## Pairing (`sas.spthy`)
 
-The first versions did not terminate. Every lemma timed out, because state-copy rules (reveal, abort, timeout) formed loops in backward search. The fixes, in case they're useful for the other models:
+Run from this directory:
+
+| Command | Profile | Expected | Time (Apple silicon) |
+|---|---|---|---|
+| `tamarin-prover --prove sas.spthy` | Spec §5, draft 0.4 | 16 lemmas verified | ≈ 11 s |
+| `tamarin-prover --prove=mode_integrity -D=MODE_FROM_P1 sas.spthy` | Draft 0.3 (B takes the mode from P1) | Falsified: SAS → TOFU downgrade (OI-19) | ≈ 8 s |
+| `tamarin-prover --prove=no_grinding_A -D=NO_COMMIT sas.spthy` | Mutation: P1 carries `nA` in the clear | Falsified: shows the lemma detects grinding | ≈ 5 s |
+
+### Properties
+
+Numbers refer to the lemma list in [formal-tooling research §8.3](../../research/2026-10-05-formal-model-tooling.md).
+
+| # | Property | Lemma | Result |
+|---|---|---|---|
+| 1 | Commitment binding | `commit_binding` | Verified |
+| 2 | Order enforcement (no grinding) | `no_grinding_A`, `no_grinding_B` | Verified; falsified by the `NO_COMMIT` mutation |
+| 3 | SAS agreement on `th`, `nB` and `RK`; `RK` secrecy | `sas_agreement_A`, `sas_agreement_B`, `sas_secrecy` | Verified |
+| 4 | Mismatched transcripts complete only by a code collision | `mismatch_needs_guess` | Verified |
+| 5 | TOFU admits an active MitM; Verify recovers | `tofu_mitm` (exists-trace), `verify_recovers` | Verified |
+| 6 | QR: B protected by `qh`; A by `token`, and by QRC if the QR was photographed | `qr_B_secrecy`, `qr_agreement_A`, `qr_secrecy_A` | Verified |
+| – | B never runs a weaker mode than its user chose | `mode_integrity` | Verified; **falsified in draft 0.3** (OI-19) |
+
+`executable_SAS`, `executable_QR` and `executable_TOFU_verify` show that honest runs complete.
+
+### Guessing bound (counting argument)
+
+Tamarin can't state probabilities, so the model makes a code collision an explicit `Lucky` action, and the bound is argued here. ProVerif's `weaksecret` doesn't apply: the codes are computed from public values (`th`, `nB`), so they are not secrets (decided in ticket *Formal model: SAS pairing*).
+
+Treat `H` as a random oracle. Let `t_A` be when the attacker learns `nA` and `t_B` when it learns `nB`.
+- By `no_grinding_A`, every input to A's code except `nA` is fixed before `t_A`.
+- By `commit_binding` and `no_grinding_B`, every input to B's code except `nB` is fixed before `t_B`.
+- Whichever nonce is revealed last, the other code is already determined at that moment, and the code that depends on the last nonce is uniform over its range from the attacker's view.
+
+So each attempt succeeds with probability at most 10⁻⁶ ≈ 2⁻²⁰ for SAS (10⁻⁴ for QRC once the QR was photographed), plus negligible hash-collision and `Digits` bias (< 2⁻⁴⁴) terms. A failed comparison aborts visibly (ADR 0009), so `q` attempts succeed with probability at most `q · 10⁻⁶`. This is the commit-then-reveal argument of Vaudenay (CRYPTO 2005), which has no machine-checked model; the Tamarin lemmas mechanise its ordering premises.
+
+### Abstractions and limits
+
+- A ceremony is two users together who agree on a mode. Their code comparison is an authentic human channel, and each ceremony has one A session and one B session.
+- X-Wing is an ideal KEM. Hashes, HKDF and the MAC are free functions; AEAD is symmetric encryption; cards are constants.
+- The QR reaches only B's camera; `RevQR` lets the attacker photograph it.
+- Not covered: device compromise during pairing, card contents (beacon key, KCI key), the 120 s timeout, and users who confirm without comparing.
+
+## Modelling notes
+
+The first Resume versions did not terminate. Every lemma timed out, because state-copy rules (reveal, abort, timeout) formed loops in backward search. The fixes, in case they're useful for the other models:
 
 1. **Persistent state plus restrictions** (`Cur` / `Retire`) instead of linear facts that rules consume and re-produce.
 2. **State keyed by pairing role.** Names come from a `!Party` fact created at `Pair`, so identities sit one step from `Pair` instead of behind the whole Resume history.

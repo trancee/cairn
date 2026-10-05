@@ -1,0 +1,239 @@
+theory PqcblePairing
+begin
+
+/*
+ * Symbolic model of pqcble-r1 pairing (docs/spec/pqcble-r1.md §5): QR, SAS and TOFU modes, and the
+ * later Verify of an Unverified contact. Ticket: "Formal model: SAS pairing". Tool: Tamarin 1.12.
+ *
+ * Flags:
+ *   (none)        spec §5 as of draft 0.4: B aborts unless P1.mode equals the mode its user chose (OI-19)
+ *   MODE_FROM_P1  draft 0.3: B takes the mode from P1; falsifies mode_integrity (downgrade, OI-19)
+ *   NO_COMMIT   mutation check: P1 carries nA in the clear instead of H(nA); no_grinding_A must fail
+ *
+ * Abstractions:
+ *  - A pairing ceremony is two users together, each with a pairing screen open, who agree on a mode.
+ *    Their comparison of codes is an authentic human channel between the two devices of one
+ *    ceremony. Each ceremony has one A session and one B session (the screen accepts one pairing).
+ *  - X-Wing is an ideal KEM: kdec(kem(ss, pk(dk)), dk) = ss. Hashes, HKDF and MAC are free functions;
+ *    truncation is ignored. AEAD is symmetric encryption; cards are constants.
+ *  - Verification codes are symbolic, so two codes are equal iff their inputs are equal. A collision
+ *    of distinct inputs (probability 10^-6 for SAS, 10^-4 for QRC, per attempt) is an explicit rule
+ *    with action Lucky. The order lemmas show that the attacker fixes all its inputs before the
+ *    honest randomness that completes each code is revealed, so a collision is a blind guess and
+ *    cannot be ground. The numeric bound is the counting argument in README.md.
+ *  - The QR is shown only to B's camera; the attacker may photograph it (RevQR).
+ *  - Device compromise during pairing is out of scope (threat model A4).
+ */
+
+builtins: hashing, symmetric-encryption
+functions: kdf/3, mac/2, kem/2, kdec/2, pk/1, sas/2, qrc/2
+
+#ifdef NO_COMMIT
+macros: COMMIT(n) = <'open', n>
+#else
+macros: COMMIT(n) = h(<'commit', n>)
+#endif
+equations: kdec(kem(ss, pk(dk)), dk) = ss
+
+restriction Neq: "All x y #i. Neq(x, y)@i ==> not (x = y)"
+restriction Eq:  "All x y #i. Eq(x, y)@i ==> x = y"
+
+/* ---------- ceremony: two users agree on a mode and open their pairing screens ---------- */
+rule Ceremony_QR:   [ Fr(~c) ] --[ Neq($A, $B), Ceremony(~c, 'qr') ]->   [ StartA(~c, $A, 'qr'),   StartB(~c, $B, 'qr') ]
+rule Ceremony_SAS:  [ Fr(~c) ] --[ Neq($A, $B), Ceremony(~c, 'sas') ]->  [ StartA(~c, $A, 'sas'),  StartB(~c, $B, 'sas') ]
+rule Ceremony_TOFU: [ Fr(~c) ] --[ Neq($A, $B), Ceremony(~c, 'tofu') ]-> [ StartA(~c, $A, 'tofu'), StartB(~c, $B, 'tofu') ]
+
+/* ---------- P1: A commits to nA ---------- */
+rule A_P1_QR:
+  let ek = pk(~dk)
+      p1 = <'P1', 'qr', COMMIT(~nA), ek>
+  in
+  [ StartA(c, A, 'qr'), Fr(~dk), Fr(~nA), Fr(~token) ]
+--[ A_Start(c, ~nA) ]->
+  [ A1(c, A, 'qr', ~dk, ~nA, ~token, p1), !QR(c, h(ek), ~token), Out(p1) ]
+
+rule A_P1:
+  let p1 = <'P1', m, COMMIT(~nA), pk(~dk)>
+  in
+  [ StartA(c, A, m), Fr(~dk), Fr(~nA) ]
+--[ Neq(m, 'qr'), A_Start(c, ~nA) ]->
+  [ A1(c, A, m, ~dk, ~nA, 'none', p1), Out(p1) ]
+
+/* An attacker who photographs the QR learns qh and token. */
+rule Reveal_QR:
+  [ !QR(c, qh, token) ] --[ RevQR(c) ]-> [ Out(<qh, token>) ]
+
+/* ---------- P2: B encapsulates and sends nB after receiving the commitment ---------- */
+rule B_P2_QR:
+  let p1 = <'P1', 'qr', cm, ek>
+      p2 = <'P2', kem(~ss, ek), ~nB>
+  in
+  [ StartB(c, B, 'qr'), !QR(c, h(ek), token), In(p1), Fr(~ss), Fr(~nB) ]
+--[ B_Commit(c, cm, ~nB) ]->
+  [ B1(c, B, 'qr', 'qr', p1, cm, ~ss, ~nB, p2, token), Out(p2) ]
+
+#ifdef MODE_FROM_P1
+/* Draft 0.3: B's device obeys P1.mode (chosen = the user's choice, m = the mode it runs). */
+rule B_P2:
+  let p1 = <'P1', m, cm, ek>
+      p2 = <'P2', kem(~ss, ek), ~nB>
+  in
+  [ StartB(c, B, chosen), In(p1), Fr(~ss), Fr(~nB) ]
+--[ Neq(chosen, 'qr'), Neq(m, 'qr'), B_Commit(c, cm, ~nB) ]->
+  [ B1(c, B, chosen, m, p1, cm, ~ss, ~nB, p2, 'none'), Out(p2) ]
+#else
+rule B_P2:
+  let p1 = <'P1', m, cm, ek>
+      p2 = <'P2', kem(~ss, ek), ~nB>
+  in
+  [ StartB(c, B, m), In(p1), Fr(~ss), Fr(~nB) ]
+--[ Neq(m, 'qr'), B_Commit(c, cm, ~nB) ]->
+  [ B1(c, B, m, m, p1, cm, ~ss, ~nB, p2, 'none'), Out(p2) ]
+#endif
+
+/* ---------- P3: A reveals nA after receiving P2 ---------- */
+rule A_P3:
+  let p2 = <'P2', ct, nB>
+      th = h(<p1, p2, nA>)
+      rk = kdf(kdec(ct, dk), th, 'rk')
+  in
+  [ A1(c, A, m, dk, nA, token, p1), In(p2) ]
+--[ A_GotP2(c, nA) ]->
+  [ A2(c, A, m, token, th, nB, rk),
+    Out(<'P3', nA, senc(mac(kdf(rk, 'confA', 'nil'), <'P3', th>), kdf(rk, 'cardA', 'nil'))>) ]
+
+/* ---------- P4: B opens the commitment and checks A's confirmation ---------- */
+rule B_P4:
+  let th = h(<p1, p2, nA>)
+      rk = kdf(~ss, th, 'rk')
+  in
+  [ B1(c, B, chosen, m, p1, COMMIT(nA), ~ss, nB, p2, token),
+    In(<'P3', nA, senc(mac(kdf(rk, 'confA', 'nil'), <'P3', th>), kdf(rk, 'cardA', 'nil'))>) ]
+--[ B_Open(c, nA) ]->
+  [ B2(c, B, chosen, m, th, nB, rk),
+    Out(<'P4', senc(mac(kdf(rk, 'confB', 'nil'), <'P4', th, token>), kdf(rk, 'cardB', 'nil'))>) ]
+
+rule A_P4:
+  [ A2(c, A, m, token, th, nB, rk),
+    In(<'P4', senc(mac(kdf(rk, 'confB', 'nil'), <'P4', th, token>), kdf(rk, 'cardB', 'nil'))>) ]
+-->
+  [ A3(c, A, m, th, nB, rk) ]
+
+/* ---------- comparison and storage ---------- */
+rule Compare_SAS:
+  [ A3(c, A, 'sas', thA, nBA, rkA), B2(c, B, chosen, 'sas', thB, nBB, rkB) ]
+--[ Eq(sas(thA, nBA), sas(thB, nBB)),
+    A_Done(c, 'sas', thA, nBA, rkA), B_Done(c, chosen, 'sas', thB, nBB, rkB) ]->
+  [ !ContactA(c, thA, nBA, rkA), !ContactB(c, thB, nBB, rkB) ]
+
+rule Lucky_SAS:
+  [ A3(c, A, 'sas', thA, nBA, rkA), B2(c, B, chosen, 'sas', thB, nBB, rkB) ]
+--[ Neq(sas(thA, nBA), sas(thB, nBB)), Lucky(c),
+    A_Done(c, 'sas', thA, nBA, rkA), B_Done(c, chosen, 'sas', thB, nBB, rkB) ]->
+  [ !ContactA(c, thA, nBA, rkA), !ContactB(c, thB, nBB, rkB) ]
+
+rule Compare_QR:
+  [ A3(c, A, 'qr', thA, nBA, rkA), B2(c, B, chosen, 'qr', thB, nBB, rkB) ]
+--[ Eq(qrc(thA, nBA), qrc(thB, nBB)),
+    A_Done(c, 'qr', thA, nBA, rkA), B_Done(c, chosen, 'qr', thB, nBB, rkB) ]->
+  [ !ContactA(c, thA, nBA, rkA), !ContactB(c, thB, nBB, rkB) ]
+
+rule Lucky_QR:
+  [ A3(c, A, 'qr', thA, nBA, rkA), B2(c, B, chosen, 'qr', thB, nBB, rkB) ]
+--[ Neq(qrc(thA, nBA), qrc(thB, nBB)), Lucky(c),
+    A_Done(c, 'qr', thA, nBA, rkA), B_Done(c, chosen, 'qr', thB, nBB, rkB) ]->
+  [ !ContactA(c, thA, nBA, rkA), !ContactB(c, thB, nBB, rkB) ]
+
+/* TOFU stores without comparison, as Unverified. Each side completes on its own. */
+rule Store_TOFU_A:
+  [ A3(c, A, 'tofu', th, nB, rk) ] --[ A_Done(c, 'tofu', th, nB, rk) ]-> [ !ContactA(c, th, nB, rk) ]
+
+rule Store_TOFU_B:
+  [ B2(c, B, chosen, 'tofu', th, nB, rk) ] --[ B_Done(c, chosen, 'tofu', th, nB, rk) ]-> [ !ContactB(c, th, nB, rk) ]
+
+/* Verify: the users later meet and compare the SAS recomputed from the stored th and nB. */
+rule Verify:
+  [ !ContactA(c, thA, nBA, rkA), !ContactB(c, thB, nBB, rkB) ]
+--[ Eq(sas(thA, nBA), sas(thB, nBB)), Verified(c, rkA, rkB) ]-> [ ]
+
+rule Verify_Lucky:
+  [ !ContactA(c, thA, nBA, rkA), !ContactB(c, thB, nBB, rkB) ]
+--[ Neq(sas(thA, nBA), sas(thB, nBB)), LuckyVerify(c), Verified(c, rkA, rkB) ]-> [ ]
+
+/* ---------- lemmas (formal-tooling research §8.3) ---------- */
+
+lemma executable_SAS:
+  exists-trace
+  "Ex c th nB rk #i #j. A_Done(c, 'sas', th, nB, rk)@i & B_Done(c, 'sas', 'sas', th, nB, rk)@j
+     & not (Ex #l. Lucky(c)@l)"
+
+lemma executable_QR:
+  exists-trace
+  "Ex c th nB rk #i #j. A_Done(c, 'qr', th, nB, rk)@i & B_Done(c, 'qr', 'qr', th, nB, rk)@j
+     & not (Ex #l. Lucky(c)@l) & not (Ex #l. RevQR(c)@l)"
+
+lemma executable_TOFU_verify:
+  exists-trace
+  "Ex c rk #i. Verified(c, rk, rk)@i & not (Ex #l. LuckyVerify(c)@l)"
+
+/* 1. Commitment binding: B only accepts the nA that A committed to before B sent nB. */
+lemma commit_binding:
+  "All c nA #i. B_Open(c, nA)@i ==>
+     Ex nB #j. B_Commit(c, COMMIT(nA), nB)@j & j < i"
+
+/* 2. No grinding: the attacker learns nA only after A has fixed P2, and learns nB only after B has
+      fixed the commitment (commit_binding). So when the attacker fixes its last input to either
+      code, the honest random value that completes that code is still unknown. */
+lemma no_grinding_A:
+  "All c nA #k. A_Start(c, nA)@k ==>
+     (All #l. KU(nA)@l ==> Ex #j. A_GotP2(c, nA)@j & j < l)"
+
+lemma no_grinding_B:
+  "All c cm nB #i #l. B_Commit(c, cm, nB)@i & KU(nB)@l ==> i < l"
+
+/* 3. SAS agreement and secrecy: matching codes bind the whole transcript and the pairing key. */
+lemma sas_agreement_A:
+  "All c th nB rk #i. A_Done(c, 'sas', th, nB, rk)@i ==>
+     (Ex ch #j. B_Done(c, ch, 'sas', th, nB, rk)@j) | (Ex #l. Lucky(c)@l)"
+
+lemma sas_agreement_B:
+  "All c ch th nB rk #i. B_Done(c, ch, 'sas', th, nB, rk)@i ==>
+     (Ex #j. A_Done(c, 'sas', th, nB, rk)@j) | (Ex #l. Lucky(c)@l)"
+
+lemma sas_secrecy:
+  "All c th nB rk #i. A_Done(c, 'sas', th, nB, rk)@i & (Ex #k. K(rk)@k) ==> Ex #l. Lucky(c)@l"
+
+/* 4. Guessing only: completing a SAS or QR ceremony on mismatched transcripts needs a collision. */
+lemma mismatch_needs_guess:
+  "All c m thA nBA rkA ch thB nBB rkB #i #j.
+     A_Done(c, m, thA, nBA, rkA)@i & B_Done(c, ch, m, thB, nBB, rkB)@j & not (m = 'tofu')
+     & not (rkA = rkB) ==> Ex #l. Lucky(c)@l"
+
+/* 5. TOFU: an active MitM at first contact is possible (expected), and Verify recovers. */
+lemma tofu_mitm:
+  exists-trace
+  "Ex c th nB rk #i #k. A_Done(c, 'tofu', th, nB, rk)@i & K(rk)@k"
+
+lemma verify_recovers:
+  "All c rkA rkB #i. Verified(c, rkA, rkB)@i ==>
+     (rkA = rkB & not (Ex #k. K(rkA)@k)) | (Ex #l. LuckyVerify(c)@l) | (Ex #l. Lucky(c)@l)"
+
+/* 6. QR: B is protected by qh alone; A is protected by the token, and by QRC if the QR was
+      photographed. */
+lemma qr_B_secrecy:
+  "All c ch th nB rk #i. B_Done(c, ch, 'qr', th, nB, rk)@i & (Ex #k. K(rk)@k) ==> F"
+
+lemma qr_agreement_A:
+  "All c th nB rk #i. A_Done(c, 'qr', th, nB, rk)@i ==>
+     (Ex ch #j. B_Done(c, ch, 'qr', th, nB, rk)@j)
+     | ((Ex #l. Lucky(c)@l) & (Ex #r. RevQR(c)@r))"
+
+lemma qr_secrecy_A:
+  "All c th nB rk #i. A_Done(c, 'qr', th, nB, rk)@i & (Ex #k. K(rk)@k) ==>
+     (Ex #l. Lucky(c)@l) & (Ex #r. RevQR(c)@r)"
+
+/* Mode integrity: B never runs a weaker mode than its user chose. */
+lemma mode_integrity:
+  "All c ch m th nB rk #i. B_Done(c, ch, m, th, nB, rk)@i ==> ch = m"
+
+end
