@@ -63,3 +63,11 @@ _Avoid_: Seen, read ack
 **KCI profile**:
 An opt-in per-contact mode that keeps a peer from being impersonated to a device whose long-term state was stolen.
 _Avoid_: Strict mode, paranoid mode
+
+**Contact removal**:
+Deleting a contact so that its keys are destroyed and its stored conversation becomes permanently unreadable.
+_Avoid_: Unpairing, blocking
+
+**Re-pairing**:
+Pairing again with someone who is already a contact, after a reinstall, a move to a new device, or a storage reset.
+_Avoid_: Recovery, restore

@@ -45,6 +45,7 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 - [Packaging, distribution and export compliance](issues/22-packaging-export-compliance.md): AAR/Maven + XCFramework/SPM; non-exempt encryption → EAR 5D002 via ENC/§742.15(b) open-source notice + ANSSI for France; UniFFI/Gobley MPL-2.0.
 - [Energy and airtime measurement methodology](issues/23-energy-methodology.md): HCI-snoop airtime (precise) + baseline-subtracted relative battery drain; no absolute joules possible with this lab.
 - [Formal model tooling and lemmas](issues/19-formal-model-tooling.md): Tamarin primary (+ProVerif for SAS bound, CryptoVerif optional); explicit KEM binding; lemma lists for Resume/ratchet/SAS.
+- [Key storage and state persistence](issues/16-key-storage.md): after-first-unlock keys, Keystore/Keychain AES master key, SQLite with one transaction per Persist batch, core-held per-contact storage keys (crypto-shred), no backups; see ADR 0006.
 - [Android↔iOS background discovery and transport feasibility](issues/04-android-ios-background-ble.md): fixed service UUID plus GATT-read beacon; GATT-first transport; L2CAP optional.
 - [Formal verification gate](issues/07-formal-verification-gate.md): symbolic model gates Resume, PQ ratchet mixing and SAS pairing only.
 - [Reference app scope](issues/08-reference-app-scope.md): minimal 1:1 chat with pairing flows plus a bytes/airtime debug panel.
