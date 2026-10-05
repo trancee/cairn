@@ -50,14 +50,14 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 - [Beacon and discovery tuning](issues/20-beacon-discovery-tuning.md): per-state duty cycle, 5-min window + adv restart w/ jitter, rate-limited purposeful connects, idle Resume ≥6 h, no-overlap key rotation, ≤2 %/24 h idle target; see ADR 0008.
 - [External cryptographic review](issues/24-external-review.md): required before any non-prototype release (not the prototype); stage 1 spec+models (academics + public ePrint), stage 2 Rust-core audit (firm); Critical/High must be fixed.
 - [SAS and QR pairing UX](issues/21-pairing-ux.md): hub screen (my QR + scanner, SAS/TOFU as fallback links), in-chat Verify upgrade, 6-digit SAS only, upgrade mismatch → Compromised contact (sending blocked), 120 s timeout, prefilled editable name, dev-only debug panel; see ADR 0009.
+- [Implementation slicing](issues/25-implementation-slicing.md): 12 vertical slices from S0 (bootstrap) through S11 (measurement), tracked as tickets; in-memory loopback skeleton first; strict formal-model gate; S1+ wait for Spec consolidation; CI gates switch on with their code; DoD = gates + TDD + oldest/newest device demo.
 - [Android↔iOS background discovery and transport feasibility](issues/04-android-ios-background-ble.md): fixed service UUID plus GATT-read beacon; GATT-first transport; L2CAP optional.
 - [Formal verification gate](issues/07-formal-verification-gate.md): symbolic model gates Resume, PQ ratchet mixing and SAS pairing only.
 - [Reference app scope](issues/08-reference-app-scope.md): minimal 1:1 chat with pairing flows plus a bytes/airtime debug panel.
 
 ## Not yet specified
 
-- **Implementation slicing**: how the build is cut into vertical slices (core crates → FFI → BLE adapters → app), and in which order. This becomes specifiable once the threat model and key storage are settled.
-- **Spec consolidation**: merging ADRs 0001–0005 and the wire draft into one `docs/spec/pqcble-r1.md`, plus test vectors. This depends on the formal-model results.
+- **Test vectors and spec freeze**: once the reference implementation exists, generate vectors, pin them in the spec, and freeze `pqcble-r1` (this precedes stage 1 of the external review).
 
 ## Out of scope
 
