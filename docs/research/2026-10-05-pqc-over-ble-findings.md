@@ -1,7 +1,10 @@
 # Research findings: post-quantum peer-to-peer security over BLE
 
-Status: research draft, not an approved design. No ADR exists yet. Any adoption
+Status: research draft, not an approved design. Any adoption
 requires an ADR (Constitution O3), a formal model, and expert review (S6).
+Primitive choices in this document (for example ChaCha20-Poly1305, SHA-256,
+the compact 8-byte data tag) are **superseded by
+[ADR 0001](../adr/0001-crypto-suite.md)**.
 
 ## 1. Summary
 
@@ -14,7 +17,7 @@ requires an ADR (Constitution O3), a formal model, and expert review (S6).
    §3.
 3. **Proposed approach:** don't shrink the public-key primitive. Move it out of
    the per-connection path:
-   - Introduce once (app-layer, no BLE pairing) with a standard hybrid KEM (about 2.4 KB, done once).
+   - Pair once at the app layer (`pqcble` pairing, not Bluetooth pairing) with a standard hybrid KEM (about 2.4 KB, done once).
    - Resume every connection with a **PQ-secure symmetric ratchet** and a
      classical X25519 ephemeral: **106 bytes total, 1 PDU each way.**
    - Restore PQ post-compromise security with an **amortized ML-KEM ratchet**
@@ -26,17 +29,28 @@ requires an ADR (Constitution O3), a formal model, and expert review (S6).
    implementations. The novelty is the protocol composition, not the
    mathematics.
 
-### Terminology: "introduction" is not BLE pairing
+### Terminology: `pqcble` pairing vs Bluetooth pairing
 
-Everything here runs at the **application layer** over ordinary, unbonded GATT
-or L2CAP CoC connections. Bluetooth OS pairing and bonding are never used. In
-this document, an **introduction** is the first app-level key exchange
-between two peers. After that they share `RK` and use cheap resumption.
+In this project, **pairing** means `pqcble` pairing: the one-time,
+application-layer key exchange that makes two peers contacts. Afterwards they
+share `RK` and use cheap resumption. It runs over ordinary, **unencrypted,
+unbonded** GATT or L2CAP CoC connections, and is completely separate from
+**Bluetooth pairing**: the operating system's link-layer Secure Simple
+Pairing / LE Secure Connections key exchange and the resulting bond.
 
-What an introduction needs depends on how much authentication the first
+`pqcble` never triggers Bluetooth pairing. That means:
+- no system pairing dialog;
+- no entry in the system's Bluetooth settings;
+- no link-layer keys to rely on or protect.
+
+All confidentiality and authentication comes from `pqcble` pairing and
+the protocol built on it. When the OS feature is meant, always write
+"Bluetooth pairing", never bare "pairing" (see [`GLOSSARY.md`](../../GLOSSARY.md)).
+
+What a pairing needs depends on how much authentication the first
 contact must have:
 
-| Introduction mode | Bytes | Active MitM on first contact |
+| Pairing mode | Bytes | Active MitM on first contact |
 |---|---:|---|
 | Unauthenticated (TOFU, like SSH) | ~2.4 KB | Possible, but only at that moment. Later sessions are pinned to `RK`. |
 | User-verified SAS (6 digits on both screens) | ~2.4 KB + 2×16 B | Probability ≤ 2⁻²⁰ |
@@ -44,14 +58,14 @@ contact must have:
 | Pre-shared identity (directory, prior channel) | ~2.4 KB | Prevented |
 
 Even TOFU is fully PQ-confidential against passive recording ("harvest now,
-decrypt later"). The mode can be chosen per introduction.
+decrypt later"). The mode can be chosen per pairing.
 
 Decisions so far:
 
 - Pairwise P2P only.
 - Targets: iOS, Android, desktop. All have hardware AES and native
   constant-time libraries.
-- No Bluetooth pairing.
+- No Bluetooth pairing or bonding; all security comes from `pqcble` pairing.
 
 ## 2. Verified constraints and numbers
 
@@ -85,7 +99,7 @@ one ACK per PDU, and no retransmissions.
 | `PROMPT.md` CSIDH-512 (insecure level) | 146 | 1 | 6 | 1.00 ms | 1.69 ms |
 | CSIDH at a level-1 size (est.) | 1042 | 5 | 40 | 6.27 ms | 10.96 ms |
 | ML-KEM-512 ephemeral per session | 1608 | 7 | 61 | 9.37 ms | 16.53 ms |
-| X-Wing introduction (once) | 2376 | 10 | 90 | 13.70 ms | 24.25 ms |
+| X-Wing pairing (once) | 2376 | 10 | 90 | 13.70 ms | 24.25 ms |
 | **Proposed resume (S1+S2)** | **106** | **1** | **5** | **0.84 ms** | **1.37 ms** |
 | Proposed amortized ML-KEM-768 rekey | 2272 | 10 | 86 | 13.29 ms | 23.42 ms |
 
@@ -123,7 +137,7 @@ Trade-offs:
   - Pros: maximum margin. It's required by NSA CNSA 2.0.
   - Cons: twice the bytes of level 1, and slower.
 
-In this design the KEM runs only at introduction and once per amortized
+In this design the KEM runs only at pairing and once per amortized
 ratchet epoch. Per-connection traffic stays at 106 B regardless of level. All
 symmetric keys are 256-bit, which is level-5-equivalent even under Grover. The
 level choice therefore costs only about 4–9 ms of airtime per epoch. That makes
@@ -151,7 +165,7 @@ The protocol has three layers. Only the first one needs large public-key
 material.
 
 ```
- Introduction (once)       Session resume (every connection)       Data
+ Pairing (once)       Session resume (every connection)       Data
  ┌─────────────────┐       ┌──────────────────────────────┐       ┌──────────────┐
  │ X-Wing KEM      │  RK   │ PSK ratchet CK_n + X25519    │  SK   │ AEAD, 17 B   │
  │ + SAS / QR / NFC├──────►│ 57 B →  ← 49 B (1 RTT)       ├──────►│ implicit nonce│
@@ -162,7 +176,7 @@ material.
                                   └──────────────────────────────────────
 ```
 
-### 4.1 Introduction: once per peer pair, size doesn't matter
+### 4.1 Pairing: once per peer pair, size doesn't matter
 
 - KEM: X-Wing (ML-KEM-768 + X25519). This is hybrid, so security never drops
   below today's classical security.
@@ -266,7 +280,7 @@ nonce = direction(1 bit) ‖ 64-bit counter   (implicit; L2CAP CoC / GATT are or
 |---|---|
 | Custom compact LWE (Rudraksh, SMAUG-T, aggressive rounding) | Rejected. Not standardized (S6), and it saves only about 30–40% versus ML-KEM-512. Amortization makes that saving irrelevant. |
 | Classic McEliece KK with static keys (96 B ct each way) | Interesting: it's KCI-resistant and stateless. Rejected for v1: the 261 KB pk per peer, no NIST selection, and no PQ forward secrecy without a ratchet anyway. Candidate optional profile. |
-| Per-session signatures (Falcon, ML-DSA, HAWK) | Unnecessary after introduction. KEM and PSK authentication is smaller. |
+| Per-session signatures (Falcon, ML-DSA, HAWK) | Unnecessary after pairing. KEM and PSK authentication is smaller. |
 | Layering on BLE LE Secure Connections (P-256) only | Classical only. Kept as an outer layer, but the app can't bind to the LTK on iOS. |
 | PQNoise patterns (KEM-based Noise) | A good fallback for unpaired first contact (§6). Start from the published proofs. |
 
@@ -345,7 +359,7 @@ Platforms: iOS, Android, desktop.
 3. iOS↔iOS with both apps backgrounded is unsupported unless an
    Android/desktop peer bridges. This is to be validated on devices.
 
-### 9.2 Unlinkable beacons (only introduced peers can recognize them)
+### 9.2 Unlinkable beacons (only paired peers can recognize them)
 
 ```
 BK_d   = KDF(RK, "beacon", day d)  ; one-way daily chain, erased after use (forward privacy)
@@ -387,14 +401,14 @@ Further rules from the pitfall analysis:
     `…ThisDeviceOnly` keychain items and Android Keystore-wrapped no-backup
     storage.
   - A device that can't prove its epoch counter is monotonic must
-    re-introduce, never resume.
+    re-pair, never resume.
 - **Forward-secrecy window:** keep `CK_n` only until the first valid frame
   from I. The window is bounded by one connection setup.
 - **KCI:** inherent to PSK authentication. Optional profile: each peer holds a
   static ML-KEM-768 key, and S1/S2 add a KEM ciphertext to the peer's static
   key. That's KCI-resistant (KK pattern) at about +1.1 KB per session.
 
-### 9.4 Introduction modes (UX)
+### 9.4 Pairing modes (UX)
 
 | Mode | Security | Usability evidence | Recommendation |
 |---|---|---|---|

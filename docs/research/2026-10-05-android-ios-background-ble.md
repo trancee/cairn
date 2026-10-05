@@ -373,7 +373,7 @@ Given the absence of a first-party cross-platform throughput number, transfer ti
 better expressed as a function of negotiated MTU and connection interval than as a
 single fabricated figure:
 
-- **Introduction (~2.4 KB):** at a conservatively small practical payload (~150–200 B
+- **Pairing (~2.4 KB):** at a conservatively small practical payload (~150–200 B
   per write/notification, consistent with commonly-reported iOS negotiated MTU minus
   ATT/L2CAP headers — community-reported, unverified) this is roughly 12–16 PDUs; at one
   connection event per interval (commonly 15–50 ms, platform/OS-governed and not fully
