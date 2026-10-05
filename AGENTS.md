@@ -60,3 +60,17 @@ Failure => incomplete: fix cause + rerun. External prerequisite => finish reacha
 
 R acceptance complete + applicable TDD red/green + O1/O2 agreement + applicable local/CI-equivalent gates pass or exact external blocker + no temporary/placeholder/disabled/stale/unjustified suppression/`TODO` state + Constitution compliance.
 Report R `{changed_files/behavior,exact_commands/results,docs/API/compat/security/performance_impact,blockers/unverified,skills/specialized_instructions_used}`; X unobserved claims.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are local markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: root `GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.md`.
