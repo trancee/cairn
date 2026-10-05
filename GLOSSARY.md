@@ -25,7 +25,7 @@ Which side of a contact relationship a device is (A or B), fixed once at pairing
 _Avoid_: Initiator, master, primary
 
 **Verification**:
-Confirming during pairing that no one sits between the two peers, by QR scan or short authentication string. A pairing without it is **unverified**.
+Confirming in person that no one sits between the two peers, by QR scan or short authentication string, either during pairing or later for an unverified contact. A contact without it is **unverified**.
 _Avoid_: Authentication, trust
 
 **Resume**:
@@ -67,6 +67,10 @@ _Avoid_: Strict mode, paranoid mode
 **Contact removal**:
 Deleting a contact so that its keys are destroyed and its stored conversation becomes permanently unreadable.
 _Avoid_: Unpairing, blocking
+
+**Compromised contact**:
+A contact whose later verification failed, meaning its pairing was intercepted. Nothing more can be sent to it until it is removed and paired again.
+_Avoid_: Untrusted, blocked
 
 **Re-pairing**:
 Pairing again with someone who is already a contact, after a reinstall, a move to a new device, or a storage reset.

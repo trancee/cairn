@@ -1,0 +1,168 @@
+<!doctype html>
+<!-- PROTOTYPE, throwaway. Three pairing-UX variants for pqcble (ticket "SAS and QR pairing UX").
+     Open in a browser; switch with ?variant=A|B|C, the bottom bar, or ←/→. No app exists yet, so this is a standalone mock. -->
+<html lang="en"><head><meta charset="utf-8"><title>pqcble pairing UX: PROTOTYPE</title>
+<style>
+:root{--acc:#2f6fed;--ok:#1f9d55;--warn:#c47f00;--bad:#c0392b;--fg:#1b1f24;--mut:#6b7280;--bg:#f4f5f7}
+*{box-sizing:border-box}body{margin:0;font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#e6e8ec;color:var(--fg)}
+.wrap{display:flex;gap:32px;justify-content:center;align-items:flex-start;padding:24px 16px 96px;flex-wrap:wrap}
+.intro{max-width:340px}.intro h1{font-size:20px;margin:.2em 0}.intro p{color:var(--mut);margin:.4em 0}
+.phones{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}
+.phone{width:300px;height:600px;background:#fff;border-radius:36px;border:10px solid #111;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.phone .who{position:absolute;top:-30px;left:0;right:0;text-align:center;font-weight:600;color:#333}
+.pw{position:relative;margin-top:30px}
+.bar{height:44px;display:flex;align-items:center;padding:0 14px;font-weight:600;border-bottom:1px solid #eee;gap:8px}
+.bar .back{color:var(--acc);cursor:pointer}
+.body{flex:1;padding:16px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+.btn{border:0;border-radius:12px;padding:12px 14px;font:inherit;font-weight:600;cursor:pointer;background:var(--acc);color:#fff}
+.btn.sec{background:#eef2fb;color:var(--acc)}.btn.bad{background:#fdecea;color:var(--bad)}.btn.ok{background:var(--ok)}
+.row{display:flex;gap:8px}.row .btn{flex:1}
+.qr{width:180px;height:180px;margin:0 auto;background:
+ conic-gradient(from 90deg at 20% 20%,#000 25%,#fff 0) 0 0/18px 18px;border:12px solid #fff;outline:2px solid #000}
+.cam{height:220px;border-radius:16px;background:#222;color:#bbb;display:flex;align-items:center;justify-content:center;position:relative}
+.cam:after{content:"";position:absolute;inset:40px;border:3px solid #fff;border-radius:12px}
+.code{font:700 34px/1 ui-monospace,Menlo,monospace;letter-spacing:6px;text-align:center}
+.emoji{font-size:30px;text-align:center;letter-spacing:6px}
+.muted{color:var(--mut);font-size:13px}.center{text-align:center}
+.chip{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600}
+.chip.ok{background:#e3f6ea;color:var(--ok)}.chip.warn{background:#fff4dc;color:var(--warn)}
+.card{border:1px solid #e5e7eb;border-radius:14px;padding:12px}
+.list .item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0f0}
+.tabs{display:flex;background:#f0f2f5;border-radius:12px;padding:3px}.tabs div{flex:1;text-align:center;padding:8px;border-radius:10px;cursor:pointer;font-weight:600;color:var(--mut)}
+.tabs .on{background:#fff;color:var(--fg);box-shadow:0 1px 2px #0002}
+.split{display:grid;grid-template-rows:1fr 1fr;gap:10px;flex:1}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -6px 24px #0003;padding:16px;display:flex;flex-direction:column;gap:10px}
+.dim{position:absolute;inset:44px 0 0;background:#0004}
+.bubble{max-width:85%;padding:9px 12px;border-radius:16px;background:#f0f2f5}.bubble.me{align-self:flex-end;background:var(--acc);color:#fff}
+.sys{align-self:center;font-size:12px;color:var(--mut);background:#f7f7f9;padding:4px 10px;border-radius:99px}
+.banner{background:#fff4dc;color:#6b4a00;border-radius:12px;padding:10px;font-size:13px}
+.state{font:12px ui-monospace,Menlo,monospace;background:#fff;border-radius:12px;padding:10px;white-space:pre-wrap;color:#333}
+#sw{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#111;color:#fff;border-radius:99px;padding:8px 10px;display:flex;gap:10px;align-items:center;box-shadow:0 6px 20px #0005;z-index:9}
+#sw button{background:#333;color:#fff;border:0;border-radius:99px;width:32px;height:32px;cursor:pointer;font-size:16px}
+#sw span{min-width:220px;text-align:center;font-weight:600}
+</style></head><body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Pairing UX: 3 variants</h1>
+    <p><b>Question:</b> how should pairing look and behave? Covers QR show/scan, the 4-digit QR confirmation on the code-showing phone, 6-digit SAS (+ emoji), TOFU "Unverified" with a later upgrade, and mismatch/abort.</p>
+    <p>Both phones are simulated side by side. Click through either phone; the other follows. <b>Alice</b> = pairing role A (shows QR / commits first).</p>
+    <div id="scen"></div>
+    <div class="state" id="state"></div>
+  </div>
+  <div class="phones"><div class="pw"><div class="who">Alice</div><div class="phone" id="pA"></div></div>
+  <div class="pw"><div class="who">Bob</div><div class="phone" id="pB"></div></div></div>
+</div>
+<div id="sw"><button id="prev">←</button><span id="lbl"></span><button id="next">→</button></div>
+<script>
+/* ---------- pure model (liftable) ---------- */
+const Pairing = (() => {
+  const init = () => ({ step: 'idle', method: null, verified: null, code4: '4821', sas: '307 915', emoji: '🦊 🌵 🚲 🎻', result: null, contactName: null });
+  function reduce(s, a) {
+    switch (a.type) {
+      case 'start':     return { ...init(), step: a.method === 'qr' ? 'qr-show' : a.method === 'sas' ? 'sas-wait' : 'tofu-wait', method: a.method };
+      case 'scanned':   return { ...s, step: 'qr-confirm' };
+      case 'connected': return { ...s, step: s.method === 'sas' ? 'sas-compare' : 'naming' };
+      case 'match':     return { ...s, step: 'naming', verified: true };
+      case 'mismatch':  return { ...s, step: 'failed', result: 'Codes did not match: possible interception. Nothing was saved.' };
+      case 'timeout':   return { ...s, step: 'failed', result: 'Timed out after 60 s. Nothing was saved.' };
+      case 'cancel':    return { ...s, step: 'failed', result: 'Cancelled. Nothing was saved.' };
+      case 'name':      return { ...s, step: 'done', contactName: a.name, verified: s.method === 'tofu' ? false : true };
+      case 'upgrade':   return { ...s, step: 'sas-compare', method: 'sas', upgrading: true };
+      case 'dismiss':   return { ...s, step: 'done', method: 'tofu', verified: false, upgrading: false };
+      case 'reset':     return init();
+    }
+    return s;
+  }
+  return { init, reduce };
+})();
+/* ---------- page shell ---------- */
+let S = Pairing.init();
+const go = a => { S = Pairing.reduce(S, a); render(); };
+const V = { A: 'Wizard (one step per screen)', B: 'Single hub (show + scan on one screen)', C: 'Conversation-first (TOFU by default, verify later)' };
+const keys = Object.keys(V);
+let cur = new URLSearchParams(location.search).get('variant') || 'A'; if (!V[cur]) cur = 'A';
+function setVar(k) { cur = k; const u = new URL(location); u.searchParams.set('variant', k); history.replaceState(null, '', u); S = Pairing.init(); render(); }
+document.getElementById('prev').onclick = () => setVar(keys[(keys.indexOf(cur) + keys.length - 1) % keys.length]);
+document.getElementById('next').onclick = () => setVar(keys[(keys.indexOf(cur) + 1) % keys.length]);
+addEventListener('keydown', e => { if (e.target.closest('input,textarea,[contenteditable]')) return;
+  if (e.key === 'ArrowLeft') document.getElementById('prev').click(); if (e.key === 'ArrowRight') document.getElementById('next').click(); });
+const b = (label, act, cls = '') => `<button class="btn ${cls}" onclick='go(${JSON.stringify(act)})'>${label}</button>`;
+const bar = (t, back = true) => `<div class="bar">${back ? `<span class="back" onclick='go({"type":"cancel"})'>‹ Cancel</span>` : ''}<span>${t}</span></div>`;
+const done = who => `<div class="body"><div class="center" style="font-size:44px">${S.verified ? '✅' : '⚠️'}</div>
+  <div class="center"><b>${who === 'A' ? 'Bob' : 'Alice'}</b> added ${S.verified ? '<span class="chip ok">Verified</span>' : '<span class="chip warn">Unverified</span>'}</div>
+  ${S.verified ? '' : `<div class="banner">Not verified: someone nearby could have intercepted this pairing. Compare codes in person to verify.</div>${b('Verify now', { type: 'upgrade' }, 'sec')}`}
+  ${b('Start over', { type: 'reset' }, 'sec')}</div>`;
+const failed = () => `<div class="body"><div class="center" style="font-size:44px">⛔</div><div class="center">${S.result}</div>${b('Try again', { type: 'reset' })}</div>`;
+const naming = who => `<div class="body"><div class="muted">${S.verified === true ? '<span class="chip ok">Codes matched</span>' : ''}</div>
+  <label>Name this contact<br><input id="nm${who}" value="${who === 'A' ? 'Bob' : 'Alice'}" style="width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;font:inherit"></label>
+  ${b('Save contact', { type: 'name', name: who === 'A' ? 'Bob' : 'Alice' })}</div>`;
+const sasCompare = () => `<div class="body"><div class="center muted">Check that the other phone shows the same code</div>
+  <div class="code">${S.sas}</div><div class="emoji">${S.emoji}</div>
+  <div class="row">${b('They match', { type: 'match' }, 'ok')}${b('Different', { type: 'mismatch' }, 'bad')}</div></div>`;
+
+/* Variant A: linear wizard */
+function A(who) {
+  switch (S.step) {
+    case 'idle': return bar('Add contact', false) + `<div class="body"><b>How are you together?</b>
+      ${b('📷 Same room: use QR', { type: 'start', method: 'qr' })}${b('🔢 Compare a code', { type: 'start', method: 'sas' }, 'sec')}
+      ${b('Skip verification (not recommended)', { type: 'start', method: 'tofu' }, 'sec')}<div class="muted">Step 1 of 4</div></div>`;
+    case 'qr-show': return bar('Step 2 of 4') + (who === 'A'
+      ? `<div class="body"><div class="center">Let Bob scan this</div><div class="qr"></div><div class="muted center">Only show this to the person you're adding.</div>${b('⏱ simulate timeout', { type: 'timeout' }, 'sec')}</div>`
+      : `<div class="body"><div class="cam">Point at Alice's code</div>${b('(simulate scan)', { type: 'scanned' })}</div>`);
+    case 'qr-confirm': return bar('Step 3 of 4') + `<div class="body"><div class="center">${who === 'A' ? 'Does Bob\'s phone show this number?' : 'Show this number to Alice'}</div>
+      <div class="code">${S.code4}</div>${who === 'A' ? `<div class="row">${b('Yes', { type: 'match' }, 'ok')}${b('No', { type: 'mismatch' }, 'bad')}</div>` : '<div class="muted center">Waiting for Alice to confirm…</div>'}</div>`;
+    case 'sas-wait': case 'tofu-wait': return bar('Step 2 of 4') + `<div class="body"><div class="center">Looking for ${who === 'A' ? 'Bob' : 'Alice'} nearby…</div><div class="muted center">Both phones need this screen open.</div>${b('(simulate found)', { type: 'connected' })}${b('⏱ simulate timeout', { type: 'timeout' }, 'sec')}</div>`;
+    case 'sas-compare': return bar('Step 3 of 4') + sasCompare();
+    case 'naming': return bar('Step 4 of 4') + naming(who);
+    case 'done': return bar('Done', false) + done(who);
+    case 'failed': return bar('Pairing failed', false) + failed();
+  }
+}
+/* Variant B: one hub screen, both directions at once, roles auto-assigned */
+function B(who) {
+  if (S.step === 'idle' || S.step === 'qr-show') return bar('Add contact', false) + `<div class="body" style="padding:10px">
+    <div class="split"><div class="card center"><div class="muted">My code</div><div class="qr" style="width:120px;height:120px;border-width:8px"></div></div>
+    <div class="cam" style="height:auto">Scan theirs</div></div>
+    ${b('(simulate: Bob scans Alice)', { type: 'scanned' })}
+    <div class="muted center">No camera? <a href="#" onclick='go({"type":"start","method":"sas"});go({"type":"connected"});return false'>Compare a code instead</a> · <a href="#" onclick='go({"type":"start","method":"tofu"});go({"type":"connected"});return false'>skip</a></div></div>`;
+  switch (S.step) {
+    case 'qr-confirm': return bar('Confirm') + `<div class="body"><div class="card center"><div class="muted">Both phones show</div><div class="code">${S.code4}</div></div>
+      ${who === 'A' ? `<div class="row">${b('Same', { type: 'match' }, 'ok')}${b('Different', { type: 'mismatch' }, 'bad')}</div>` : '<div class="muted center">Alice confirms on her phone</div>'}</div>`;
+    case 'sas-compare': return bar('Compare') + sasCompare();
+    case 'naming': return bar('Name') + naming(who);
+    case 'done': return bar('Contacts', false) + `<div class="body list"><div class="item"><span>${who === 'A' ? 'Bob' : 'Alice'}</span>${S.verified ? '<span class="chip ok">Verified</span>' : '<span class="chip warn">Unverified</span>'}</div>
+      ${S.verified ? '' : b('Verify', { type: 'upgrade' }, 'sec')}${b('Start over', { type: 'reset' }, 'sec')}</div>`;
+    case 'failed': return bar('Failed', false) + failed();
+  }
+}
+/* Variant C: conversation-first; TOFU pairs instantly, verification lives inside the chat */
+function C(who) {
+  const other = who === 'A' ? 'Bob' : 'Alice';
+  if (S.step === 'idle') return bar('Nearby', false) + `<div class="body"><div class="muted">People nearby with pqcble open</div>
+    <div class="list"><div class="item"><span>📱 ${other}'s phone</span>${b('Add', { type: 'start', method: 'tofu' })}</div></div>
+    <div class="muted">Added contacts start as <span class="chip warn">Unverified</span>. Verify in the chat when you're together.</div></div>`;
+  if (S.step === 'tofu-wait') { setTimeout(() => go({ type: 'connected' }), 0); return bar('Nearby', false); }
+  if (S.step === 'naming') { setTimeout(() => go({ type: 'name', name: other }), 0); return bar('Nearby', false); }
+  const chat = `<div class="bar">${other} ${S.verified ? '<span class="chip ok">Verified</span>' : '<span class="chip warn">Unverified</span>'}</div>
+    <div class="body"><div class="sys">Paired · end-to-end post-quantum encrypted</div><div class="bubble">hi 👋</div><div class="bubble me">hey!</div>`;
+  switch (S.step) {
+    case 'done': return chat + (S.verified ? '<div class="sys">✅ Verified in person</div>' : `<div class="banner">Not verified yet. ${b('Verify together', { type: 'upgrade' }, 'sec')}</div>`) + b('Start over', { type: 'reset' }, 'sec') + '</div>';
+    case 'sas-compare': return chat + `</div><div class="dim"></div><div class="sheet"><b>Verify ${other}</b>${sasCompare().replace('<div class="body">', '<div>')}${b('Not now', { type: 'dismiss' }, 'sec')}</div>`;
+    case 'failed': return chat + `<div class="banner" style="background:#fdecea;color:#7a1c12">${S.result}</div>${b('Start over', { type: 'reset' }, 'sec')}</div>`;
+  }
+  return chat + '</div>';
+}
+const SCEN = {
+  A: ['QR happy path: Same room → scan → Alice confirms 4821 → name', 'Photographed-QR attack: at step 3 press "No"', 'TOFU then upgrade: Skip → found → save → Verify now'],
+  B: ['QR happy path: simulate scan → Same → name', 'No camera: "Compare a code instead"', 'Skip → Unverified chip → Verify'],
+  C: ['Add (instant TOFU) → chat with Unverified chip', 'Verify together → bottom-sheet SAS → match', 'Verify → Different → chat shows warning'],
+};
+function render() {
+  const f = { A, B, C }[cur];
+  document.getElementById('pA').innerHTML = f('A'); document.getElementById('pB').innerHTML = f('B');
+  document.getElementById('lbl').textContent = `${cur} (${V[cur]})`;
+  document.getElementById('scen').innerHTML = '<p><b>Try:</b></p><ul>' + SCEN[cur].map(x => `<li class="muted">${x}</li>`).join('') + '</ul>';
+  document.getElementById('state').textContent = 'state ' + JSON.stringify(S, null, 1);
+}
+render();
+</script></body></html>

@@ -47,6 +47,9 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 - [Formal model tooling and lemmas](issues/19-formal-model-tooling.md): Tamarin primary (+ProVerif for SAS bound, CryptoVerif optional); explicit KEM binding; lemma lists for Resume/ratchet/SAS.
 - [Key storage and state persistence](issues/16-key-storage.md): after-first-unlock keys, Keystore/Keychain AES master key, SQLite with one transaction per Persist batch, core-held per-contact storage keys (crypto-shred), no backups; see ADR 0006.
 - [Constant-time and conformance CI gates](issues/18-ct-conformance-gates.md): per-PR blocking KATs/Wycheproof/X-Wing cross-vectors/differential/valgrind taint; dudect+long fuzz nightly advisory; on-device timing pre-release; see ADR 0007.
+- [Beacon and discovery tuning](issues/20-beacon-discovery-tuning.md): per-state duty cycle, 5-min window + adv restart w/ jitter, rate-limited purposeful connects, idle Resume ≥6 h, no-overlap key rotation, ≤2 %/24 h idle target; see ADR 0008.
+- [External cryptographic review](issues/24-external-review.md): required before any non-prototype release (not the prototype); stage 1 spec+models (academics + public ePrint), stage 2 Rust-core audit (firm); Critical/High must be fixed.
+- [SAS and QR pairing UX](issues/21-pairing-ux.md): hub screen (my QR + scanner, SAS/TOFU as fallback links), in-chat Verify upgrade, 6-digit SAS only, upgrade mismatch → Compromised contact (sending blocked), 120 s timeout, prefilled editable name, dev-only debug panel; see ADR 0009.
 - [Android↔iOS background discovery and transport feasibility](issues/04-android-ios-background-ble.md): fixed service UUID plus GATT-read beacon; GATT-first transport; L2CAP optional.
 - [Formal verification gate](issues/07-formal-verification-gate.md): symbolic model gates Resume, PQ ratchet mixing and SAS pairing only.
 - [Reference app scope](issues/08-reference-app-scope.md): minimal 1:1 chat with pairing flows plus a bytes/airtime debug panel.
@@ -62,3 +65,4 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 - Desktop (macOS/Windows/Linux) shells — deferred past this destination.
 - Group messaging, multi-hop relay, BLE Mesh.
 - Submitting our own module for CMVP/FIPS 140-3 certification.
+- Commissioning the external review itself (selecting vendors, setting a budget): it happens after the prototype, before a non-prototype release; see [External cryptographic review](issues/24-external-review.md).
