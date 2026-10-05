@@ -1,13 +1,13 @@
 # `pqcble-r1` protocol specification
 
-Status: **draft 0.2** (ticket *Spec consolidation*, 2026-10-05). It is not frozen: the formal models (*Formal model: Resume*, *Formal model: PQ ratchet mixing*, *Formal model: SAS pairing*) may change §5–§7, and test vectors are pending (§12).
+Status: **draft 0.3** (ticket *Formal model: Resume*, 2026-10-05). It is not frozen: the remaining formal models (*Formal model: PQ ratchet mixing*, *Formal model: SAS pairing*) may change §5, §7 and §9, and test vectors are pending (§12). §6 is backed by the verified [Resume model](models/README.md).
 
 This document consolidates, and is normative over:
 - [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md);
 - the [wire-format draft](../research/2026-10-05-wire-format-draft.md);
 - the [threat model](threat-model.md).
 
-Consolidation found 15 inconsistencies and gaps between the sources. They were resolved on 2026-10-05 and are recorded in §13; the affected ADRs are amended. **[OI-n]** marks text that follows resolution *n*. Items marked *provisional* remain subject to the formal models.
+Consolidation found 15 inconsistencies and gaps between the sources, and the formal models found more. They are resolved and recorded in §13; the affected ADRs are amended. **[OI-n]** marks text that follows resolution *n*. Items marked *provisional* remain subject to the formal models.
 
 The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted as described in RFC 2119 and RFC 8174 when, and only when, they appear in capitals.
 
@@ -126,7 +126,7 @@ On L2CAP CoC, one SDU is exactly one frame with MORE = 0.
 
 ### 4.6 Duplicate links
 
-If two contacts hold two links, the link where pairing role A is the central survives. The other is closed before Resume.
+If two contacts hold two links, the link where pairing role A is the central survives. Neither side can tell that a link is a duplicate until it has matched a pseudonym, so the losing link is closed at S1 by the concurrent-Resume rule in §6 [OI-17].
 
 ## 5. Pairing
 
@@ -212,8 +212,8 @@ K_door_A→B  = KDF(RK, "", "door A", "", 32);  K_door_B→A = KDF(RK, "", "door
 
 ```
 ctx(n)    = pairID ‖ u64(n)
-K_id      = KDF(CK_n, "", "id",     ctx(n), 32)
-K_auth_I  = KDF(CK_n, "", "auth I", ctx(n), 32)
+K_id      = KDF(CK_n, "", "id " ‖ ρ_I,     ctx(n), 32)          # ρ_I = I's pairing role, "A" or "B" [OI-16]
+K_auth_I  = KDF(CK_n, "", "auth I " ‖ ρ_I, ctx(n), 32)
 K_auth_R  = KDF(CK_n, "", "auth R", ctx(n), 32)
 pseudonym = Trunc8(HMAC(K_id, lp("pqcble-r1 pseudonym") ‖ u8(attempt)))    attempt = min(tries, 3)  [OI-8]
 
@@ -231,10 +231,16 @@ MS_{n+1}  = HKDF-Expand(prk, lp("pqcble-r1 msg seed") ‖ ctx(n) ‖ th_s, 32)  
 ```
 
 **R's processing order:**
-1. Look up the pseudonym in a table of `{CK_n, CK_{n+1}} × attempt 0–3` for every contact. On a miss, close the link.
+1. Look up the pseudonym in a table of `{CK_n, CK_{n+1}} × attempt 0–3` for every contact, computed with the **contact's** pairing role as `ρ_I`. On a miss, close the link. A device therefore never matches its own S1 [OI-16].
 2. Verify `mac` before any asymmetric operation; on failure, close the link.
 3. Apply rate limits per pseudonym, per remote address and globally (threat model §5).
 4. Only then generate `eR`, compute `dh`, and send S2.
+
+**Concurrent Resume** [OI-17]:
+- A device MUST have at most one Resume per contact in flight, and MUST commit a new `CK` for a contact atomically.
+- If a device receives a valid S1 from a contact while its own S1 to that contact is outstanding, the attempt whose I is pairing role A wins:
+  - pairing role A closes the incoming link without answering;
+  - pairing role B aborts its own attempt (erasing `eI`, keeping `CK_n`) and answers the incoming S1.
 
 **Key commitment and desync:**
 - I commits `CK_{n+1}` (erasing `CK_n`) after a valid S2.
@@ -244,6 +250,7 @@ MS_{n+1}  = HKDF-Expand(prk, lp("pqcble-r1 msg seed") ‖ ctx(n) ‖ th_s, 32)  
 
 **KCI profile** (sub bit 0 = 1; both contacts MUST have exchanged static ML-KEM-768 keys) [OI-12]:
 - S1 appends `ct_R = MLKEM.Encaps(static_ek_R)` before `mac`, and S2 appends `ct_I = MLKEM.Encaps(static_ek_I)` before `confirm`.
+- `th_s = H(S1 ‖ eR ‖ ct_I)`, so `confirm` and every derived key cover `ct_I` [OI-18].
 - `pq` gains `ss_R ‖ ss_I`, and `confirm` is keyed with `KDF(K_auth_R, ss_R, "auth R kci", "", 32)`.
 - I's first DATA frame proves it knows `ss_I`.
 - Sizes: S1 1145 B, S2 1137 B.
@@ -378,7 +385,7 @@ door = Trunc8(HMAC(K_door_me→peer, lp("pqcble-r1 door") ‖ u64(w)))
 
 ## 13. Consolidation issues (resolved 2026-10-05)
 
-The user accepted every proposal. OI-4 is accepted as *provisional*, pending *Formal model: PQ ratchet mixing*. The affected ADRs carry amendment notes.
+OI-1 to OI-15 come from spec consolidation and OI-16 to OI-18 from *Formal model: Resume*. The user accepted every proposal. OI-4 is accepted as *provisional*, pending *Formal model: PQ ratchet mixing*. The affected ADRs carry amendment notes.
 
 | # | Issue | Resolution |
 |---|---|---|
@@ -397,9 +404,13 @@ The user accepted every proposal. OI-4 is accepted as *provisional*, pending *Fo
 | OI-13 | The draft's `ctx` calls the Resume counter "epoch", which clashes with the glossary (Epoch = PQ ratchet period) | Call it the **Resume index** `n` and add it to the glossary |
 | OI-14 | CLOSE reason codes are undefined | As §7.3 |
 | OI-15 | QR-mode authentication of B relies on `token`, but the draft's `confirm_B` places it differently (`"qr" ‖ token ‖ th`) | Equivalent; use §5.2 (`th ‖ token`) |
+| OI-16 | *Formal model: Resume* falsified reflection resistance and I's agreement: `K_id` and `K_auth_I` bind only the Resume role, and both peers share `CK_n`, so a relay can return A's own S1 to A. A accepts a session with itself and advances `CK`, which B never learns: a permanent desync (DoS until re-pairing). Session keys stay secret | Bind I's pairing role `ρ_I` into the `K_id` and `K_auth_I` labels; R computes with the contact's role. 0 bytes, same table size. All Resume lemmas verify (user's choice, 2026-10-05) |
+| OI-17 | Both devices can act as central and send S1 to each other at once. §4.6 closes duplicates "before Resume", but a device can't identify the peer before the pseudonym, and nothing stopped both Resumes from committing different `CK`s | At most one Resume per contact in flight; atomic commit; on collision pairing role A's attempt wins (§6). Matches §4.6 (user's choice, 2026-10-05) |
+| OI-18 | KCI profile: `th_s = H(S1 ‖ eR)` leaves `ct_I` unauthenticated. An attacker who replaces `ct_I` makes I derive different keys and retire `CK_n` while R keeps it: permanent desync without any key compromise | `th_s = H(S1 ‖ eR ‖ ct_I)` in the KCI profile; 0 bytes (§6) (user's choice, 2026-10-05) |
 
 ## 14. Change log
 
+- 0.3 (2026-10-05): *Formal model: Resume* verified §6 and found OI-16 (reflection), OI-17 (concurrent Resume) and OI-18 (unauthenticated `ct_I` in the KCI profile); all resolved and applied.
 - 0.2 (2026-10-05): consolidation issues OI-1 to OI-15 resolved and applied.
 - 0.1 (2026-10-05): first consolidation of ADRs 0001–0009, the wire-format draft and the threat model.
   - Clarifications that don't change any byte: the labelled KDF/MAC framing, domain-separated `commit`, and AAD = `hdr ‖ th` for P3/P4.

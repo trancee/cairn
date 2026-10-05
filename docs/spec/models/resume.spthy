@@ -1,0 +1,270 @@
+theory PqcbleResume
+begin
+
+/*
+ * Symbolic model of pqcble-r1 Resume (docs/spec/pqcble-r1.md §6).
+ * Ticket: "Formal model: Resume". Tool: Tamarin 1.12 (+ Maude 3.5.1). See README.md for commands.
+ *
+ * Flags:
+ *   (none)     spec §6 as of draft 0.3: K_id and K_auth_I bind I's pairing role (OI-16)
+ *   UNBOUND    draft 0.2: no pairing role in K_id/K_auth_I. Falsifies I_agreement and
+ *              reflection_resistance (reflection attack, OI-16); use --stop-on-trace=BFS
+ *   DESYNC     R keeps CK_{n+1} as an extra candidate when DATA never arrives (§6 desync recovery)
+ *   KCI        KCI profile (§6): static ML-KEM keys, ct_R in S1, ct_I in S2, confirm keyed with ss_R
+ *   KCI_UNBOUND  with KCI: th_s without ct_I (draft 0.3 before OI-18); kci_I_agreement is falsified
+ *
+ * Abstractions:
+ *  - Pairing is an authentic setup that yields a shared CK_0 (covered by the SAS model).
+ *  - HKDF-Extract/Expand and the labelled MAC are free functions; truncation is ignored.
+ *  - Every CK is fresh-derived, so ctx(n) adds nothing symbolically and is omitted. Retries reuse
+ *    one pseudonym per CK (worst case for linkability).
+ *  - DATA is reduced to I's first frame, which is R's key confirmation (§6).
+ *  - Contact state is a persistent !St fact made linear by restrictions: a party may use a chain key
+ *    until it retires it, and retires each key at most once. A party may run several Resume attempts
+ *    on the same key concurrently, in either role; at most one completes. Abort and timeout are
+ *    attempts that never complete, so they need no rule. This removes the state-copy loops that made
+ *    backward search diverge. The single completion is required by spec §6 (concurrent Resume, OI-17).
+ *  - Compromise (A4b): a party's current chain key (RevCK) or only its S2 confirmation key
+ *    (RevAuthR) can be revealed at any time. Ephemeral reveal is not modelled.
+ *  - The PQ epoch mix (pq in §6) is covered by the ratchet model; here pq is empty, except for the
+ *    KCI shared secrets. ML-KEM is an ideal KEM with implicit rejection: kdec(kem(ss, pk(sk)), sk) = ss.
+ */
+
+builtins: diffie-hellman, hashing, symmetric-encryption
+functions: kdf/3, ext/2, mac/2, kem/2, kdec/2, pk/1
+equations: kdec(kem(ss, pk(sk)), sk) = ss
+
+#ifdef UNBOUND
+macros: LID(x) = <'id', 'any'>, LAUTH(x) = <'authI', 'any'>
+#else
+macros: LID(x) = <'id', x>, LAUTH(x) = <'authI', x>
+#endif
+
+restriction Neq: "All x y #i. Neq(x, y)@i ==> not (x = y)"
+
+/* A party uses a chain key only before retiring it ... */
+restriction current: "All pid r ck #i #d. Cur(pid, r, ck)@i & Retire(pid, r, ck)@d ==> #i < #d | #i = #d"
+/* ... and retires (advances from) each key at most once. */
+restriction retire_once: "All pid r ck #i #j. Retire(pid, r, ck)@i & Retire(pid, r, ck)@j ==> #i = #j"
+
+/* !Party(pairID, me, peer, my pairing role, peer's pairing role) is fixed at pairing.
+   !St(pairID, my pairing role, CK) is a chain key a party holds. Keying state by role keeps the
+   names one step away from Pair instead of behind the whole Resume history. */
+#ifdef KCI
+/* KCI profile: each party also holds a static ML-KEM-768 key; cards carry the encapsulation keys. */
+rule Pair:
+  [ Fr(~ck0), Fr(~pid), Fr(~skA), Fr(~skB) ]
+--[ Neq($A, $B), Paired(~pid, $A, $B), Init(~pid, ~ck0), CK(~pid, ~ck0) ]->
+  [ !Party(~pid, $A, $B, 'A', 'B'), !Party(~pid, $B, $A, 'B', 'A'), !St(~pid, 'A', ~ck0), !St(~pid, 'B', ~ck0),
+    !SK(~pid, 'A', ~skA), !SK(~pid, 'B', ~skB), !PK(~pid, 'A', pk(~skA)), !PK(~pid, 'B', pk(~skB)),
+    Out(pk(~skA)), Out(pk(~skB)) ]
+
+rule Reveal_SK:
+  [ !Party(pid, me, p, r, pr), !SK(pid, r, sk) ] --[ RevSK(pid, me) ]-> [ Out(sk) ]
+#else
+rule Pair:
+  [ Fr(~ck0), Fr(~pid) ]
+--[ Neq($A, $B), Paired(~pid, $A, $B), Init(~pid, ~ck0), CK(~pid, ~ck0) ]->
+  [ !Party(~pid, $A, $B, 'A', 'B'), !Party(~pid, $B, $A, 'B', 'A'), !St(~pid, 'A', ~ck0), !St(~pid, 'B', ~ck0) ]
+#endif
+
+/* ---------- compromise ---------- */
+rule Reveal_CK:
+  [ !St(pid, r, ck) ] --[ Cur(pid, r, ck), RevCK(pid) ]-> [ Out(ck) ]
+
+rule Reveal_AuthR:
+  [ !St(pid, r, ck) ] --[ Cur(pid, r, ck), RevAuthR(pid) ]-> [ Out(kdf(ck, 'authR', pid)) ]
+
+#ifdef KCI_UNBOUND
+macros: THS(m1, tag, Y, ct) = h(<m1, tag, Y>)
+#else
+macros: THS(m1, tag, Y, ct) = h(<m1, tag, Y, ct>)
+#endif
+
+#ifdef KCI
+/* ---------- initiator (KCI profile, §6) ---------- */
+rule I_S1:
+  let m1  = <'S1', kdf(ck, LID(r), pid), 'g'^~eI, kem(~ssR, pkR)>
+      tag = mac(kdf(ck, LAUTH(r), pid), m1)
+  in
+  [ !Party(pid, me, p, r, pr), !St(pid, r, ck), !PK(pid, pr, pkR), Fr(~eI), Fr(~ssR) ]
+--[ Cur(pid, r, ck), I_Start(pid, me, p, 'g'^~eI) ]->
+  [ I_Wait(pid, me, p, r, ck, ~eI, ~ssR, pkR), Out(<m1, tag>) ]
+
+/* th_s = H(S1 ‖ eR ‖ ct_I) (OI-18); KCI_UNBOUND reproduces draft 0.3's H(S1 ‖ eR), which lets an attacker swap ct_I. */
+rule I_S2:
+  let X   = 'g'^~eI
+      m1  = <'S1', kdf(ck, LID(r), pid), X, kem(~ssR, pkR)>
+      tag = mac(kdf(ck, LAUTH(r), pid), m1)
+      ths = THS(m1, tag, Y, ctI)
+      ssI = kdec(ctI, skI)
+      prk = ext(ck, <Y^~eI, ~ssR, ssI>)
+      kIR = kdf(prk, 'skI', <pid, ths>)
+      kRI = kdf(prk, 'skR', <pid, ths>)
+      ck1 = kdf(prk, 'ratchet', <pid, ths>)
+  in
+  [ I_Wait(pid, me, p, r, ck, ~eI, ~ssR, pkR), !SK(pid, r, skI),
+    In(<Y, ctI, mac(kdf(kdf(ck, 'authR', pid), ~ssR, 'authRkci'), <'S2', ths>)>) ]
+--[ Cur(pid, r, ck), Retire(pid, r, ck), I_Commit(pid, me, p, X, Y, kIR, kRI), I_CommitCK(pid, me, ck), CK(pid, ck1) ]->
+  [ !St(pid, r, ck1), Out(senc('data', kIR)) ]
+
+/* ---------- responder (KCI profile) ---------- */
+rule R_S2:
+  let m1   = <'S1', kdf(ck, LID(pr), pid), X, ctR>
+      ssR  = kdec(ctR, skR)
+      tag  = mac(kdf(ck, LAUTH(pr), pid), m1)
+      Y    = 'g'^~eR
+      ths  = THS(m1, tag, Y, kem(~ssI, pkI))
+      prk  = ext(ck, <X^~eR, ssR, ~ssI>)
+      kIR  = kdf(prk, 'skI', <pid, ths>)
+      kRI  = kdf(prk, 'skR', <pid, ths>)
+      ck1  = kdf(prk, 'ratchet', <pid, ths>)
+  in
+  [ !Party(pid, me, p, r, pr), !St(pid, r, ck), !SK(pid, r, skR), !PK(pid, pr, pkI), In(<m1, tag>), Fr(~eR), Fr(~ssI) ]
+--[ Cur(pid, r, ck), R_DH(pid, me, X), R_Accept(pid, me, p, X, Y, kIR, kRI), CK(pid, ck1) ]->
+  [ R_Pend(pid, me, p, r, ck, ck1, X, Y, kIR, kRI),
+    Out(<Y, kem(~ssI, pkI), mac(kdf(kdf(ck, 'authR', pid), ssR, 'authRkci'), <'S2', ths>)>) ]
+
+#else
+/* ---------- initiator ---------- */
+rule I_S1:
+  let m1  = <'S1', kdf(ck, LID(r), pid), 'g'^~eI>
+      tag = mac(kdf(ck, LAUTH(r), pid), m1)
+  in
+  [ !Party(pid, me, p, r, pr), !St(pid, r, ck), Fr(~eI) ]
+--[ Cur(pid, r, ck), I_Start(pid, me, p, 'g'^~eI) ]->
+  [ I_Wait(pid, me, p, r, ck, ~eI), Out(<m1, tag>) ]
+
+rule I_S2:
+  let X   = 'g'^~eI
+      m1  = <'S1', kdf(ck, LID(r), pid), X>
+      tag = mac(kdf(ck, LAUTH(r), pid), m1)
+      ths = h(<m1, tag, Y>)
+      prk = ext(ck, Y^~eI)
+      kIR = kdf(prk, 'skI', <pid, ths>)
+      kRI = kdf(prk, 'skR', <pid, ths>)
+      ck1 = kdf(prk, 'ratchet', <pid, ths>)
+  in
+  [ I_Wait(pid, me, p, r, ck, ~eI), In(<Y, mac(kdf(ck, 'authR', pid), <'S2', ths>)>) ]
+--[ Cur(pid, r, ck), Retire(pid, r, ck), I_Commit(pid, me, p, X, Y, kIR, kRI), I_CommitCK(pid, me, ck), CK(pid, ck1) ]->
+  [ !St(pid, r, ck1), Out(senc('data', kIR)) ]
+
+/* ---------- responder: checks S1 under the PEER's pairing role ---------- */
+rule R_S2:
+  let m1   = <'S1', kdf(ck, LID(pr), pid), X>
+      tag  = mac(kdf(ck, LAUTH(pr), pid), m1)
+      Y    = 'g'^~eR
+      ths  = h(<m1, tag, Y>)
+      prk  = ext(ck, X^~eR)
+      kIR  = kdf(prk, 'skI', <pid, ths>)
+      kRI  = kdf(prk, 'skR', <pid, ths>)
+      ck1  = kdf(prk, 'ratchet', <pid, ths>)
+  in
+  [ !Party(pid, me, p, r, pr), !St(pid, r, ck), In(<m1, tag>), Fr(~eR) ]
+--[ Cur(pid, r, ck), R_DH(pid, me, X), R_Accept(pid, me, p, X, Y, kIR, kRI), CK(pid, ck1) ]->
+  [ R_Pend(pid, me, p, r, ck, ck1, X, Y, kIR, kRI), Out(<Y, mac(kdf(ck, 'authR', pid), <'S2', ths>)>) ]
+
+#endif
+
+/* The first valid DATA frame from I confirms the session; R then advances to CK_{n+1}. */
+rule R_Data:
+  [ R_Pend(pid, me, p, r, ck, ck1, X, Y, kIR, kRI), In(senc('data', kIR)) ]
+--[ Cur(pid, r, ck), Retire(pid, r, ck), R_Confirm(pid, me, p, X, Y, kIR, kRI), R_ConfirmCK(pid, me, ck1) ]->
+  [ !St(pid, r, ck1) ]
+
+#ifdef DESYNC
+/* No DATA in time (§6): R keeps CK_n and adds CK_{n+1} as a second candidate. Over-approximation:
+   the unused candidate is not dropped when the other one advances. */
+rule R_Timeout:
+  [ R_Pend(pid, me, p, r, ck, ck1, X, Y, kIR, kRI) ]
+--[ Cur(pid, r, ck), R_Timeout(pid, me, ck1) ]->
+  [ !St(pid, r, ck1) ]
+#endif
+
+/* ===================== lemmas (formal-tooling research §8.1) ===================== */
+
+/* Helper: a chain key becomes known only after that pair's state was revealed. */
+lemma ck_secret [reuse, use_induction]:
+  "All pid ck #i #j. CK(pid, ck)@i & KU(ck)@j ==> Ex #r. RevCK(pid)@r & r < j"
+
+/* Helper: the same, stated on Cur (present in every rule that uses a key), so later proofs can
+   apply it as soon as the attacker needs ck. */
+lemma cur_secret [reuse]:
+  "All pid rl ck #i #j. Cur(pid, rl, ck)@i & KU(ck)@j ==> Ex #r. RevCK(pid)@r & r < j"
+
+/* Sanity: the first honest Resume after pairing is reachable. */
+lemma executable: exists-trace
+  "Ex pid a b ck X Y k1 k2 #p #i #j.
+     Init(pid, ck)@p & I_CommitCK(pid, a, ck)@i
+   & I_Commit(pid, a, b, X, Y, k1, k2)@i & R_Confirm(pid, b, a, X, Y, k1, k2)@j
+   & not (Ex #r. RevCK(pid)@r) & not (Ex #r. RevAuthR(pid)@r)"
+
+#ifdef DESYNC
+/* 9: after a lost DATA frame (R times out), a later Resume still succeeds. */
+lemma desync_recovery: exists-trace
+  "Ex pid a b rb ck ck1 X Y k1 k2 X2 Y2 m1 m2 #p #i #j #l #c.
+     Init(pid, ck)@p & I_CommitCK(pid, a, ck)@i & I_CommitCK(pid, a, ck1)@l & Cur(pid, rb, ck1)@c
+   & I_Commit(pid, a, b, X, Y, k1, k2)@i & R_Timeout(pid, b, ck1)@j & i < j & j < l
+   & I_Commit(pid, a, b, X2, Y2, m1, m2)@l & R_Confirm(pid, b, a, X2, Y2, m1, m2)@c
+   & not (Ex #r. RevCK(pid)@r) & not (Ex #r. RevAuthR(pid)@r)
+   & not (Ex p3 X3 #s. I_Start(pid, b, p3, X3)@s)"
+#endif
+
+/* 10: R spends an X25519 only on an S1 an honest I produced (maybe replayed), unless the state leaked. */
+lemma dh_only_after_valid_mac:
+  "All pid b X #i. R_DH(pid, b, X)@i ==>
+     (Ex a p #j. I_Start(pid, a, p, X)@j & j < i) | (Ex #r. RevCK(pid)@r & r < i)"
+
+/* 1: I agrees with R on the pair, both ephemerals and both session keys. */
+lemma I_agreement:
+  "All pid a b X Y k1 k2 #i. I_Commit(pid, a, b, X, Y, k1, k2)@i ==>
+     (Ex #j. R_Accept(pid, b, a, X, Y, k1, k2)@j & j < i)
+   | (Ex #r. RevCK(pid)@r & r < i) | (Ex #r. RevAuthR(pid)@r & r < i)"
+
+/* 1: R's confirmation implies I committed to the same values. */
+lemma R_agreement:
+  "All pid b a X Y k1 k2 #i. R_Confirm(pid, b, a, X, Y, k1, k2)@i ==>
+     (Ex #j. I_Commit(pid, a, b, X, Y, k1, k2)@j & j < i) | (Ex #r. RevCK(pid)@r & r < i)"
+
+/* 1 (injectivity): one I session is confirmed by at most one R session. */
+lemma R_injective:
+  "All pid b a X Y k1 k2 #i #j. R_Confirm(pid, b, a, X, Y, k1, k2)@i & R_Confirm(pid, b, a, X, Y, k1, k2)@j ==> #i = #j"
+
+/* 2, 4, 8: session keys stay secret unless the state was revealed BEFORE the session. A later
+   reveal (forward secrecy) and a reveal of only the confirmation key are allowed. Not allowed:
+   confirmation key before the session AND the chain key at any time (the attacker forged S2 with its
+   own ephemeral and later reads R's still-current CK_n; equivalent to an earlier state reveal). */
+lemma I_key_secrecy:
+  "All pid a b X Y k1 k2 #i. I_Commit(pid, a, b, X, Y, k1, k2)@i ==>
+     (not (Ex #j. K(k1)@j) & not (Ex #j. K(k2)@j))
+   | (Ex #r. RevCK(pid)@r & r < i) | (Ex #r #s. RevAuthR(pid)@r & r < i & RevCK(pid)@s)"
+
+/* 6: even an unconfirmed (possibly replayed) S1 gives the attacker no session key. */
+lemma R_key_secrecy:
+  "All pid b a X Y k1 k2 #i. R_Accept(pid, b, a, X, Y, k1, k2)@i ==>
+     (not (Ex #j. K(k1)@j) & not (Ex #j. K(k2)@j)) | (Ex #r. RevCK(pid)@r & r < i)"
+
+/* 5: healing against a passive attacker: if both ephemerals are honest, the session is secret
+   even if the chain key was revealed. */
+lemma pcs_passive_session:
+  "All pid a b X Y k1 k2 #i #j. I_Commit(pid, a, b, X, Y, k1, k2)@i & R_Accept(pid, b, a, X, Y, k1, k2)@j
+     ==> not (Ex #k. K(k1)@k) & not (Ex #k. K(k2)@k)"
+
+/* 7: a party never accepts its own S1 reflected back to it. */
+lemma reflection_resistance:
+  "All pid a p q X Y k1 k2 #i #j. I_Start(pid, a, p, X)@i & R_Accept(pid, a, q, X, Y, k1, k2)@j ==>
+     (Ex #r. RevCK(pid)@r & r < j)"
+
+#ifdef KCI
+/* KCI: even with the shared chain key AND A's own static key revealed, nobody can impersonate the
+   peer to A. Only a reveal of the PEER's static key (before the session) breaks agreement. */
+lemma kci_I_agreement:
+  "All pid a b X Y k1 k2 #i. I_Commit(pid, a, b, X, Y, k1, k2)@i ==>
+     (Ex #j. R_Accept(pid, b, a, X, Y, k1, k2)@j & j < i) | (Ex #r. RevSK(pid, b)@r & r < i)"
+
+lemma kci_R_agreement:
+  "All pid b a X Y k1 k2 #i. R_Confirm(pid, b, a, X, Y, k1, k2)@i ==>
+     (Ex #j. I_Commit(pid, a, b, X, Y, k1, k2)@j & j < i) | (Ex #r. RevSK(pid, a)@r & r < i)"
+#endif
+
+end

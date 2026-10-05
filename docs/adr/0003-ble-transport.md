@@ -88,3 +88,8 @@ version: pqcble-r1
 ## Migration
 
 First version, so nothing to migrate. GATT UUIDs and the `beacon`/`rx`/`tx`/`psm` contract are fixed for `pqcble-r1`. Changing them requires a new service UUID, not a change to the existing one.
+
+## Amendments
+
+2026-10-05, from *Formal model: Resume* ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
+- **Duplicate links.** A device can't tell that a link is a duplicate until it has matched a pseudonym. The losing link is therefore closed at S1, by the concurrent-Resume rule in spec §6, not before Resume (OI-17).

@@ -83,3 +83,8 @@ This is the first version. Any layout change requires a new protocol version: a 
 - QUEUED body = `gen ‖ LEB128(idx) ‖ Seal(msgno ‖ text)` (OI-6).
 - iOS beacon UUID derivation (OI-9).
 - CLOSE reason codes (OI-14).
+
+2026-10-05, from *Formal model: Resume* ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
+- `K_id` and `K_auth_I` bind I's pairing role (`"id A"`, `"auth I B"`, …), so a device never accepts its own reflected S1. No byte changes (OI-16).
+- At most one Resume per contact in flight; on collision, pairing role A's attempt wins (OI-17).
+- KCI profile: `th_s` covers `ct_I`, so S2 cannot be altered to desync the pair. No byte changes (OI-18).
