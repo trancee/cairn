@@ -22,13 +22,13 @@ A single fixed suite per protocol version: a version byte only, with **no negoti
 | PQ ratchet KEM | **ML-KEM-768** (pure) |
 | Resume ephemeral exchange | **X25519**, output used only as auxiliary `T`; the approved secret is the KDF over the ML-KEM-rooted chain key |
 | KDF / MAC / PRF / transcript hash | **HKDF-SHA-384 / HMAC-SHA-384 / SHA-384**, outputs truncated as needed |
-| AEAD | **AES-256-GCM**, 16 B tag; doorbell 8 B tag (SP 800-38D App. C limits); implicit 96-bit nonce |
+| AEAD | **AES-256-GCM**, 16 B tag; implicit 96-bit nonce. *(Amended by [ADR 0005](0005-wire-format.md): the doorbell is an 8 B truncated HMAC-SHA-384 tag, not an AEAD tag.)* |
 | Signatures | **None.** Authentication comes from pairing verification plus MAC/KEM |
 | Randomness | **OS CSPRNG** now; the validated backend's SP 800-90A DRBG later |
 | KCI-resistant profile | Static ML-KEM-768 key per contact; **opt-in per contact, off by default** |
 | Key commitment | None added |
 
-Truncations (all ≥ 64 bits, SP 800-107): pseudonym 8 B, beacon 8 B, Resume MAC 16 B, key confirmation 16 B, doorbell tag 8 B. The SAS is 6 digits, protected by commit-then-reveal.
+Truncations (all ≥ 64 bits, SP 800-107): pseudonym 8 B, beacon 8 B, Resume MAC 16 B, key confirmation 16 B, doorbell tag 8 B (HMAC, per ADR 0005). The SAS is 6 digits, protected by commit-then-reveal.
 
 ## Alternatives considered
 

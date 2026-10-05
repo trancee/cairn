@@ -41,7 +41,7 @@ A period of the post-quantum ratchet bounded by two consecutive post-quantum key
 _Avoid_: Round, generation
 
 **Beacon**:
-A short, unlinkable, rotating value by which a contact recognises a peer nearby.
+A short, rotating value by which any of a peer's contacts recognises it nearby; strangers can't link it over time.
 _Avoid_: Advertisement, ID, tag
 
 **Doorbell**:
