@@ -72,3 +72,14 @@ Byte counts and airtime come from the prototype `docs/research/prototypes/wire-l
 ## Migration
 
 This is the first version. Any layout change requires a new protocol version: a new service UUID, a new `ctx` label and a new version byte. Contacts paired under an older version must pair again.
+
+## Amendments
+
+2026-10-05, from spec consolidation ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
+- The contact card carries `day ‖ BK_day`, so P3 ≤ 135 B and P4 ≤ 119 B (OI-1).
+- The beacon formula has no `role` (OI-2).
+- New records: `0A BEACON_KEY`, `0B BEACON_ACK` and `0C EPOCH_DONE` (provisional) (OI-3, OI-4).
+- S1 sub bit 1 = MIX (provisional) (OI-4).
+- QUEUED body = `gen ‖ LEB128(idx) ‖ Seal(msgno ‖ text)` (OI-6).
+- iOS beacon UUID derivation (OI-9).
+- CLOSE reason codes (OI-14).

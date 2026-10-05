@@ -48,3 +48,9 @@ version: pqcble-r1
 ## Migration
 
 First version, so nothing to migrate. Changing the layering or the chain derivation needs a new protocol version byte. Queued messages sealed under an old version must be delivered or expired before a device upgrades.
+
+## Amendments
+
+2026-10-05, from spec consolidation ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
+- Queued messages carry the chain index; the message number moves inside the ciphertext (OI-6).
+- If the 1-byte generation wraps onto a generation that still has outstanding messages, those messages expire (OI-5).

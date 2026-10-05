@@ -1,6 +1,6 @@
 # Wire-format draft: `pqcble-r1` (rough, for reaction)
 
-Status: **accepted draft** (ticket *Wire-format byte layouts*; decisions in [ADR 0005](../adr/0005-wire-format.md)). Exact bit-level encoding is finalised in `pqcble-wire`. Byte counts come from
+Status: **superseded** by [`docs/spec/pqcble-r1.md`](../spec/pqcble-r1.md) (normative). Formerly the **accepted draft** (ticket *Wire-format byte layouts*; decisions in [ADR 0005](../adr/0005-wire-format.md)). Exact bit-level encoding is finalised in `pqcble-wire`. Byte counts come from
 [`prototypes/wire-layouts/wire_layouts_prototype.py`](prototypes/wire-layouts/wire_layouts_prototype.py),
 which reuses [`ble_airtime.py`](ble_airtime.py). Items marked **[Qn]** were grilled on 2026-10-05; all recommendations were accepted.
 

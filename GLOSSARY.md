@@ -36,6 +36,10 @@ _Avoid_: Reconnect, handshake, login
 The protected channel between two contacts, from one resume until disconnection.
 _Avoid_: Connection, link
 
+**Resume index**:
+The count of resumes completed between two contacts since pairing; each resume advances it by one.
+_Avoid_: Epoch, session number
+
 **Epoch**:
 A period of the post-quantum ratchet bounded by two consecutive post-quantum key refreshes.
 _Avoid_: Round, generation

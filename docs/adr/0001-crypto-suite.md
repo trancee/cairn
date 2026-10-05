@@ -53,3 +53,9 @@ Truncations (all ≥ 64 bits, SP 800-107): pseudonym 8 B, beacon 8 B, Resume MAC
 ## Migration
 
 This is the first suite, so there is nothing to migrate. Any change ships as a new protocol version byte, with no in-band negotiation. Swapping to a validated module happens behind the crypto-backend seam and leaves the wire unchanged.
+
+## Amendments
+
+2026-10-05, from spec consolidation ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
+- The KCI profile is chosen at pairing only; enabling it later requires re-pairing (OI-12).
+- Doorbell keys are two directional keys derived from `RK` (OI-10).

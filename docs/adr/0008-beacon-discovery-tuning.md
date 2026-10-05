@@ -73,3 +73,9 @@ The [threat model](../spec/threat-model.md) requires the beacon to be unlinkable
 ## Migration
 
 This is the first version. These parameters are policy inside the core and SDK; changing them needs no wire change and only an amendment to this ADR.
+
+## Amendments
+
+2026-10-05, from spec consolidation ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
+- The rotated beacon key travels in `BEACON_KEY` records until `BEACON_ACK` (OI-3).
+- PQ epoch cadence: ≥ 10 Resumes or ≥ 24 h since the last completed epoch (OI-11).
