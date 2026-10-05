@@ -40,21 +40,19 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 - [Rust core architecture and crypto backend seam](issues/11-rust-core-architecture.md): sans-IO `handle(event)->actions` core, compile-time CryptoBackend with 2 adapters, keystore-sealed Persist/Restore, core/sdk/app monorepo; see ADR 0004.
 - [Wire-format byte layouts](issues/12-wire-format-layouts.md): 1 B header (MORE|type|sub), version only in QR/P1, 4-message pairing, S1 57 B / S2 49 B, record-based DATA with bucket padding, shared device beacon, doorbell = 8 B HMAC tag in beacon slot; see ADR 0005.
 - [Device test lab](issues/13-device-test-lab.md): 23 Android (SDK 26–36) + 4 iPhones (iOS 15–26), no sniffer; core matrix of 8 Android + 3 iPhones.
+- [Threat model and security goals](issues/15-threat-model.md): A1–A7 in scope, compromised OS/physical/jamming/proximity out; FS + PCS claims; TOFU passive-only; QR gains 4-digit confirm; see `docs/spec/threat-model.md`.
+- [Constant-time and conformance tooling for the Rust core](issues/17-ct-conformance-tooling.md): CT tools are Linux-only (no on-device proof); ACVP + Wycheproof per PR, dudect advisory nightly, X-Wing cross-checked vs BoringSSL/CIRCL.
+- [Packaging, distribution and export compliance](issues/22-packaging-export-compliance.md): AAR/Maven + XCFramework/SPM; non-exempt encryption → EAR 5D002 via ENC/§742.15(b) open-source notice + ANSSI for France; UniFFI/Gobley MPL-2.0.
+- [Energy and airtime measurement methodology](issues/23-energy-methodology.md): HCI-snoop airtime (precise) + baseline-subtracted relative battery drain; no absolute joules possible with this lab.
+- [Formal model tooling and lemmas](issues/19-formal-model-tooling.md): Tamarin primary (+ProVerif for SAS bound, CryptoVerif optional); explicit KEM binding; lemma lists for Resume/ratchet/SAS.
 - [Android↔iOS background discovery and transport feasibility](issues/04-android-ios-background-ble.md): fixed service UUID plus GATT-read beacon; GATT-first transport; L2CAP optional.
 - [Formal verification gate](issues/07-formal-verification-gate.md): symbolic model gates Resume, PQ ratchet mixing and SAS pairing only.
 - [Reference app scope](issues/08-reference-app-scope.md): minimal 1:1 chat with pairing flows plus a bytes/airtime debug panel.
 
 ## Not yet specified
 
-- **Threat model & security goals document** — exact adversary model (active MITM at pairing, device seizure, tracking adversary), which properties each mode claims (FS, PCS, KCI, unlinkability); likely graduates once the crypto suite is fixed.
-- **Key storage & state persistence** — Android Keystore / iOS Keychain + Secure Enclave usage, backup exclusion, monotonic-counter proof, behavior on app reinstall/restore (ADR 0002 fixes no-backup + re-pair); local message history and sealed-queue storage at rest.
-- **Constant-time & conformance CI** — dudect / valgrind taint / Binsec, ACVP/CAVP vectors, Wycheproof, fuzzing of parsers; depends on chosen backend.
-- **Formal model scope details** — which tool, which lemmas; depends on the formal-verification gate decision.
-- **Beacon & discovery tuning** — window length, truncation size, rotation vs iOS/Android advertising limits; depends on background-discovery research.
-- **SAS / QR pairing UX** — exact screens, emoji list, error/abort flows; depends on reference-app scope.
-- **Packaging & distribution** — XCFramework/AAR/Maven, App Store export compliance (`ITSAppUsesNonExemptEncryption`, BIS), privacy manifest.
-- **Energy & airtime validation methodology** — how to measure on real devices against the model.
-- **External cryptographic review** — whether/when, by whom.
+- **Implementation slicing**: how the build is cut into vertical slices (core crates → FFI → BLE adapters → app), and in which order. This becomes specifiable once the threat model and key storage are settled.
+- **Spec consolidation**: merging ADRs 0001–0005 and the wire draft into one `docs/spec/pqcble-r1.md`, plus test vectors. This depends on the formal-model results.
 
 ## Out of scope
 

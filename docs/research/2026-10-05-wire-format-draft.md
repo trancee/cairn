@@ -53,6 +53,7 @@ Pairing role A initiates and B responds. KEM: X-Wing.
 - **QR mode.**
   - B checks `H(ek_A)` against the QR, which authenticates A.
   - B proves it scanned the QR with `confirm_B = MAC(K, "qr" ‖ token ‖ th)`, which authenticates B.
+  - Both phones also show a **4-digit confirmation code**, `Trunc_4digits(H("qrc" ‖ th ‖ nB))`, and A taps confirm. This defeats an attacker who photographed the QR ([threat model](../spec/threat-model.md)). It needs no extra bytes on the wire.
 - **TOFU.** Same exchange with no comparison. The contact stays marked *unverified*. Keeping `th` lets the pair show the SAS later for an in-person upgrade.
 - **Contact card** (AEAD-protected): display name (≤ 48 B UTF-8), capability bits (L2CAP CoC, KCI), and the optional static ML-KEM-768 `ek` (+1184 B) when the KCI profile is on.
 

@@ -32,6 +32,7 @@ Byte counts and airtime come from the prototype `docs/research/prototypes/wire-l
   - Four messages: P1 `ver ‖ mode ‖ H(nA) ‖ X-Wing ek` (1251 B); P2 `ct ‖ nB` (1137 B); P3 `nA ‖ AEAD(confirm ‖ card)`; P4 `AEAD(confirm ‖ card)`.
   - The SAS comes from the transcript and `nB` through commit-then-reveal.
   - The QR payload is `ver ‖ H(ek_A) ‖ token` (49 B).
+  - In QR mode, A also confirms a 4-digit code derived from the transcript, which both phones show. It is local only, so there is no wire change (see the [threat model](../spec/threat-model.md)).
   - TOFU keeps the transcript so it can be verified later.
 - **Resume.** S1 57 B and S2 49 B, as in findings §4.2. The KCI variants add one ML-KEM-768 ciphertext each way.
   - The epoch and the retry counter are never sent.
