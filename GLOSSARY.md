@@ -20,6 +20,10 @@ _Avoid_: Introduction, enrollment, handshake
 The operating system's own link-layer key exchange (Secure Simple Pairing / LE Secure Connections) and the resulting **bond**. Out of scope for `pqcble`; always say "Bluetooth pairing", never just "pairing", when this is meant.
 _Avoid_: Pairing (unqualified), bonding when meaning `pqcble` pairing
 
+**Pairing role**:
+Which side of a contact relationship a device is (A or B), fixed once at pairing and used wherever the two sides must act asymmetrically.
+_Avoid_: Initiator, master, primary
+
 **Verification**:
 Confirming during pairing that no one sits between the two peers, by QR scan or short authentication string. A pairing without it is **unverified**.
 _Avoid_: Authentication, trust

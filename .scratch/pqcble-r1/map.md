@@ -36,6 +36,7 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 - [Kompact suitability for pqcble payload encoding](issues/14-kompact-payload-encoding.md): not adopted; no savings on crypto-dominated frames; chat envelope uses a Rust presence-bitmap layout.
 - [Crypto suite and parameter set under FIPS](issues/05-crypto-suite-under-fips.md): X-Wing / ML-KEM-768 / X25519-as-T / SHA-384 / AES-256-GCM, no signatures, no negotiation; see ADR 0001.
 - [Store-and-forward sync semantics](issues/09-store-and-forward-semantics.md): seal at send with per-session-reseeded message chains, two layers for queued only, acks/resend/dedup, 500 msgs/7 days; see ADR 0002.
+- [Data transport and fragmentation](issues/10-data-transport-and-framing.md): symmetric discovery, GATT beacon/rx/tx/psm, MORE-bit fragmentation, 4096/2560 B limits, flagged L2CAP CoC upgrade; see ADR 0003.
 - [Android↔iOS background discovery and transport feasibility](issues/04-android-ios-background-ble.md): fixed service UUID plus GATT-read beacon; GATT-first transport; L2CAP optional.
 - [Formal verification gate](issues/07-formal-verification-gate.md): symbolic model gates Resume, PQ ratchet mixing and SAS pairing only.
 - [Reference app scope](issues/08-reference-app-scope.md): minimal 1:1 chat with pairing flows plus a bytes/airtime debug panel.
