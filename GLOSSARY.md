@@ -44,6 +44,18 @@ _Avoid_: Advertisement, ID, tag
 A tiny connectionless signal telling a contact "I have something for you".
 _Avoid_: Ping, notification, wake-up
 
+**Queued message**:
+A chat message sealed at send time that waits for the next session with its contact to be delivered.
+_Avoid_: Offline message, pending message, outbox item
+
+**Delivery**:
+The moment a contact's device acknowledges receiving a message. A message that expires first is **not delivered**.
+_Avoid_: Sent, received
+
+**Read receipt**:
+A notice that the contact has displayed a delivered message.
+_Avoid_: Seen, read ack
+
 **KCI profile**:
 An opt-in per-contact mode that keeps a peer from being impersonated to a device whose long-term state was stolen.
 _Avoid_: Strict mode, paranoid mode

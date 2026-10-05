@@ -20,7 +20,7 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
   - FIPS: approved algorithms now; hybrid with X25519 allowed via an SP 800-56C/227-conformant combiner (ML-KEM is the approved component); CMVP-validated module is the later target behind a crypto backend seam. AEAD therefore AES-256-GCM.
 - Vocabulary: [`GLOSSARY.md`](../../GLOSSARY.md); decisions: [`docs/adr/`](../../docs/adr/).
   - Background operation required on both Android and iOS.
-  - Store-and-forward: encrypt at send time with a Signal-style skipped-message-key window (details in *Store-and-forward sync semantics*).
+  - Store-and-forward: see ADR 0002.
 - Skills every session should consult: `grilling`, `domain-modeling`; by topic: `ble-protocol-stack`, `ble-throughput`, `android-ble`, `android-ble-gatt-server`, `android-bluetooth-sockets`, `corebluetooth`, `kotlin-multiplatform`, `compose-multiplatform`, `tdd`, `security-audit`, `wycheproof`, `nist-cavp`.
 - Standing rules: established primitives only (no novel crypto); no commits/pushes without explicit approval; research findings go to `docs/research/` and are linked from the ticket (no throwaway branches — commits need approval).
 - Refer to tickets by name.
@@ -35,6 +35,7 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 - [Kotlin Multiplatform + Rust core + BLE toolchain viability](issues/03-kmp-rust-ble-toolchain.md): Gobley bindings; platform-specific BLE code; iOS floor is ≥ 15.
 - [Kompact suitability for pqcble payload encoding](issues/14-kompact-payload-encoding.md): not adopted; no savings on crypto-dominated frames; chat envelope uses a Rust presence-bitmap layout.
 - [Crypto suite and parameter set under FIPS](issues/05-crypto-suite-under-fips.md): X-Wing / ML-KEM-768 / X25519-as-T / SHA-384 / AES-256-GCM, no signatures, no negotiation; see ADR 0001.
+- [Store-and-forward sync semantics](issues/09-store-and-forward-semantics.md): seal at send with per-session-reseeded message chains, two layers for queued only, acks/resend/dedup, 500 msgs/7 days; see ADR 0002.
 - [Android↔iOS background discovery and transport feasibility](issues/04-android-ios-background-ble.md): fixed service UUID plus GATT-read beacon; GATT-first transport; L2CAP optional.
 - [Formal verification gate](issues/07-formal-verification-gate.md): symbolic model gates Resume, PQ ratchet mixing and SAS pairing only.
 - [Reference app scope](issues/08-reference-app-scope.md): minimal 1:1 chat with pairing flows plus a bytes/airtime debug panel.
@@ -42,7 +43,7 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 ## Not yet specified
 
 - **Threat model & security goals document** — exact adversary model (active MITM at pairing, device seizure, tracking adversary), which properties each mode claims (FS, PCS, KCI, unlinkability); likely graduates once the crypto suite is fixed.
-- **Key storage & state persistence** — Android Keystore / iOS Keychain + Secure Enclave usage, backup exclusion, monotonic-counter proof, behavior on app reinstall/restore.
+- **Key storage & state persistence** — Android Keystore / iOS Keychain + Secure Enclave usage, backup exclusion, monotonic-counter proof, behavior on app reinstall/restore (ADR 0002 fixes no-backup + re-pair); local message history and sealed-queue storage at rest.
 - **Constant-time & conformance CI** — dudect / valgrind taint / Binsec, ACVP/CAVP vectors, Wycheproof, fuzzing of parsers; depends on chosen backend.
 - **Formal model scope details** — which tool, which lemmas; depends on the formal-verification gate decision.
 - **Beacon & discovery tuning** — window length, truncation size, rotation vs iOS/Android advertising limits; depends on background-discovery research.
