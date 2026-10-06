@@ -1,0 +1,467 @@
+theory PqcbleRatchet
+begin
+
+/*
+ * pqcble-r1 sections 6/9: quantum-view Resume composed with the alternating PQ ratchet.
+ * X25519 is deliberately public here. Pairing provides a secret CK_0; pairID is public.
+ * ML-KEM is ideal, with explicit decapsulation and implicit rejection. HKDF/MAC are free functions.
+ *
+ * Epochs use zero/succ in the model: this covers arbitrary finite prefixes before u32 exhaustion,
+ * not the arithmetic/encoding boundary. Two abstract contiguous pieces cover each EK/CT object.
+ * Pieces represent complementary byte ranges. Each reveals the full public EK/CT object to the
+ * attacker (a conservative disclosure abstraction), but acceptance still requires both pieces.
+ * Concrete offsets, lengths and persistence need implementation tests. Prefix facts are storage.
+ * Progress follows storage and second pieces require authenticated progress. Full receipts require
+ * a sent tail. Stored objects, receipts and DONE can be retransmitted under a new session.
+ * Exact duplicate pieces are harmless; guards select the latest stored progress.
+ *
+ * Persistent CK candidates carry epoch position and next generator. Index records the locally
+ * committed position. A timed-out responder retains its old Index and both candidate positions.
+ * Recovery on the new candidate does not mix the previous epoch twice.
+ *
+ * Restrictions implement the specified atomic current-state, immutable-prefix, single-epoch and
+ * mandatory-MIX guards. They are implementation obligations, not cryptographic assumptions.
+ * The attacker may reveal every available CK, in-flight DK and pending epoch secret. Stolen values
+ * remain known forever. Healing requires an honestly generated EK and honest encapsulation whose
+ * fresh epoch secrets are not revealed; continued active replacement can prevent recovery.
+ */
+
+builtins: hashing, symmetric-encryption
+functions: kdf/3, ext/2, mac/2, kem/2, kdec/2, pk/1, succ/1, roleA/0, roleB/0
+equations: kdec(kem(ss, pk(dk)), dk) = ss
+
+restriction distinct: "All a b #i. Neq(a,b)@i ==> not (a=b)"
+restriction current_ck: "All pid r ck #i #j. Cur(pid,r,ck)@i & Retire(pid,r,ck)@j ==> #i < #j | #i = #j"
+restriction retire_once: "All pid r ck #i #j. Retire(pid,r,ck)@i & Retire(pid,r,ck)@j ==> #i = #j"
+restriction current_epoch: "All pid r e n #i #j. EUse(pid,r,e)@i & Advance(pid,r,e,n)@j ==> #i < #j | #i = #j"
+restriction advance_once: "All pid r e n m #i #j. Advance(pid,r,e,n)@i & Advance(pid,r,e,m)@j ==> #i = #j"
+restriction once: "All pid r e kind #i #j. Once(pid,r,e,kind)@i & Once(pid,r,e,kind)@j ==> #i = #j"
+restriction ek_prefix: "All pid r e x y #i #j. EKPrefix(pid,r,e,x)@i & EKPrefix(pid,r,e,y)@j ==> x=y"
+restriction ct_prefix: "All pid r e x y #i #j. CTPrefix(pid,r,e,x)@i & CTPrefix(pid,r,e,y)@j ==> x=y"
+restriction latest_progress:
+  "All pid r e kind #i #j. ProgressSent(pid,r,e,kind,'half')@i
+     & Durable(pid,r,e,kind,'full')@j ==> #i < #j | #i = #j"
+restriction completed_send:
+  "All pid r e kind pos #i #j. Sent(pid,r,e,kind,pos)@i
+     & Ack(pid,r,e,kind,'full')@j ==> #i < #j | #i = #j"
+restriction prefix_send:
+  "All pid r e kind #i #j. Sent(pid,r,e,kind,'half')@i
+     & Ack(pid,r,e,kind,'half')@j ==> #i < #j | #i = #j"
+#ifdef CLASSIC_FALLBACK
+/* Mutation: the mandatory-MIX guard is removed. */
+#else
+restriction mandatory_mix:
+  "All pid r e #i #j. ClassicStart(pid,r,e)@i & Ready(pid,r,e)@j ==>
+     #i < #j | #i = #j"
+#endif
+
+rule Pair:
+  [ Fr(~pid), Fr(~ck) ]
+--[ Init(~pid,~ck), CK(~pid,~ck), EpochPosition(~pid,'zero'), Neq($A,$B) ]->
+  [ !Party(~pid,roleA,roleB), !Party(~pid,roleB,roleA),
+    !St(~pid,roleA,~ck,'zero',roleA), !St(~pid,roleB,~ck,'zero',roleA),
+    !Index(~pid,roleA,'zero',roleA), !Index(~pid,roleB,'zero',roleA),
+    !Ordinal(~pid,'zero'), Out(~pid) ]
+
+rule Reveal_CK:
+  [ !St(pid,r,ck,e,g)[-,no_precomp] ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), RevCK(pid), RevCKv(pid,ck) ]-> [ Out(ck) ]
+
+rule Reveal_DK:
+  [ !GenKey(pid,r,e,dk)[-,no_precomp] ]
+--[ EUse(pid,r,e), RevDK(pid,pk(dk)) ]-> [ Out(dk) ]
+
+rule Reveal_SS:
+  [ !Have(pid,r,e,pq,ss,ek,ct)[-,no_precomp] ]
+--[ EUse(pid,r,e), RevSS(pid,ss) ]-> [ Out(ss) ]
+
+/* Resume: the epoch is local metadata, not an added S1 field. */
+rule I_S1_classic:
+  let m = <'S1','0',kdf(ck,<'id',r>,pid),~x>
+  in
+  [ !Party(pid,r,p), !St(pid,r,ck,e,g), Fr(~x) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), ClassicStart(pid,r,e), I_Start(pid,r,~x,'none') ]->
+  [ IWait(pid,r,p,ck,e,g,e,g,~x,'0','none','none','none','none'),
+    Out(<m,mac(kdf(ck,<'authI',r>,pid),m)>) ]
+
+rule I_S1_mix:
+  let m = <'S1','1',kdf(ck,<'id',r>,pid),~x>
+  in
+  [ !Party(pid,r,p), !Party(pid,g,ng), !St(pid,r,ck,e,g), !ReadyEpoch(pid,r,e,pq),
+    !Have(pid,r,e,pq,ss,ek,ct), Fr(~x) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), I_Start(pid,r,~x,pq), MixStart(pid,r,e,pq) ]->
+  [ IWait(pid,r,p,ck,e,g,succ(e),ng,~x,'1',pq,ss,ek,ct),
+    Out(<m,mac(kdf(ck,<'authI',r>,pid),m)>) ]
+
+rule R_S2_classic:
+  let y = ~y
+      m = <'S1','0',kdf(ck,<'id',p>,pid),x>
+      th = h(<m,y>)
+      prk = ext(ck,<x,y,'none'>)
+      ki = kdf(prk,'skI',<pid,th>)
+      kr = kdf(prk,'skR',<pid,th>)
+      ck1 = kdf(prk,'ratchet',<pid,th>)
+  in
+  [ !Party(pid,r,p), !St(pid,r,ck,e,g), In(<m,mac(kdf(ck,<'authI',p>,pid),m)>), Fr(~y) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), R_Accept(pid,r,p,x,'none',ki,kr),
+    DerivedCK(pid,ck,ck1), CK(pid,ck1) ]->
+  [ RPending(pid,r,p,ck,ck1,e,g,'none',ki,kr),
+    Out(<y,mac(kdf(ck,'authR',pid),<'S2',th>)>) ]
+
+rule R_S2_mix:
+  let y = ~y
+      m = <'S1','1',kdf(ck,<'id',p>,pid),x>
+      th = h(<m,y>)
+      prk = ext(ck,<x,y,pq>)
+      ki = kdf(prk,'skI',<pid,th>)
+      kr = kdf(prk,'skR',<pid,th>)
+      ck1 = kdf(prk,'ratchet',<pid,th>)
+  in
+  [ !Party(pid,r,p), !Party(pid,g,ng), !St(pid,r,ck,e,g), !Have(pid,r,e,pq,ss,ek,ct),
+    In(<m,mac(kdf(ck,<'authI',p>,pid),m)>), Fr(~y) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), R_Accept(pid,r,p,x,pq,ki,kr),
+    DerivedCK(pid,ck,ck1), MixedKey(pid,e,ss,ek,ct,ck1), CK(pid,ck1),
+    EpochPosition(pid,succ(e)) ]->
+  [ RPending(pid,r,p,ck,ck1,succ(e),ng,pq,ki,kr), !Ordinal(pid,succ(e)),
+    Out(<y,mac(kdf(ck,'authR',pid),<'S2',th>)>) ]
+
+rule I_S2_classic:
+  let m = <'S1','0',kdf(ck,<'id',r>,pid),x>
+      th = h(<m,y>)
+      prk = ext(ck,<x,y,'none'>)
+      ki = kdf(prk,'skI',<pid,th>)
+      kr = kdf(prk,'skR',<pid,th>)
+      ck1 = kdf(prk,'ratchet',<pid,th>)
+  in
+  [ IWait(pid,r,p,ck,e,g,e,g,x,'0','none','none','none','none')[no_precomp], In(<y,mac(kdf(ck,'authR',pid),<'S2',th>)>) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), Retire(pid,r,ck),
+    I_Commit(pid,r,p,x,'none',ki,kr), I_Advance(pid,r,ck,ck1,e,e),
+    DerivedCK(pid,ck,ck1), CK(pid,ck1) ]->
+  [ !St(pid,r,ck1,e,g), !Session(pid,r,ck1,e,g,ki,kr), Out(senc('data',ki)) ]
+
+rule I_S2_mix:
+  let pq = <ss,h(ek),h(ct)>
+      m = <'S1','1',kdf(ck,<'id',r>,pid),x>
+      th = h(<m,y>)
+      prk = ext(ck,<x,y,pq>)
+      ki = kdf(prk,'skI',<pid,th>)
+      kr = kdf(prk,'skR',<pid,th>)
+      ck1 = kdf(prk,'ratchet',<pid,th>)
+  in
+  [ IWait(pid,r,p,ck,e,g,succ(e),ng,x,'1',pq,ss,ek,ct)[no_precomp],
+    In(<y,mac(kdf(ck,'authR',pid),<'S2',th>)>) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), Retire(pid,r,ck), Advance(pid,r,e,succ(e)),
+    I_Commit(pid,r,p,x,pq,ki,kr), I_Advance(pid,r,ck,ck1,e,succ(e)),
+    DerivedCK(pid,ck,ck1), MixedKey(pid,e,ss,ek,ct,ck1), CK(pid,ck1),
+    EpochPosition(pid,succ(e)) ]->
+  [ !St(pid,r,ck1,succ(e),ng), !Index(pid,r,succ(e),ng), !Ordinal(pid,succ(e)),
+    !Session(pid,r,ck1,succ(e),ng,ki,kr), Out(senc('data',ki)) ]
+
+rule R_Data_same_epoch:
+  [ RPending(pid,r,p,ck,ck1,e,g,pq,ki,kr)[no_precomp], !Index(pid,r,e,g)[no_precomp], In(senc('data',ki)) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), Retire(pid,r,ck),
+    R_Confirm(pid,r,p,pq,ki,kr), ConfirmedCK(pid,r,ck1,e) ]->
+  [ !St(pid,r,ck1,e,g), !Session(pid,r,ck1,e,g,kr,ki) ]
+
+/* Covers both the first mixed DATA and a recovery Resume on its already-mixed candidate. */
+rule R_Data_advance_epoch:
+  [ RPending(pid,r,p,ck,ck1,succ(e),ng,pq,ki,kr)[no_precomp], !Index(pid,r,e,g)[no_precomp],
+    !Party(pid,g,ng), In(senc('data',ki)) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), Retire(pid,r,ck), Advance(pid,r,e,succ(e)),
+    R_Confirm(pid,r,p,pq,ki,kr), ConfirmedCK(pid,r,ck1,succ(e)) ]->
+  [ !St(pid,r,ck1,succ(e),ng), !Index(pid,r,succ(e),ng),
+    !Session(pid,r,ck1,succ(e),ng,kr,ki) ]
+
+rule R_Timeout:
+  [ RPending(pid,r,p,ck,ck1,e,g,pq,ki,kr)[no_precomp] ]
+--[ Cur(pid,r,ck), Timeout(pid,r,ck1,e) ]-> [ !St(pid,r,ck1,e,g) ]
+
+/* Each object is split into two complementary abstract contiguous byte ranges. */
+rule Generate_EK:
+  [ !Index(pid,r,e,r)[-,no_precomp], !Ordinal(pid,e),
+    !Session(pid,r,ck,e,r,ks,kr)[-,no_precomp], Fr(~dk) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), Once(pid,r,e,'gen'), FreshDK(pid,~dk), EpGen(pid,r,e,pk(~dk)),
+    LocalComplete(pid,r,e,'EK'), Sent(pid,r,e,'EK','half') ]->
+  [ !GenKey(pid,r,e,~dk), Out(senc(<'EK',e,'zero',pk(~dk)>,ks)) ]
+
+rule Send_EK_tail:
+  [ !GenKey(pid,r,e,dk), !Ordinal(pid,e), !Progress(pid,r,e,'EK','half'),
+    !Session(pid,r,ck,e,g,ks,kr) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), Sent(pid,r,e,'EK','full') ]->
+  [ !SentTail(pid,r,e,'EK'), Out(senc(<'EK',e,'half',pk(dk)>,ks)) ]
+
+rule Receive_EK_prefix:
+  [ !Party(pid,r,p), !Index(pid,r,e,p), !Ordinal(pid,e), !Session(pid,r,ck,e,p,ks,kr),
+    In(senc(<'EK',e,'zero',ek>,kr)) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), EKPrefix(pid,r,e,ek), Durable(pid,r,e,'EK','half'),
+    ProgressSent(pid,r,e,'EK','half') ]->
+  [ !EK0(pid,r,e,ek), Out(senc(<'PROGRESS',e,'EK','half'>,ks)) ]
+
+rule Receive_EK_tail:
+  [ !EK0(pid,r,e,ek), !Ordinal(pid,e), !Session(pid,r,ck,e,g,ks,kr), In(senc(<'EK',e,'half',ek>,kr)) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), ReceivedFull(pid,r,e,'EK'),
+    LocalComplete(pid,r,e,'EK'), Durable(pid,r,e,'EK','full'),
+    ProgressSent(pid,r,e,'EK','full') ]->
+  [ !CompleteEK(pid,r,e,ek), Out(senc(<'PROGRESS',e,'EK','full'>,ks)) ]
+
+#ifdef NO_PREFIX_GUARD
+rule Receive_EK_tail_unguarded:
+  [ !Ordinal(pid,e), !Session(pid,r,ck,e,g,ks,kr), In(senc(<'EK',e,'half',ek>,kr)) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), ReceivedFull(pid,r,e,'EK'),
+    LocalComplete(pid,r,e,'EK'), Durable(pid,r,e,'EK','full'),
+    ProgressSent(pid,r,e,'EK','full') ]->
+  [ !CompleteEK(pid,r,e,ek), Out(senc(<'PROGRESS',e,'EK','full'>,ks)) ]
+#endif
+
+rule Encapsulate:
+  let ct = kem(~ss,ek)
+      pq = <~ss,h(ek),h(ct)>
+  in
+  [ !CompleteEK(pid,r,e,ek)[-,no_precomp], !Ordinal(pid,e),
+    !Session(pid,r,ck,e,g,ks,kr)[-,no_precomp], Fr(~ss) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), Once(pid,r,e,'enc'), FreshSS(pid,~ss,ek), EpEnc(pid,r,e,ek,ct,~ss),
+    EpochHave(pid,r,e,pq), LocalComplete(pid,r,e,'CT'), Sent(pid,r,e,'CT','half') ]->
+  [ !Have(pid,r,e,pq,~ss,ek,ct), !EncWait(pid,r,e,ct,pq),
+    Out(senc(<'CT',e,'zero',ct>,ks)) ]
+
+rule Send_CT_tail:
+  [ !EncWait(pid,r,e,ct,pq), !Ordinal(pid,e), !Progress(pid,r,e,'CT','half'),
+    !Session(pid,r,ck,e,g,ks,kr) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), Sent(pid,r,e,'CT','full') ]->
+  [ !SentTail(pid,r,e,'CT'), Out(senc(<'CT',e,'half',ct>,ks)) ]
+
+rule Receive_CT_prefix:
+  [ !GenKey(pid,r,e,dk), !Ordinal(pid,e), !Session(pid,r,ck,e,g,ks,kr), In(senc(<'CT',e,'zero',ct>,kr)) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), CTPrefix(pid,r,e,ct), Durable(pid,r,e,'CT','half'),
+    ProgressSent(pid,r,e,'CT','half') ]->
+  [ !CT0(pid,r,e,ct), Out(senc(<'PROGRESS',e,'CT','half'>,ks)) ]
+
+rule Receive_CT_tail:
+  let ss = kdec(ct,dk)
+      pq = <ss,h(pk(dk)),h(ct)>
+  in
+  [ !GenKey(pid,r,e,dk), !Ordinal(pid,e), !CT0(pid,r,e,ct), !Session(pid,r,ck,e,g,ks,kr),
+    In(senc(<'CT',e,'half',ct>,kr)) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), ReceivedFull(pid,r,e,'CT'), LocalComplete(pid,r,e,'CT'),
+    Durable(pid,r,e,'CT','full'), EpDec(pid,r,e,pk(dk),ct,ss),
+    EpochHave(pid,r,e,pq), Ready(pid,r,e), ProgressSent(pid,r,e,'CT','full') ]->
+  [ !Have(pid,r,e,pq,ss,pk(dk),ct), !ReadyEpoch(pid,r,e,pq), !CompleteCT(pid,r,e,ct),
+    Out(senc(<'PROGRESS',e,'CT','full'>,ks)), Out(senc(<'DONE',e>,ks)) ]
+
+#ifdef NO_PREFIX_GUARD
+rule Receive_CT_tail_unguarded:
+  let ss = kdec(ct,dk)
+      pq = <ss,h(pk(dk)),h(ct)>
+  in
+  [ !GenKey(pid,r,e,dk), !Ordinal(pid,e), !Session(pid,r,ck,e,g,ks,kr),
+    In(senc(<'CT',e,'half',ct>,kr)) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), ReceivedFull(pid,r,e,'CT'), LocalComplete(pid,r,e,'CT'),
+    Durable(pid,r,e,'CT','full'), EpDec(pid,r,e,pk(dk),ct,ss),
+    EpochHave(pid,r,e,pq), Ready(pid,r,e), ProgressSent(pid,r,e,'CT','full') ]->
+  [ !Have(pid,r,e,pq,ss,pk(dk),ct), !ReadyEpoch(pid,r,e,pq), !CompleteCT(pid,r,e,ct),
+    Out(senc(<'PROGRESS',e,'CT','full'>,ks)), Out(senc(<'DONE',e>,ks)) ]
+#endif
+
+rule Receive_DONE:
+  [ !EncWait(pid,r,e,ct,pq), !Ordinal(pid,e), !Session(pid,r,ck,e,g,ks,kr), In(senc(<'DONE',e>,kr)) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), Ready(pid,r,e) ]-> [ !ReadyEpoch(pid,r,e,pq) ]
+
+rule Receive_progress_EK:
+  [ !GenKey(pid,r,e,dk), !Ordinal(pid,e), !Session(pid,r,ck,e,g,ks,kr),
+    In(senc(<'PROGRESS',e,'EK','half'>,kr)) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), Ack(pid,r,e,'EK','half') ]-> [ !Progress(pid,r,e,'EK','half') ]
+
+rule Receive_progress_CT:
+  [ !EncWait(pid,r,e,ct,pq), !Ordinal(pid,e), !Session(pid,r,ck,e,g,ks,kr),
+    In(senc(<'PROGRESS',e,'CT','half'>,kr)) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), Ack(pid,r,e,'CT','half') ]-> [ !Progress(pid,r,e,'CT','half') ]
+
+rule Receive_progress_full:
+  [ !SentTail(pid,r,e,kind), !Session(pid,r,ck,e,g,ks,kr),
+    In(senc(<'PROGRESS',e,kind,'full'>,kr)) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), Ack(pid,r,e,kind,'full') ]->
+  [ !Progress(pid,r,e,kind,'full') ]
+
+rule Resend_EK_prefix:
+  [ !GenKey(pid,r,e,dk), !Session(pid,r,ck,e,g,ks,kr) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), Sent(pid,r,e,'EK','half') ]->
+  [ Out(senc(<'EK',e,'zero',pk(dk)>,ks)) ]
+
+rule Resend_CT_prefix:
+  [ !EncWait(pid,r,e,ct,pq), !Session(pid,r,ck,e,g,ks,kr) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), Sent(pid,r,e,'CT','half') ]->
+  [ Out(senc(<'CT',e,'zero',ct>,ks)) ]
+
+rule Resend_EK_progress_half:
+  [ !EK0(pid,r,e,ek), !Session(pid,r,ck,e,g,ks,kr) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), ProgressSent(pid,r,e,'EK','half') ]->
+  [ Out(senc(<'PROGRESS',e,'EK','half'>,ks)) ]
+
+rule Resend_CT_progress_half:
+  [ !CT0(pid,r,e,ct), !Session(pid,r,ck,e,g,ks,kr) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), ProgressSent(pid,r,e,'CT','half') ]->
+  [ Out(senc(<'PROGRESS',e,'CT','half'>,ks)) ]
+
+rule Resend_EK_progress_full:
+  [ !CompleteEK(pid,r,e,ek), !Session(pid,r,ck,e,g,ks,kr) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), ProgressSent(pid,r,e,'EK','full') ]->
+  [ Out(senc(<'PROGRESS',e,'EK','full'>,ks)) ]
+
+rule Resend_CT_progress_full:
+  [ !CompleteCT(pid,r,e,ct), !Session(pid,r,ck,e,g,ks,kr) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), ProgressSent(pid,r,e,'CT','full') ]->
+  [ Out(senc(<'PROGRESS',e,'CT','full'>,ks)), Out(senc(<'DONE',e>,ks)) ]
+
+rule Receive_EK_duplicate_prefix_complete:
+  [ !CompleteEK(pid,r,e,ek), !Session(pid,r,ck,e,g,ks,kr),
+    In(senc(<'EK',e,'zero',ek>,kr)) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), ProgressSent(pid,r,e,'EK','full') ]->
+  [ Out(senc(<'PROGRESS',e,'EK','full'>,ks)) ]
+
+rule Receive_CT_duplicate_prefix_complete:
+  [ !CompleteCT(pid,r,e,ct), !Session(pid,r,ck,e,g,ks,kr),
+    In(senc(<'CT',e,'zero',ct>,kr)) ]
+--[ Cur(pid,r,ck), EUse(pid,r,e), ProgressSent(pid,r,e,'CT','full') ]->
+  [ Out(senc(<'PROGRESS',e,'CT','full'>,ks)), Out(senc(<'DONE',e>,ks)) ]
+
+/* Secrecy helpers use provenance instead of recursively expanding all earlier sessions. */
+lemma epoch_position_shape [reuse]:
+  "All pid e #i. EpochPosition(pid,e)@i ==> e='zero' | (Ex p. e=succ(p))"
+
+lemma fresh_dk_origin [reuse, use_induction]:
+  "All pid dk #i #j. FreshDK(pid,dk)@i & KU(dk)@j ==>
+     Ex #d. RevDK(pid,pk(dk))@d & #d < #j"
+
+lemma fresh_ss_origin [reuse, use_induction]:
+  "All pid ss ek #i #j. FreshSS(pid,ss,ek)@i & KU(ss)@j ==>
+     (Ex #d. RevSS(pid,ss)@d & #d < #j)
+     | (Ex dk #k. KU(dk)@k & ek=pk(dk) & #k < #j)"
+
+lemma monotonic_epochs [hide_lemma=epoch_position_shape, hide_lemma=fresh_dk_origin, hide_lemma=fresh_ss_origin]:
+  "All pid r e n #i. Advance(pid,r,e,n)@i ==> n = succ(e)"
+
+lemma derived_ck_origin [reuse]:
+  "All pid old new #i #j. DerivedCK(pid,old,new)@i & KU(new)@j ==>
+     (Ex #k. KU(old)@k & #k < #j) | (Ex #r. RevCK(pid)@r & #r < #j)"
+
+lemma derived_ck_predecessor [reuse, heuristic=C]:
+  "All pid old new #i. DerivedCK(pid,old,new)@i ==> Ex #k. CK(pid,old)@k & #k < #i"
+
+lemma ck_secret [reuse, use_induction]:
+  "All pid ck #i #j. CK(pid,ck)@i & KU(ck)@j ==> Ex #r. RevCK(pid)@r & #r < #j"
+
+lemma cur_secret [reuse]:
+  "All pid r ck #i #j. Cur(pid,r,ck)@i & KU(ck)@j ==> Ex #d. RevCK(pid)@d & #d < #j"
+
+lemma epoch_secret [reuse, hide_lemma=derived_ck_origin, hide_lemma=derived_ck_predecessor, hide_lemma=ck_secret, hide_lemma=cur_secret]:
+  "All pid r g e ek ct ss #i #j #k. EpEnc(pid,r,e,ek,ct,ss)@i
+     & EpGen(pid,g,e,ek)@j & KU(ss)@k ==>
+     (Ex #d. RevDK(pid,ek)@d) | (Ex #d. RevSS(pid,ss)@d)"
+
+lemma binding [hide_lemma=derived_ck_origin, hide_lemma=derived_ck_predecessor, hide_lemma=ck_secret, hide_lemma=cur_secret, hide_lemma=epoch_secret]:
+  "All pid e f ss ts ek pk ct dt ck #i #j.
+     MixedKey(pid,e,ss,ek,ct,ck)@i & MixedKey(pid,f,ts,pk,dt,ck)@j ==>
+     ss=ts & ek=pk & ct=dt"
+
+lemma no_rollback [hide_lemma=epoch_position_shape, hide_lemma=fresh_dk_origin, hide_lemma=fresh_ss_origin,
+    hide_lemma=derived_ck_origin, hide_lemma=derived_ck_predecessor, hide_lemma=ck_secret,
+    hide_lemma=cur_secret, hide_lemma=epoch_secret, hide_lemma=mixed_key_origin]:
+  "All pid r e n #i #j. Advance(pid,r,e,n)@i & EUse(pid,r,e)@j ==> #j < #i | #j = #i"
+
+lemma generator_has_position [hide_lemma=derived_ck_origin, hide_lemma=derived_ck_predecessor, hide_lemma=ck_secret, hide_lemma=cur_secret, hide_lemma=epoch_secret]:
+  "All pid r e ek #i. EpGen(pid,r,e,ek)@i ==>
+     (r=roleA & e='zero') | (Ex p #j. Advance(pid,r,p,e)@j & #j < #i)"
+
+lemma generator_parity:
+  "All pid r p e ek pk #i #j. EpGen(pid,r,e,ek)@i
+     & EpGen(pid,p,succ(e),pk)@j ==> not (r=p)"
+
+lemma no_partial_mix [hide_lemma=epoch_position_shape, hide_lemma=fresh_dk_origin, hide_lemma=fresh_ss_origin,
+    hide_lemma=derived_ck_origin, hide_lemma=derived_ck_predecessor, hide_lemma=ck_secret,
+    hide_lemma=cur_secret, hide_lemma=epoch_secret, hide_lemma=mixed_key_origin]:
+  "All pid r e ss ek ct #i. MixStart(pid,r,e,<ss,h(ek),h(ct)>)@i ==>
+     (Ex #g #p #f. EpGen(pid,r,e,ek)@g & CTPrefix(pid,r,e,ct)@p
+       & ReceivedFull(pid,r,e,'CT')@f & #g < #i & #p < #f & #f < #i)
+     | (Ex #c #p #f. EpEnc(pid,r,e,ek,ct,ss)@c & EKPrefix(pid,r,e,ek)@p
+       & ReceivedFull(pid,r,e,'EK')@f & #p < #f & #f < #c & #c < #i)"
+
+lemma no_classical_downgrade [hide_lemma=epoch_position_shape, hide_lemma=fresh_dk_origin, hide_lemma=fresh_ss_origin,
+    hide_lemma=derived_ck_origin, hide_lemma=derived_ck_predecessor, hide_lemma=ck_secret,
+    hide_lemma=cur_secret, hide_lemma=epoch_secret, hide_lemma=mixed_key_origin]:
+  "All pid r e #i #j. Ready(pid,r,e)@i & ClassicStart(pid,r,e)@j & #i < #j ==>
+     Ex n #k. Advance(pid,r,e,n)@k & #k < #j"
+
+lemma progress_is_durable:
+  "All pid r e kind pos #i. Ack(pid,r,e,kind,pos)@i ==>
+     (Ex p #j. Durable(pid,p,e,kind,pos)@j & #j < #i & not (p=r))
+     | (Ex #c. RevCK(pid)@c & #c < #i)"
+
+lemma kem_decapsulation_agreement:
+  "All pid r g e ek ct ss ts #i #j. EpEnc(pid,r,e,ek,ct,ss)@i
+     & EpDec(pid,g,e,ek,ct,ts)@j ==> ss=ts"
+
+lemma epoch_agreement:
+  "All pid r p e pq rq #i #j. EpochHave(pid,r,e,pq)@i
+     & EpochHave(pid,p,e,rq)@j & not (r=p) ==>
+     pq=rq | (Ex #d. RevCK(pid)@d)"
+
+lemma mixed_key_origin [reuse, hide_lemma=derived_ck_predecessor, hide_lemma=derived_ck_origin]:
+  "All pid e ss ek ct ck #i #j. MixedKey(pid,e,ss,ek,ct,ck)@i & KU(ck)@j ==>
+     (Ex #k. KU(ss)@k & #k < #j) | (Ex #d. RevCKv(pid,ck)@d)"
+
+lemma pcs_epoch:
+  "All pid e r g ss ek ct ck #i #a #b. MixedKey(pid,e,ss,ek,ct,ck)@i
+     & EpGen(pid,g,e,ek)@a & EpEnc(pid,r,e,ek,ct,ss)@b ==>
+     not (Ex #k. K(ck)@k)
+     | (Ex #d. RevDK(pid,ek)@d) | (Ex #d. RevSS(pid,ss)@d)
+     | (Ex #d. RevCKv(pid,ck)@d)"
+
+lemma hndl_secrecy:
+  "All pid r p x pq ki kr #i. I_Commit(pid,r,p,x,pq,ki,kr)@i ==>
+     (not (Ex #k. K(ki)@k) & not (Ex #k. K(kr)@k))
+     | (Ex #d. RevCK(pid)@d)"
+
+lemma executable: exists-trace
+  "Ex pid ck0 ck1 ck2 ek ct ss #p #a #b #g #c #d #i #j.
+     Init(pid,ck0)@p
+     & I_Advance(pid,roleA,ck0,ck1,'zero','zero')@a
+     & ConfirmedCK(pid,roleB,ck1,'zero')@b
+     & EpGen(pid,roleA,'zero',ek)@g
+     & EpEnc(pid,roleB,'zero',ek,ct,ss)@c
+     & EpDec(pid,roleA,'zero',ek,ct,ss)@d
+     & I_Advance(pid,roleA,ck1,ck2,'zero',succ('zero'))@i
+     & ConfirmedCK(pid,roleB,ck2,succ('zero'))@j
+     & #p < #a & #a < #b & #b < #g & #g < #c & #c < #d & #d < #i & #i < #j
+     & not (Ex #v. RevCK(pid)@v)
+     & not (Ex r x pq #s. I_Start(pid,r,x,pq)@s & not (r=roleA))"
+
+lemma lost_data_recovery: exists-trace
+  "Ex pid ck0 ck1 ck2 ck3 #p #a #b #i #t #r #c.
+     Init(pid,ck0)@p
+     & I_Advance(pid,roleA,ck0,ck1,'zero','zero')@a
+     & ConfirmedCK(pid,roleB,ck1,'zero')@b
+     & I_Advance(pid,roleA,ck1,ck2,'zero',succ('zero'))@i
+     & Timeout(pid,roleB,ck2,succ('zero'))@t
+     & I_Advance(pid,roleA,ck2,ck3,succ('zero'),succ('zero'))@r
+     & ConfirmedCK(pid,roleB,ck3,succ('zero'))@c
+     & #p < #a & #a < #b & #b < #i & #i < #t & #t < #r & #r < #c
+     & not (Ex #d. RevCK(pid)@d)
+     & not (Ex q x pq #s. I_Start(pid,q,x,pq)@s & not (q=roleA))"
+
+lemma fresh_epoch_after_compromise: exists-trace
+  "Ex pid ck0 ck1 ck2 ek ct ss #p #v #a #b #g #e #d #i #j.
+     Init(pid,ck0)@p & RevCKv(pid,ck0)@v
+     & I_Advance(pid,roleA,ck0,ck1,'zero','zero')@a
+     & ConfirmedCK(pid,roleB,ck1,'zero')@b
+     & EpGen(pid,roleA,'zero',ek)@g
+     & EpEnc(pid,roleB,'zero',ek,ct,ss)@e
+     & EpDec(pid,roleA,'zero',ek,ct,ss)@d
+     & I_Advance(pid,roleA,ck1,ck2,'zero',succ('zero'))@i
+     & ConfirmedCK(pid,roleB,ck2,succ('zero'))@j
+     & #p < #v & #v < #a & #a < #b & #b < #g & #g < #e & #e < #d & #d < #i & #i < #j
+     & not (Ex key #r. RevDK(pid,key)@r)
+     & not (Ex secret #r. RevSS(pid,secret)@r)
+     & not (Ex key #r. RevCKv(pid,key)@r & not (key=ck0))
+     & not (Ex q x pq #s. I_Start(pid,q,x,pq)@s & not (q=roleA))"
+
+end

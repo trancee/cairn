@@ -59,3 +59,19 @@ This is the first suite, so there is nothing to migrate. Any change ships as a n
 2026-10-05, from spec consolidation ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
 - The KCI profile is chosen at pairing only; enabling it later requires re-pairing (OI-12).
 - Doorbell keys are two directional keys derived from `RK` (OI-10).
+
+2026-10-05, post-compromise security scope (OI-24):
+
+- **Context:** possession of the shared authentication state lets a
+  continuously active attacker replace ratchet exchanges.
+- **Decision:** PQ healing is conditional on a genuinely exchanged fresh
+  epoch whose decapsulation key and shared secret stay unexposed. The
+  attacker retains prior stolen state; no unconditional active-attacker
+  healing is claimed.
+- **Alternative:** require authenticated in-person re-pairing after every
+  compromise. Re-pairing remains the recovery route for known interception,
+  but it is not required for automatic healing after a fresh honest epoch.
+- **Risks:** sustained interception or traffic blocking can prevent
+  recovery. The guarantee must not be marketed as unconditional.
+- **Migration:** clarification of the unreleased security claim; no
+  algorithms, packet sizes or stored layouts change through OI-24.

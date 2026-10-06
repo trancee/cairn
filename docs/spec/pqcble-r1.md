@@ -1,6 +1,6 @@
 # `pqcble-r1` protocol specification
 
-Status: **draft 0.4** (ticket *Formal model: SAS pairing*, 2026-10-05). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §7 and §9, and test vectors are pending (§12). §5 and §6 are backed by the verified [pairing and Resume models](models/README.md).
+Status: **draft 0.6** (ticket *Formal model: PQ ratchet mixing*, 2026-10-05). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed.
 
 This document consolidates, and is normative over:
 - [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md);
@@ -247,6 +247,7 @@ MS_{n+1}  = HKDF-Expand(prk, lp("pqcble-r1 msg seed") ‖ ctx(n) ‖ th_s, 32)  
 **Key commitment and desync:**
 - I commits `CK_{n+1}` (erasing `CK_n`) after a valid S2.
 - R keeps both `CK_n` and `CK_{n+1}` until the first DATA frame from I that opens correctly under `SK_I→R`. That frame is I's key confirmation. R then erases `CK_n`.
+- Each stored CK candidate MUST carry its post-mix epoch position. The candidate `CK_{n+1}` records any epoch incorporated into it even before DATA confirms it. A recovery Resume on that candidate MUST NOT mix the same epoch again [OI-23].
 - Ephemeral secrets are erased after `dh`.
 - No data is sent before S2. There is no 0-RTT.
 
@@ -285,13 +286,14 @@ nonce = u8(dir << 7) ‖ 0x00 0x00 0x00 ‖ u64(ctr)      dir: 0 = I→R, 1 = R�
 | `03` | ACK | `LEB128(msgno)`: highest contiguous message number received |
 | `04` | READ | `LEB128(msgno)`: read up to and including this number |
 | `05` | EXPIRED | `LEB128(from) ‖ LEB128(to)`: inclusive range the sender expired |
-| `06` | KEM_EK | `epoch(1) ‖ LEB128(offset) ‖ chunk` |
-| `07` | KEM_CT | `epoch(1) ‖ LEB128(offset) ‖ chunk` |
+| `06` | KEM_EK | `LEB128(epoch) ‖ LEB128(offset) ‖ chunk` [OI-21] |
+| `07` | KEM_CT | `LEB128(epoch) ‖ LEB128(offset) ‖ chunk` [OI-21] |
 | `08` | CAPS | `caps(1)`: as §5.4 |
 | `09` | CLOSE | `reason(1)`: 0 normal, 1 protocol error, 2 limit, 3 user [OI-14] |
 | `0A` | BEACON_KEY | `day(u32) ‖ BK_day(32)` (§10.2) [OI-3] |
 | `0B` | BEACON_ACK | `day(u32)` [OI-3] |
-| `0C` | EPOCH_DONE | `epoch(1)` (§9, *provisional*) [OI-4] |
+| `0C` | EPOCH_DONE | `LEB128(epoch)` (§9, *provisional*) [OI-4, OI-21] |
+| `0D` | KEM_PROGRESS | `LEB128(epoch) ‖ kind(1) ‖ LEB128(next_offset)` (§9, *provisional*); kind `01` = EK, `02` = CT [OI-25] |
 
 - Unknown record types MUST close the link.
 - A record whose length runs past the plaintext end MUST close the link.
@@ -322,15 +324,32 @@ nonce = u8(dir << 7) ‖ 0x00 0x00 0x00 ‖ u64(ctr)      dir: 0 = I→R, 1 = R�
 
 Status: **provisional; gated by the model in *Formal model: PQ ratchet mixing*** [OI-4].
 
-- An epoch `e` (`u8`, wrapping) transfers one ML-KEM-768 `ek` from its generator to the encapsulator in KEM_EK chunks, and one `ct` back in KEM_CT chunks. Offsets allow a transfer to continue in a later session.
+- An epoch `e` transfers one ML-KEM-768 `ek` from its generator to the encapsulator in KEM_EK chunks, and one `ct` back in KEM_CT chunks. Offsets allow a transfer to continue in a later session.
+- **Identifiers** [OI-21]: `e` is a non-wrapping `u32`, starting at 0 and encoded as canonical unsigned LEB128 in KEM_EK, KEM_CT, EPOCH_DONE and KEM_PROGRESS. Epochs MUST advance by exactly one only after the previous epoch has been mixed; identifiers MUST NOT be skipped, reused or rolled back. After mixing epoch `2^32 - 1`, the contact MUST stop further Resumes, report `epoch_exhausted` locally and require re-pairing; it MUST NOT wrap to 0.
 - The generator of epoch `e` is pairing role A when `e` is even and role B when `e` is odd [OI-4].
+- **Durable transfer and progress** [OI-25]:
+  - Object lengths are fixed: EK = 1184 B, CT = 1088 B. The sender MUST persist the epoch's immutable object and associated key state before sending its first chunk. It MUST NOT regenerate an object when retransmitting it.
+  - The receiver maintains one contiguous prefix per epoch/object kind. It MUST persist appended bytes and their next expected offset atomically before sending KEM_PROGRESS. This is an authenticated application-level durable receipt inside DATA, not a transport acknowledgement.
+  - `next_offset` is cumulative, in the inclusive range 0 to the object's length. The sender MUST reject unknown kinds, a wrong epoch, an out-of-range offset or progress beyond bytes it has sent. Valid duplicate or older progress for the same immutable object does not decrease the sender's stored progress.
+  - After accepting a chunk, including an exact duplicate, the receiver sends its latest cumulative progress. After a new Resume it sends current progress for each object it receives in the selected CK candidate's active epoch; 0 means no stored bytes. Retained losing branches MUST NOT send progress in that session.
+  - Until progress acknowledges a chunk, the sender retains and may retransmit it. Across sessions, it continues from the durable acknowledged offset, or from 0 if no progress was received. Losing an acknowledgement MUST NOT lose bytes, regenerate a key or advance an epoch.
+  - Full EK progress is not epoch completion. Full CT progress acknowledges durable ciphertext storage; it does not replace EPOCH_DONE's successful decapsulation/ready signal.
+- **Strict reassembly** [OI-26]:
+  - A chunk MUST be nonempty, identify the selected candidate's active epoch and correct direction/object kind, and fit wholly within the fixed object length. Bounds MUST be checked without overflowing offset arithmetic.
+  - If `offset = next_offset`, append the chunk contiguously. If `offset < next_offset`, accept it only when it lies wholly within the stored prefix and every byte matches. A duplicate does not append or change state.
+  - Gaps, conflicting duplicates, overlaps crossing the stored frontier, wrong epochs/kinds and out-of-bounds chunks MUST close the link without a response and report `pq_transfer_invalid` locally. Invalid input MUST NOT partially mutate durable state.
+  - No sparse or out-of-order buffers are permitted. Only a fully reassembled EK may be used for encapsulation; only a fully reassembled CT may be used for decapsulation.
 - **Completion.**
   - The encapsulator holds `ss_e` once it has encapsulated.
-  - The generator holds `ss_e` once it has received the whole `ct` and decapsulated it. It then sends EPOCH_DONE(`e`).
+  - The generator holds `ss_e` once it has received the whole `ct` and decapsulated it. It MUST persist the completed state before sending EPOCH_DONE(`e`), and resend EPOCH_DONE after a duplicate completed CT or a new session while that epoch remains active.
 - **Mixing.**
-  - I sets S1.MIX = 1 when it holds `ss_e` and, if I is the encapsulator, has received EPOCH_DONE(`e`).
-  - With MIX = 1, `pq = ss_e ‖ H(ek_e) ‖ H(ct_e)` enters the Resume KDF (§6). If R does not hold `ss_e`, R closes the link and I retries with MIX = 0.
-  - After a Resume that mixed epoch `e`, both sides erase `dk_e`, `ss_e` and the transfer buffers, and epoch `e + 1` may start.
+  - I MUST set S1.MIX = 1 when it holds `ss_e` and, if I is the encapsulator, has received EPOCH_DONE(`e`).
+  - With MIX = 1, `pq = ss_e ‖ H(ek_e) ‖ H(ct_e)` enters the Resume KDF (§6). If R does not hold `ss_e`, R closes the link.
+  - Once ready to mix, I MUST retain the pending epoch until commitment and MUST keep MIX = 1 on retries. It MUST NOT automatically retry with MIX = 0. A pending-epoch mismatch fails closed, reports `pq_recovery_required` locally and prevents new session establishment until recovery or re-pairing [OI-22]. These local reasons add no wire fields and MUST NOT include key material.
+  - Mandatory MIX applies to a CK candidate that has not yet incorporated the pending epoch. On an already-mixed recovery candidate, the epoch contribution is empty; it MUST NOT be incorporated twice [OI-23].
+  - I commits the new CK and its epoch position atomically at valid S2, then erases the incorporated epoch's `dk_e`, `ss_e` and buffers. R retains the old and candidate epoch positions and the state needed by the old branch until DATA or a recovery Resume confirms the candidate. It then commits the selected CK and epoch position and erases the losing branch and incorporated epoch state atomically [OI-23].
+  - A party may start epoch `e + 1` only after locally committing a CK that incorporated epoch `e`. The generator still follows epoch parity.
+- **Post-compromise healing** [OI-24]: after compromise ends, a genuinely exchanged fresh epoch whose decapsulation key and shared secret remain unexposed restores PQ secrecy when mixed. The attacker retains everything previously stolen. Continued active interception can prevent healing; the default profile makes no unconditional active-attacker recovery claim. Re-pairing through an authenticated in-person flow remains the recovery route for known interception.
 - **Cadence:** a new epoch starts when none is in flight and ≥ 10 Resumes or ≥ 24 h have passed since the last completed epoch [OI-11]. Idle contacts Resume when ≥ 6 h have passed or an epoch is due (ADR 0008).
 
 ## 10. Beacons and doorbell
@@ -387,14 +406,14 @@ door = Trunc8(HMAC(K_door_me→peer, lp("pqcble-r1 door") ‖ u64(w)))
 
 ## 13. Consolidation issues (resolved 2026-10-05)
 
-OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: Resume*, and OI-19 to OI-20 from *Formal model: SAS pairing*. The user accepted every proposal. OI-4 is accepted as *provisional*, pending *Formal model: PQ ratchet mixing*. The affected ADRs carry amendment notes.
+OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: Resume*, OI-19 to OI-20 from *Formal model: SAS pairing*, and OI-21 to OI-26 from the in-progress *Formal model: PQ ratchet mixing*. The user accepted every proposal. OI-4 is accepted as *provisional*, pending *Formal model: PQ ratchet mixing*; OI-22 supersedes its classical fallback. The affected ADRs carry amendment notes.
 
 | # | Issue | Resolution |
 |---|---|---|
 | OI-1 | ADR 0005 shares the device beacon key at pairing, but the draft's 64 B card has no room for it, so the P3/P4 sizes are wrong | Card carries `day(u32) ‖ BK_d(32)`: +36 B. With a 48 B name, P3 ≤ 135 B and P4 ≤ 119 B (the draft's 113/97 B assumed an illustrative 64 B card) |
 | OI-2 | The beacon formula has `role ‖ window`, but a device-wide key has no pairing role | Drop `role`; use the label `"beacon"` |
 | OI-3 | ADR 0008 sends the rotated beacon key "in a record at the next Resume", but there's no record type | New records `0A BEACON_KEY: day(u32) ‖ BK_d(32)` and `0B BEACON_ACK: day(u32)`. The sender includes BEACON_KEY in every session until the matching BEACON_ACK arrives |
-| OI-4 | The ratchet doesn't say who generates `ek`, or how both sides agree that an epoch completed before mixing it at Resume (a lost last chunk or ack desyncs `CK`) | Alternate the generator by epoch parity. The generator sends `0C EPOCH_DONE(epoch)` after decapsulating. I sets S1 sub bit 1 = "mix pending epoch"; R mixes only if it has `ss_e`, else the Resume fails and I retries without the bit. Settle in the ratchet model |
+| OI-4 | The ratchet doesn't say who generates `ek`, or how both sides agree that an epoch completed before mixing it at Resume (a lost last chunk or ack desyncs `CK`) | Alternate the generator by epoch parity. The generator sends `0C EPOCH_DONE(epoch)` after decapsulating. I sets S1 sub bit 1 = "mix pending epoch"; R mixes only if it has `ss_e`, else the Resume fails. The original MIX = 0 retry is superseded by OI-22. Settle in the ratchet model |
 | OI-5 | The 1 B chain generation wraps after 256 Resumes, which can happen within the 7-day queue lifetime | Receiver keeps chains only for generations with outstanding skipped keys. A collision expires the older generation's messages (EXPIRED); alternatively use LEB128 `gen` (+1 B after 127) |
 | OI-6 | QUEUED carries the global `msgno`, but the receiver needs the chain index within its generation | Body becomes `gen(1) ‖ LEB128(idx) ‖ Seal(mk_idx, …, msgno ‖ text)`; `msgno` moves inside the ciphertext, which also hides it at the session layer. Same size |
 | OI-7 | The draft's `ctx = "pqcble-r1" ‖ pairID ‖ epoch` is used for pairing too, but `pairID` comes from `RK`, which is circular | Pairing KDFs use only the label and `th` (as §5.2); `ctx(n)` applies from Resume on |
@@ -411,9 +430,17 @@ OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: R
 | OI-18 | KCI profile: `th_s = H(S1 ‖ eR)` leaves `ct_I` unauthenticated. An attacker who replaces `ct_I` makes I derive different keys and retire `CK_n` while R keeps it: permanent desync without any key compromise | `th_s = H(S1 ‖ eR ‖ ct_I)` in the KCI profile; 0 bytes (§6) (user's choice, 2026-10-05) |
 | OI-19 | §5 doesn't require B to check `P1.mode`. An attacker rewrites `sas` to `tofu`, and B silently stores an Unverified, possibly intercepted contact although its user chose SAS | B MUST abort unless `mode` equals its user's selection (§5.1); 0 bytes (user's choice, 2026-10-05) |
 | OI-20 | Pairing roles are defined by who shows the QR, which leaves SAS and TOFU without a role rule | The phone whose user picks the peer from the nearby list is B; the picked phone is A (§2.3) (user's choice, 2026-10-05) |
+| OI-21 | A wrapping `u8` epoch identifier conflicts with the required non-reuse and monotonicity property | Non-wrapping `u32`, canonical LEB128 in all three epoch record types; exhaustion requires re-pairing (§7.3, §9). One byte for epochs 0–127, up to five thereafter (user's choice, 2026-10-05) |
+| OI-22 | Retrying with MIX = 0 after a failed PQ-mixing attempt conflicts with the no-downgrade requirement | Once ready, keep MIX = 1 and retain the pending epoch until commitment; mismatches fail closed with a local recovery-required error (§9). No extra wire bytes (user's choice, 2026-10-05) |
+| OI-23 | I can erase an epoch at S2 while R still retains the old CK after lost DATA; without per-candidate epoch metadata, recovery can mix an epoch twice or roll back its position | Store post-mix epoch positions with CK candidates; defer R's epoch erasure until branch confirmation; commit CK, position and erasure atomically (§6, §9). No extra packets (user's choice, 2026-10-05) |
+| OI-24 | PQ healing after state compromise is not explicitly conditioned on a fresh exchange that a continuously active attacker did not replace | Claim conditional fresh honest-epoch healing, retaining stolen-key knowledge; do not claim recovery under continued active interception (§9, threat model) (user's choice, 2026-10-05) |
+| OI-25 | Chunk offsets alone do not tell the sender which bytes survived a disconnect or a lost acknowledgement | Authenticated cumulative `0D KEM_PROGRESS(epoch, kind, next_offset)` after durable storage; re-advertise progress and pending EPOCH_DONE after Resume; resend immutable unacknowledged chunks (§7.3, §9) (user's choice, 2026-10-05) |
+| OI-26 | Reassembly semantics for gaps, overlaps and retransmitted chunks are unspecified | Contiguous append only; exact duplicates wholly within the stored prefix are accepted; gaps, conflicting/cross-frontier overlaps, wrong epochs and bounds violations fail closed without partial mutation (§9) (user's choice, 2026-10-05) |
 
 ## 14. Change log
 
+- 0.6 (2026-10-05): accepted OI-25 (durable cumulative KEM_PROGRESS) and OI-26 (strict contiguous reassembly); specified retransmission, reconnect receipts and fail-closed validation. Ratchet gate remains closed.
+- 0.5 (2026-10-05): accepted OI-21 (non-wrapping LEB128 epochs), OI-22 (mandatory MIX), OI-23 (CK-bound recovery metadata) and OI-24 (conditional honest-epoch healing). All four public-`pairID` Resume profiles subsequently re-verified; composed ratchet proof remains pending.
 - 0.4 (2026-10-05): *Formal model: SAS pairing* verified §5 and found OI-19 (mode downgrade) and OI-20 (roles without a QR); both resolved and applied.
 - 0.3 (2026-10-05): *Formal model: Resume* verified §6 and found OI-16 (reflection), OI-17 (concurrent Resume) and OI-18 (unauthenticated `ct_I` in the KCI profile); all resolved and applied.
 - 0.2 (2026-10-05): consolidation issues OI-1 to OI-15 resolved and applied.

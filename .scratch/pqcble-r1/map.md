@@ -24,6 +24,12 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 - Skills every session should consult: `grilling`, `domain-modeling`; by topic: `ble-protocol-stack`, `ble-throughput`, `android-ble`, `android-ble-gatt-server`, `android-bluetooth-sockets`, `corebluetooth`, `kotlin-multiplatform`, `compose-multiplatform`, `tdd`, `security-audit`, `wycheproof`, `nist-cavp`.
 - Standing rules: established primitives only (no novel crypto); no commits/pushes without explicit approval; research findings go to `docs/research/` and are linked from the ticket (no throwaway branches — commits need approval).
 - Refer to tickets by name.
+- Current ratchet contract: spec draft 0.6 includes CK-bound recovery,
+  conditional honest-epoch healing, durable KEM_PROGRESS and strict
+  contiguous reassembly (OI-21-26). The composed model loads cleanly, but
+  its cryptographic/helper, execution/recovery and mutation proofs remain
+  incomplete. *Formal model: PQ ratchet mixing* stays claimed; its
+  implementation gate is closed.
 
 ## Decisions so far
 
@@ -53,7 +59,7 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 - [Implementation slicing](issues/25-implementation-slicing.md): 12 vertical slices from S0 (bootstrap) through S11 (measurement), tracked as tickets; in-memory loopback skeleton first; strict formal-model gate; S1+ wait for Spec consolidation; CI gates switch on with their code; DoD = gates + TDD + oldest/newest device demo.
 - [Spec consolidation](issues/26-spec-consolidation.md): `docs/spec/pqcble-r1.md` draft 0.2 (normative); 15 consolidation issues resolved, including the beacon key in the card, new BEACON_KEY/BEACON_ACK/EPOCH_DONE records, encrypted msgno in QUEUED, epoch cadence ≥10 Resumes/24 h, and KCI at pairing only; ADRs 0001/0002/0005/0008 amended.
 - [Formal model: SAS pairing](issues/29-formal-model-sas.md): Tamarin model of QR/SAS/TOFU/Verify verified (16 lemmas); found mode downgrade → B checks `P1.mode` (OI-19); SAS/TOFU roles: picker is B (OI-20); `weaksecret` replaced by counting argument; spec draft 0.4.
-- [Formal model: Resume](issues/27-formal-model-resume.md): Tamarin model verified (base, DESYNC, KCI); found reflection attack → role-bound `K_id`/`K_auth_I` (OI-16), concurrent-Resume rule (OI-17), `ct_I` in KCI `th_s` (OI-18); spec draft 0.3.
+- [Formal model: Resume](issues/27-formal-model-resume.md): all four profiles re-verified with public `pairID` (16/17/19/20 lemmas); OI-16/17/18 regressions retained. Resume gate restored; composed ratchet gate remains pending.
 - [Android↔iOS background discovery and transport feasibility](issues/04-android-ios-background-ble.md): fixed service UUID plus GATT-read beacon; GATT-first transport; L2CAP optional.
 - [Formal verification gate](issues/07-formal-verification-gate.md): symbolic model gates Resume, PQ ratchet mixing and SAS pairing only.
 - [Reference app scope](issues/08-reference-app-scope.md): minimal 1:1 chat with pairing flows plus a bytes/airtime debug panel.

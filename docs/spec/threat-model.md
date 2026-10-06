@@ -34,12 +34,21 @@ Rows are adversaries, columns are properties. ✓ = claimed; ✗ = explicitly no
 |---|---|---|---|---|---|---|---|
 | A1 | ✓ | ✓ (TOFU: ✗ at first contact) | ✓ | — | ✓ beacon and pseudonym; ✗ fixed UUID | ✓ | ✗ (best effort, §5) |
 | A2 | ✓ (NIST L3) | — | ✓ | — | — | ✓ | — |
-| A3 | ✓ | ✓ for QR/SAS; ✗ for unverified TOFU | ✓ | PQ healing only after the next PQ epoch | as A1 | ✓ | ✗ |
+| A3 | ✓ | ✓ for QR/SAS; ✗ for unverified TOFU | ✓ | Conditional fresh honest-epoch healing after compromise (§3 below) | as A1 | ✓ | ✗ |
 | A4a | ✓ via OS data protection (§4) | — | — | — | — | via OS | — |
-| A4b | ✗ for current state and stored history; ✓ for erased past keys | ✗ until healed | ✓ | ✓ classical at the next Resume (passive attacker); ✓ PQ after the next PQ epoch | — | ✗ | — |
+| A4b | ✗ for current state and stored history; ✓ for erased past keys | ✗ until healed | ✓ | ✓ classical at the next Resume (passive attacker); ✓ PQ after a fresh honest epoch whose secrets remain unexposed | — | ✗ | — |
 | A5 | ✓ for other contacts' traffic | ✓ cannot impersonate you to others; ✗ KCI toward itself unless the KCI profile is on | ✓ | ✓ | ✗ can track your device beacon | ✓ learns nothing beyond its own pairing | ✗ |
 | A6 | — | — | — | — | ✓ beacon and pseudonym; ✗ fixed UUID, ✗ OS address rotation not under app control | ✓ | — |
 | A7 | — | — | — | — | — | — | best effort (§5) |
+
+**PCS scope** (spec OI-24): the attacker keeps all state stolen before
+recovery. PQ healing requires a genuinely exchanged fresh epoch whose
+decapsulation key and shared secret are not exposed. A continuously
+active attacker who uses stolen authentication state to replace every
+exchange can prevent healing. Neither the default ratchet nor fail-closed
+MIX retries guarantee availability or unconditional recovery from that
+attacker. Known interception can be addressed by authenticated in-person
+re-pairing.
 
 ### Per-mode authentication
 

@@ -35,10 +35,10 @@ Byte counts and airtime come from the prototype `docs/research/prototypes/wire-l
   - In QR mode, A also confirms a 4-digit code derived from the transcript, which both phones show. It is local only, so there is no wire change (see the [threat model](../spec/threat-model.md)).
   - TOFU keeps the transcript so it can be verified later.
 - **Resume.** S1 57 B and S2 49 B, as in findings §4.2. The KCI variants add one ML-KEM-768 ciphertext each way.
-  - The epoch and the retry counter are never sent.
+  - The Resume index and retry counter are never sent. Ratchet DATA records carry their epoch identifier.
   - **No 0-RTT.**
 - **DATA frame.** `hdr ‖ AES-256-GCM(records ‖ zero padding) ‖ tag(16)`, with an implicit nonce.
-  - Records are `type(1) ‖ LEB128 len ‖ body`: CHAT, QUEUED, ACK, READ, EXPIRED, KEM_EK, KEM_CT, CAPS and CLOSE.
+  - Records are `type(1) ‖ LEB128 len ‖ body`; the current type table, including later amendments, is normative in [spec §7.3](../spec/pqcble-r1.md#73-records).
   - A `0x00` type byte starts the padding.
 - **Padding.** The plaintext is padded to buckets of 32, 64, 128, 256, 512, 1024, 2048 and the maximum.
   - Ratchet KEM_EK/KEM_CT chunks (with an epoch and a LEB128 offset, so a transfer can continue after a disconnect) fill the slack first.
@@ -91,3 +91,66 @@ This is the first version. Any layout change requires a new protocol version: a 
 
 2026-10-05, from *Formal model: SAS pairing* ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
 - B aborts unless `P1.mode` equals the mode its user selected, so a mode downgrade is impossible. No byte changes (OI-19).
+
+2026-10-05, in-progress *Formal model: PQ ratchet mixing* (spec draft 0.5):
+
+- **Context:** wrapping epoch identifiers conflict with non-reuse, and a
+  failed MIX attempt followed by a classical retry weakens the no-downgrade
+  requirement.
+- **Decision:** epoch identifiers are non-wrapping `u32` values, encoded as
+  canonical LEB128 in KEM_EK, KEM_CT and EPOCH_DONE (OI-21). A ready initiator
+  retains the pending epoch until commitment and keeps MIX = 1 on retries.
+  A mismatch fails closed with a local recovery-required error (OI-22).
+- **Alternatives:** keep one-byte identifiers with session-bound wrap
+  bookkeeping; retain classical fallback with a qualified security claim.
+  The user selected simpler identifier semantics and fail-closed mixing.
+- **Risks:** epoch identifiers grow from one to at most five bytes. A
+  mismatch blocks new sessions until recovery or re-pairing; traffic
+  blocking can still prevent progress. The composed formal proof is pending.
+- **Migration:** this changes the unreleased draft; there are no released
+  contacts to migrate. Future parsers and vectors MUST use the new layout.
+  Existing research layouts are historical, superseded drafts. Epoch
+  exhaustion requires re-pairing, never wraparound.
+
+2026-10-05, ratchet recovery refinement (OI-23):
+
+- **Context:** a lost first DATA leaves I committed and R holding two CK
+  candidates. Erasing or re-mixing an epoch without candidate-specific
+  metadata can desynchronise their epoch positions.
+- **Decision:** each CK candidate carries its post-mix epoch position.
+  I commits and erases at valid S2. R retains the old branch's required
+  epoch state until candidate confirmation, then atomically selects its
+  CK/position and erases the losing branch. Recovery on an already-mixed
+  candidate contributes no second copy of the epoch.
+- **Alternative:** add an explicit epoch-commit acknowledgement, costing
+  an authenticated exchange and still requiring lost-ack recovery.
+- **Risks:** persisted CK and epoch metadata must be transactional;
+  partial erasure is unsafe. The composed proof remains pending.
+- **Migration:** no wire fields change. Future contact state must persist
+  the CK/epoch association; no released state exists to migrate.
+
+2026-10-05, durable ratchet transfer (OI-25/26, spec draft 0.6):
+
+- **Context:** offsets alone cannot recover a transfer when a disconnect
+  loses a receipt, and unspecified overlap handling permits ambiguous
+  reassembly or unbounded sparse buffers.
+- **Decision:** add `0D KEM_PROGRESS` with canonical LEB128 epoch, closed
+  one-byte kind (`01` EK, `02` CT) and canonical LEB128 next expected offset.
+  Send cumulative receipts only after bytes/offset are atomically durable.
+  Re-advertise active-branch progress after Resume; repeat EPOCH_DONE while
+  a completed epoch remains active. Persist immutable sender objects before
+  transmission and retransmit unacknowledged bytes without regenerating keys.
+  Append only at the contiguous frontier; accept exact duplicate ranges
+  wholly within it. Gaps, conflicts, cross-frontier overlaps, wrong epochs
+  and invalid bounds fail closed without partial storage mutation.
+- **Alternatives:** restart the whole transfer after every disconnect;
+  allow sparse offset maps. The user selected durable cumulative progress
+  and bounded contiguous storage.
+- **Risks:** receipts consume DATA slack and cannot guarantee liveness
+  against traffic blocking. Their bodies are 3-8 B (epoch 1-5 B, kind 1 B,
+  offset 1-2 B), plus the 2 B record header. Transactional persistence,
+  malformed/boundary inputs and crash recovery still need implementation
+  tests; symbolic pieces do not prove a byte parser.
+- **Migration:** this extends the unreleased draft; no released contacts
+  exist. Update future parsers/vectors to spec §7.3/§9. A released layout
+  change would require the protocol-version migration described above.
