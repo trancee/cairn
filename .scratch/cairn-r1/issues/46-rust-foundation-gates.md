@@ -57,7 +57,13 @@ CI results are recorded, and PROJECT/core documentation agrees with them.
 HMAC ACVP follow-up: both adapters pass all 150 AFT cases from the official
 NIST ACVP-Server HMAC-SHA2-384-2.0 corpus at commit
 `975de31eb83d87039ec88934fdc47d8c312b892d`. Prompt/results and NIST notice
-are retained unchanged with checksums in core/README. HKDF KDA ingestion
-remains open: it requires handling the fixed-info construction and separating
-SHA-384 groups from the multi-algorithm corpus, not treating it as raw RFC
-5869 vectors without checking the ACVP schema.
+are retained unchanged with checksums in core/README.
+
+HKDF KDA follow-up: the owning extraction script validates both upstream
+checksums and retains all 100 SHA2-384 single-expansion cases (50 AFT/50 VAL)
+from KDA-HKDF-Sp800-56Cr2 at the same NIST commit. Both adapters pass,
+including accepted/rejected VAL cases. Fixed info follows upstream
+`FixedInfo.cs` (U party info || V party info || u32 output-bit length);
+shared input is Z || T. Selected group contents are unchanged and the
+subset notice records the modification. Multi-expansion coverage remains
+open; no full-corpus or certification claim is made.

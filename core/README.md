@@ -93,10 +93,29 @@ ACVP certification or CMVP validation.
 | `prompt.json` | `cf1c34db3973949a2f53d9971472eba2b85fcaba43ca958ab527a4d62ef885cc` |
 | `expectedResults.json` | `86e208b8c7644c55b8c14028fb1a100ae2e5711f9db680623e0f6a511758aab8` |
 
+The HKDF KDA fixture retains **100 SHA2-384 single-expansion cases** (50 AFT
+and 50 VAL) from NIST's `KDA-HKDF-Sp800-56Cr2` corpus at the same commit.
+The harness builds input as `Z || T` and fixed info as U party ID/optional
+ephemeral data, V party ID/optional ephemeral data, then a 32-bit big-endian
+output bit length. This follows upstream `FixedInfo.cs` and is checked
+against NIST's expected results, including accepted and rejected VAL cases.
+These test-only KDA fields are not Cairn's protocol KDF labels.
+
+Regenerate the subset with
+`python3 core/cairn-crypto/tests/vectors/extract_hkdf.py UPSTREAM_DIRECTORY OUTPUT_DIRECTORY`.
+The script validates upstream checksums and copies selected group contents;
+the notice records the selection. Other algorithms and all multi-expansion
+groups are excluded, so this is not a complete KDA corpus sweep.
+
+| HKDF subset file | SHA-256 |
+|---|---|
+| `prompt.json` | `b0df50185c90de85dc2b762d069ce613c1dd1f9de7d2bdca054c4904af2116ac` |
+| `expectedResults.json` | `af4d56f1a75dea6053399cd65b53077a726dd65ab6ce06038ee40ec5c88e1e35` |
+
 ## Remaining gates
 
 [ADR 0007](../docs/adr/0007-ct-conformance-gates.md) remains authoritative.
-HKDF ACVP ingestion, secret-taint checks, mobile
+HKDF multi-expansion ACVP coverage, secret-taint checks, mobile
 cross-builds and binding/device proofs are not complete in this increment.
 Do not merge or release it as completed S0 or validated production crypto.
 Track the foundation gate completion in
