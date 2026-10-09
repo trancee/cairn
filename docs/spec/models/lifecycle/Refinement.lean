@@ -1,6 +1,6 @@
 import Lifecycle
 
-namespace Pqcble
+namespace Cairn
 
 inductive Token where
   | slot (stage : Nat)
@@ -159,4 +159,4 @@ theorem projected_serialization {bag : Bag} {actions : List (Action × Nat)}
 #print axioms projected_trace_simulates
 #print axioms projected_serialization
 
-end Pqcble
+end Cairn

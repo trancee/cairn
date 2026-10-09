@@ -1,8 +1,8 @@
-theory PqcbleRatchet
+theory CairnRatchet
 begin
 
 /*
- * pqcble-r1 sections 6/9: quantum-view Resume composed with the alternating PQ ratchet.
+ * cairn-r1 sections 6/9: quantum-view Resume composed with the alternating PQ ratchet.
  * X25519 is deliberately public here. Pairing provides a secret CK_0; pairID is public.
  * ML-KEM is ideal, with explicit decapsulation and implicit rejection. HKDF/MAC are free functions.
  *

@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-05
-version: pqcble-r1
+version: cairn-r1
 ---
 
 # 0008: Beacon and discovery tuning
@@ -57,7 +57,7 @@ The [threat model](../spec/threat-model.md) requires the beacon to be unlinkable
 ## Alternatives considered
 
 - **A 15 min window.** Fewer recomputations, but a longer linkable interval for A6.
-- **Always connecting to unknown fixed-UUID peers.** Drains battery and spams strangers with connections; observers could count `pqcble` users more easily.
+- **Always connecting to unknown fixed-UUID peers.** Drains battery and spams strangers with connections; observers could count `cairn` users more easily.
 - **Never Resuming when idle.** Post-compromise recovery and PQ epochs would stall for silent contacts.
 - **A 7-day overlap of the old beacon key.** The removed contact could keep tracking the device for 7 days, which defeats the point of rotating.
 - **A continuous `LOW_LATENCY` scan in the background.** Android throttles it and it drains the battery.
@@ -76,6 +76,6 @@ This is the first version. These parameters are policy inside the core and SDK; 
 
 ## Amendments
 
-2026-10-05, from spec consolidation ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
+2026-10-05, from spec consolidation ([`cairn-r1` spec §13](../spec/cairn-r1.md#13-consolidation-issues-resolved-2026-10-05)):
 - The rotated beacon key travels in `BEACON_KEY` records until `BEACON_ACK` (OI-3).
 - PQ epoch cadence: ≥ 10 Resumes or ≥ 24 h since the last completed epoch (OI-11).

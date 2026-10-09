@@ -1,10 +1,10 @@
-# Map: pqcble-r1 — PQC peer-to-peer over BLE
+# Map: cairn-r1 — PQC peer-to-peer over BLE
 
 Label: `wayfinder:map`
 
 ## Destination
 
-A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform shell) and a minimal reference chat app that establish post-quantum, FIPS-conformant, constant-time peer-to-peer sessions over plain BLE (no Bluetooth bonding) and exchange real-time and store-and-forward messages, end-to-end on Android↔Android and Android↔iOS — preceded by a written `pqcble-r1` spec + ADRs.
+A working `cairn` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform shell) and a minimal reference chat app that establish post-quantum, FIPS-conformant, constant-time peer-to-peer sessions over plain BLE (no Bluetooth bonding) and exchange real-time and store-and-forward messages, end-to-end on Android↔Android and Android↔iOS — preceded by a written `cairn-r1` spec + ADRs.
 
 ## Notes
 
@@ -12,7 +12,7 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 - Baseline research: [`PQC over BLE findings`](../../docs/research/2026-10-05-pqc-over-ble-findings.md) (protocol sketch §4, open questions §8, round-2 research §9) and [`ble_airtime.py`](../../docs/research/ble_airtime.py).
 - Settled at charting (user answers, 2026-10-05):
   - Product: SDK + reference app; messages: real-time **and** store-and-forward.
-  - Topology: pairwise P2P only; "pairing" = `pqcble` app-layer pairing, never Bluetooth pairing/bonding (see `GLOSSARY.md`).
+  - Topology: pairwise P2P only; "pairing" = `cairn` app-layer pairing, never Bluetooth pairing/bonding (see `GLOSSARY.md`).
   - Security level: ML-KEM-768 (NIST L3).
   - Prototype platforms: Android↔Android, Android↔iOS.
   - Protocol scope: Pairing (QR, SAS, TOFU), Resume, Data frames, PQ ratchet, Beacons, Doorbell (connectionless), KCI profile — all in.
@@ -81,7 +81,7 @@ verifies 54/54 complete certificates (38.7 s).
 - [FIPS-conformant hybrid KEM combiner](issues/02-fips-hybrid-kem-combiner.md): X-Wing is acceptable under SP 800-227; AES-256-GCM is required; truncated tags/PRFs ≥ 64 bit.
 - [Kotlin Multiplatform + Rust core + BLE toolchain viability](issues/03-kmp-rust-ble-toolchain.md): Ubique bindings selected instead of Gobley per ADR 0004; platform-specific BLE code; iOS floor is ≥ 15.
 - [Ubique binding compatibility](issues/43-ubique-kmp-target-compatibility.md): Ubique `1.3.1` / UniFFI `0.32.0` selected; iOS 15 execution proof remains open in [issue 44](issues/44-ubique-binding-smoke-test.md).
-- [Kompact suitability for pqcble payload encoding](issues/14-kompact-payload-encoding.md): not adopted; no savings on crypto-dominated frames; chat envelope uses a Rust presence-bitmap layout.
+- [Kompact suitability for cairn payload encoding](issues/14-kompact-payload-encoding.md): not adopted; no savings on crypto-dominated frames; chat envelope uses a Rust presence-bitmap layout.
 - [Crypto suite and parameter set under FIPS](issues/05-crypto-suite-under-fips.md): X-Wing / ML-KEM-768 / X25519-as-T / SHA-384 / AES-256-GCM, no signatures, no negotiation; see ADR 0001.
 - [Store-and-forward sync semantics](issues/09-store-and-forward-semantics.md): seal at send with per-session-reseeded message chains, two layers for queued only, acks/resend/dedup, 500 msgs/7 days; see ADR 0002.
 - [Data transport and fragmentation](issues/10-data-transport-and-framing.md): symmetric discovery, GATT beacon/rx/tx/psm, MORE-bit fragmentation, 4096/2560 B limits, flagged L2CAP CoC upgrade; see ADR 0003.
@@ -99,7 +99,7 @@ verifies 54/54 complete certificates (38.7 s).
 - [External cryptographic review](issues/24-external-review.md): required before any non-prototype release (not the prototype); stage 1 spec+models (academics + public ePrint), stage 2 Rust-core audit (firm); Critical/High must be fixed.
 - [SAS and QR pairing UX](issues/21-pairing-ux.md): hub screen (my QR + scanner, SAS/TOFU as fallback links), in-chat Verify upgrade, 6-digit SAS only, upgrade mismatch → Compromised contact (sending blocked), 120 s timeout, prefilled editable name, dev-only debug panel; see ADR 0009.
 - [Implementation slicing](issues/25-implementation-slicing.md): 12 vertical slices from S0 (bootstrap) through S11 (measurement), tracked as tickets; in-memory loopback skeleton first; strict formal-model gate; S1+ wait for Spec consolidation; CI gates switch on with their code; DoD = gates + TDD + oldest/newest device demo.
-- [Spec consolidation](issues/26-spec-consolidation.md): `docs/spec/pqcble-r1.md` draft 0.2 (normative); 15 consolidation issues resolved, including the beacon key in the card, new BEACON_KEY/BEACON_ACK/EPOCH_DONE records, encrypted msgno in QUEUED, epoch cadence ≥10 Resumes/24 h, and KCI at pairing only; ADRs 0001/0002/0005/0008 amended.
+- [Spec consolidation](issues/26-spec-consolidation.md): `docs/spec/cairn-r1.md` draft 0.2 (normative); 15 consolidation issues resolved, including the beacon key in the card, new BEACON_KEY/BEACON_ACK/EPOCH_DONE records, encrypted msgno in QUEUED, epoch cadence ≥10 Resumes/24 h, and KCI at pairing only; ADRs 0001/0002/0005/0008 amended.
 - [Formal model: SAS pairing](issues/29-formal-model-sas.md): Tamarin model of QR/SAS/TOFU/Verify verified (16 lemmas); found mode downgrade → B checks `P1.mode` (OI-19); SAS/TOFU roles: picker is B (OI-20); `weaksecret` replaced by counting argument; spec draft 0.4.
 - [Formal model: Resume](issues/27-formal-model-resume.md): all four profiles re-verified with public `pairID` (16/17/19/20 lemmas); OI-16/17/18 regressions retained. Resume gate restored; composed ratchet gate remains pending.
 - [Android↔iOS background discovery and transport feasibility](issues/04-android-ios-background-ble.md): fixed service UUID plus GATT-read beacon; GATT-first transport; L2CAP optional.
@@ -109,7 +109,7 @@ verifies 54/54 complete certificates (38.7 s).
 
 ## Not yet specified
 
-- **Test vectors and spec freeze**: once the reference implementation exists, generate vectors, pin them in the spec, and freeze `pqcble-r1` (this precedes stage 1 of the external review).
+- **Test vectors and spec freeze**: once the reference implementation exists, generate vectors, pin them in the spec, and freeze `cairn-r1` (this precedes stage 1 of the external review).
 
 ## Out of scope
 

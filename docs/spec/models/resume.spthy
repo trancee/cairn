@@ -1,8 +1,8 @@
-theory PqcbleResume
+theory CairnResume
 begin
 
 /*
- * Symbolic model of pqcble-r1 Resume (docs/spec/pqcble-r1.md §6).
+ * Symbolic model of cairn-r1 Resume (docs/spec/cairn-r1.md §6).
  * Ticket: "Formal model: Resume". Tool: Tamarin 1.12 (+ Maude 3.5.1). See README.md for commands.
  *
  * Flags:

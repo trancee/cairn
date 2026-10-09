@@ -6,7 +6,7 @@ Blocked by:
 
 ## Question
 
-How are the `pqcble` SDK and the reference app packaged and distributed, and what compliance applies? Cover: AAR/Maven and XCFramework/SPM publishing for a KMP+Rust (Gobley) library; App Store export compliance for custom non-OS crypto (`ITSAppUsesNonExemptEncryption`, the US BIS EAR 5D002 / License Exception ENC self-classification report, France's ANSSI declaration); the Google Play equivalent; Apple privacy manifests (`PrivacyInfo.xcprivacy`) and required-reason APIs; Bluetooth usage strings; Play Data safety; and open-source licence notices for `aws-lc-rs`, `mlkem-native` and RustCrypto.
+How are the `cairn` SDK and the reference app packaged and distributed, and what compliance applies? Cover: AAR/Maven and XCFramework/SPM publishing for a KMP+Rust (Gobley) library; App Store export compliance for custom non-OS crypto (`ITSAppUsesNonExemptEncryption`, the US BIS EAR 5D002 / License Exception ENC self-classification report, France's ANSSI declaration); the Google Play equivalent; Apple privacy manifests (`PrivacyInfo.xcprivacy`) and required-reason APIs; Bluetooth usage strings; Play Data safety; and open-source licence notices for `aws-lc-rs`, `mlkem-native` and RustCrypto.
 
 ## Answer
 

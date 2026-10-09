@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-05
-version: pqcble-r1
+version: cairn-r1
 ---
 
 # 0005: Wire format: frames, records, version, padding, beacon and doorbell
@@ -21,7 +21,7 @@ Byte counts and airtime come from the prototype `docs/research/prototypes/wire-l
 
 - **Version.**
   - The version byte appears only in the QR payload and in pairing message P1.
-  - Otherwise the version is implied by the GATT service UUID and the `"pqcble-r1"` label in every KDF/MAC context.
+  - Otherwise the version is implied by the GATT service UUID and the `"cairn-r1"` label in every KDF/MAC context.
   - Each contact stores its agreed version. Resume and data frames carry no version byte, and there is no negotiation.
 - **Frame header (1 B).**
   - Layout: `MORE(1) | type(3): PAIR, S1, S2, DATA | sub(4)`.
@@ -38,7 +38,7 @@ Byte counts and airtime come from the prototype `docs/research/prototypes/wire-l
   - The Resume index and retry counter are never sent. Ratchet DATA records carry their epoch identifier.
   - **No 0-RTT.**
 - **DATA frame.** `hdr ‖ AES-256-GCM(records ‖ zero padding) ‖ tag(16)`, with an implicit nonce.
-  - Records are `type(1) ‖ LEB128 len ‖ body`; the current type table, including later amendments, is normative in [spec §7.3](../spec/pqcble-r1.md#73-records).
+  - Records are `type(1) ‖ LEB128 len ‖ body`; the current type table, including later amendments, is normative in [spec §7.3](../spec/cairn-r1.md#73-records).
   - A `0x00` type byte starts the padding.
 - **Padding.** The plaintext is padded to buckets of 32, 64, 128, 256, 512, 1024, 2048 and the maximum.
   - Ratchet KEM_EK/KEM_CT chunks (with an epoch and a LEB128 offset, so a transfer can continue after a disconnect) fill the slack first.
@@ -66,7 +66,7 @@ Byte counts and airtime come from the prototype `docs/research/prototypes/wire-l
 - **Tracking by contacts.** A contact, or a stolen contact phone, can recognise and track the device's beacon until the key rotates.
 - **Doorbell replay.** A doorbell replayed within its window causes one wasted connection. Its presence reveals "pending mail" only to the intended contact.
 - **Padding cost.** Bucket padding costs up to about 2× bytes for small messages (a 30 B chat becomes 81 B instead of 51 B).
-- **Parsing.** The LEB128 and record parser runs on decrypted plaintext and must be fuzzed (`pqcble-wire`). Its timing depends only on lengths, never on key material.
+- **Parsing.** The LEB128 and record parser runs on decrypted plaintext and must be fuzzed (`cairn-wire`). Its timing depends only on lengths, never on key material.
 - **Unverified inputs.** The legacy-advertising arithmetic assumes Android adds only the 3 B flags AD. This needs a device-lab check.
 
 ## Migration
@@ -75,7 +75,7 @@ This is the first version. Any layout change requires a new protocol version: a 
 
 ## Amendments
 
-2026-10-05, from spec consolidation ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
+2026-10-05, from spec consolidation ([`cairn-r1` spec §13](../spec/cairn-r1.md#13-consolidation-issues-resolved-2026-10-05)):
 - The contact card carries `day ‖ BK_day`, so P3 ≤ 135 B and P4 ≤ 119 B (OI-1).
 - The beacon formula has no `role` (OI-2).
 - New records: `0A BEACON_KEY`, `0B BEACON_ACK` and `0C EPOCH_DONE` (provisional) (OI-3, OI-4).
@@ -84,12 +84,12 @@ This is the first version. Any layout change requires a new protocol version: a 
 - iOS beacon UUID derivation (OI-9).
 - CLOSE reason codes (OI-14).
 
-2026-10-05, from *Formal model: Resume* ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
+2026-10-05, from *Formal model: Resume* ([`cairn-r1` spec §13](../spec/cairn-r1.md#13-consolidation-issues-resolved-2026-10-05)):
 - `K_id` and `K_auth_I` bind I's pairing role (`"id A"`, `"auth I B"`, …), so a device never accepts its own reflected S1. No byte changes (OI-16).
 - At most one Resume per contact in flight; on collision, pairing role A's attempt wins (OI-17).
 - KCI profile: `th_s` covers `ct_I`, so S2 cannot be altered to desync the pair. No byte changes (OI-18).
 
-2026-10-05, from *Formal model: SAS pairing* ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
+2026-10-05, from *Formal model: SAS pairing* ([`cairn-r1` spec §13](../spec/cairn-r1.md#13-consolidation-issues-resolved-2026-10-05)):
 - B aborts unless `P1.mode` equals the mode its user selected, so a mode downgrade is impossible. No byte changes (OI-19).
 
 2026-10-05, in-progress *Formal model: PQ ratchet mixing* (spec draft 0.5):

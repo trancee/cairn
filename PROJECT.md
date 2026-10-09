@@ -4,7 +4,7 @@ state=protocol research/specification/formal models; application/build/test-pipe
 
 ## Verified profile
 
-- **Purpose:** specify and verify `pqcble-r1` before implementing the SDK.
+- **Purpose:** specify and verify `cairn-r1` before implementing the SDK.
 - **Languages/toolchains:** Markdown specification and Tamarin `.spthy` models;
   model commands use Tamarin 1.12.0 and Maude 3.5.1.
 - **Platforms:** formal checks have run on macOS/Apple silicon. Android/iOS
@@ -64,7 +64,7 @@ state=protocol research/specification/formal models; application/build/test-pipe
   No application build, coverage or compatibility gate is available.
 - **CI gates/code generation:** no application pipeline or generated SDK
   artifacts exist. Future implementation gates are in the local
-  [map](.scratch/pqcble-r1/map.md); symbolic verification is not a
+  [map](.scratch/cairn-r1/map.md); symbolic verification is not a
   constant-time, byte-parser, persistence or hardware proof.
   The lifecycle runner regenerates proof certificates into a temporary
   directory. The [lifecycle workflow](.github/workflows/lifecycle.yml)

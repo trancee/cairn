@@ -1,4 +1,4 @@
-# Kompact suitability for pqcble payload encoding
+# Kompact suitability for cairn payload encoding
 
 Type: research
 Status: resolved
@@ -6,7 +6,7 @@ Blocked by:
 
 ## Question
 
-Can [Kompact](https://github.com/trancee/kompact), a KMP library for LSB-first bit-packed messages, shrink `pqcble-r1` payloads, and where should it sit? Specifically:
+Can [Kompact](https://github.com/trancee/kompact), a KMP library for LSB-first bit-packed messages, shrink `cairn-r1` payloads, and where should it sit? Specifically:
 - Its wire format: fixed vs framed layouts, length/count prefixes, varints, optional fields.
 - Byte savings against a hand-designed byte-aligned layout for: Resume S1/S2, data frame header, ratchet chunk carriage, beacon, doorbell, chat message envelope.
 - Maturity: version, tests, fuzzing, checked-decode guarantees, allocation behavior, KMP targets incl. iOS.

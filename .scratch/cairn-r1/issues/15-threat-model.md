@@ -6,7 +6,7 @@ Blocked by:
 
 ## Question
 
-Which adversaries does `pqcble-r1` defend against, and which security properties does each mode claim? Cover: active MitM at pairing (per QR/SAS/TOFU), a passive recorder with a future quantum computer, device seizure (unlocked/locked, with or without forensic tools), a malicious or compromised contact, a tracking adversary (multi-sensor RF, cross-contact), DoS/battery drain, rollback via backup/restore, and a malicious OS/app sandbox escape (out of scope?). Output: `docs/spec/threat-model.md` with an adversary × property table (confidentiality, PQ-FS, PCS, mutual auth, KCI, unlinkability, metadata hiding, availability), and non-goals.
+Which adversaries does `cairn-r1` defend against, and which security properties does each mode claim? Cover: active MitM at pairing (per QR/SAS/TOFU), a passive recorder with a future quantum computer, device seizure (unlocked/locked, with or without forensic tools), a malicious or compromised contact, a tracking adversary (multi-sensor RF, cross-contact), DoS/battery drain, rollback via backup/restore, and a malicious OS/app sandbox escape (out of scope?). Output: `docs/spec/threat-model.md` with an adversary × property table (confidentiality, PQ-FS, PCS, mutual auth, KCI, unlinkability, metadata hiding, availability), and non-goals.
 
 ## Comments
 
@@ -23,7 +23,7 @@ Recorded in the [threat model](../../../docs/spec/threat-model.md); the user acc
 **Claims:**
 - Forward secrecy, plus post-compromise recovery: classical at the next Resume, PQ after the next PQ epoch.
 - TOFU: passive-PQ only, shown as Unverified.
-- Metadata: identities and the contact graph are hidden; the presence of `pqcble` is visible.
+- Metadata: identities and the contact graph are hidden; the presence of `cairn` is visible.
 - Security levels: NIST L3 and 2^-64/2^-128 tag bounds.
 
 **New:** QR mode gets a 4-digit confirmation on A, which defeats an attacker who photographed the QR. It is local only, and ADR 0005 and the wire draft are updated.

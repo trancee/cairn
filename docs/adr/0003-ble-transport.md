@@ -1,14 +1,14 @@
 ---
 status: accepted
 date: 2026-10-05
-version: pqcble-r1
+version: cairn-r1
 ---
 
 # 0003 — BLE transport: symmetric discovery, GATT with an optional L2CAP CoC upgrade
 
 ## Context
 
-`pqcble-r1` runs between Android (API 26+) and iOS (15+) over plain BLE, never Bluetooth pairing. It must work while the apps are backgrounded. The background research ([Android↔iOS background BLE](../research/2026-10-05-android-ios-background-ble.md)) found:
+`cairn-r1` runs between Android (API 26+) and iOS (15+) over plain BLE, never Bluetooth pairing. It must work while the apps are backgrounded. The background research ([Android↔iOS background BLE](../research/2026-10-05-android-ios-background-ble.md)) found:
 
 - iOS moves a backgrounded app's service UUIDs into an Apple-only overflow area that Android probably cannot see.
 - iOS can scan in the background for a standard service UUID.
@@ -21,7 +21,7 @@ version: pqcble-r1
 
 **Discovery and roles: symmetric.** Every device advertises and scans whenever the OS allows it, and either side may connect.
 
-- **Advertising.** A fixed `pqcble` 128-bit service UUID.
+- **Advertising.** A fixed `cairn` 128-bit service UUID.
   - Android also puts the rotating **beacon** in service data.
   - A foregrounded iOS device also advertises the beacon as a rotating 128-bit service UUID.
   - A backgrounded iOS device advertises only the fixed UUID, which iOS places in the overflow area.
@@ -39,7 +39,7 @@ version: pqcble-r1
 | `psm` | read, only after Resume | L2CAP CoC PSM for the optional upgrade |
 
 **Framing and fragmentation.**
-- Every `pqcble` frame begins with the 1-byte header defined by the wire format, which includes a **MORE** bit.
+- Every `cairn` frame begins with the 1-byte header defined by the wire format, which includes a **MORE** bit.
 - One ATT value carries one fragment.
 - The fragments of a frame are sent back to back in each direction, never interleaved.
 - A frame that fits one ATT value costs 0 extra bytes.
@@ -78,7 +78,7 @@ version: pqcble-r1
 
 ## Risks
 
-- **Linkability.** The fixed service UUID reveals that a `pqcble` app is nearby. Only the beacon is unlinkable.
+- **Linkability.** The fixed service UUID reveals that a `cairn` app is nearby. Only the beacon is unlinkable.
 - **Background reachability.** Android finding a backgrounded iPhone may not work at all. Direct-connect fallback is limited by iOS address rotation. Symmetric discovery hides this risk instead of designing around it, which makes real-device measurement mandatory.
 - **Wasted connections.** Reading the `beacon` characteristic costs a connection per candidate peer, which adds battery use and lets a nearby observer count connection attempts.
 - **Pre-auth memory.** Each link can hold up to 2560 B for 5 s before authentication. Many simultaneous strangers multiply this, so the number of concurrent unauthenticated links must be capped.
@@ -87,9 +87,9 @@ version: pqcble-r1
 
 ## Migration
 
-First version, so nothing to migrate. GATT UUIDs and the `beacon`/`rx`/`tx`/`psm` contract are fixed for `pqcble-r1`. Changing them requires a new service UUID, not a change to the existing one.
+First version, so nothing to migrate. GATT UUIDs and the `beacon`/`rx`/`tx`/`psm` contract are fixed for `cairn-r1`. Changing them requires a new service UUID, not a change to the existing one.
 
 ## Amendments
 
-2026-10-05, from *Formal model: Resume* ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
+2026-10-05, from *Formal model: Resume* ([`cairn-r1` spec §13](../spec/cairn-r1.md#13-consolidation-issues-resolved-2026-10-05)):
 - **Duplicate links.** A device can't tell that a link is a duplicate until it has matched a pseudonym. The losing link is therefore closed at S1, by the concurrent-Resume rule in spec §6, not before Resume (OI-17).

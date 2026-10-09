@@ -6,7 +6,7 @@ Blocked by:
 
 ## Question
 
-Must a symbolic formal model (Tamarin and/or ProVerif) of `pqcble-r1` pass before the prototype counts as done — and if so, for which components (pairing modes, resume, PQ ratchet, KCI profile, doorbell) and which security properties? Or is it a parallel non-blocking effort?
+Must a symbolic formal model (Tamarin and/or ProVerif) of `cairn-r1` pass before the prototype counts as done — and if so, for which components (pairing modes, resume, PQ ratchet, KCI profile, doorbell) and which security properties? Or is it a parallel non-blocking effort?
 
 ## Answer
 

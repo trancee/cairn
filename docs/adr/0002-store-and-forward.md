@@ -1,14 +1,14 @@
 ---
 status: accepted
 date: 2026-10-05
-version: pqcble-r1
+version: cairn-r1
 ---
 
 # 0002 — Store-and-forward: encrypt at send time with a per-session message-key chain
 
 ## Context
 
-`pqcble` must deliver messages written while two contacts are apart, and must do it in the background on Android and iOS. Session keys exist only during a connection: Resume derives them from a fresh X25519 exchange. Messages are **sealed when the user sends them**, not when they are delivered. The sending user then sees a durable, encrypted "sent" state at once, and plaintext never waits in a queue for a future session. The cost is that message keys must exist outside a session, and some may have to be kept for late delivery.
+`cairn` must deliver messages written while two contacts are apart, and must do it in the background on Android and iOS. Session keys exist only during a connection: Resume derives them from a fresh X25519 exchange. Messages are **sealed when the user sends them**, not when they are delivered. The sending user then sees a durable, encrypted "sent" state at once, and plaintext never waits in a queue for a future session. The cost is that message keys must exist outside a session, and some may have to be kept for late delivery.
 
 ## Decision
 
@@ -51,6 +51,6 @@ First version, so nothing to migrate. Changing the layering or the chain derivat
 
 ## Amendments
 
-2026-10-05, from spec consolidation ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
+2026-10-05, from spec consolidation ([`cairn-r1` spec §13](../spec/cairn-r1.md#13-consolidation-issues-resolved-2026-10-05)):
 - Queued messages carry the chain index; the message number moves inside the ciphertext (OI-6).
 - If the 1-byte generation wraps onto a generation that still has outstanding messages, those messages expire (OI-5).

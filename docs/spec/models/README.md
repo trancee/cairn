@@ -1,6 +1,6 @@
 # Formal models
 
-Symbolic models of `pqcble-r1` ([spec](../pqcble-r1.md)). Under the strict formal-model gate (ticket *Implementation slicing*), a slice that implements a modelled flow starts only after its model verifies.
+Symbolic models of `cairn-r1` ([spec](../cairn-r1.md)). Under the strict formal-model gate (ticket *Implementation slicing*), a slice that implements a modelled flow starts only after its model verifies.
 
 | Model | Spec | Status |
 |---|---|---|
@@ -289,17 +289,17 @@ Observed on macOS/Apple silicon: the strict exact-source replay verifies
 `lost_data_recovery` in 826 steps and `dk_reveal_owner` in 9 steps
 (105.69 seconds processing time). All 37 selector/correspondence/result/
 command regressions pass. The native assembled-export SHA-256 is
-`b41046cd3ae828ae59d6fa98f61652207005171fd7a84e50af7a1e8ef919f9b0`;
+`d5678674a4dfdff8fb5997fc8bc0202b7818f0cdcf9ac1f5aa4089d40d89e8e0`;
 the native replay-export SHA-256 is
-`6b47c1fabed41b7d317bf9bf3e6aa6e0dbd52d292dae64abd2c7df7da4785362`.
+`8efffcd0f03af887cfb11e8f9c3b2c69ed4e5b1b4609e610d5a78a9c6e662caa`.
 These differ from the lifecycle printer digest because the export formats
 differ; they are regenerated, not cached certificates.
 
-Re-run on the current tree (certificate-only, native export,
+Re-run before the rename to Cairn (theory `PqcbleRatchet`; the digests below are of that export; certificate-only, native export,
 `tamarin-prover EXPORT --quit-on-warning --derivcheck-timeout=60 +RTS -M5G`,
 8 GiB host): the full assembled context exhausted the 5 GiB heap in both
 profiles, after 481 s for the default and 247 s for `DISCLOSURE_SOURCES`.
-The export SHA-256 values are unchanged:
+The export SHA-256 values were:
 `b41046cd3ae828ae59d6fa98f61652207005171fd7a84e50af7a1e8ef919f9b0` (default)
 and `2421f43c5907ff5a2e96e4dea404a643b472ed25ab38922bf6bc11b48f49bfe1`
 (profile). No lemma result was printed, so this is an inconclusive resource

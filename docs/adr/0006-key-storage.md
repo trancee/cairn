@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-05
-version: pqcble-r1
+version: cairn-r1
 ---
 
 # 0006: Key storage and state persistence
@@ -38,7 +38,7 @@ Platform floors are Android 8 (API 26) and iOS 15.
   - Android: `allowBackup=false`, plus `fullBackupContent` and `dataExtractionRules` (API 31+) that exclude everything.
   - iOS: `ThisDeviceOnly` Keychain items, plus `isExcludedFromBackup` on the database directory.
   - Moving to a new device, or restoring one, requires **re-pairing** every contact.
-- **Fresh install on iOS:** if no database exists at launch, delete every `pqcble` Keychain item before creating new ones. This handles Keychain items that survive app deletion.
+- **Fresh install on iOS:** if no database exists at launch, delete every `cairn` Keychain item before creating new ones. This handles Keychain items that survive app deletion.
 - **Master-key loss:** if unwrapping fails, there is no fallback to plaintext and no new key is used to keep the old data. The app wipes the database, tells the user "Secure storage was reset; contacts must pair again", and starts over.
 - **Contact removal:** one transaction deletes the contact's state row (destroying its storage key), its queue rows and its history rows, then the core rotates the device beacon key ([ADR 0005](0005-wire-format.md)). Physical erasure of flash is not guaranteed; the guarantee rests on destroying the key.
 - **History retention:** messages are kept until the user clears them (per contact) or removes the contact. There are no disappearing messages in r1.

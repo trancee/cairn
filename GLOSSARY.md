@@ -1,11 +1,13 @@
-# pqcble
+# cairn
 
 Post-quantum secure peer-to-peer messaging between nearby devices over Bluetooth Low Energy.
+
+The name is a cairn: a stack of stones marking a path, each placed on the last, like the one-way ratchet. See [ADR 0011](docs/adr/0011-project-name.md).
 
 ## Language
 
 **Peer**:
-A device running `pqcble` that takes part in a pairwise relationship with another.
+A device running `cairn` that takes part in a pairwise relationship with another.
 _Avoid_: Node, client, partner
 
 **Contact**:
@@ -13,12 +15,12 @@ A peer that this device has paired with and holds shared state for.
 _Avoid_: Bond, paired device, friend
 
 **Pairing**:
-The one-time act by which two peers become contacts and establish post-quantum shared secrets, performed by `pqcble` itself on top of an ordinary, unencrypted BLE connection. It is **not** Bluetooth pairing: the operating system's Bluetooth pairing and bonding are never used, no Bluetooth keys are created, and nothing appears in the system's Bluetooth settings.
+The one-time act by which two peers become contacts and establish post-quantum shared secrets, performed by `cairn` itself on top of an ordinary, unencrypted BLE connection. It is **not** Bluetooth pairing: the operating system's Bluetooth pairing and bonding are never used, no Bluetooth keys are created, and nothing appears in the system's Bluetooth settings.
 _Avoid_: Introduction, enrollment, handshake
 
 **Bluetooth pairing**:
-The operating system's own link-layer key exchange (Secure Simple Pairing / LE Secure Connections) and the resulting **bond**. Out of scope for `pqcble`; always say "Bluetooth pairing", never just "pairing", when this is meant.
-_Avoid_: Pairing (unqualified), bonding when meaning `pqcble` pairing
+The operating system's own link-layer key exchange (Secure Simple Pairing / LE Secure Connections) and the resulting **bond**. Out of scope for `cairn`; always say "Bluetooth pairing", never just "pairing", when this is meant.
+_Avoid_: Pairing (unqualified), bonding when meaning `cairn` pairing
 
 **Pairing role**:
 Which side of a contact relationship a device is (A or B), fixed once at pairing and used wherever the two sides must act asymmetrically.

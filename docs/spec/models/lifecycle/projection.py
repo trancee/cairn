@@ -216,7 +216,7 @@ def lean_certificate(rows: list[Projection]) -> str:
         matching = [event for event in row.events if event[0] == name]
         return f"some {ordinal(matching[0][-1])}" if matching else "none"
 
-    lines = ["import Composition", "", "namespace Pqcble", ""]
+    lines = ["import Composition", "", "namespace Cairn", ""]
     for row in rows:
         lines.append(f"-- {row.name}")
         if row.action == "pair":
@@ -246,5 +246,5 @@ def lean_certificate(rows: list[Projection]) -> str:
             f"{event_option(row, 'ResumeStart')}, {event_option(row, 'ResumeFinish')}) "
             f"= observation .{row.action} stage := by rfl", "",
         ])
-    lines.extend(["end Pqcble", ""])
+    lines.extend(["end Cairn", ""])
     return "\n".join(lines)

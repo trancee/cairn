@@ -1,14 +1,14 @@
 ---
 status: accepted
 date: 2026-10-05
-version: pqcble-r1
+version: cairn-r1
 ---
 
 # 0004 — Core architecture: sans-IO Rust core, crypto backend seam, KMP shell
 
 ## Context
 
-The `pqcble` SDK ships on Android (API 26+) and iOS (15+) behind a Kotlin Multiplatform + Compose Multiplatform shell. Bindings use UniFFI through Ubique's Kotlin Multiplatform plugin. The core API remains synchronous and sans-IO; binding-runtime async behavior is not part of its contract. BLE is platform code, because no KMP library covers peripheral, GATT server and L2CAP together. Two constraints shape the core:
+The `cairn` SDK ships on Android (API 26+) and iOS (15+) behind a Kotlin Multiplatform + Compose Multiplatform shell. Bindings use UniFFI through Ubique's Kotlin Multiplatform plugin. The core API remains synchronous and sans-IO; binding-runtime async behavior is not part of its contract. BLE is platform code, because no KMP library covers peripheral, GATT server and L2CAP together. Two constraints shape the core:
 
 - FIPS: approved algorithms now, and a validated module later behind a seam ([ADR 0001](0001-crypto-suite.md)).
 - Formal verification gates Resume, the ratchet and SAS. The implementation must therefore be deterministic and testable against those models.
@@ -20,7 +20,7 @@ On 2026-10-08, the user selected Ubique's binding plugin to replace Gobley. Gobl
 **Sans-IO core.** The Rust core is a pure, deterministic state machine. Its whole interface is one object:
 
 ```
-PqcbleCore.handle(event: Event) -> List<Action>   // plus read-only queries (contacts, verification state)
+CairnCore.handle(event: Event) -> List<Action>   // plus read-only queries (contacts, verification state)
 ```
 
 - **Events** include link up/down, bytes received, timer fired, user sent, Restore and pairing input.
@@ -40,20 +40,20 @@ PqcbleCore.handle(event: Event) -> List<Action>   // plus read-only queries (con
 - **Secret hygiene.**
   - Secrets live in `zeroize`-on-drop types and never cross the FFI, apart from the sealed persistence blob.
   - Secret comparisons use `subtle`.
-  - `pqcble-proto` and the adapters get constant-time CI gates (valgrind taint / dudect).
+  - `cairn-proto` and the adapters get constant-time CI gates (valgrind taint / dudect).
 
 **Rust/Kotlin bindings.** Use Ubique's unified UniFFI Kotlin Multiplatform plugin (`ch.ubique.uniffi.plugin`) at `1.3.1`, with UniFFI `0.32.0`. This replaces Gobley. Keep the plugin-managed runtime and generated dependencies together at `1.3.1`; do not add Gobley's separate Cargo/Rust/UniFFI plugins or atomicfu compiler-plugin setup.
 
-The first bootstrap must prove the generated API through a real Kotlin call on the JVM, Android API 26+, and iOS device/simulator targets with an iOS 15 deployment floor before the binding choice is considered validated for production. The iOS 15 floor is not yet verified; track the build proof in [issue 44](../../.scratch/pqcble-r1/issues/44-ubique-binding-smoke-test.md).
+The first bootstrap must prove the generated API through a real Kotlin call on the JVM, Android API 26+, and iOS device/simulator targets with an iOS 15 deployment floor before the binding choice is considered validated for production. The iOS 15 floor is not yet verified; track the build proof in [issue 44](../../.scratch/cairn-r1/issues/44-ubique-binding-smoke-test.md).
 
 **Layout (monorepo):**
 
 ```
 core/   Cargo workspace
-  pqcble-wire    codec; no_std; fuzzed
-  pqcble-crypto  CryptoBackend trait + adapters
-  pqcble-proto   state machines; no_std + alloc
-  pqcble-ffi     UniFFI surface (PqcbleCore, Event, Action)
+  cairn-wire    codec; no_std; fuzzed
+  cairn-crypto  CryptoBackend trait + adapters
+  cairn-proto   state machines; no_std + alloc
+  cairn-ffi     UniFFI surface (CairnCore, Event, Action)
 sdk/    KMP library: Ubique UniFFI bindings, BLE adapters (Kable central; native peripheral/GATT server), sealed storage
 app/    Compose Multiplatform reference app
 ```

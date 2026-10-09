@@ -471,7 +471,7 @@ over all eight targets.
 
 2026-10-09 (re-measurement): the exact-prefix safety-only profile context
 (61-lemma export minus 4 existential witnesses and 3 incomplete
-serialization lemmas) verifies **54/54** in 38.7 s (native export SHA-256
+serialization lemmas) verifies **54/54** in 38.7 s (pre-rename theory `PqcbleRatchet`; native export SHA-256
 `2421f43c5907ff5a2e96e4dea404a643b472ed25ab38922bf6bc11b48f49bfe1`,
 selected context `f82357a72ab9304d2438d3311986ebdd48e312a346f3fa1cb974e414fae195d0`).
 Not a full-theory count; the 15 SS source chains remain.

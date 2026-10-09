@@ -1,14 +1,14 @@
 ---
 status: accepted
 date: 2026-10-05
-version: pqcble-r1
+version: cairn-r1
 ---
 
-# 0001 — `pqcble-r1` cryptographic suite
+# 0001 — `cairn-r1` cryptographic suite
 
 ## Context
 
-`pqcble-r1` must be post-quantum (target NIST category 3), constant-time, and as small on the wire as possible over BLE. "FIPS required" was defined as **FIPS-approved algorithms now**, with a hybrid classical component allowed when ML-KEM is the approved component. The target is a CMVP-validated module later, behind a crypto-backend seam.
+`cairn-r1` must be post-quantum (target NIST category 3), constant-time, and as small on the wire as possible over BLE. "FIPS required" was defined as **FIPS-approved algorithms now**, with a hybrid classical component allowed when ML-KEM is the approved component. The target is a CMVP-validated module later, behind a crypto-backend seam.
 
 As of 2026-10, no validated module covers ML-KEM on both iOS and Android ([FIPS-validated modules research](../research/2026-10-05-fips-validated-mlkem-modules.md)). NIST SP 800-227 §4.6 uses X-Wing as its worked example of an acceptable PQ/T hybrid. X25519 is not an approved SP 800-56A scheme and may only act as the auxiliary secret `T` in SP 800-56C's `Z‖T`. ChaCha20-Poly1305 is not approved ([hybrid combiner research](../research/2026-10-05-fips-hybrid-kem-combiner.md)).
 
@@ -56,7 +56,7 @@ This is the first suite, so there is nothing to migrate. Any change ships as a n
 
 ## Amendments
 
-2026-10-05, from spec consolidation ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
+2026-10-05, from spec consolidation ([`cairn-r1` spec §13](../spec/cairn-r1.md#13-consolidation-issues-resolved-2026-10-05)):
 - The KCI profile is chosen at pairing only; enabling it later requires re-pairing (OI-12).
 - Doorbell keys are two directional keys derived from `RK` (OI-10).
 

@@ -1,6 +1,6 @@
 import Refinement
 
-namespace Pqcble
+namespace Cairn
 
 abbrev Key := Nat × Bool
 
@@ -83,7 +83,7 @@ theorem advance_invariant {world : World} (invariant : WorldInvariant world)
 
 inductive GlobalTrace : World → Prop where
   | empty : GlobalTrace ⟨0, fun _ => none⟩
-  | stutter : GlobalTrace world → GlobalTrace (Pqcble.stutter world)
+  | stutter : GlobalTrace world → GlobalTrace (Cairn.stutter world)
   | pair : GlobalTrace world →
       (∀ key ∈ keys, world.locals key = none) →
       GlobalTrace (create world keys)
@@ -138,4 +138,4 @@ theorem global_stutter {world : World} (trace : GlobalTrace world) :
 #print axioms global_stutter
 #print axioms stutter_records_no_actions
 
-end Pqcble
+end Cairn

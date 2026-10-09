@@ -6,7 +6,7 @@ Blocked by: none
 
 ## Question
 
-Merge ADRs 0001–0009, the [wire-format draft](../../../docs/research/2026-10-05-wire-format-draft.md) and the [threat model](../../../docs/spec/threat-model.md) into one normative `docs/spec/pqcble-r1.md`, written in RFC 2119 language:
+Merge ADRs 0001–0009, the [wire-format draft](../../../docs/research/2026-10-05-wire-format-draft.md) and the [threat model](../../../docs/spec/threat-model.md) into one normative `docs/spec/cairn-r1.md`, written in RFC 2119 language:
 - primitives and labels;
 - the key schedule;
 - every message's byte layout;
@@ -19,7 +19,7 @@ Leave a placeholder for test vectors: they come from the reference implementatio
 
 ## Answer
 
-Wrote [`docs/spec/pqcble-r1.md`](../../../docs/spec/pqcble-r1.md), draft 0.2: normative RFC 2119 text covering notation, the labelled KDF/MAC, versioning, transport, pairing, Resume, DATA records, store-and-forward, the PQ ratchet (provisional), beacons and the doorbell, and implementation requirements. Test vectors are a placeholder.
+Wrote [`docs/spec/cairn-r1.md`](../../../docs/spec/cairn-r1.md), draft 0.2: normative RFC 2119 text covering notation, the labelled KDF/MAC, versioning, transport, pairing, Resume, DATA records, store-and-forward, the PQ ratchet (provisional), beacons and the doorbell, and implementation requirements. Test vectors are a placeholder.
 
 Consolidation found 15 issues (OI-1 to OI-15); the user accepted every proposal on 2026-10-05. Main changes:
 - the card carries the device beacon key (P3 ≤ 135 B, P4 ≤ 119 B);

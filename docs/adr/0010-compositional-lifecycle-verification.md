@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-09
-version: pqcble-r1
+version: cairn-r1
 ---
 
 # 0010: Compositional lifecycle verification

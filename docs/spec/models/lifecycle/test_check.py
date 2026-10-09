@@ -46,15 +46,15 @@ class EvidenceTests(unittest.TestCase):
             check_axioms("compiled without an axiom audit")
 
     def test_each_required_theorem_must_be_audited(self):
-        output = "'Pqcble.resume_serialized' depends on axioms: [propext]"
+        output = "'Cairn.resume_serialized' depends on axioms: [propext]"
 
         with self.assertRaisesRegex(RuntimeError, "missing Lean theorem"):
-            check_axioms(output, ("Pqcble.resume_serialized", "Pqcble.lock_stage_order"))
+            check_axioms(output, ("Cairn.resume_serialized", "Cairn.lock_stage_order"))
 
     def test_axiom_free_theorem_report_is_accepted(self):
-        output = "'Pqcble.stutter_records_no_actions' does not depend on any axioms"
+        output = "'Cairn.stutter_records_no_actions' does not depend on any axioms"
 
-        check_axioms(output, ("Pqcble.stutter_records_no_actions",))
+        check_axioms(output, ("Cairn.stutter_records_no_actions",))
 
     def test_duplicate_theorem_report_is_rejected(self):
         output = "'theorem' depends on axioms: [propext]\n" * 2

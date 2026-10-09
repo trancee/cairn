@@ -6,7 +6,7 @@ Blocked by:
 
 ## Question
 
-How do we measure the energy and airtime of `pqcble` on the device-test-lab phones without a BLE sniffer and without lab power monitors? Evaluate: Android Battery Historian/batterystats, `dumpsys bluetooth_manager` activity energy info, ODPM/PowerStats HAL availability on non-Pixel devices, HCI snoop logs for airtime, Perfetto power rails, iOS Instruments Energy Log/MetricKit, and whether a cheap USB power meter or an nRF PPK2 is needed. Output a reproducible protocol: idle background cost per hour, cost per Resume, cost per message, and the pairing cost.
+How do we measure the energy and airtime of `cairn` on the device-test-lab phones without a BLE sniffer and without lab power monitors? Evaluate: Android Battery Historian/batterystats, `dumpsys bluetooth_manager` activity energy info, ODPM/PowerStats HAL availability on non-Pixel devices, HCI snoop logs for airtime, Perfetto power rails, iOS Instruments Energy Log/MetricKit, and whether a cheap USB power meter or an nRF PPK2 is needed. Output a reproducible protocol: idle background cost per hour, cost per Resume, cost per message, and the pairing cost.
 
 ## Comments
 

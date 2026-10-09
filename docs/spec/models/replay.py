@@ -200,7 +200,7 @@ def main() -> int:
             r"^Maude version 3\.5\.1\s*$", version, re.M,
         ):
             raise ReplayError("expected Tamarin 1.12.0 and Maude 3.5.1")
-        with tempfile.TemporaryDirectory(prefix="pqcble-witness-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="cairn-witness-") as temporary:
             build = Path(temporary)
             exported = build / "assembled.spthy"
             run([

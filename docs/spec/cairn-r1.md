@@ -1,4 +1,4 @@
-# `pqcble-r1` protocol specification
+# `cairn-r1` protocol specification
 
 Status: **draft 0.6** (ticket *Formal model: PQ ratchet mixing*, 2026-10-05). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed.
 
@@ -50,10 +50,10 @@ No other algorithms are used. There is no suite negotiation.
 - String literals are ASCII without a terminator.
 - **Labelled KDF.** Every derived key uses
   ```
-  KDF(ikm, salt, label, info, L) = HKDF-Expand(HKDF-Extract(salt, ikm), lp("pqcble-r1 " ‖ label) ‖ info, L)
+  KDF(ikm, salt, label, info, L) = HKDF-Expand(HKDF-Extract(salt, ikm), lp("cairn-r1 " ‖ label) ‖ info, L)
   ```
   An empty salt is 48 zero bytes.
-- **Labelled MAC.** `MAC(k, label, x) = Trunc16(HMAC(k, lp("pqcble-r1 " ‖ label) ‖ x))`.
+- **Labelled MAC.** `MAC(k, label, x) = Trunc16(HMAC(k, lp("cairn-r1 " ‖ label) ‖ x))`.
 - `Digits(x, d) = (u64(x[..8]) mod 10^d)`, rendered with leading zeros. The modulo bias is below 2^-44 and is ignored.
 - All comparisons of MACs, tags, pseudonyms against secret-derived tables, beacons and SAS inputs MUST be constant-time (§11).
 
@@ -65,8 +65,8 @@ No other algorithms are used. There is no suite negotiation.
 
 ## 3. Versioning
 
-- The protocol version is `0x01` for `pqcble-r1`.
-- It appears explicitly only in the QR payload and P1. Elsewhere it is implied by the GATT service UUID (§4.1) and by the `"pqcble-r1 "` prefix of every KDF and MAC label.
+- The protocol version is `0x01` for `cairn-r1`.
+- It appears explicitly only in the QR payload and P1. Elsewhere it is implied by the GATT service UUID (§4.1) and by the `"cairn-r1 "` prefix of every KDF and MAC label.
 - A peer MUST abort pairing when P1's or the QR's version differs from its own. There is no negotiation and no downgrade.
 - Each contact stores the version it paired under. Any change to a layout, label or primitive requires a new version, a new service UUID and re-pairing (ADR 0005).
 
@@ -152,11 +152,11 @@ Pairing MUST only be accepted while the local user has the pairing screen open (
 ```
 A:  (ek_A, dk_A) ← XWing.KeyGen();  nA ← rand(16);  token ← rand(16)   (QR mode only)
     qh     = Trunc32(H(ek_A))
-    commit = Trunc32(H(lp("pqcble-r1 commit") ‖ nA))
+    commit = Trunc32(H(lp("cairn-r1 commit") ‖ nA))
 B:  (ct, ss) ← XWing.Encaps(ek_A);  nB ← rand(16)
 A:  ss ← XWing.Decaps(dk_A, ct)
     th = H(P1 ‖ P2 ‖ nA)                     # P1, P2 = complete reassembled frames
-B:  on P3: check Trunc32(H(lp("pqcble-r1 commit") ‖ nA)) == commit, else abort
+B:  on P3: check Trunc32(H(lp("cairn-r1 commit") ‖ nA)) == commit, else abort
 RK                        = KDF(ss, th, "rk", "", 32)
 K_conf_A, K_conf_B        = KDF(RK, "", "conf A", "", 32), KDF(RK, "", "conf B", "", 32)
 K_card_A, K_card_B        = KDF(RK, "", "card A", "", 32), KDF(RK, "", "card B", "", 32)
@@ -172,8 +172,8 @@ confirm_B = MAC(K_conf_B, "P4", th ‖ token)   # token = empty unless mode = QR
 ### 5.3 Verification codes
 
 ```
-SAS  = Digits(H(lp("pqcble-r1 sas") ‖ th ‖ nB), 6)     # shown as "ddd ddd"
-QRC  = Digits(H(lp("pqcble-r1 qrc") ‖ th ‖ nB), 4)
+SAS  = Digits(H(lp("cairn-r1 sas") ‖ th ‖ nB), 6)     # shown as "ddd ddd"
+QRC  = Digits(H(lp("cairn-r1 qrc") ‖ th ‖ nB), 4)
 ```
 
 | Mode | Before the contact is stored |
@@ -217,7 +217,7 @@ ctx(n)    = pairID ‖ u64(n)
 K_id      = KDF(CK_n, "", "id " ‖ ρ_I,     ctx(n), 32)          # ρ_I = I's pairing role, "A" or "B" [OI-16]
 K_auth_I  = KDF(CK_n, "", "auth I " ‖ ρ_I, ctx(n), 32)
 K_auth_R  = KDF(CK_n, "", "auth R", ctx(n), 32)
-pseudonym = Trunc8(HMAC(K_id, lp("pqcble-r1 pseudonym") ‖ u8(attempt)))    attempt = min(tries, 3)  [OI-8]
+pseudonym = Trunc8(HMAC(K_id, lp("cairn-r1 pseudonym") ‖ u8(attempt)))    attempt = min(tries, 3)  [OI-8]
 
 S1  I→R : hdr ‖ pseudonym(8) ‖ eI(32) ‖ mac(16)              57 B
           mac = MAC(K_auth_I, "S1", hdr ‖ pseudonym ‖ eI)
@@ -226,10 +226,10 @@ S2  R→I : hdr ‖ eR(32) ‖ confirm(16)                         49 B
           confirm = MAC(K_auth_R, "S2", hdr ‖ th_s)
 dh        = X25519(e, E_peer)
 prk       = HKDF-Extract(CK_n, dh ‖ pq)                      # pq per §9 if S1.MIX = 1, else empty [OI-4]
-SK_I→R    = HKDF-Expand(prk, lp("pqcble-r1 sk I") ‖ ctx(n) ‖ th_s, 32)
-SK_R→I    = HKDF-Expand(prk, lp("pqcble-r1 sk R") ‖ ctx(n) ‖ th_s, 32)
-CK_{n+1}  = HKDF-Expand(prk, lp("pqcble-r1 ratchet") ‖ ctx(n) ‖ th_s, 32)
-MS_{n+1}  = HKDF-Expand(prk, lp("pqcble-r1 msg seed") ‖ ctx(n) ‖ th_s, 32)    (§8)
+SK_I→R    = HKDF-Expand(prk, lp("cairn-r1 sk I") ‖ ctx(n) ‖ th_s, 32)
+SK_R→I    = HKDF-Expand(prk, lp("cairn-r1 sk R") ‖ ctx(n) ‖ th_s, 32)
+CK_{n+1}  = HKDF-Expand(prk, lp("cairn-r1 ratchet") ‖ ctx(n) ‖ th_s, 32)
+MS_{n+1}  = HKDF-Expand(prk, lp("cairn-r1 msg seed") ‖ ctx(n) ‖ th_s, 32)    (§8)
 ```
 
 **R's processing order:**
@@ -358,14 +358,14 @@ Status: **provisional; gated by the model in *Formal model: PQ ratchet mixing***
 
 ```
 w      = floor(unix_time / 300)
-beacon = Trunc8(HMAC(BK_d, lp("pqcble-r1 beacon") ‖ u64(w)))      # no role [OI-2]
+beacon = Trunc8(HMAC(BK_d, lp("cairn-r1 beacon") ‖ u64(w)))      # no role [OI-2]
 BK_d+1 = KDF(BK_d, "", "beacon day", "", 32)                       d = floor(unix_time / 86400)
 ```
 
 - **Receivers** keep, for every contact, the beacons of windows `{w−1, w, w+1}` in a constant-time lookup structure.
 - **Advertisers** stop and restart the advertising set at every window boundary plus 0–30 s of random jitter.
 - **Android** advertises legacy PDUs: flags + service data (128-bit service UUID ‖ beacon), 29 of 31 B.
-- **iOS** advertises in the foreground the fixed UUID plus a beacon UUID `Trunc16(HMAC(BK_d, lp("pqcble-r1 beacon uuid") ‖ u64(w)))` [OI-9]. In the background it advertises the fixed UUID only.
+- **iOS** advertises in the foreground the fixed UUID plus a beacon UUID `Trunc16(HMAC(BK_d, lp("cairn-r1 beacon uuid") ‖ u64(w)))` [OI-9]. In the background it advertises the fixed UUID only.
 
 ### 10.2 Device beacon key
 
@@ -375,7 +375,7 @@ BK_d+1 = KDF(BK_d, "", "beacon day", "", 32)                       d = floor(uni
 ### 10.3 Doorbell (Android advertisers only)
 
 ```
-door = Trunc8(HMAC(K_door_me→peer, lp("pqcble-r1 door") ‖ u64(w)))
+door = Trunc8(HMAC(K_door_me→peer, lp("cairn-r1 door") ‖ u64(w)))
 ```
 
 - The doorbell replaces the beacon in the same service-data slot. It carries no payload.
@@ -416,7 +416,7 @@ OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: R
 | OI-4 | The ratchet doesn't say who generates `ek`, or how both sides agree that an epoch completed before mixing it at Resume (a lost last chunk or ack desyncs `CK`) | Alternate the generator by epoch parity. The generator sends `0C EPOCH_DONE(epoch)` after decapsulating. I sets S1 sub bit 1 = "mix pending epoch"; R mixes only if it has `ss_e`, else the Resume fails. The original MIX = 0 retry is superseded by OI-22. Settle in the ratchet model |
 | OI-5 | The 1 B chain generation wraps after 256 Resumes, which can happen within the 7-day queue lifetime | Receiver keeps chains only for generations with outstanding skipped keys. A collision expires the older generation's messages (EXPIRED); alternatively use LEB128 `gen` (+1 B after 127) |
 | OI-6 | QUEUED carries the global `msgno`, but the receiver needs the chain index within its generation | Body becomes `gen(1) ‖ LEB128(idx) ‖ Seal(mk_idx, …, msgno ‖ text)`; `msgno` moves inside the ciphertext, which also hides it at the session layer. Same size |
-| OI-7 | The draft's `ctx = "pqcble-r1" ‖ pairID ‖ epoch` is used for pairing too, but `pairID` comes from `RK`, which is circular | Pairing KDFs use only the label and `th` (as §5.2); `ctx(n)` applies from Resume on |
+| OI-7 | The draft's `ctx = "cairn-r1" ‖ pairID ‖ epoch` is used for pairing too, but `pairID` comes from `RK`, which is circular | Pairing KDFs use only the label and `th` (as §5.2); `ctx(n)` applies from Resume on |
 | OI-8 | Behaviour after attempt 3 without a valid S2 is undefined | Further attempts reuse attempt 3, so retries are linkable for one `CK_n`; accept, and back off per ADR 0008 |
 | OI-9 | ADR 0003 calls the iOS beacon a "rotating 128-bit UUID" without a derivation | As §10.1. Receivers match on the first 8 B; iOS foreground only |
 | OI-10 | `K_door_pair` is never derived | Two directional keys from `RK` (§5.5). They are static for the contact's lifetime, so they are not healed by the ratchet; acceptable for a hint without payload |

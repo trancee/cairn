@@ -147,7 +147,7 @@ all 50 regression tests pass, all three Lean modules compile from scratch,
 and generated certificates check for all 43 default rules: one initialization,
 one acquire, one release, four starts, ten finishes and 26 stutters.
 Expanded-theory SHA-256:
-`1dd88a6b63d08fb64654d0e82e6f5cae0d37ef445a996e4e139e01965419d380`.
+`8979b0346fbcd45370222436b2595af509460070a368eee4f70f05190e3e4051`.
 The runner recomputes this value rather than using it as a cached proof.
 `actionlint` 1.7.12 (with ShellCheck 0.11.0) accepts the workflow.
 Downloaded Tamarin and Maude Linux archives match their official published

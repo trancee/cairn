@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-05
-version: pqcble-r1
+version: cairn-r1
 ---
 
 # 0007: Constant-time and conformance CI gates
@@ -23,7 +23,7 @@ CI runs on **GitHub Actions**: `ubuntu-latest` (x86_64), `ubuntu-24.04-arm` (aar
 **Per PR (blocking):**
 - `cargo fmt --check`, `cargo clippy -D warnings`, and `cargo test` for all crates with **both** backend adapters.
 - `cargo deny check` (advisories, licences, sources) with a committed `Cargo.lock`.
-- `cargo miri test` on `pqcble-wire` and `pqcble-proto`, excluding RNG and key-generation paths. `cargo careful test` on `pqcble-crypto` and `pqcble-ffi`.
+- `cargo miri test` on `cairn-wire` and `cairn-proto`, excluding RNG and key-generation paths. `cargo careful test` on `cairn-crypto` and `cairn-ffi`.
 - **Known-answer tests:**
   - NIST ACVP for ML-KEM-768 keyGen/encapDecap, AES-256-GCM, HMAC-SHA-384 and HKDF (KDA).
   - Wycheproof for AES-GCM, X25519, HKDF, HMAC, and ML-KEM where vectors exist.
@@ -44,7 +44,7 @@ CI runs on **GitHub Actions**: `ubuntu-latest` (x86_64), `ubuntu-24.04-arm` (aar
 - `dudect-bencher` on the same secret paths. Advisory only, with trends recorded.
 - **Fuzzing**, 30 min per target:
   - targets: frame header and reassembly, the record parser, the S1/S2 and P1–P4 parsers;
-  - a state-machine fuzzer that sends random event sequences to `PqcbleCore` and checks invariants (no data before Resume, monotonic counters, bounded memory);
+  - a state-machine fuzzer that sends random event sequences to `CairnCore` and checks invariants (no data before Resume, monotonic counters, bounded memory);
   - the corpus lives in `core/fuzz/corpus`, and every crash becomes a regression test.
 - If any `mlkem-native` C is vendored, a mirror of its KyberSlash-patched valgrind CT job.
 
@@ -52,7 +52,7 @@ CI runs on **GitHub Actions**: `ubuntu-latest` (x86_64), `ubuntu-24.04-arm` (aar
 - A full ACVP and Wycheproof sweep across all families.
 - An X-Wing re-check against the latest BoringSSL and CIRCL.
 - No open fuzz crashes.
-- **On-device timing smoke test:** a dudect-style harness in an instrumented test app on the [device test lab](../../.scratch/pqcble-r1/issues/13-device-test-lab.md) core matrix (arm64 Android and iPhone). It covers X-Wing and ML-KEM decapsulation and MAC verification.
+- **On-device timing smoke test:** a dudect-style harness in an instrumented test app on the [device test lab](../../.scratch/cairn-r1/issues/13-device-test-lab.md) core matrix (arm64 Android and iPhone). It covers X-Wing and ML-KEM decapsulation and MAC verification.
 - A documented re-check of whether upstream AWS-LC or mlkem-native now cover Android/iOS targets.
 
 The inventory of vector sources and pinned versions lives with the test harness in `core/`, not in a separate spec.

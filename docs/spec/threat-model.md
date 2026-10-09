@@ -1,10 +1,10 @@
-# `pqcble-r1` threat model and security goals
+# `cairn-r1` threat model and security goals
 
 Status: **accepted** (2026-10-05, ticket *Threat model and security goals*). This document states the goals that [ADRs 0001–0005](../adr/) must meet. Changing it requires a new review.
 
 ## 1. System and assets
 
-Two **peers** (phones running `pqcble`) **pair** once and become **contacts**. After that, every BLE connection starts with a **Resume** and carries real-time messages and **queued messages** (see [`GLOSSARY.md`](../../GLOSSARY.md)).
+Two **peers** (phones running `cairn`) **pair** once and become **contacts**. After that, every BLE connection starts with a **Resume** and carries real-time messages and **queued messages** (see [`GLOSSARY.md`](../../GLOSSARY.md)).
 
 The protected assets are:
 - message content;
@@ -87,7 +87,7 @@ re-pairing.
 
 ## 6. Non-goals (explicitly not claimed)
 
-- Hiding that a `pqcble` device is present (the fixed service UUID), that two devices are connected, or their timing and traffic volume.
+- Hiding that a `cairn` device is present (the fixed service UUID), that two devices are connected, or their timing and traffic volume.
 - Proximity or distance bounding. Relay attacks are possible, so "connected" never implies "nearby".
 - Protection against a compromised OS or kernel, a sandbox escape, malware with root, physical side channels (power, EM), fault injection, or RF jamming.
 - Detecting state rollback by a rooted user or the OS. Backups are excluded by design (ADR 0002).
@@ -96,7 +96,7 @@ re-pairing.
 - Unlinkability against one's own contacts (the device beacon key is shared with them; ADR 0005).
 - Key commitment / multi-key AEAD robustness (ADR 0001).
 
-## 7. Possible later work (out of scope for `pqcble-r1`)
+## 7. Possible later work (out of scope for `cairn-r1`)
 
 - Marking a contact **stale** after N days unseen, with optional automatic removal.
 - Per-contact beacons to resist tracking by contacts (rejected for r1 in ADR 0005).

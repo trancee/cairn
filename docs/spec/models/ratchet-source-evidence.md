@@ -11,7 +11,7 @@ No preprocessor definitions, source-limit overrides, auto-sources or
 protocol mutations were enabled. Default open-chain/saturation limits
 were 10/5. The assembled `--parse-only` SHA-256 was:
 
-`1dd88a6b63d08fb64654d0e82e6f5cae0d37ef445a996e4e139e01965419d380`.
+`8979b0346fbcd45370222436b2595af509460070a368eee4f70f05190e3e4051`.
 
 From the repository root:
 
@@ -327,7 +327,7 @@ witnesses (`executable`, `initiator_candidate_recovery`,
 lemmas (`lock_stage_order`, `initial_resume_serialized`,
 `resume_serialized`). Result: **54/54 verified**, 38.7 s,
 `tamarin-prover --prove --quit-on-warning --derivcheck-timeout=60`
-(native export SHA-256
+(pre-rename theory `PqcbleRatchet`; native export SHA-256
 `2421f43c5907ff5a2e96e4dea404a643b472ed25ab38922bf6bc11b48f49bfe1`; selected
 context `f82357a72ab9304d2438d3311986ebdd48e312a346f3fa1cb974e414fae195d0`).
 This is not a full-theory count: the excluded lemmas are unproven here, and

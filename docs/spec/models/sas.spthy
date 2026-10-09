@@ -1,8 +1,8 @@
-theory PqcblePairing
+theory CairnPairing
 begin
 
 /*
- * Symbolic model of pqcble-r1 pairing (docs/spec/pqcble-r1.md §5): QR, SAS and TOFU modes, and the
+ * Symbolic model of cairn-r1 pairing (docs/spec/cairn-r1.md §5): QR, SAS and TOFU modes, and the
  * later Verify of an Unverified contact. Ticket: "Formal model: SAS pairing". Tool: Tamarin 1.12.
  *
  * Flags:

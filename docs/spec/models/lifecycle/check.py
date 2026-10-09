@@ -83,7 +83,7 @@ def main() -> int:
         run([sys.executable, "-m", "unittest", "discover", "-s", str(here), "-p", "test_*.py"])
         expanded = run(["tamarin-prover", "--parse-only", str(here.parent / "ratchet.spthy")])
         rows = project_export(expanded)
-        with tempfile.TemporaryDirectory(prefix="pqcble-lifecycle-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="cairn-lifecycle-") as temporary:
             build = Path(temporary)
             env = {**os.environ, "LEAN_PATH": str(build)}
             for module in ("Lifecycle", "Refinement", "Composition"):
@@ -91,7 +91,7 @@ def main() -> int:
                     arguments.lean, "-DwarningAsError=true",
                     "-o", str(build / f"{module}.olean"), str(here / f"{module}.lean"),
                 ], env=env)
-                check_axioms(output, tuple(f"Pqcble.{name}" for name in AUDITED_THEOREMS[module]))
+                check_axioms(output, tuple(f"Cairn.{name}" for name in AUDITED_THEOREMS[module]))
                 print(output.strip())
             certificate = build / "ProjectedRules.lean"
             certificate.write_text(lean_certificate(rows))

@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-05
-version: pqcble-r1
+version: cairn-r1
 ---
 
 # 0009: Pairing UX
@@ -52,6 +52,6 @@ None; this is the first UX decision. The Compromised state adds a contact flag t
 
 ## Amendments
 
-2026-10-05, from *Formal model: SAS pairing* ([`pqcble-r1` spec §13](../spec/pqcble-r1.md#13-consolidation-issues-resolved-2026-10-05)):
+2026-10-05, from *Formal model: SAS pairing* ([`cairn-r1` spec §13](../spec/cairn-r1.md#13-consolidation-issues-resolved-2026-10-05)):
 - In SAS and TOFU modes, the phone whose user picks the peer from the nearby list is pairing role B; the picked phone is A. This mirrors QR mode, where the scanning phone is B (OI-20).
 - The mode the user taps is authoritative: B aborts if `P1` carries a different mode (OI-19).
