@@ -32,6 +32,8 @@ cargo install cargo-careful --version 0.4.10 --locked
 cd core
 cargo +nightly-2026-10-08 miri test -p cairn-wire --locked
 cargo +nightly-2026-10-08 careful test -p cairn-crypto --all-features --locked
+cargo install cargo-fuzz --version 0.13.2 --locked
+cargo +nightly-2026-10-08 fuzz run wire_encoding -- -max_total_time=60 -max_len=65540 -seed=20261009
 ```
 
 The Rust workflow runs the ordinary gates on Linux x86-64, Linux ARM64 and
@@ -40,6 +42,16 @@ this increment. A separate coverage job requires 100% source line/branch
 coverage; the current crypto line coverage gap is expected to block it.
 Interpreter checks do not prove constant-time behavior and
 Miri does not inspect the AWS-LC C implementation.
+
+The wire fuzz target checks canonical re-encoding of accepted input,
+public-integer roundtrips, truncation/overflow safety and unchanged buffers
+on failed integer encoding. Its seed corpus is retained under `fuzz/corpus`;
+`fuzz/Cargo.lock` pins the separate internal harness dependencies. The fuzz
+job runs a 60-second smoke on both Linux architectures. A local macOS ARM64
+smoke completed 57,843,345 executions in 61 seconds without a crash; this is
+not exhaustive parser or platform proof.
+The internal harness uses `libfuzzer-sys` (MIT/Apache-2.0 and NCSA) and its
+`arbitrary` dependency; neither is a runtime dependency of the SDK.
 
 ## Dependencies and vectors
 
@@ -71,7 +83,7 @@ Differential tests use reproducible varied inputs, not production randomness.
 ## Remaining gates
 
 [ADR 0007](../docs/adr/0007-ct-conformance-gates.md) remains authoritative.
-ACVP ingestion, secret-taint checks, fuzzing, complete line coverage, mobile
+ACVP ingestion, secret-taint checks, complete line coverage, mobile
 cross-builds and binding/device proofs are not complete in this increment.
 Do not merge or release it as completed S0 or validated production crypto.
 Track the foundation gate completion in

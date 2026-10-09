@@ -73,3 +73,24 @@ jobs:
               if result["count"] == 0 or result["covered"] != result["count"]:
                   raise SystemExit(f"incomplete {metric} coverage: {result}")
           PY
+  fuzz:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned fuzz tools
+        run: |
+          rustup toolchain install nightly-2026-10-08 --profile minimal
+          cargo install cargo-fuzz --version 0.13.2 --locked
+      - name: Fuzz canonical wire encodings
+        working-directory: core
+        run: |
+          cargo +nightly-2026-10-08 fuzz run wire_encoding -- \
+            -max_total_time=60 -max_len=65540 -seed=20261009

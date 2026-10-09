@@ -24,9 +24,21 @@ crypto lines in the first measurement; after diagnostic tests, coverage is
 full line coverage; do not suppress production code or inject fixture-only
 failures. This is a Constitution T3 pre-merge blocker.
 
+The wire fuzz smoke completed 57,843,345 executions in 61 seconds on macOS
+ARM64 (cargo-fuzz 0.13.2, nightly-2026-10-08, seed 20261009, max_len 65540)
+without a crash. Corpus and fuzz lockfile are retained; Linux x86-64/ARM64
+smokes are configured but not yet run.
+
+Provider source investigation: RustCrypto HMAC `new_from_slice` accepts any
+key length; RustCrypto HKDF rejects only output longer than 255 digest
+blocks. The wrapper already validates that bound. AWS-LC expansion rejects
+the same bound and fill rejects output/key length mismatch, neither of
+which valid wrapper calls permit. Native fill errors must still fail closed.
+These paths must not be fabricated or suppressed for a coverage number.
+
 Outstanding ADR 0007 gates: ACVP ingestion for implemented primitives,
-secret-taint checks for own cryptographic glue, fuzz smoke for the wire
-codec and mobile cross-builds. CI enforces 100% source line/branch coverage,
+secret-taint checks for own cryptographic glue and mobile cross-builds.
+CI enforces 100% source line/branch coverage,
 so the currently measured crypto gap must block it. Binding deployment
 floors/device proofs remain issue 44 and S0 obligations. Independent protocol
 review and the composed-ratchet gate also remain open.
