@@ -1,0 +1,75 @@
+name: Rust foundation
+
+on:
+  push:
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  foundation:
+    name: rust-${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm, macos-latest]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust and gate tools
+        run: |
+          rustup show active-toolchain
+          cargo install cargo-deny --version 0.20.2 --locked
+      - name: Check workspace and both backends
+        run: bash scripts/check-rust.sh
+  interpreters:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned interpreter toolchain
+        run: |
+          rustup toolchain install nightly-2026-10-08 --profile minimal --component miri,rust-src
+          cargo install cargo-careful --version 0.4.10 --locked
+      - name: Check wire under Miri and crypto under careful
+        working-directory: core
+        run: |
+          cargo +nightly-2026-10-08 miri test -p cairn-wire --locked
+          cargo +nightly-2026-10-08 careful test -p cairn-crypto --all-features --locked
+  coverage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned coverage tools
+        run: |
+          rustup toolchain install nightly-2026-10-08 --profile minimal --component llvm-tools
+          cargo install cargo-llvm-cov --version 0.9.1 --locked
+      - name: Require complete maintained-source coverage
+        working-directory: core
+        run: |
+          cargo +nightly-2026-10-08 llvm-cov --workspace --all-features --locked --branch \
+            --json --output-path "$RUNNER_TEMP/coverage.json"
+          python3 - "$RUNNER_TEMP/coverage.json" <<'PY'
+          import json
+          import sys
+          with open(sys.argv[1]) as report:
+              totals = json.load(report)["data"][0]["totals"]
+          for metric in ("lines", "branches"):
+              result = totals[metric]
+              if result["count"] == 0 or result["covered"] != result["count"]:
+                  raise SystemExit(f"incomplete {metric} coverage: {result}")
+          PY

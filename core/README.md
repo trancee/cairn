@@ -1,0 +1,78 @@
+# Rust foundation
+
+This is an unreleased, host-tested subset of [ADR 0004](../docs/adr/0004-core-architecture.md).
+It is not a secure channel implementation or completion of S0.
+
+- `cairn-wire`: allocation-free `no_std` encoding/decoding of public u32
+  unsigned LEB128 and u16-big-endian length-prefixed fields from
+  [spec §2.2](../docs/spec/cairn-r1.md#22-conventions). Decoders consume one
+  field and report its byte count; callers must enforce complete-frame
+  consumption. Encoders leave the output unchanged on error.
+- `cairn-crypto`: a partial `CryptoBackend` seam for SHA-384, HMAC-SHA-384
+  and raw RFC 5869 HKDF-SHA-384. `aws-lc` selects non-FIPS `aws-lc-rs`;
+  `reference` selects RustCrypto. Both are enabled by default for differential
+  tests; consumers can select one with `--no-default-features --features aws-lc`
+  or `reference`. No runtime backend fallback exists.
+
+Protocol-labelled KDF/MAC construction, tag verification, RNG, AEAD, X25519,
+ML-KEM, X-Wing, protocol state machines and FFI are not implemented.
+The `ch.trancee.cairn` namespace is reserved for future Kotlin bindings.
+Rust crate names use `cairn-`; Cargo does not have dotted namespaces.
+
+## Validation
+
+Rust is pinned in the root `rust-toolchain.toml`; `core/Cargo.lock` locks all
+dependencies. From the repository root:
+
+```sh
+cargo install cargo-deny --version 0.20.2 --locked
+bash scripts/check-rust.sh
+rustup toolchain install nightly-2026-10-08 --profile minimal --component miri,rust-src
+cargo install cargo-careful --version 0.4.10 --locked
+cd core
+cargo +nightly-2026-10-08 miri test -p cairn-wire --locked
+cargo +nightly-2026-10-08 careful test -p cairn-crypto --all-features --locked
+```
+
+The Rust workflow runs the ordinary gates on Linux x86-64, Linux ARM64 and
+macOS, plus Miri/careful on Linux. Hosted results are not yet available for
+this increment. A separate coverage job requires 100% source line/branch
+coverage; the current crypto line coverage gap is expected to block it.
+Interpreter checks do not prove constant-time behavior and
+Miri does not inspect the AWS-LC C implementation.
+
+## Dependencies and vectors
+
+`aws-lc-rs` provides the ADR-selected non-FIPS adapter with maintained native
+cryptographic primitives; `sha2`, `hmac` and `hkdf` provide the independent
+RustCrypto reference adapter. They are permissively licensed and lock their
+native/transitive dependencies in `Cargo.lock`. `zeroize` wipes returned
+HMAC/HKDF buffers on drop and enables supported RustCrypto state wiping.
+The standard library has no cryptographic primitives or guaranteed wiping
+equivalent. This does not establish erasure of every provider temporary,
+stack/register copy or caller-owned input. No provider is claimed to be
+CMVP-validated on mobile.
+
+`serde_json` is test-only for the pinned Wycheproof corpus:
+[C2SP/wycheproof commit `12fd3aaf`](https://github.com/C2SP/wycheproof/tree/12fd3aaf33eb5fa1f52e026912ee00c054f9d984/testvectors_v1).
+Vendored files retain the upstream license in `cairn-crypto/tests/vectors/LICENSE`.
+
+| File | SHA-256 | Cases |
+|---|---|---:|
+| `hkdf_sha384_test.json` | `69ff6ea3657bb9c1b8cdffbbb4e7832353d08fd15c0d9997b03f7a6b180e3678` | 83 |
+| `hmac_sha384_test.json` | `28b9776e979dd755d852ca471043ea6cedce8b15f7a28abdf6ea9efd982b43c0` | 174 |
+
+HKDF invalid cases must fail. HMAC corpus tests compare full/truncated
+computed tags against valid and invalid vectors; they do not exercise a
+production tag-verification API. RFC 4231 case 1 supplies an additional HMAC
+known answer. The SHA-384 `abc` digest supplies an independent fixed example.
+Differential tests use reproducible varied inputs, not production randomness.
+
+## Remaining gates
+
+[ADR 0007](../docs/adr/0007-ct-conformance-gates.md) remains authoritative.
+ACVP ingestion, secret-taint checks, fuzzing, complete line coverage, mobile
+cross-builds and binding/device proofs are not complete in this increment.
+Do not merge or release it as completed S0 or validated production crypto.
+Track the foundation gate completion in
+[issue 46](../.scratch/cairn-r1/issues/46-rust-foundation-gates.md).

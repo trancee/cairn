@@ -1,0 +1,11 @@
+[package]
+name = "cairn-wire"
+description = "Canonical allocation-free Cairn wire encodings"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

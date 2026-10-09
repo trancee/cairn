@@ -1,19 +1,30 @@
 # PROJECT
 
-state=protocol research/specification/formal models; application/build/test-pipeline=none.
+state=protocol research/specification/formal models + host-only Rust foundation; SDK/application=not implemented.
 
 ## Verified profile
 
 - **Purpose:** specify and verify `cairn-r1` before implementing the SDK.
 - **Languages/toolchains:** Markdown specification and Tamarin `.spthy` models;
   model commands use Tamarin 1.12.0 and Maude 3.5.1.
+  The `core/` Cargo workspace pins Rust 1.99.0 for the public wire codecs and
+  partial SHA-384/HMAC/HKDF backend seam (AWS-LC and RustCrypto).
+  [Core documentation](core/README.md) lists the feature selection, vectors,
+  dependencies, commands and remaining gates; [ADR 0012](docs/adr/0012-rust-foundation-increment.md)
+  bounds this increment. No protocol state machines or FFI exist yet.
 - **Platforms:** formal checks have run on macOS/Apple silicon. Android/iOS
   are intended application targets, not implemented or platform-tested here.
+  Rust foundation gates pass locally on macOS ARM64; the new Rust workflow's
+  Linux x86-64/ARM64 and macOS jobs have not run yet.
 - **Prerequisites/setup:** tool installation is documented in
   [`docs/spec/models/README.md`](docs/spec/models/README.md#tooling).
 - **Environment:** before running Tamarin, replay or `act`, read
   [`docs/spec/models/ENVIRONMENT.md`](docs/spec/models/ENVIRONMENT.md);
   `scripts/check.sh` runs the fast gates (also the pre-commit hook and CI).
+  `bash scripts/check-rust.sh` runs Rust format/clippy/tests and cargo-deny;
+  the pre-commit hook additionally calls it. Miri/careful use the pinned
+  nightly in the Rust workflow. Crypto line coverage and other ADR 0007
+  gates remain incomplete ([issue 46](.scratch/cairn-r1/issues/46-rust-foundation-gates.md)).
 - **Targeted validation:** from the repository root,
   `tamarin-prover docs/spec/models/ratchet.spthy --open-chains=0 --saturation=0 --derivcheck-timeout=30`
   checks model loading/wellformedness, not lemma verification.
@@ -59,9 +70,8 @@ state=protocol research/specification/formal models; application/build/test-pipe
   (all SS). Run `python3 docs/spec/models/replay.py --disclosure-sources`.
   It replays the unchanged lost-data certificate in 802 steps and all
   three source certificates. Default proof contexts are unchanged:
-  seven existing safety skeletons still need migration in the refined profile,
-  and their regeneration timed out at 240 seconds.
-  No application build, coverage or compatibility gate is available.
+  all eight existing safety certificates are migrated in the refined profile.
+  No application or SDK build/compatibility gate is available.
 - **CI gates/code generation:** no application pipeline or generated SDK
   artifacts exist. Future implementation gates are in the local
   [map](.scratch/cairn-r1/map.md); symbolic verification is not a
@@ -75,7 +85,9 @@ state=protocol research/specification/formal models; application/build/test-pipe
   gate, both witnesses, KEM origin and fresh-DK origin, then hit the shared
   15-minute job timeout. Each of the ten replays now has its own 15-minute
   matrix job, separate from the lifecycle gate, with fail-fast disabled.
-  Full hosted completion and required-check enforcement remain unverified. The same
+  The merged matrix run
+  [37952930237](https://github.com/trancee/cairn/actions/runs/37952930237)
+  is successful; required-check enforcement remains unverified. The same
   workflow also runs default and opt-in disclosure-profile exact-source
   witness replay, refined-certificate replays and its 42 regressions.
   `python3 docs/spec/models/replay.py --disclosure-sources --target kem_ciphertext_origin`
@@ -92,7 +104,8 @@ state=protocol research/specification/formal models; application/build/test-pipe
   checksum installation, lifecycle proofs and replay regressions, but
   default witness replay hit guest OOM; a bounded-runtime retry timed
   out at 300 seconds. The full local job did not pass and did not reach
-  disclosure-profile replay. Hosted checks remain unverified.
+  disclosure-profile replay. Hosted formal matrix checks now pass; the
+  full assembled-context replay remains inconclusive.
 
 Policy authority: [`CONSTITUTION.md`](CONSTITUTION.md)/[`AGENTS.md`](AGENTS.md).
 The schema below is retained for the future implementation profile.
