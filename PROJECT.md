@@ -128,7 +128,7 @@ state=protocol research/specification/formal models + host-only Rust foundation;
   checksum installation, lifecycle proofs and replay regressions, but
   default witness replay hit guest OOM; a bounded-runtime retry timed
   out at 300 seconds. The full local job did not pass and did not reach
-  disclosure-profile replay. Hosted formal matrix checks now pass; the
+  disclosure-profile replay.   Hosted formal matrix checks have passed; the
   full assembled-context replay remains inconclusive.
 
 Policy authority: [`CONSTITUTION.md`](CONSTITUTION.md)/[`AGENTS.md`](AGENTS.md).
@@ -186,7 +186,7 @@ Ten local replays with the exact Linux archives and matching canonical hashes
 verified all five retained certificates, but used Rosetta rather than a
 native x86-64 runner. The cause remains unresolved; these passes do not
 establish that the intermittent crash is fixed. No retry, runtime workaround
-or proof change was added. PR #2 remains unmerged.
+or proof change was added.
 
 The bounded native x86-64 diagnostic
 [37970902175](https://github.com/trancee/cairn/actions/runs/37970902175)
@@ -199,6 +199,22 @@ capturing its seven-day hosted artifact. The ordinary Rust/lifecycle
 runs `37970902100`/`37970902125` also passed at `00a3f0c`.
 No native crash was reproduced, so its cause remains unresolved.
 Passing repetitions do not establish a fix or justify a retry policy.
+
+PR #2 was merged at `65fc089` on 2026-10-09 after every check passed on
+final head `ce54305`: [Rust run 37972979064](https://github.com/trancee/cairn/actions/runs/37972979064)
+and [lifecycle run 37972978282](https://github.com/trancee/cairn/actions/runs/37972978282)
+each passed all 11 jobs, and CodeQL passed. The feature branch was deleted.
+This accepts only ADR 0012's bounded foundation, not S0 or the full protocol.
+Post-merge results are separate from this final-PR-head evidence.
+
+Post-merge Rust run
+[37973820517](https://github.com/trancee/cairn/actions/runs/37973820517)
+passed at `65fc089`. Lifecycle run
+[37973820415](https://github.com/trancee/cairn/actions/runs/37973820415)
+failed in `replay-encrypted_origin` during tool installation: `curl` exit 56,
+`Recv failure: Connection reset by peer`. Its proof step did not run.
+This is a download failure, not the earlier Tamarin `<<loop>>` symptom
+or a reported counterexample. No successful post-merge formal run is claimed.
 
 The schema below is retained for the future implementation profile.
 

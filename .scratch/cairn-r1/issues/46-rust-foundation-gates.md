@@ -166,3 +166,20 @@ The temporary workflow/driver were removed as authorized after capture.
 No failing native reproduction or minimized counterexample was obtained.
 The investigation remains inconclusive, with no root cause or fix claimed.
 Do not replace the fail-closed replay gate with automatic retries.
+
+2026-10-09 (merged bounded increment): PR #2 merged at `65fc089`.
+Final head `ce54305` passed all 11 Rust jobs in
+[run 37972979064](https://github.com/trancee/cairn/actions/runs/37972979064)
+and all 11 formal jobs in
+[run 37972978282](https://github.com/trancee/cairn/actions/runs/37972978282),
+plus CodeQL. The feature branch was deleted and local `main` fast-forwarded.
+Earlier unmerged/failed-head entries above are historical, not current
+merge status. This ticket remains open for its broader binding/device and
+ADR 0007 obligations; the approved foundation is not S0 completion.
+
+Post-merge at `65fc089`: Rust run 37973820517 passed. Lifecycle run
+37973820415 failed during checksum-pinned tool installation in
+`replay-encrypted_origin` (job 113966902408), with `curl` exit 56 and
+`Recv failure: Connection reset by peer`. The proof step was not reached.
+This does not reproduce the earlier Tamarin runtime crash; no post-merge
+formal success or counterexample is established by that job.

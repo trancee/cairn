@@ -44,3 +44,11 @@ integration works from configuration or source inspection alone.
 
 - 2026-10-08: Per user direction, this ticket now waits on
   [Provision isolated build runner](45-provision-isolated-build-runner.md).
+
+- 2026-10-09: PR #2 merged the host-only `core/` Cargo workspace and library
+  cross-build evidence for Apple and Android. Earlier missing-manifest and
+  missing-target observations above describe the 2026-10-08 checkout.
+  No Gradle/KMP binding proof or packaged runtime/deployment-floor proof was
+  added. Ordinary cross-builds do not establish the required isolation.
+  This ticket still waits on the runner; its pinned interop tuple has not
+  been revalidated or changed by the Rust 1.99.0 foundation increment.

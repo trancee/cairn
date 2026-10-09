@@ -69,15 +69,19 @@ the same clean runner on Ubuntu 24.04, with immutable action revisions,
 Python 3.13.16 and checksum-pinned official proof tools. It runs without
 path filters or cached proof outputs, with read-only repository permissions.
 This automates compositional evidence only, not all ratchet obligations.
-Local syntax/proof checks are not hosted CI evidence; a clean hosted run
-and required-check enforcement remain external prerequisites.
+Local syntax/proof checks are not hosted CI evidence. All 11 formal jobs
+passed on final PR #2 head `ce54305` in
+[run 37972978282](https://github.com/trancee/cairn/actions/runs/37972978282).
+Required-check enforcement remains an external prerequisite; the last
+settings inspection found no rulesets or `main` protection.
 
 The proof-only `DISCLOSURE_SOURCES` profile now adds CK/SS origin
 certificates, replayed against raw sources. It leaves all transitions,
 restrictions, equations and default certificate contexts unchanged.
-It reduces refined partial chains from 30 to 15, but seven existing
-safety proof skeletons need migration in the new source context.
-It therefore remains opt-in rather than invalidating default evidence.
+It reduces refined partial chains from 30 to 15. All eight affected
+safety proof skeletons have now been migrated in the new source context.
+It remains opt-in because SS source closure and full assembled-context
+verification are incomplete, rather than invalidating default evidence.
 The witness runner and workflow check its three source certificates and
 lost-data witness separately. This is not full profile verification;
 see the [source evidence](../spec/models/ratchet-source-evidence.md#opt-in-disclosure-refinement).

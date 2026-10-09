@@ -73,3 +73,10 @@ instructions and evidence needed to execute it.
   document macOS guest support; community Hackintosh setups are unofficial and
   unsuitable as Xcode/Simulator proof. See
   [macOS guest on Linux](../../../docs/research/2026-10-08-macos-guest-on-linux.md).
+
+- 2026-10-09: The merged foundation now has Apple and Android library
+  cross-build evidence, including Android NDK r30 and Rust mobile targets.
+  Docker/Colima was also used for bounded Linux checks. The missing-tools
+  and missing-remote observations above are historical, not current setup
+  claims. No compliant isolated macOS/KMP runner with all acceptance controls
+  was established. These additions do not unblock the binding smoke test.
