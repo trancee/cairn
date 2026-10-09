@@ -57,10 +57,11 @@ dependencies; this is not a hermetic OS build.
 
 Local workflow validation: `actionlint .github/workflows/lifecycle.yml`.
 It does not execute the Linux binaries or prove hosted success.
-A successful clean hosted run and a repository ruleset requiring `lifecycle`
-are still needed before calling this an authoritative merge gate.
-This checkout has no Git remote configured; no workflow was dispatched and
-no repository ruleset was changed.
+All 11 formal jobs passed on final PR #2 head `ce54305` in
+[run 37972978282](https://github.com/trancee/cairn/actions/runs/37972978282).
+The last settings inspection found no rulesets or `main` protection.
+A ruleset requiring the applicable jobs is still needed to enforce this
+merge gate. No repository settings were changed.
 
 ## Proof correspondence
 
@@ -137,8 +138,9 @@ Cryptographic claims, source coverage and implementation/constant-time/
 persistence proofs are separate gates. The lost-data witness now has
 repository-owned exact-source replay; full assembled-context completion
 remains unverified.
-The CI configuration exists, but hosted execution and required-check
-enforcement remain unverified.
+Hosted execution passes in the run linked above. Required-check enforcement
+is not configured. The full assembled-context and source/equation gates
+remain open independently of these CI results.
 
 ## Observed evidence
 

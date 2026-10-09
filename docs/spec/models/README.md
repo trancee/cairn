@@ -140,8 +140,11 @@ All 50 regressions and the clean Lean build pass.
 Run and inspect the trust boundary in
 [`lifecycle/README.md`](lifecycle/README.md).
 The [lifecycle workflow](../../../.github/workflows/lifecycle.yml) configures
-a checksum-pinned, clean Linux job; its syntax has been validated locally,
-but no hosted execution or required-check enforcement has been verified.
+a checksum-pinned, clean Linux matrix. All 11 jobs passed on final PR #2
+head `ce54305` in
+[run 37972978282](https://github.com/trancee/cairn/actions/runs/37972978282).
+Required-check enforcement is not configured; successful execution does not
+establish full assembled-theory completion.
 The [local Linux execution record](lifecycle/README.md#observed-evidence)
 now includes a `gh act`/Colima/Rosetta run: lifecycle checks and replay
 regressions passed, but the default witness hit guest OOM and then a
@@ -403,8 +406,9 @@ the unchanged lost-data certificate checks in 802 steps under this
 refined context (100.98 seconds), versus 826 under the default.
 This changes replay step counts, not the saved witness or transitions.
 The [refinement evidence](ratchet-source-evidence.md#opt-in-disclosure-refinement)
-records why this is not enabled by default: seven existing safety
-certificates still need branch migration under refined sources.
+records its limits: all eight affected safety certificates are now migrated,
+but 15 SS chains and full assembled-context verification remain unresolved.
+The profile is therefore not enabled by default.
 `kem_ciphertext_origin` has now been migrated: its unchanged formula
 verifies in 18 steps in the profile, versus 31 in the default context.
 `--target kem_ciphertext_origin` checks its certificate and all sources
@@ -467,6 +471,16 @@ The tested properties explicitly hide all reusable helpers; searches use
 sensitivity is not established**. `lost_data_recovery` is a pinned
 existential witness, not a guarantee of recovery under continued
 interception. Its assembled-layout replay limitation is recorded above.
+
+On 2026-10-09, bounded native macOS depth-first probes also timed out at
+90 seconds for both targets. Each used the assembled `ratchet.spthy`,
+`--quit-on-warning --derivcheck-timeout=60 --open-chains=0 --saturation=0`,
+and `--stop-on-trace=DFS`, with `--defines=CLASSIC_FALLBACK
+--prove=no_classical_downgrade` or `--defines=NO_PREFIX_GUARD
+--prove=no_partial_mix`. The limit covered the entire process, not just search.
+An initial 30-second derivation budget failed with a derivation-check timeout;
+that setup failure is not a mutation result. No replayable counterexample or
+automated mutation regression was obtained from these probes.
 
 The model encodes wire epoch zero as the positive natural `%1`, and uses
 natural-number successors, not a concrete u32 counter or LEB128 parser.

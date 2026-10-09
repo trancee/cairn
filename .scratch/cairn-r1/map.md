@@ -49,16 +49,20 @@ simulation, arbitrary-key interleavings and checked certificates for all
 43 rules. The source connection trusts Tamarin's export and the tested Python
 extractor; see [ADR 0010](../../docs/adr/0010-compositional-lifecycle-verification.md)
 and the [lifecycle gate](../../docs/spec/models/lifecycle/README.md).
-The [lifecycle workflow](../../.github/workflows/lifecycle.yml) now configures
-a checksum-pinned Linux run; local validation passes, but hosted execution
-and required-check enforcement remain unverified (no Git remote configured).
+The [lifecycle workflow](../../.github/workflows/lifecycle.yml) runs
+checksum-pinned Linux checks. All 11 formal jobs passed on the final PR #2
+head `ce54305` in
+[run 37972978282](https://github.com/trancee/cairn/actions/runs/37972978282).
+Required-check enforcement is not configured: the last settings inspection
+found no rulesets or `main` protection. Hosted success does not close the
+full assembled-model gate.
 Mutation and source-coverage gates remain open. *Formal model: PQ ratchet
 mixing* stays claimed; its implementation gate is closed.
 The [source inventory](../../docs/spec/models/ratchet-source-evidence.md)
 now isolates all 30 residual chains to CK/SS reveal branches.
 The [equation argument](../../docs/spec/models/ratchet-equation-evidence.md)
 documents the exact rewrite assumptions; independent combined-theory
-acceptance and proved disclosure-source refinement remain outstanding.
+acceptance and complete disclosure-source closure remain outstanding.
 The opt-in `DISCLOSURE_SOURCES` profile proves CK/SS disclosure origins
 and halves refined chains to 15 (all SS). Its source/witness replay passes,
 and all eight existing safety certificates are now migrated; default
@@ -76,6 +80,7 @@ verifies 54/54 complete certificates (38.7 s).
 
 <!-- One line per resolved ticket: title linked to its issue, followed by the decision. -->
 
+- [Rust foundation gate completion](issues/46-rust-foundation-gates.md): the approved public-wire/SHA-384/HMAC/HKDF foundation and public documentation were merged in PR #2 at `65fc089`; final-head Rust and formal CI passed. This is not S0 completion. Binding/device proof, protocol-labelled crypto gates and the composed-ratchet gate remain open. The intermittent Tamarin `<<loop>>` crash was not reproduced in 20 exact-input native runs; no fix or retry policy is claimed.
 - [Minimum OS versions](issues/06-minimum-os-versions.md): Android 8 (API 26) / iOS 15; a GATT-only path is mandatory and ML-KEM ships in the Rust core.
 - [FIPS-validated modules providing ML-KEM](issues/01-fips-validated-mlkem-modules.md): no module is validated on both mobile platforms yet; claim "approved algorithms" for now and keep the backend seam.
 - [FIPS-conformant hybrid KEM combiner](issues/02-fips-hybrid-kem-combiner.md): X-Wing is acceptable under SP 800-227; AES-256-GCM is required; truncated tags/PRFs ≥ 64 bit.

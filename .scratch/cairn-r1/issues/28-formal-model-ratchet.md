@@ -475,3 +475,27 @@ serialization lemmas) verifies **54/54** in 38.7 s (pre-rename theory `PqcbleRat
 `2421f43c5907ff5a2e96e4dea404a643b472ed25ab38922bf6bc11b48f49bfe1`,
 selected context `f82357a72ab9304d2438d3311986ebdd48e312a346f3fa1cb974e414fae195d0`).
 Not a full-theory count; the 15 SS source chains remain.
+
+2026-10-09 (current evidence reconciliation): all eight refined safety
+certificates are migrated. All 11 hosted formal jobs passed on final PR #2
+head `ce54305` in
+[run 37972978282](https://github.com/trancee/cairn/actions/runs/37972978282).
+The bounded Rust foundation was merged at `65fc089`, not the ratchet
+implementation gate. Earlier comments describing missing hosting or pending
+certificate migrations are historical. Full assembled-context completion,
+15 residual SS source chains, independent combined-equation acceptance and
+broader protocol mutation coverage remain open. Required-check enforcement
+is not configured. The recurrent Tamarin runtime crash remains unexplained
+after 20 exact-input native replays passed.
+
+2026-10-09 (bounded mutation follow-up): the user confirmed the native
+assembled-theory test boundary with the existing mutation flags, not
+mocked results or a reduced transition system. Depth-first searches for
+`CLASSIC_FALLBACK` / `no_classical_downgrade` and `NO_PREFIX_GUARD` /
+`no_partial_mix` each hit an externally enforced 90-second process cap
+on macOS with Tamarin 1.12.0 and Maude 3.5.1. Both used
+`--quit-on-warning --derivcheck-timeout=60 --open-chains=0 --saturation=0
+--stop-on-trace=DFS`. The first fallback probe with a 30-second derivation
+budget failed its derivation checks; correcting to the documented 60-second
+budget still produced a process timeout. No counterexample or proof-sensitivity
+regression was established, and no model, certificate or gate was changed.
