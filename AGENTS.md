@@ -49,6 +49,8 @@ Failure => incomplete: fix cause + rerun. External prerequisite => finish reacha
 
 ## GIT/EXTERNAL
 
+- GitHub Actions: use the latest stable official release, verified when updating workflows; retain immutable commit-SHA pins and matching version comments.
+
 - R G1 feature branch; X protected-default direct commit.
 - PR only after O1/O2 reconciliation; if docs unchanged, explain why in PR.
 - Commit/push/open-or-merge PR/publish/external-service change R prior explicit user approval.
