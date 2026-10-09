@@ -24,6 +24,13 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   the mandatory-mix guard remains present. It also has its own lifecycle job.
 - Enable the hook once per clone: `git config core.hooksPath .githooks`.
 - Native export needs `--derivcheck-timeout=60`. Without it, `--quit-on-warning` fails on derivation-check timeouts.
+- Mutation replay uses standard export settings with that 60-second budget,
+  then replays guided certificates with `--open-chains=0 --saturation=0`
+  and `--derivcheck-timeout=120`. Exact Linux binaries timed out at 60 seconds
+  with the guided settings; the fallback attack replay completed in 74.24
+  seconds with 120. Strict warnings and the 180-second external process cap
+  remain enabled. Changing replay precomputation to defaults makes the guided
+  attack skeleton incomplete, so export and replay settings are separate.
 - Lemma formulas cannot contain reducible symbols such as `kdec`; use action facts such as `EpDec`.
 
 ## Proof search

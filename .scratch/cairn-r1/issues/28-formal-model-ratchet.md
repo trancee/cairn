@@ -556,3 +556,27 @@ side, not a separately guided EK attack. Both original symbolic guard
 mutations now have native sensitivity regressions. Full-context completion,
 SS source closure, independent equation acceptance and the implementation
 gate remain open.
+
+2026-10-09 (first mutation CI diagnosis): PR #4 at `5b29d90` ran both new
+jobs in [37985431090](https://github.com/trancee/cairn/actions/runs/37985431090).
+Both failed the default export's strict derivation check at 60 seconds,
+before any replay result. All 11 existing formal jobs passed, as did Rust
+and CodeQL. This is a derivation timeout, not a found trace or the earlier
+`<<loop>>` exception.
+
+The exact checksum-pinned Linux binaries reproduced failure with guided
+precomputation flags and success with standard export. Guided replay also
+timed out at 60 seconds; standard replay made the attack skeleton incomplete.
+A strict 120-second guided derivation budget completed the fallback replay
+in 74.24 seconds with its unchanged 504-step attack. The runner now separates
+standard export (60 seconds) from guided certificate replay (120 seconds),
+retaining the 180-second external cap and strict warnings. No retries,
+validation bypass or protocol/claim changes were introduced. This local
+Linux result used Rosetta, not native hosted execution.
+
+The complete corrected Linux/Rosetta runner then passed both profiles:
+default/`CLASSIC_FALLBACK` verified/falsified in 2/504 steps (63.91/74.10 s);
+default/`NO_PREFIX_GUARD` verified/falsified in 4/526 steps (67.04/75.40 s).
+Transition-prefix digests matched macOS. Fast gates, pinned Lean, links,
+workflow syntax and model secret scanning also passed. Hosted native
+confirmation remains required.

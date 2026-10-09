@@ -511,6 +511,28 @@ to each native command. The lifecycle workflow adds a separate
 `mutation-classic-fallback` job; `REPLAY=1 scripts/check.sh` also runs it.
 Hosted execution of the new mutation jobs is not yet verified.
 
+The first hosted mutation jobs at `5b29d90` in
+[run 37985431090](https://github.com/trancee/cairn/actions/runs/37985431090)
+failed during the initial default export: strict derivation checks hit their
+60-second timeout before either certificate replay. All 11 existing formal
+jobs in that run passed. The exact Linux binaries reproduced that timeout
+locally under Rosetta. Standard export settings passed; guided replay with
+the same 60-second budget also timed out. A 120-second strict derivation
+budget completed fallback replay in 74.24 seconds, with the same 504-step
+counterexample. Default replay precomputation instead produced an incomplete
+attack skeleton, not a counterexample.
+
+The runner therefore uses standard canonical export with a 60-second
+derivation budget, then retains the guided certificate context
+(`--open-chains=0 --saturation=0`) with a 120-second derivation budget.
+Every process still has the external 180-second cap, and `--quit-on-warning`
+remains enabled. There is no retry, skipped check, changed claim or protocol
+change. Linux/Rosetta evidence does not substitute for hosted native results.
+Both corrected regressions passed with the exact Linux binaries under Rosetta:
+default/`CLASSIC_FALLBACK` verified/falsified in 2/504 steps (63.91/74.10 s);
+default/`NO_PREFIX_GUARD` verified/falsified in 4/526 steps (67.04/75.40 s).
+The transition-prefix digests match the earlier macOS results.
+
 The native trace uses a permitted reveal of the initial CK. The attacker
 completes a classical Resume using that CK and the public S1 nonce, derives
 the session keys, then injects both authenticated CT pieces. A becomes

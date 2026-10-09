@@ -15,7 +15,7 @@ TARGETS = {
     "NO_PREFIX_GUARD": "no_partial_mix",
 }
 OPTIONS = [
-    "--quit-on-warning", "--derivcheck-timeout=60",
+    "--quit-on-warning", "--derivcheck-timeout=120",
     "--open-chains=0", "--saturation=0",
 ]
 
@@ -123,7 +123,8 @@ def main() -> int:
             ):
                 exported = build / f"{name}.spthy"
                 run([
-                    "tamarin-prover", str(here / "ratchet.spthy"), *OPTIONS, *definitions,
+                    "tamarin-prover", str(here / "ratchet.spthy"),
+                    "--quit-on-warning", "--derivcheck-timeout=60", *definitions,
                     "--output-module=msr", f"--output={exported}",
                 ], arguments.timeout)
                 source = exported.read_text()
