@@ -188,6 +188,18 @@ native x86-64 runner. The cause remains unresolved; these passes do not
 establish that the intermittent crash is fixed. No retry, runtime workaround
 or proof change was added. PR #2 remains unmerged.
 
+The bounded native x86-64 diagnostic
+[37970902175](https://github.com/trancee/cairn/actions/runs/37970902175)
+at `00a3f0c` verified all five certificates on all 20 unchanged-input
+replays (43.77–46.08 seconds each). Canonical hashes matched the failed
+run. The job used the same Ubuntu image version, Python 3.13.16,
+GHC 9.6.7 and four CPUs, with `GHCRTS` unset and the binary's default
+`-N`. The temporary diagnostic workflow and driver were removed after
+capturing its seven-day hosted artifact. The ordinary Rust/lifecycle
+runs `37970902100`/`37970902125` also passed at `00a3f0c`.
+No native crash was reproduced, so its cause remains unresolved.
+Passing repetitions do not establish a fix or justify a retry policy.
+
 The schema below is retained for the future implementation profile.
 
 ```text

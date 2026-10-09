@@ -152,3 +152,17 @@ The native macOS replay also passed, but had different canonical hashes.
 Neither result reproduces the crash or establishes a root cause.
 The remaining diagnostic requirement is a repeatable native x86-64 Linux
 reproduction with retained process diagnostics; Rosetta is not hosted parity.
+
+The user authorized a temporary 20-replay native hosted diagnostic.
+Run [37970902175](https://github.com/trancee/cairn/actions/runs/37970902175)
+at `00a3f0c` passed 20/20 exact-input final replays, verifying all five
+retained certificates every time (43.77–46.08 seconds). It used the same
+Ubuntu image version, Python 3.13.16, GHC 9.6.7, four CPUs, unset `GHCRTS`
+and default `-N`. The source/replay hashes matched the failed job.
+Its `fresh-dk-runtime` artifact retains runtime metadata, theories and
+per-attempt output for seven days. Ordinary lifecycle/Rust runs
+`37970902125`/`37970902100` also passed at that commit.
+The temporary workflow/driver were removed as authorized after capture.
+No failing native reproduction or minimized counterexample was obtained.
+The investigation remains inconclusive, with no root cause or fix claimed.
+Do not replace the fail-closed replay gate with automatic retries.
