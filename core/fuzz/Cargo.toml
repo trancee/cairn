@@ -1,0 +1,22 @@
+[package]
+name = "cairn-wire-fuzz"
+version = "0.0.0"
+edition = "2024"
+license = "Unlicense"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4.13"
+cairn-wire = { version = "0.1.0", path = "../cairn-wire" }
+
+[[bin]]
+name = "wire_encoding"
+path = "fuzz_targets/wire_encoding.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]

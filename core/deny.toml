@@ -1,0 +1,12 @@
+[advisories]
+
+[licenses]
+allow = ["Apache-2.0", "BSD-3-Clause", "ISC", "MIT", "MIT-0", "NCSA", "Unicode-3.0", "Unlicense"]
+
+[bans]
+multiple-versions = "deny"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

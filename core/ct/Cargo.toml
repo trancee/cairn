@@ -1,0 +1,22 @@
+[package]
+name = "cairn-ct"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+license = "Unlicense"
+publish = false
+
+[workspace]
+
+[dependencies]
+cairn-crypto = { path = "../cairn-crypto", version = "0.1.0" }
+crabgrind = "=0.4.0"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "deny"
+
+[profile.release]
+debug = 1

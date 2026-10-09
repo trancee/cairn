@@ -1,19 +1,54 @@
 # PROJECT
 
-state=protocol research/specification/formal models; application/build/test-pipeline=none.
+state=protocol research/specification/formal models + host-only Rust foundation; SDK/application=not implemented.
 
 ## Verified profile
 
+- **Public documentation:** [README.md](README.md) introduces the current
+  scope; [the documentation entry point](docs/README.md) links the runnable
+  wire tutorial, contributor validation guide, foundation API reference and
+  compact-PQ/BLE design explanation. Local Markdown links are checked with
+  the activated Diataxis skill's `scripts/check-links.py`; no repository
+  Markdown formatter or spelling gate is configured. All three Mermaid
+  diagrams render with `@mermaid-js/mermaid-cli` 12.0.0 and the installed
+  Chrome browser. This is a local documentation check, not a new CI gate.
 - **Purpose:** specify and verify `cairn-r1` before implementing the SDK.
 - **Languages/toolchains:** Markdown specification and Tamarin `.spthy` models;
   model commands use Tamarin 1.12.0 and Maude 3.5.1.
+  The `core/` Cargo workspace pins Rust 1.99.0 for the public wire codecs and
+  partial SHA-384/HMAC/HKDF backend seam (AWS-LC and RustCrypto).
+  [Core documentation](core/README.md) lists the feature selection, vectors,
+  dependencies, commands and remaining gates; [ADR 0012](docs/adr/0012-rust-foundation-increment.md)
+  bounds this increment. No protocol state machines or FFI exist yet.
 - **Platforms:** formal checks have run on macOS/Apple silicon. Android/iOS
-  are intended application targets, not implemented or platform-tested here.
+  are intended application targets, not implemented or runtime-tested here.
+  Both foundation crates/all backends now cross-compile as release libraries
+  for iOS device/simulator ARM64 with Xcode 27 SDKs; this is not linked-app,
+  packaged-binding, deployment-floor or device proof. Both crates/all backends
+  also cross-compile as release libraries for Android API 26 arm64-v8a,
+  armeabi-v7a and x86_64 with cargo-ndk 4.1.2 and NDK r30
+  (`30.0.16248370`). No APK, linked shared-library or Android runtime proof
+  exists.
+  Rust foundation gates pass locally on macOS ARM64 and in all 11 jobs of
+  [hosted run 37963154963](https://github.com/trancee/cairn/actions/runs/37963154963)
+  at `4ba4955`, including Linux x86-64/ARM64, macOS and mobile cross-builds.
 - **Prerequisites/setup:** tool installation is documented in
   [`docs/spec/models/README.md`](docs/spec/models/README.md#tooling).
 - **Environment:** before running Tamarin, replay or `act`, read
   [`docs/spec/models/ENVIRONMENT.md`](docs/spec/models/ENVIRONMENT.md);
   `scripts/check.sh` runs the fast gates (also the pre-commit hook and CI).
+  `bash scripts/check-rust.sh` runs Rust format/clippy/tests and cargo-deny;
+  the pre-commit hook additionally calls it. Miri/careful use the pinned
+  nightly in the Rust workflow. Local source line/branch coverage is now
+  100% for both crates; error-propagation regions remain uncovered.
+  Other ADR 0007
+  gates remain incomplete ([issue 46](.scratch/cairn-r1/issues/46-rust-foundation-gates.md)).
+  The standalone `core/ct` Memcheck driver (`bash scripts/check-ct.sh`)
+  passes both primitive adapters in Linux x86-64/Rosetta and native ARM64
+  containers, with required branch/address controls and output-taint checks.
+  Hosted native taint jobs also pass with Valgrind 3.22.0.
+  Mobile constant-time behavior and unimplemented protocol glue remain
+  outside that result.
 - **Targeted validation:** from the repository root,
   `tamarin-prover docs/spec/models/ratchet.spthy --open-chains=0 --saturation=0 --derivcheck-timeout=30`
   checks model loading/wellformedness, not lemma verification.
@@ -59,9 +94,8 @@ state=protocol research/specification/formal models; application/build/test-pipe
   (all SS). Run `python3 docs/spec/models/replay.py --disclosure-sources`.
   It replays the unchanged lost-data certificate in 802 steps and all
   three source certificates. Default proof contexts are unchanged:
-  seven existing safety skeletons still need migration in the refined profile,
-  and their regeneration timed out at 240 seconds.
-  No application build, coverage or compatibility gate is available.
+  all eight existing safety certificates are migrated in the refined profile.
+  No application or SDK build/compatibility gate is available.
 - **CI gates/code generation:** no application pipeline or generated SDK
   artifacts exist. Future implementation gates are in the local
   [map](.scratch/cairn-r1/map.md); symbolic verification is not a
@@ -75,7 +109,9 @@ state=protocol research/specification/formal models; application/build/test-pipe
   gate, both witnesses, KEM origin and fresh-DK origin, then hit the shared
   15-minute job timeout. Each of the ten replays now has its own 15-minute
   matrix job, separate from the lifecycle gate, with fail-fast disabled.
-  Full hosted completion and required-check enforcement remain unverified. The same
+  The merged matrix run
+  [37952930237](https://github.com/trancee/cairn/actions/runs/37952930237)
+  is successful; required-check enforcement remains unverified. The same
   workflow also runs default and opt-in disclosure-profile exact-source
   witness replay, refined-certificate replays and its 42 regressions.
   `python3 docs/spec/models/replay.py --disclosure-sources --target kem_ciphertext_origin`
@@ -92,9 +128,78 @@ state=protocol research/specification/formal models; application/build/test-pipe
   checksum installation, lifecycle proofs and replay regressions, but
   default witness replay hit guest OOM; a bounded-runtime retry timed
   out at 300 seconds. The full local job did not pass and did not reach
-  disclosure-profile replay. Hosted checks remain unverified.
+  disclosure-profile replay. Hosted formal matrix checks now pass; the
+  full assembled-context replay remains inconclusive.
 
 Policy authority: [`CONSTITUTION.md`](CONSTITUTION.md)/[`AGENTS.md`](AGENTS.md).
+
+### CI scheduling and setup
+
+Rust and lifecycle workflows run on pull requests, pushes to `main`, merge
+groups and manual dispatch. Feature branches without a PR use manual dispatch;
+this avoids duplicate push/PR matrices. Superseded PR runs are cancelled, but
+main/merge-group/manual runs are not cancelled. All proof, build, test,
+coverage and fuzz gates still execute; results and compiled project targets
+are not cached.
+
+Setup caches contain version-keyed host tool binaries, lockfile-keyed Cargo
+registry downloads and pinned proof archives. Proof archives are checksum
+verified after every restore. Cache misses install the same pinned tools.
+The Memcheck apt install omits recommended packages, not its requested
+prerequisites. New cache actions are pinned to official `v6.1.0`.
+
+Baseline: PR Rust run `37963979548` took 13m32s; its x86-64 taint job spent
+9m26s installing prerequisites (55.8 MB at 103 kB/s), then about 63s checking
+and executing the harness. The same commit's push Rust run `37963974833`
+took 4m22s and its taint job 1m18s. This establishes setup/network variability,
+not slow taint execution. Optimization changes require hosted cold/warm
+comparison before claiming a measured speedup; queue and mirror latency
+remain outside the repository's control.
+
+Hosted comparison at `aa470f2` (2026-10-09):
+[Rust run 37966263807](https://github.com/trancee/cairn/actions/runs/37966263807)
+passed all 11 jobs in 3m39s cold and 2m11s warm (attempt 2);
+[lifecycle run 37966263691](https://github.com/trancee/cairn/actions/runs/37966263691)
+passed all 11 jobs in 4m56s cold and 4m55s warm.
+Logs confirm warm binary/registry/archive cache hits. Same-PR reruns preserve
+cache scope; manual dispatch cannot read PR-merge-ref caches.
+The warm Rust reduction was 40% in this sample; lifecycle wall time did not
+materially improve because proof replay/queueing still dominates. These are
+single-run observations, not a guaranteed latency budget or attribution of
+the anomalous baseline's full 13m32s to repository-controlled work.
+
+Pre-merge scan (2026-10-09): Gitleaks 8.30.1 scanned all 11 proposed commits.
+Its 204 generic-key findings were confined to the pinned public Wycheproof
+and NIST HMAC fixtures; both file checksums matched recorded upstream
+provenance. A temporary exact-findings baseline excluded those known vector
+matches, and the remaining history scan passed. No blanket file exclusion
+or repository scan suppression was added. This is a point-in-time scan,
+not an independent cryptographic/security audit.
+
+Final-head lifecycle run
+[37967905307](https://github.com/trancee/cairn/actions/runs/37967905307)
+at `83e2edb` failed in `replay-fresh_dk_origin` with
+`tamarin-prover: <<loop>>`, exit 1, after theory closure.
+Both canonical hashes match the successful warm run above, and both jobs
+used the same runner image version and checksum-verified tool archives.
+Ten local replays with the exact Linux archives and matching canonical hashes
+verified all five retained certificates, but used Rosetta rather than a
+native x86-64 runner. The cause remains unresolved; these passes do not
+establish that the intermittent crash is fixed. No retry, runtime workaround
+or proof change was added. PR #2 remains unmerged.
+
+The bounded native x86-64 diagnostic
+[37970902175](https://github.com/trancee/cairn/actions/runs/37970902175)
+at `00a3f0c` verified all five certificates on all 20 unchanged-input
+replays (43.77–46.08 seconds each). Canonical hashes matched the failed
+run. The job used the same Ubuntu image version, Python 3.13.16,
+GHC 9.6.7 and four CPUs, with `GHCRTS` unset and the binary's default
+`-N`. The temporary diagnostic workflow and driver were removed after
+capturing its seven-day hosted artifact. The ordinary Rust/lifecycle
+runs `37970902100`/`37970902125` also passed at `00a3f0c`.
+No native crash was reproduced, so its cause remains unresolved.
+Passing repetitions do not establish a fix or justify a retry policy.
+
 The schema below is retained for the future implementation profile.
 
 ```text
