@@ -105,17 +105,31 @@ Regenerate the subset with
 `python3 core/cairn-crypto/tests/vectors/extract_hkdf.py UPSTREAM_DIRECTORY OUTPUT_DIRECTORY`.
 The script validates upstream checksums and copies selected group contents;
 the notice records the selection. Other algorithms and all multi-expansion
-groups are excluded, so this is not a complete KDA corpus sweep.
+groups are excluded from that subset.
+
+A separate subset retains the other **100 SHA2-384 multi-expansion cases**
+(50 AFT/50 VAL). Every iteration is checked through the existing raw HKDF
+interface with the same `Z || T` and salt, and its supplied fixed info.
+This recomputes extract per iteration; it does not test a reusable-PRK API.
+All supplied output keys must match for a VAL case to pass. Generate it with
+the same extraction command plus the final argument `multi`. Together the
+two subsets cover every SHA2-384 group in this pinned corpus, not other
+algorithms or ACVP certification.
 
 | HKDF subset file | SHA-256 |
 |---|---|
 | `prompt.json` | `b0df50185c90de85dc2b762d069ce613c1dd1f9de7d2bdca054c4904af2116ac` |
 | `expectedResults.json` | `af4d56f1a75dea6053399cd65b53077a726dd65ab6ce06038ee40ec5c88e1e35` |
 
+| HKDF multi-expansion file | SHA-256 |
+|---|---|
+| `prompt.json` | `cb6f72df9664c24679be8a6d409dc42bc0e4b1cd15d31ff0d509f46c4135cc74` |
+| `expectedResults.json` | `cbb0b99eb6601f8f7f5214a512c66f0e9ca0ed41ce3c01b0fc53e977ea879b02` |
+
 ## Remaining gates
 
 [ADR 0007](../docs/adr/0007-ct-conformance-gates.md) remains authoritative.
-HKDF multi-expansion ACVP coverage, secret-taint checks, mobile
+Secret-taint checks, mobile
 cross-builds and binding/device proofs are not complete in this increment.
 Do not merge or release it as completed S0 or validated production crypto.
 Track the foundation gate completion in

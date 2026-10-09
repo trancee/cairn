@@ -65,5 +65,13 @@ from KDA-HKDF-Sp800-56Cr2 at the same NIST commit. Both adapters pass,
 including accepted/rejected VAL cases. Fixed info follows upstream
 `FixedInfo.cs` (U party info || V party info || u32 output-bit length);
 shared input is Z || T. Selected group contents are unchanged and the
-subset notice records the modification. Multi-expansion coverage remains
-open; no full-corpus or certification claim is made.
+subset notice records the modification.
+
+Multi-expansion follow-up: the same checksum-validated owning script now
+extracts the remaining 100 SHA2-384 cases (50 AFT/50 VAL). Both adapters pass
+every expansion, including accepted/rejected VAL output-key lists.
+The existing raw HKDF interface recomputes extract per iteration; no
+reusable-PRK API is added or tested. All 200 SHA2-384 cases in the pinned
+corpus are now covered; no all-algorithm corpus or certification claim is made.
+Remaining pre-merge gates include secret-taint, mobile/target builds and
+hosted Rust workflow execution.

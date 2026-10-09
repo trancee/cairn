@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Extract SHA2-384 single-expansion groups from pinned NIST KDA fixtures.
+"""Extract SHA2-384 single- or multi-expansion groups from pinned NIST KDA fixtures.
 
-Usage: python3 extract_hkdf.py upstream-directory output-directory
+Usage: python3 extract_hkdf.py upstream-directory output-directory [multi]
 The upstream directory must contain prompt.json and expectedResults.json
 from ACVP-Server commit 975de31eb83d87039ec88934fdc47d8c312b892d,
 gen-val/json-files/KDA-HKDF-Sp800-56Cr2.
@@ -14,7 +14,10 @@ from pathlib import Path
 
 
 def main():
-    source, destination = map(Path, sys.argv[1:])
+    source, destination = map(Path, sys.argv[1:3])
+    multi = len(sys.argv) == 4 and sys.argv[3] == "multi"
+    if len(sys.argv) > 3 and not multi:
+        raise SystemExit("optional selection must be 'multi'")
     for name, digest in [
         ("prompt.json", "2d27b1b69549f383b7583700f7e0622b33debb254db37bf83eb524102a1e3d9c"),
         ("expectedResults.json", "de35a4b7b3bc795b9c1b7bba4a28407bcfe2941568d097eadf9de57ff2e76395"),
@@ -25,8 +28,10 @@ def main():
     expected = json.loads((source / "expectedResults.json").read_text())
     groups = [
         group for group in prompt["testGroups"]
-        if group.get("kdfConfiguration", {}).get("hmacAlg") == "SHA2-384"
-        and group["multiExpansion"] is False
+        if group.get(
+            "kdfMultiExpansionConfiguration" if multi else "kdfConfiguration", {}
+        ).get("hmacAlg") == "SHA2-384"
+        and group["multiExpansion"] is multi
     ]
     assert len(groups) == 20
     assert sum(len(group["tests"]) for group in groups) == 100
