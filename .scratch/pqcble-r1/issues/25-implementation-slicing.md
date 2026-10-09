@@ -6,7 +6,7 @@ Blocked by: none
 
 ## Question
 
-How is the build cut into vertical slices across the Rust core crates, the UniFFI/Gobley FFI, the Android and iOS BLE adapters, the KMP SDK and the reference app, and in which order? Each slice should be demoable end to end. Cover:
+How is the build cut into vertical slices across the Rust core crates, the UniFFI FFI, the Android and iOS BLE adapters, the KMP SDK and the reference app, and in which order? Each slice should be demoable end to end. Cover:
 - which slices may start before the formal models land (the formal-verification gate covers only Resume, PQ ratchet mixing and SAS);
 - the first walking skeleton;
 - when the CI gates from ADR 0007 switch on;
@@ -37,5 +37,5 @@ Grilled in one round on 2026-10-05; all recommendations accepted. No ADR: this i
 - **Spec gate.** S0 starts now; S1 and later wait for Spec consolidation.
 - **CI gates.** Each ADR 0007 gate switches on, blocking, in the slice that adds the code it covers.
 - **Definition of done.** Gates green, TDD, spec sections referenced, and a demo on the oldest and newest core-matrix devices of each platform pair.
-- **Build.** One root Gradle build (`:sdk`, `:app`, version catalog). Gobley builds the `core/` Cargo workspace, which also builds standalone.
+- **Build.** One root Gradle build (`:sdk`, `:app`, version catalog). Ubique's unified plugin builds the `core/` Cargo workspace, which also builds standalone.
 - **Git.** `git init` with `main`, a feature branch per slice, and commits only with the user's approval.

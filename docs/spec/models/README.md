@@ -5,8 +5,22 @@ Symbolic models of `pqcble-r1` ([spec](../pqcble-r1.md)). Under the strict forma
 | Model | Spec | Status |
 |---|---|---|
 | [`resume.spthy`](resume.spthy) | §6 Resume | All four profiles verified with public `pairID` |
-| [`ratchet.spthy`](ratchet.spthy) | §9 | Draft; not an implementation-gate proof |
+| [`ratchet.spthy`](ratchet.spthy) | §9 | Last completed replay: 55/59; current strict replay timed out at 360 s; full gate closed |
 | [`sas.spthy`](sas.spthy) | §5 Pairing (QR, SAS, TOFU, Verify) | Verified (draft 0.4) |
+
+## Evidence index
+
+Run commands from the repository root; setup and limits are in [`ENVIRONMENT.md`](ENVIRONMENT.md).
+
+| Claim | Evidence | Gate |
+|---|---|---|
+| Lifecycle invariants hold for the projected 43 rules | [`lifecycle/`](lifecycle/README.md) | `python3 docs/spec/models/lifecycle/check.py --lean <lean>` |
+| Lost-data witness and KEM origin replay exactly against the source | `replay.py`, [`ratchet-source-evidence.md`](ratchet-source-evidence.md) | `python3 docs/spec/models/replay.py [--disclosure-sources [--target <certificate>]]` |
+| Replay tooling selects and compares certificates correctly | `test_replay.py` | `python3 -m unittest discover -s docs/spec/models -p 'test_replay.py'` |
+| Certificates are finished and every include file is wired in | `check_certificates.py`, `test_check_certificates.py` | `python3 docs/spec/models/check_certificates.py` |
+| Branch driver parses methods and picks the closing priority | `test_branch.py` | `python3 -m unittest discover -s docs/spec/models -p 'test_branch.py'` |
+| Custom equations terminate and are confluent | [`ratchet-equation-evidence.md`](ratchet-equation-evidence.md) | Independent review open |
+| All fast gates | `scripts/check.sh` | pre-commit hook and CI |
 
 ## Tooling
 
@@ -94,19 +108,330 @@ acknowledgement (OI-25/26). Empty-prefix progress is a stuttering no-op
 in this abstraction; concrete offsets remain outside it.
 
 Earlier targeted results applied to a superseded, smaller model and are
-not evidence for the expanded model. `epoch_secret` and `pcs_epoch`
-can terminate using unverified reusable helpers; such conditional
-results **do not satisfy the gate**. Fresh-secret/CK origin helpers,
-executability, complete epoch agreement, alternation, authenticated
-progress, healing and lost-DATA recovery still need independent proofs.
+not evidence for the expanded model. The default-model honest witness verifies, including the initial
+Resume, complete authenticated EK/CT exchange and a subsequent mixed
+Resume that advances the epoch. Fresh-secret and KDF/CK provenance
+helpers, chain/session secrecy and generator parity have replayed proofs.
+EK/CT authentication and authenticated-progress durability now replay.
+Complete epoch agreement and fresh-epoch execution after compromise now
+replay. The lost-data recovery witness now has a proof. An earlier reduced
+lifecycle diagnosis that removed `LockStage` from `Release_Resume` was
+incorrect: that projection omitted the real completion-stage increment, where
+`FinishPermit` advances from the `BusySlot` ordinal. Consequently, the release
+marker is the next distinct ordinal, not a duplicate. With the marker removed,
+the faithful reduced lifecycle has a seven-step counterexample to
+`lock_stage_order`; the marker has been restored. The latest strict assembled
+replay timed out at 360 s, and targeted searches for the remaining obligations
+also timed out; none provides proof or counterexample evidence.
+
+### Compositional lifecycle gate
+
+The three serialization claims now have a separate compositional verification
+path under [ADR 0010](../../adr/0010-compositional-lifecycle-verification.md).
+Lean 4.34.1 kernel-checks unbounded lifecycle induction, token-rewrite
+simulation, event recording and arbitrary-key interleavings. A fail-closed
+Python checker projects all 43 current default rules and generates Lean
+token/action schema certificates; it also pins the exact three source
+formulas and reviewed equations. Initialization certificates cover both
+roles and their markers; global proofs include fresh-history preservation
+and unrelated-event stuttering. Malformed/misplaced facts and duplicate
+declarations fail the projection; every required theorem is axiom-audited.
+All 50 regressions and the clean Lean build pass.
+Run and inspect the trust boundary in
+[`lifecycle/README.md`](lifecycle/README.md).
+The [lifecycle workflow](../../../.github/workflows/lifecycle.yml) configures
+a checksum-pinned, clean Linux job; its syntax has been validated locally,
+but no hosted execution or required-check enforcement has been verified.
+The [local Linux execution record](lifecycle/README.md#observed-evidence)
+now includes a `gh act`/Colima/Rosetta run: lifecycle checks and replay
+regressions passed, but the default witness hit guest OOM and then a
+300-second timeout under bounded runtime settings. The full local
+workflow is not green; the disclosure-profile invocation was not reached.
+
+This is compositional evidence, not three new native Tamarin proofs. Source
+correspondence trusts Tamarin's canonical export and the tested Python
+extractor; that extractor is not formally verified. The Tamarin search status
+and historical replay counts below remain unchanged. Other ratchet gates,
+including lost-data replay and source/equation evidence, are not closed by
+this lifecycle proof.
+
+### Retained proof checkpoints
+
+The current default model retains Tamarin-generated proof skeletons in
+[`ratchet-executable-proof.inc`](ratchet-executable-proof.inc),
+[`ratchet-fresh-execution-proof.inc`](ratchet-fresh-execution-proof.inc),
+[`ratchet-lost-data-recovery-proof.inc`](ratchet-lost-data-recovery-proof.inc),
+[`ratchet-lifecycle.inc`](ratchet-lifecycle.inc),
+[`ratchet-state-guards.inc`](ratchet-state-guards.inc),
+[`ratchet-origins.inc`](ratchet-origins.inc) and
+[`ratchet-ck-origins.inc`](ratchet-ck-origins.inc),
+[`ratchet-secrecy.inc`](ratchet-secrecy.inc),
+[`ratchet-epoch-security.inc`](ratchet-epoch-security.inc),
+[`ratchet-progress.inc`](ratchet-progress.inc),
+[`ratchet-key-inputs.inc`](ratchet-key-inputs.inc),
+[`ratchet-transfer-origins.inc`](ratchet-transfer-origins.inc),
+[`ratchet-transfer.inc`](ratchet-transfer.inc),
+[`ratchet-acknowledgement.inc`](ratchet-acknowledgement.inc),
+[`ratchet-durability.inc`](ratchet-durability.inc),
+[`ratchet-serialization.inc`](ratchet-serialization.inc) and
+[`ratchet-positions.inc`](ratchet-positions.inc) and
+[`ratchet-agreement.inc`](ratchet-agreement.inc). These generated files
+contain the corresponding lemma declarations as well as their proofs;
+do not hand-edit their proof trees. The existential witness retains only
+its solved branch; no `sorry` occurs in the retained artifacts.
+
+The last completed unrestricted repository replay verified 55 of 59 default
+obligations in 203.07 s processing time (207.94 s wrapper elapsed) with
+Tamarin 1.12.0 and Maude 3.5.1. Its source included the release `LockStage`
+marker, as does the restored current source. A fresh full strict replay did not
+finish within a 360 s cap. This includes `executable`
+(609 steps), lifecycle/source helpers, erasure/epoch guards, KEM/KDF/CK
+provenance, chain/session secrecy, conditional epoch security,
+encrypted-progress provenance and generator-position properties.
+`declared_keys_have_inputs` (7 steps) checks that each directional key pair
+uses the same extract inputs/context as its declared chain key, with
+opposite `skI`/`skR` labels. It is deliberately not a reusable search hint.
+`acknowledgement_input` (8 steps) ties a receipt to its incoming ciphertext;
+`acknowledgement_session` (5 steps) supplies its same-event session and prior
+ciphertext knowledge for reuse. Both were proved with unrelated reusable
+helpers removed and source expansion disabled, then replayed with default
+precomputation. These establish input/session provenance.
+`progress_is_durable` now verifies in six steps by composing ciphertext
+origin, incoming-key secrecy, directional ownership and storage provenance.
+The peer's symbolic storage event precedes an accepted receipt, unless
+the pair's CK was revealed earlier; this does not prove a real transaction.
+EK/CT authentication now verifies in six steps each. The new five-step
+output-origin helpers distinguish original generation/encapsulation from
+retransmission. Their disjunctive form avoids eager recursive event
+expansion while preserving the same claim and admissible traces.
+`epoch_agreement` verifies in 132 steps using EK/CT authentication and
+generator uniqueness. Its generated header hides unrelated reusable
+hints; the protocol rules, restrictions and target formula are unchanged.
+The retained include layout, not just an isolated guided export, replayed.
+`fresh_epoch_after_compromise` verifies in 617 steps under the default
+rules, without execution-profile restrictions. Its witness strengthens
+the earlier formula by also pinning both Resume lifecycles and matching
+peer/session events. It reveals CK_0 before the initial initiator commit,
+then completes an honest fresh epoch and a mixed Resume without exposing
+DK, SS or another CK. This establishes a possible recovery execution,
+not inevitable healing or availability against continued interception.
+`ratchet_key_reveal_owner` proves that the pair identifier bound into a
+derived CK agrees with the pair recorded by its reveal event.
+
+`initiator_candidate_recovery` now verifies in 507 steps in the unchanged
+default rules and restrictions. Its existential witness pins three
+successive Resumes: an initial classical Resume, an epoch-1 KEM exchange and
+MIX, then a timed-out responder's candidate commitment by role B followed by
+generation of epoch 2. The witness also rules out extra Resume starts,
+accepts or commits, extra role-B MIX/confirmation events before epoch
+generation, and CK/DK/SS reveals. These guards specify a particular honest
+trace; they are part of the existential witness, not protocol restrictions
+or an all-traces security guarantee. The solved-only owner
+[`ratchet-candidate-recovery-proof.inc`](ratchet-candidate-recovery-proof.inc)
+was replayed both in isolation and in the full default theory. No rule,
+restriction, or attacker capability changed.
+
+`lost_data_recovery` now has a Tamarin-verified 826-step existential witness.
+Its source theory has the same signature and equations, all 43 default rules,
+and all 13 default restrictions as the current model. The witness pins the
+Resume lifecycles, candidate state, timeout and final peer confirmation.
+Strict replay in the assembled repository layout was killed by the system
+with exit 137 after about 48 minutes; this is inconclusive, not a
+counterexample. The standalone proof uses the same transition system, while
+replaying it in the full include layout remains resource-blocked. The witness
+establishes a possible recovery trace, not guaranteed recovery under active
+interception.
+
+### Exact-source witness replay
+
+The repository-owned runner rebuilds the lost-data replay from the current
+assembled model, rather than relying on a saved session theory:
+
+```sh
+python3 -m unittest discover -s docs/spec/models -p 'test_replay.py'
+python3 docs/spec/models/replay.py --timeout 180
+python3 docs/spec/models/replay.py --disclosure-sources --timeout 180
+for target in kem_ciphertext_origin fresh_dk_origin encrypted_origin extract_origin \
+    ratchet_key_origin session_key_origin initial_ck_secret fresh_ss_origin; do
+  python3 docs/spec/models/replay.py --disclosure-sources --target "$target" --timeout 180
+done
+```
+
+Prerequisites are Python 3.10+, Tamarin 1.12.0 and Maude 3.5.1.
+The runner uses Tamarin's native `--output-module=msr` export with strict
+wellformedness checks. `--parse-only` is not used to generate the replay
+input: its current printer also emits typed source annotations that do not
+reparse as MSR syntax.
+
+Only the selected target and **all** `[sources]` lemmas are retained;
+the default's sole source lemma is `dk_reveal_owner`.
+`--disclosure-sources` explicitly enables the proof-only
+`DISCLOSURE_SOURCES` profile, adding two verified source lemmas.
+Its transition-system/signature/restriction prefix is identical to the
+default; only the lemma context changes. The prefix containing
+the signature, equations, tactics, all 43 default rules and all 13 default
+restrictions is copied unchanged. Target/source formulas, attributes and
+certificates are also copied unchanged. A second native export checks exact
+non-comment correspondence before the proof run. The exporter and tested
+Python selector/comparator remain trusted, not formally verified.
+
+The proof command is `tamarin-prover GENERATED_THEORY --quit-on-warning
+--derivcheck-timeout=60`, deliberately without `--prove`. It checks the
+retained certificates rather than starting automation on unfinished sibling
+branches of an existential proof. Success requires a unique `verified`
+result for the witness and every retained source lemma; exit status alone
+is insufficient. Missing/incomplete results fail. Temporary theories are
+cleaned automatically; timeout terminates the command's process group.
+`--timeout` defaults to 300 seconds for the proof invocation; export commands
+each have a separate 120-second limit.
+
+Observed on macOS/Apple silicon: the strict exact-source replay verifies
+`lost_data_recovery` in 826 steps and `dk_reveal_owner` in 9 steps
+(105.69 seconds processing time). All 37 selector/correspondence/result/
+command regressions pass. The native assembled-export SHA-256 is
+`b41046cd3ae828ae59d6fa98f61652207005171fd7a84e50af7a1e8ef919f9b0`;
+the native replay-export SHA-256 is
+`6b47c1fabed41b7d317bf9bf3e6aa6e0dbd52d292dae64abd2c7df7da4785362`.
+These differ from the lifecycle printer digest because the export formats
+differ; they are regenerated, not cached certificates.
+
+Re-run on the current tree (certificate-only, native export,
+`tamarin-prover EXPORT --quit-on-warning --derivcheck-timeout=60 +RTS -M5G`,
+8 GiB host): the full assembled context exhausted the 5 GiB heap in both
+profiles, after 481 s for the default and 247 s for `DISCLOSURE_SOURCES`.
+The export SHA-256 values are unchanged:
+`b41046cd3ae828ae59d6fa98f61652207005171fd7a84e50af7a1e8ef919f9b0` (default)
+and `2421f43c5907ff5a2e96e4dea404a643b472ed25ab38922bf6bc11b48f49bfe1`
+(profile). No lemma result was printed, so this is an inconclusive resource
+failure, not a counterexample and not a new assembled count.
+
+The same minimal context with `--prove` timed out at 240 seconds.
+Certificate-only replay of the full assembled context also timed out at
+300 seconds. Thus this closes reproducible exact-transition-system witness
+replay, **not** full-context completion or a new 56/59 assembled result.
+The [workflow](../../../.github/workflows/lifecycle.yml) now runs these
+regressions and the witness runner alongside the lifecycle gate; hosted
+execution remains unverified.
+
+### Remaining lifecycle searches
+
+An isolated restored-source search for `lock_stage_order` with
+`--heuristic=I` timed out at 300 s after generating 18,346 constraints. This is
+inconclusive. Restored-source searches for `initial_resume_serialized` and
+`resume_serialized` also timed out at 300 s each. A faithful reduced lifecycle
+verifies `lock_stage_unique` (65 steps) and `lock_stage_predecessor` (14 steps);
+these projections do not prove the full theory. Projection-only results and
+timeouts are not assembled-theory evidence.
+
+Further proof-search experiments did not close the gap. An
+`--heuristic=O` search for `lock_stage_order` exceeded 120 s. An
+`--heuristic=I --derivcheck-timeout=0` search for `resume_serialized` was
+stopped at 240 s after repeatedly expanding `ResumeFinish` interval goals.
+A proposed monotonic-stage helper timed out at 180 s and was discarded.
+The interactive UI loaded the theory, but its overview request stalled; the
+server was stopped. These experiments are inconclusive and changed no model
+transitions or restrictions.
+Combining `--no-reuse --heuristic=O --derivcheck-timeout=0` timed out at
+120 s for each of the three target obligations.
+
+As a proof-search experiment, `LockStage` was moved from `Release_Resume` to
+each finish rule's existing `ResumeFinish` action, keeping the same stage
+ordinal and leaving protocol state, restrictions, wire terms and target
+formulas unchanged. With a 180 s process cap,
+`tamarin-prover ratchet.spthy --prove=lock_stage_order --derivcheck-timeout=0 --quiet`
+and the corresponding `--prove=lock_stage_predecessor` command both timed out.
+The instrumentation change was reverted; these results are inconclusive and
+do not alter the assembled-theory evidence.
+
+Further tactic variants also remained inconclusive. Using the `lifecycle`
+tactic on `lock_stage_order` timed out at 180 s after roughly 16,500
+constraints. Using `initial_lock` on `initial_resume_serialized` timed out at
+180 s. Using `lifecycle` on `resume_serialized` timed out at 180 s while
+interval goals expanded; `--no-reuse --heuristic=I --derivcheck-timeout=0`
+also timed out at 180 s for that lemma. The latter settings timed out at
+180 s for `lock_stage_order` as well, after roughly 15,370 constraints.
+The Tamarin UI loaded both theories, but its `/thy/trace/2/overview/help`
+request stalled for 30 s; no interactive proof guidance was obtained. A
+zero-open-chain/zero-saturation run aborted in `--quit-on-warning` mode on
+derivation-check timeouts and is not proof evidence. No tactic annotation,
+lemma formula, rule or restriction was retained from these experiments.
+
+The 3 target obligations without native Tamarin proof evidence are
+`lock_stage_order`,
+`initial_resume_serialized` and `resume_serialized`.
+Their compositional lifecycle evidence and trusted source boundary are
+described above.
+A generated header or absence of `sorry` does not establish proof
+validity; the replay result is authoritative.
+
+The initiator recovery witness's generated proof is retained only because it
+replays in the unrestricted default theory. Restricted positive-trace
+experiments are search aids only; any resulting certificate must replay on
+the unrestricted default model.
+
+Replay the retained proofs from this directory:
+
+```sh
+tamarin-prover ratchet.spthy --quit-on-warning --derivcheck-timeout=60
+```
+
+This command rechecks the stored proofs; it does not search the remaining
+lemmas. Earlier runs with a 30-second derivation-check budget sometimes
+expired before proof search. The calling process still needs a separate
+wall-clock cap; the latest searches used 60 or 90 seconds in total.
+The mutex premises use `no_precomp` to prevent source precomputation
+expanding unrelated collision/previous-Resume histories. This annotation
+changes search strategy, not protocol transitions, restrictions or
+attacker capabilities.
+
+Default precomputation still reports 43 source cases and 30 partial
+deconstructions. The proved origin/source helpers are progress, not a
+claim that this source-coverage gate is closed.
+The [fresh source inventory](ratchet-source-evidence.md) accounts for all
+43 goal groups and 179 branches: the 30 residual chains are exclusively
+`Reveal_CK`/`Reveal_SS` branches across 15 attacker-knowledge shapes.
+Raw and refined residual inventories agree; no source closure is claimed.
+The opt-in `DISCLOSURE_SOURCES` profile reduces refined chains to 15
+across 172 branches. Every remaining partial branch is `Reveal_SS`.
+Its new CK/SS origin certificates replay in 12/8 steps, respectively;
+the unchanged lost-data certificate checks in 802 steps under this
+refined context (100.98 seconds), versus 826 under the default.
+This changes replay step counts, not the saved witness or transitions.
+The [refinement evidence](ratchet-source-evidence.md#opt-in-disclosure-refinement)
+records why this is not enabled by default: seven existing safety
+certificates still need branch migration under refined sources.
+`kem_ciphertext_origin` has now been migrated: its unchanged formula
+verifies in 18 steps in the profile, versus 31 in the default context.
+`--target kem_ciphertext_origin` checks its certificate and all sources
+without relying on ordinary reuse helpers; the default target remains
+`lost_data_recovery`. Seven more are migrated (`fresh_dk_origin`,
+`encrypted_origin`, `extract_origin`, `ratchet_key_origin`,
+`session_key_origin`, `initial_ck_secret`, `fresh_ss_origin`); each is
+checked by `--target` together with its dependency `kem_ciphertext_origin`.
+The exact-prefix safety-only profile context now verifies **54 of 54**
+complete certificates in 38.7 s (it was 47/54 before these migrations); the
+three incomplete serialization lemmas and four existential witnesses are not
+in that context. Earlier bulk regeneration timed out at 240 seconds. Neither this profile nor its selected-certificate CI
+check establishes a new full-theory completion count.
+The [equation argument](ratchet-equation-evidence.md) records termination,
+the repeated-key confluence caveat and the subterm/ground FVP rationale
+for the exact six message equations. Independent convergence
+and finite-variant evidence for the custom equations is also still
+required, including acceptance of their sorted natural-number combination.
+The lightweight skill inspector does not expand the `.inc`
+files: an entry-file scan reports `NO_LEMMAS` despite the prover loading
+59 obligations. Its textual inventory is not an expanded-theory check.
+None of these symbolic proofs establishes constant-time code,
+computational security, concrete parsing or persistence atomicity.
 
 Bounded experiments use `--open-chains=0 --saturation=0` to avoid source
 precomputation expanding arbitrary session histories. These are search
 settings, not attacker restrictions. The prefix-closed mandatory-MIX
-guard removes an existential restriction from induction, but fresh DK,
-fresh SS and derived-CK origin searches still hit the 30 s cap. A timeout
-is neither verification nor a counterexample. No ratchet implementation
-may start on this evidence.
+guard removes an existential restriction from induction. Fresh DK,
+fresh SS and derived-CK origin now have retained replayed proofs;
+remaining searches use bounded wall-clock experiments and exact
+interactive guidance. A timeout is neither verification nor a
+counterexample. No ratchet implementation may start on this evidence.
 
 The derivation check caught a modelling error: mixed Resume could recover
 EK/CT only from their hashes. `IWait` now retains the concrete pending
@@ -114,17 +439,10 @@ secret and objects, matching the local state available at S1. A standalone
 load with `tamarin-prover ratchet.spthy --open-chains=0 --saturation=0
 --derivcheck-timeout=30` passes wellformedness. This does not prove lemmas.
 
-`epoch_position_shape`, `monotonic_epochs`, `no_rollback` and
-`no_classical_downgrade` have targeted proofs (5/4/4/2 steps).
-The first is the initial lemma; the other three explicitly hide reusable
-helpers to keep these results independent of unverified dependencies.
-Reproduce those four checks from this directory:
-
-```sh
-tamarin-prover ratchet.spthy --open-chains=0 --saturation=0 --derivcheck-timeout=30 \
-  --prove=epoch_position_shape --prove=monotonic_epochs \
-  --prove=no_rollback --prove=no_classical_downgrade
-```
+The earlier `epoch_position_shape` lemma is no longer part of the current
+theory. `monotonic_epochs`, `no_rollback` and `no_classical_downgrade`
+now have retained default-model proofs (6/4/2 steps), alongside
+`erased_is_retired` and `erased_branch_unusable` (16/4 steps).
 
 These flags do not impose an overall proof timeout. The 30 s experiment
 cap is enforced by the calling process; `--derivcheck-timeout=30` limits
@@ -140,12 +458,14 @@ reception, not just a completion action.
 The `CLASSIC_FALLBACK` and `NO_PREFIX_GUARD` mutations remove mandatory
 mixing and permit tail acceptance without stored prefixes respectively.
 The tested properties explicitly hide all reusable helpers; searches use
-`--stop-on-trace=BFS`. Both still hit the 30 s cap; **mutation
-sensitivity is not established**. `executable`, `lost_data_recovery` and
-`fresh_epoch_after_compromise` are pinned witnesses, not verified traces.
+`--stop-on-trace=BFS`. Both latest searches hit the 90 s cap; **mutation
+sensitivity is not established**. `lost_data_recovery` is a pinned
+existential witness, not a guarantee of recovery under continued
+interception. Its assembled-layout replay limitation is recorded above.
 
-The model uses zero/successor epochs, not a concrete u32 counter or
-LEB128 parser. Each piece conservatively exposes the full public object
+The model encodes wire epoch zero as the positive natural `%1`, and uses
+natural-number successors, not a concrete u32 counter or LEB128 parser.
+Each piece conservatively exposes the full public object
 once its enclosing session encryption is opened, while full acceptance
 requires both pieces. Position tags distinguish the pieces; redundant
 piece/decoder equations were removed without changing this disclosure

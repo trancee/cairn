@@ -13,7 +13,8 @@ The [threat model](../spec/threat-model.md) requires the implementation to be co
 The [tooling research](../research/2026-10-05-ct-conformance-tooling.md) found:
 - No available tool verifies constant-time behaviour of the actual Android-NDK or iOS binaries; Valgrind, dudect and Microwalk run on Linux hosts.
 - Upstream proofs (AWS-LC SAW, mlkem-native CBMC/HOL-Light/valgrind) are confidence signals for their source, not evidence for our build.
-- X-Wing draft-11 ships no test vectors.
+- Draft-11 Appendix C contains numeric X-Wing vectors, but their provenance
+  is unspecified; see the [source comparison](../research/2026-10-08-x-wing-draft-11-vectors.md).
 
 ## Decision
 

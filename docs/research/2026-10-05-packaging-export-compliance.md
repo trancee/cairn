@@ -49,6 +49,11 @@ primary source in this session.
 
 ## §1 KMP + Rust (Gobley) packaging & publishing
 
+**Superseded for the selected binding:** this section records Gobley-specific
+plugin and packaging mechanics. ADR 0004 now selects Ubique; Android/iOS artifact
+delivery, runtime packaging, and licensing must be revalidated for that plugin
+before release. See the [Ubique compatibility research](2026-10-08-ubique-compatibility.md).
+
 ### 1.1 Maven Central publishing for KMP libraries
 
 **Verified** — JetBrains' official Kotlin Multiplatform docs on publishing to Maven

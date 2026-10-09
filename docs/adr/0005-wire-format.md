@@ -129,6 +129,31 @@ This is the first version. Any layout change requires a new protocol version: a 
 - **Migration:** no wire fields change. Future contact state must persist
   the CK/epoch association; no released state exists to migrate.
 
+2026-10-06, OI-23 formal-model correspondence repair:
+
+- **Context:** an unrestricted-model witness for a timed-out responder
+  initiating recovery and then generating the next epoch was falsified
+  in five steps. Its classic initiator commit selected the candidate CK
+  but left the locally committed `Index` behind. Responder candidate
+  confirmation also omitted the frontier's `Advance` marker.
+- **Decision:** split unchanged-position classic initiator commitment
+  from ahead-of-index candidate commitment. The latter atomically
+  publishes the selected CK, session and committed index, recording
+  `Advance` of the lagging local frontier. Responder candidate confirmation
+  records that same frontier advancement. Neither path increments the
+  already-mixed candidate's epoch or contributes its secret again.
+- **Alternative:** require an extra responder recovery before generation.
+  That contradicts the existing atomic initiator commitment requirement
+  in spec §9 and adds an unnecessary exchange.
+- **Risks:** changed state producers require regeneration and unrestricted
+  replay of the retained proofs, plus honest recovery witnesses in both
+  directions. Those checks are not yet complete; the ratchet gate stays
+  closed. The symbolic `Advance` marker does not prove real erasure or
+  crash-atomic persistence.
+- **Migration:** model correspondence only; no wire field, protocol
+  version or released state changes. Future SDK transactions must implement
+  the already specified candidate/position commitment.
+
 2026-10-05, durable ratchet transfer (OI-25/26, spec draft 0.6):
 
 - **Context:** offsets alone cannot recover a transfer when a disconnect

@@ -47,11 +47,12 @@ Concretely:
 - **Test vectors**: NIST's own `usnistgov/ACVP-Server` repo is confirmed as
   the authoritative source for ML-KEM keyGen/encapDecap JSON vectors (exact
   directories found); AES-GCM/HMAC/HKDF("KDA") directory names were not
-  individually enumerated in this pass (follow-up needed). The X-Wing draft
-  (-11, current, matches ADR 0001) ships **no official test vectors of its
-  own** — conformance vectors must come from an implementation (BoringSSL,
-  CIRCL, or RustCrypto's `KEMs/x-wing`, the latter stuck at draft -06 and
-  explicitly unaudited). Wycheproof (C2SP fork) **now lists ML-KEM among its
+  individually enumerated in this pass (follow-up needed). Draft-11 Appendix C
+  contains numeric X-Wing vectors, but their provenance is unspecified. The
+  source audit in [the 2026-10-08 X-Wing research](2026-10-08-x-wing-draft-11-vectors.md)
+  confirms BoringSSL and CIRCL independently match draft-11 for well-formed
+  inputs; their low-order-X25519 handling differs. Wycheproof (C2SP fork)
+  **now lists ML-KEM among its
   covered algorithms** — contrary to its historical "no PQ KEM vectors"
   reputation — in addition to confirmed AES-GCM/HKDF/HMAC/X25519 coverage;
   exact vector-file paths/schema depth were not opened in this pass.
@@ -330,12 +331,14 @@ this research. Source/working-area repo:
 https://github.com/dconnolly/draft-connolly-cfrg-xwing-kem (the I-D source,
 not a reference-implementation repo).
 
-Reading the draft body (sections 5.2–6, References, Appendix A/B): **there
-is no "Test Vectors" appendix in draft -11.** Appendix A lists third-party
-implementations; Appendix B is a Python reference spec (`xwing.py`)
-explicitly marked *"not production ready... leaks the private key by its
-runtime."* **The X-Wing draft itself ships no official numeric test
-vectors** — conformance vectors must come from an implementation.
+Reading the draft body (sections 5.2–6, References, Appendices A–C):
+Appendix A lists third-party implementations; Appendix B is a Python reference
+spec (`xwing.py`) explicitly marked *"not production ready... leaks the private
+key by its runtime."* Appendix C contains numeric test vectors for key
+generation and encapsulation. Their provenance is not stated in the draft.
+The earlier pass overlooked Appendix C; the
+[2026-10-08 source audit](2026-10-08-x-wing-draft-11-vectors.md) compares the
+draft's construction with BoringSSL and CIRCL.
 
 Appendix A's implementation list (candidate vector sources): Apple
 CryptoKit (`XWingMLKEM768X25519`), Google BoringSSL
@@ -374,9 +377,11 @@ generally per-primitive, not per-hybrid-combiner). Follow-up: fetch
 **Verdict: NIST ACVP (ML-KEM confirmed; AES-GCM/HMAC/HKDF to be enumerated)
 is the primary conformance oracle. Wycheproof is a strong secondary
 edge-case source, now plausibly covering ML-KEM too (needs depth check).
-X-Wing itself has no spec-level vectors — build our own vectors by
-cross-checking against BoringSSL/CIRCL (both ahead of RustCrypto's x-wing
-crate, which is both behind and unaudited).**
+Draft-11 Appendix C provides X-Wing vectors, although their provenance is
+unspecified. Cross-check them against BoringSSL and CIRCL; a later source
+audit confirms both match the draft's well-formed-input construction, with a
+known divergence on low-order X25519 inputs. RustCrypto's x-wing crate remains
+behind draft-11 and unaudited.**
 
 ---
 
@@ -510,7 +515,7 @@ it does to AWS-LC's production ML-KEM.**
 | cargo-fuzz/libFuzzer | Yes (x86_64 and aarch64 per README) | Plausible on aarch64 Linux host only, not on-device | No | Needs nightly + sanitizer support |
 | AFL++ | Likely, unverified in this pass | Unverified | Unverified | Needs follow-up fetch |
 | NIST ACVP vectors (ML-KEM confirmed; AES-GCM/HMAC/HKDF dirs not yet enumerated) | Source-of-truth JSON, usable anywhere a harness can load JSON | Same (data-only) | Same | Need a harness; no confirmed maintained Rust ACVP crate (crates.io API check blocked) |
-| X-Wing draft vectors | **None shipped in draft -11 itself** | — | — | Must derive from an implementation (BoringSSL/CIRCL/RustCrypto x-wing — the latter stuck at draft -06, unaudited) |
+| X-Wing draft vectors | Draft-11 Appendix C has numeric vectors; provenance unspecified | — | — | Cross-check against BoringSSL and CIRCL; source audit confirms normal-input construction matches, but low-order X25519 behavior differs |
 | Wycheproof | AES-GCM/HKDF/HMAC/X25519/X448 and now ML-KEM confirmed listed | Data-only | Data-only | Active C2SP-maintained project; ML-KEM depth unverified |
 | AWS-LC SAW/NSym proofs | SHA-2/HMAC/AES-KWP/AES-GCM only, on SandyBridge+/Neoverse-N1/V1 Linux builds — **no ML-KEM/X25519** | **Not covered** | **Not covered** | Re-verification needed for cross-compiled mobile artifacts |
 | mlkem-native CBMC/HOL-Light/Valgrind | Yes (x86_64 + aarch64 Linux, partly via self-hosted EC2) | **Not covered** — "portable C" assumption only | **Not covered** | Same cross-compilation transfer gap as AWS-LC |
@@ -584,9 +589,12 @@ expected before cutting a release):**
   this is the one gap no existing tool closes, and would need bespoke
   harness work outside anything found in this research pass.
 - X-Wing conformance cross-check against at least two independent
-  implementations (e.g. BoringSSL's `xwing.h` and Cloudflare CIRCL) since
-  the draft itself ships no vectors and RustCrypto's crate lags the spec
-  version and is unaudited.
+  implementations (e.g. BoringSSL's `xwing.h` and Cloudflare CIRCL). Draft-11
+  Appendix C has numeric vectors, but their provenance is unspecified;
+  RustCrypto's crate lags the spec version and is unaudited. The later
+  [source audit](2026-10-08-x-wing-draft-11-vectors.md) confirms BoringSSL
+  and CIRCL agree with the draft's normal-input construction and documents
+  their low-order-X25519 divergence.
 
 ---
 

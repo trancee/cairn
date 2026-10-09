@@ -16,4 +16,4 @@ Recorded in [ADR 0004 — Core architecture](../../../docs/adr/0004-core-archite
 - Persist/Restore actions; Kotlin seals the blob with the platform keystore.
 - `zeroize`/`subtle`; no secrets cross the FFI; constant-time CI.
 - Monorepo: `core/` (crates `pqcble-wire`, `pqcble-crypto`, `pqcble-proto`, `pqcble-ffi`; wire and proto are `no_std`), `sdk/` (KMP), `app/` (Compose Multiplatform).
-- Toolchain: Gobley + UniFFI, `cargo-ndk` for 3 Android ABIs, a Kotlin/Native XCFramework for iOS.
+- Toolchain: Ubique UniFFI plugin + UniFFI, `cargo-ndk` for 3 Android ABIs, a Kotlin/Native XCFramework for iOS (selected in ADR 0004; target proof tracked by issue 44).

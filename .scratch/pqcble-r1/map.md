@@ -26,19 +26,61 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 - Refer to tickets by name.
 - Current ratchet contract: spec draft 0.6 includes CK-bound recovery,
   conditional honest-epoch healing, durable KEM_PROGRESS and strict
-  contiguous reassembly (OI-21-26). The composed model loads cleanly, but
-  its cryptographic/helper, execution/recovery and mutation proofs remain
-  incomplete. *Formal model: PQ ratchet mixing* stays claimed; its
-  implementation gate is closed.
+contiguous reassembly (OI-21-26). A prior reduced-model diagnosis incorrectly
+removed the `LockStage` marker from release because its `Finish` rule omitted
+the completion-stage increment in the assembled theory. The marker is restored.
+The last completed replay verified 55/59 obligations on the same marker
+behavior; a fresh strict replay timed out at 360 seconds. An isolated
+`lock_stage_order` search also timed out at 300 seconds, so current full-theory
+completion remains unverified. Additional tactics and no-reuse searches for
+all three remaining obligations also timed out. Finish-action placement,
+lifecycle/initial-lock tactics, no-reuse induction and interactive UI
+experiments yielded no new evidence; see the model README. `lost_data_recovery` has an
+826-step verified witness against the same 43 rules and 13 restrictions; its
+assembled-layout strict replay was system-killed with exit 137 after about
+48 minutes. Repository-owned [exact-source witness replay](../../docs/spec/models/README.md#exact-source-witness-replay)
+now reproduces the 826-step result with only the witness and its proved source
+lemma, retaining every rule/restriction/equation and certificate. Full-context
+certificate replay still timed out at 300 seconds; no assembled completion
+is claimed. Three obligations remain without native Tamarin proof evidence:
+`lock_stage_order`, `initial_resume_serialized` and `resume_serialized`.
+They now have compositional lifecycle evidence using Lean 4.34.1, linear-token
+simulation, arbitrary-key interleavings and checked certificates for all
+43 rules. The source connection trusts Tamarin's export and the tested Python
+extractor; see [ADR 0010](../../docs/adr/0010-compositional-lifecycle-verification.md)
+and the [lifecycle gate](../../docs/spec/models/lifecycle/README.md).
+The [lifecycle workflow](../../.github/workflows/lifecycle.yml) now configures
+a checksum-pinned Linux run; local validation passes, but hosted execution
+and required-check enforcement remain unverified (no Git remote configured).
+Mutation and source-coverage gates remain open. *Formal model: PQ ratchet
+mixing* stays claimed; its implementation gate is closed.
+The [source inventory](../../docs/spec/models/ratchet-source-evidence.md)
+now isolates all 30 residual chains to CK/SS reveal branches.
+The [equation argument](../../docs/spec/models/ratchet-equation-evidence.md)
+documents the exact rewrite assumptions; independent combined-theory
+acceptance and proved disclosure-source refinement remain outstanding.
+The opt-in `DISCLOSURE_SOURCES` profile proves CK/SS disclosure origins
+and halves refined chains to 15 (all SS). Its source/witness replay passes,
+and all eight existing safety certificates are now migrated; default
+activation still needs the assembled-context result. The 15 residual SS
+source chains are a documented limitation: a circular attacker-built
+`kem` payload that no action fact on the decode rule resolves (see
+`ratchet-source-evidence.md`). The default remains unchanged; source closure is not claimed.
+The first migration, `kem_ciphertext_origin`, verifies in 18 steps in the
+profile; seven more follow (`fresh_dk_origin`, `encrypted_origin`,
+`extract_origin`, `ratchet_key_origin`, `session_key_origin`,
+`initial_ck_secret`, `fresh_ss_origin`). The safety-only replay now
+verifies 54/54 complete certificates (38.7 s).
 
 ## Decisions so far
 
-<!-- one line per resolved ticket: [title](issues/NN-slug.md): gist -->
+<!-- One line per resolved ticket: title linked to its issue, followed by the decision. -->
 
 - [Minimum OS versions](issues/06-minimum-os-versions.md): Android 8 (API 26) / iOS 15; a GATT-only path is mandatory and ML-KEM ships in the Rust core.
 - [FIPS-validated modules providing ML-KEM](issues/01-fips-validated-mlkem-modules.md): no module is validated on both mobile platforms yet; claim "approved algorithms" for now and keep the backend seam.
 - [FIPS-conformant hybrid KEM combiner](issues/02-fips-hybrid-kem-combiner.md): X-Wing is acceptable under SP 800-227; AES-256-GCM is required; truncated tags/PRFs ≥ 64 bit.
-- [Kotlin Multiplatform + Rust core + BLE toolchain viability](issues/03-kmp-rust-ble-toolchain.md): Gobley bindings; platform-specific BLE code; iOS floor is ≥ 15.
+- [Kotlin Multiplatform + Rust core + BLE toolchain viability](issues/03-kmp-rust-ble-toolchain.md): Ubique bindings selected instead of Gobley per ADR 0004; platform-specific BLE code; iOS floor is ≥ 15.
+- [Ubique binding compatibility](issues/43-ubique-kmp-target-compatibility.md): Ubique `1.3.1` / UniFFI `0.32.0` selected; iOS 15 execution proof remains open in [issue 44](issues/44-ubique-binding-smoke-test.md).
 - [Kompact suitability for pqcble payload encoding](issues/14-kompact-payload-encoding.md): not adopted; no savings on crypto-dominated frames; chat envelope uses a Rust presence-bitmap layout.
 - [Crypto suite and parameter set under FIPS](issues/05-crypto-suite-under-fips.md): X-Wing / ML-KEM-768 / X25519-as-T / SHA-384 / AES-256-GCM, no signatures, no negotiation; see ADR 0001.
 - [Store-and-forward sync semantics](issues/09-store-and-forward-semantics.md): seal at send with per-session-reseeded message chains, two layers for queued only, acks/resend/dedup, 500 msgs/7 days; see ADR 0002.
@@ -48,7 +90,7 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 - [Device test lab](issues/13-device-test-lab.md): 23 Android (SDK 26–36) + 4 iPhones (iOS 15–26), no sniffer; core matrix of 8 Android + 3 iPhones.
 - [Threat model and security goals](issues/15-threat-model.md): A1–A7 in scope, compromised OS/physical/jamming/proximity out; FS + PCS claims; TOFU passive-only; QR gains 4-digit confirm; see `docs/spec/threat-model.md`.
 - [Constant-time and conformance tooling for the Rust core](issues/17-ct-conformance-tooling.md): CT tools are Linux-only (no on-device proof); ACVP + Wycheproof per PR, dudect advisory nightly, X-Wing cross-checked vs BoringSSL/CIRCL.
-- [Packaging, distribution and export compliance](issues/22-packaging-export-compliance.md): AAR/Maven + XCFramework/SPM; non-exempt encryption → EAR 5D002 via ENC/§742.15(b) open-source notice + ANSSI for France; UniFFI/Gobley MPL-2.0.
+- [Packaging, distribution and export compliance](issues/22-packaging-export-compliance.md): AAR/Maven + XCFramework/SPM; non-exempt encryption → EAR 5D002 via ENC/§742.15(b) open-source notice + ANSSI for France; revalidate selected Ubique runtime packaging and licenses before release.
 - [Energy and airtime measurement methodology](issues/23-energy-methodology.md): HCI-snoop airtime (precise) + baseline-subtracted relative battery drain; no absolute joules possible with this lab.
 - [Formal model tooling and lemmas](issues/19-formal-model-tooling.md): Tamarin primary (+ProVerif for SAS bound, CryptoVerif optional); explicit KEM binding; lemma lists for Resume/ratchet/SAS.
 - [Key storage and state persistence](issues/16-key-storage.md): after-first-unlock keys, Keystore/Keychain AES master key, SQLite with one transaction per Persist batch, core-held per-contact storage keys (crypto-shred), no backups; see ADR 0006.
@@ -63,6 +105,7 @@ A working `pqcble` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform s
 - [Android↔iOS background discovery and transport feasibility](issues/04-android-ios-background-ble.md): fixed service UUID plus GATT-read beacon; GATT-first transport; L2CAP optional.
 - [Formal verification gate](issues/07-formal-verification-gate.md): symbolic model gates Resume, PQ ratchet mixing and SAS pairing only.
 - [Reference app scope](issues/08-reference-app-scope.md): minimal 1:1 chat with pairing flows plus a bytes/airtime debug panel.
+- [X-Wing draft-11 vector provenance](issues/42-x-wing-draft-11-vector-provenance.md): BoringSSL and CIRCL match draft-11 for well-formed inputs; low-order X25519 behavior differs, and draft-11 Appendix C contains numeric vectors with unspecified provenance.
 
 ## Not yet specified
 

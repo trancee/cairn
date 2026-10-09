@@ -1,0 +1,2 @@
+# Tamarin proof output carries trailing spaces
+*.inc whitespace=-trailing-space
