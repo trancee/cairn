@@ -130,6 +130,17 @@ state=protocol research/specification/formal models + host-only Rust foundation;
   out at 300 seconds. The full local job did not pass and did not reach
   disclosure-profile replay.   Hosted formal matrix checks have passed; the
   full assembled-context replay remains inconclusive.
+  `python3 docs/spec/models/mutation.py --timeout 180` now establishes native
+  mandatory-mix sensitivity: the unchanged default target verifies in 2 steps,
+  and `CLASSIC_FALLBACK` falsifies it in 504 steps. The runner checks exact
+  transition correspondence apart from the removed guard and uses no helper
+  lemmas. `--mutation NO_PREFIX_GUARD` establishes stored-prefix sensitivity:
+  the default `no_partial_mix` verifies in 4 steps and the mutation falsifies
+  it in 526 steps. Correspondence requires only two added unguarded tail
+  rules, with no other default declaration changes. Separate lifecycle
+  matrix jobs are configured but have not yet run on a hosted runner.
+  The broader ratchet gate remains open; see the
+  [mutation reference](docs/spec/models/README.md#native-mandatory-mix-mutation-regression).
 
 Policy authority: [`CONSTITUTION.md`](CONSTITUTION.md)/[`AGENTS.md`](AGENTS.md).
 

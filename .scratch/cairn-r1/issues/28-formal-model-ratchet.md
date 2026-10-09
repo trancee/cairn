@@ -499,3 +499,84 @@ on macOS with Tamarin 1.12.0 and Maude 3.5.1. Both used
 budget failed its derivation checks; correcting to the documented 60-second
 budget still produced a process timeout. No counterexample or proof-sensitivity
 regression was established, and no model, certificate or gate was changed.
+
+2026-10-09 (guided mandatory-mix counterexample): Native loopback guidance
+found a solved `CLASSIC_FALLBACK` / `no_classical_downgrade` trace. The proof
+context retained the entire canonical mutation prefix and unchanged target,
+omitting only unrelated lemmas. The attacker uses an allowed initial-CK
+reveal to complete a classical Resume, derive session keys and inject both
+CT pieces. Role A becomes `Ready`, then starts another classical Resume in
+the same epoch without `Advance`. The normal mandatory-mix guard excludes
+that ordering.
+
+The generated attack-only include contains no unfinished proof steps.
+The attack extractor prunes unselected alternatives and natively replays
+the chosen path before writing it. `mutation.py --timeout 180` freshly
+exports both assembled profiles, rejects any transition difference beyond
+removal of `mandatory_mix`, requires identical target formula/attributes
+and retains no helper lemmas. The intended-red run verified the default
+claim but failed on the mutation's old `analysis incomplete (3 steps)`.
+The green run verified the default in 2 steps (38.00 s) and falsified the
+mutation in 504 steps (44.37 s). These are native Tamarin processing times
+on macOS, not Linux/CI wall times. The default export SHA-256 remained
+`d5678674a4dfdff8fb5997fc8bc0202b7818f0cdcf9ac1f5aa4089d40d89e8e0`.
+
+A dedicated lifecycle CI job and the local opt-in replay gate now run this
+regression; hosted execution of the new job remains unverified. See the
+[mutation reference](../../../docs/spec/models/README.md#native-mandatory-mix-mutation-regression).
+This establishes only mandatory-mix sensitivity in the deliberately mutated
+symbolic model, not a vulnerability in the guarded protocol. Prefix-guard
+sensitivity, assembled-context completion, SS source closure, independent
+equation acceptance and the implementation gate remain open.
+
+2026-10-09 (guided stored-prefix counterexample): Native guidance also
+completed `NO_PREFIX_GUARD` / `no_partial_mix`, retaining the full canonical
+mutation transition system and only the exact target lemma. The trace uses
+an allowed initial-CK reveal to finish a classical Resume, forges an
+authenticated CT tail without a CT prefix, and reaches `I_S1_mix`/`MixStart`
+after unguarded tail acceptance. No `CTPrefix` event appears. The normal
+mandatory-mixing restriction stays present. This is a deliberately mutated
+symbolic-model counterexample, not a guarded-protocol vulnerability.
+
+The new `mutation.py --mutation NO_PREFIX_GUARD --timeout 180` gate checks
+that only the two unguarded tail rules are added, that each removes just its
+stored-prefix premise (plus its rule/diagnostic rename), and that every
+default declaration and target formula/attribute is unchanged. The intended
+red observed default verification in 4 steps, then rejected the mutation's
+old `analysis incomplete (6 steps)`. The green replay verified the default
+in 4 steps (38.75 s) and falsified the mutation in 526 steps (45.10 s).
+The default canonical export SHA-256 remains unchanged. Both profiles omit
+all helper lemmas while retaining every non-lemma declaration.
+
+`extract_attack.py` now generates both native attack-only includes; neither
+contains unfinished steps. It replaced the fallback-specific extractor
+before publication. Both mutations have separate CI jobs and local opt-in
+replay commands; hosted execution is unverified. The trace exercises the CT
+side, not a separately guided EK attack. Both original symbolic guard
+mutations now have native sensitivity regressions. Full-context completion,
+SS source closure, independent equation acceptance and the implementation
+gate remain open.
+
+2026-10-09 (first mutation CI diagnosis): PR #4 at `5b29d90` ran both new
+jobs in [37985431090](https://github.com/trancee/cairn/actions/runs/37985431090).
+Both failed the default export's strict derivation check at 60 seconds,
+before any replay result. All 11 existing formal jobs passed, as did Rust
+and CodeQL. This is a derivation timeout, not a found trace or the earlier
+`<<loop>>` exception.
+
+The exact checksum-pinned Linux binaries reproduced failure with guided
+precomputation flags and success with standard export. Guided replay also
+timed out at 60 seconds; standard replay made the attack skeleton incomplete.
+A strict 120-second guided derivation budget completed the fallback replay
+in 74.24 seconds with its unchanged 504-step attack. The runner now separates
+standard export (60 seconds) from guided certificate replay (120 seconds),
+retaining the 180-second external cap and strict warnings. No retries,
+validation bypass or protocol/claim changes were introduced. This local
+Linux result used Rosetta, not native hosted execution.
+
+The complete corrected Linux/Rosetta runner then passed both profiles:
+default/`CLASSIC_FALLBACK` verified/falsified in 2/504 steps (63.91/74.10 s);
+default/`NO_PREFIX_GUARD` verified/falsified in 4/526 steps (67.04/75.40 s).
+Transition-prefix digests matched macOS. Fast gates, pinned Lean, links,
+workflow syntax and model secret scanning also passed. Hosted native
+confirmation remains required.

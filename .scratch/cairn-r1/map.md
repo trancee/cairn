@@ -56,7 +56,14 @@ head `ce54305` in
 Required-check enforcement is not configured: the last settings inspection
 found no rulesets or `main` protection. Hosted success does not close the
 full assembled-model gate.
-Mutation and source-coverage gates remain open. *Formal model: PQ ratchet
+Mandatory-mix mutation sensitivity now has a native regression: the default
+claim verifies in 2 steps and `CLASSIC_FALLBACK` produces a 504-step
+counterexample with the same rules/equations and only the mandatory guard
+removed, without helper lemmas. Stored-prefix sensitivity also has native
+evidence: default `no_partial_mix` verifies in 4 steps and `NO_PREFIX_GUARD`
+falsifies it in 526 steps. The mutation adds only the two validated unguarded
+tail rules and keeps the mandatory-mix guard. The new CI jobs have not yet
+run on hosted runners. Source-coverage and broader ratchet gates remain open. *Formal model: PQ ratchet
 mixing* stays claimed; its implementation gate is closed.
 The [source inventory](../../docs/spec/models/ratchet-source-evidence.md)
 now isolates all 30 residual chains to CK/SS reveal branches.

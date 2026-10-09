@@ -11,9 +11,26 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
 ## Commands
 
 - `scripts/check.sh` runs the fast gates: whitespace, unit tests, `actionlint`, lifecycle proofs. The pre-commit hook and CI both call it.
-- `REPLAY=1 scripts/check.sh` adds the three Tamarin replays (about 3 minutes each at most).
+- `REPLAY=1 scripts/check.sh` adds the default/refined witness replays,
+  eight refined-origin replays and both guard-mutation regressions.
+- `python3 docs/spec/models/mutation.py --timeout 180` replays the default
+  mandatory-mix claim and its `CLASSIC_FALLBACK` counterexample, preserving
+  each assembled transition system and omitting helper lemmas. It is also
+  part of `REPLAY=1` and has a separate lifecycle CI job. Each native command
+  has its own timeout; no new proof search or retry is started.
+- `python3 docs/spec/models/mutation.py --mutation NO_PREFIX_GUARD --timeout 180`
+  replays the stored-prefix claim and counterexample. It checks that the
+  mutation only adds the two tail rules without stored-prefix premises;
+  the mandatory-mix guard remains present. It also has its own lifecycle job.
 - Enable the hook once per clone: `git config core.hooksPath .githooks`.
 - Native export needs `--derivcheck-timeout=60`. Without it, `--quit-on-warning` fails on derivation-check timeouts.
+- Mutation replay uses standard export settings with that 60-second budget,
+  then replays guided certificates with `--open-chains=0 --saturation=0`
+  and `--derivcheck-timeout=120`. Exact Linux binaries timed out at 60 seconds
+  with the guided settings; the fallback attack replay completed in 74.24
+  seconds with 120. Strict warnings and the 180-second external process cap
+  remain enabled. Changing replay precomputation to defaults makes the guided
+  attack skeleton incomplete, so export and replay settings are separate.
 - Lemma formulas cannot contain reducible symbols such as `kdec`; use action facts such as `EpDec`.
 
 ## Proof search

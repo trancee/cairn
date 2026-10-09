@@ -466,10 +466,10 @@ reception, not just a completion action.
 
 The `CLASSIC_FALLBACK` and `NO_PREFIX_GUARD` mutations remove mandatory
 mixing and permit tail acceptance without stored prefixes respectively.
-The tested properties explicitly hide all reusable helpers; searches use
-`--stop-on-trace=BFS`. Both latest searches hit the 90 s cap; **mutation
-sensitivity is not established**. `lost_data_recovery` is a pinned
-existential witness, not a guarantee of recovery under continued
+Earlier helper-hidden BFS searches hit the 90 s cap for both targets.
+Guided native replay now establishes sensitivity for both mutations.
+`lost_data_recovery`
+is a pinned existential witness, not a guarantee of recovery under continued
 interception. Its assembled-layout replay limitation is recorded above.
 
 On 2026-10-09, bounded native macOS depth-first probes also timed out at
@@ -481,6 +481,135 @@ and `--stop-on-trace=DFS`, with `--defines=CLASSIC_FALLBACK
 An initial 30-second derivation budget failed with a derivation-check timeout;
 that setup failure is not a mutation result. No replayable counterexample or
 automated mutation regression was obtained from these probes.
+
+### Native mandatory-mix mutation regression
+
+From the repository root:
+
+```sh
+python3 docs/spec/models/mutation.py --timeout 180
+```
+
+The runner exports the default and `CLASSIC_FALLBACK` assembled theories
+with Tamarin 1.12.0/Maude 3.5.1. It checks that the only transition-system
+difference is removal of `mandatory_mix` and that the target formula and
+attributes are identical. It retains every non-lemma declaration but only
+`no_classical_downgrade`: no source, reuse or other helper lemma is available.
+Native certificate replay, without `--prove` or a new search, must report:
+
+| Profile | Required result | Local native result |
+|---|---|---|
+| Default: guard present | `verified` | 2 steps |
+| `CLASSIC_FALLBACK`: guard absent | `falsified - found trace` | 504 steps |
+
+The intended-red run verified the default claim but rejected the old
+mutation certificate's `analysis incomplete` result. After adding the guided
+attack certificate, both required outcomes passed. Timeouts, warnings,
+process failures, incomplete analysis and unexpected verification are failures,
+not substitutes for a counterexample. The 180-second bound applies separately
+to each native command. The lifecycle workflow adds a separate
+`mutation-classic-fallback` job; `REPLAY=1 scripts/check.sh` also runs it.
+Hosted execution of the new mutation jobs is not yet verified.
+
+The first hosted mutation jobs at `5b29d90` in
+[run 37985431090](https://github.com/trancee/cairn/actions/runs/37985431090)
+failed during the initial default export: strict derivation checks hit their
+60-second timeout before either certificate replay. All 11 existing formal
+jobs in that run passed. The exact Linux binaries reproduced that timeout
+locally under Rosetta. Standard export settings passed; guided replay with
+the same 60-second budget also timed out. A 120-second strict derivation
+budget completed fallback replay in 74.24 seconds, with the same 504-step
+counterexample. Default replay precomputation instead produced an incomplete
+attack skeleton, not a counterexample.
+
+The runner therefore uses standard canonical export with a 60-second
+derivation budget, then retains the guided certificate context
+(`--open-chains=0 --saturation=0`) with a 120-second derivation budget.
+Every process still has the external 180-second cap, and `--quit-on-warning`
+remains enabled. There is no retry, skipped check, changed claim or protocol
+change. Linux/Rosetta evidence does not substitute for hosted native results.
+Both corrected regressions passed with the exact Linux binaries under Rosetta:
+default/`CLASSIC_FALLBACK` verified/falsified in 2/504 steps (63.91/74.10 s);
+default/`NO_PREFIX_GUARD` verified/falsified in 4/526 steps (67.04/75.40 s).
+The transition-prefix digests match the earlier macOS results.
+
+The native trace uses a permitted reveal of the initial CK. The attacker
+completes a classical Resume using that CK and the public S1 nonce, derives
+the session keys, then injects both authenticated CT pieces. A becomes
+`Ready` in the initial epoch and subsequently starts another classical Resume
+without any intervening `Advance`. The normal mandatory-mixing guard forbids
+that ordering. This is an attack against the deliberately mutated symbolic
+model, not a newly found vulnerability in the guarded protocol or evidence
+about constant-time implementation.
+
+`ratchet-classic-fallback-attack.inc` stores only the successful native attack
+path, without unfinished steps or unselected alternatives. Tamarin may
+reconstruct unexplored alternatives while loading the skeleton; falsification
+requires one solved counterexample, not exhaustive exploration. Regenerate
+the include from a saved native UI export with exactly one solved target path:
+
+```sh
+python3 docs/spec/models/extract_attack.py /path/to/native-attack-export.spthy
+python3 docs/spec/models/mutation.py --timeout 180
+```
+
+Extraction replays the chosen path before writing the generated include.
+The second command checks its current assembled-source correspondence.
+Unrelated lemmas are omitted, never rules, restrictions, equations or attacker
+behaviors. Full assembled-context completion, disclosure-source closure and
+independent combined-equation acceptance remain open.
+
+### Native stored-prefix mutation regression
+
+The second profile uses the same runner and toolchain:
+
+```sh
+python3 docs/spec/models/mutation.py --mutation NO_PREFIX_GUARD --timeout 180
+```
+
+`--mutation` selects `CLASSIC_FALLBACK` (the default) or `NO_PREFIX_GUARD`.
+Both compare the selected target's exact formula/attributes and retain its
+entire assembled non-lemma prefix without any helper lemmas. For
+`NO_PREFIX_GUARD`, the runner checks that the default declarations remain
+unchanged and that exactly two unguarded tail rules are added. Each must
+match its guarded counterpart except for removing the stored `!EK0` or
+`!CT0` premise and renaming the rule/diagnostic action. In particular,
+`mandatory_mix` remains present. Any additional change fails correspondence.
+
+| Profile | Target | Required local native result |
+|---|---|---|
+| Default: prefix guards present | `no_partial_mix` | `verified (4 steps)` |
+| `NO_PREFIX_GUARD` | `no_partial_mix` | `falsified - found trace (526 steps)` |
+
+The intended-red run rejected the old mutation certificate's
+`analysis incomplete (6 steps)` result. The generated native attack
+certificate makes the regression pass. Its trace uses an allowed initial-CK
+reveal and a completed classical Resume. The attacker forges an authenticated
+CT tail without sending a CT prefix. The unguarded receiver accepts full
+reception, stores the decapsulation result and becomes ready; a later
+`I_S1_mix` reaches `MixStart` without any `CTPrefix` event. Both complementary
+pieces are required by the real protocol. This counterexample demonstrates
+why tail acceptance must check durable prefix state even when the session
+encryption authenticates. It is not a vulnerability in the guarded model.
+
+The trace exercises the CT side. The runner verifies correspondence for both
+added EK and CT rules, but does not claim a separately guided EK counterexample.
+It is symbolic, not proof of concrete byte-range checks or storage atomicity.
+The new `mutation-no-prefix-guard` CI job and `REPLAY=1 scripts/check.sh`
+run the regression; hosted execution remains unverified.
+
+Regenerate `ratchet-no-prefix-guard-attack.inc` from a saved native UI export:
+
+```sh
+python3 docs/spec/models/extract_attack.py /path/to/native-prefix-attack.spthy \
+  --mutation NO_PREFIX_GUARD
+python3 docs/spec/models/mutation.py --mutation NO_PREFIX_GUARD --timeout 180
+```
+
+The shared extractor requires one solved target path and natively replays it
+before writing the include. `--output PATH` overrides the default generated
+include path. Both symbolic guard mutations now have native sensitivity
+regressions; the broader ratchet implementation gate remains closed.
 
 The model encodes wire epoch zero as the positive natural `%1`, and uses
 natural-number successors, not a concrete u32 counter or LEB128 parser.
