@@ -15,7 +15,7 @@ machines or bindings are authorized by this increment. S0 is not complete.
 Local Rust 1.99.0 tests, clippy, cargo-deny 0.20.2, wire Miri and crypto
 careful 0.4.10 (nightly-2026-10-08) pass on macOS ARM64. Both adapters pass
 83 HKDF and 174 HMAC Wycheproof cases. CI is configured for three host
-platforms, but has not executed for this increment.
+platforms and passes in hosted run 37963154963 (linked below).
 
 Nightly branch coverage measured by cargo-llvm-cov 0.9.1 is 100% for wire
 lines/branches and 100% of recorded crypto branches, but only 86.36% of
@@ -35,7 +35,7 @@ that errors occurred inside valid adapter calls. No suppression was added.
 The wire fuzz smoke completed 57,843,345 executions in 61 seconds on macOS
 ARM64 (cargo-fuzz 0.13.2, nightly-2026-10-08, seed 20261009, max_len 65540)
 without a crash. Corpus and fuzz lockfile are retained; Linux x86-64/ARM64
-smokes are configured but not yet run.
+smokes also pass in the hosted run linked below.
 
 Provider source investigation: RustCrypto HMAC `new_from_slice` accepts any
 key length; RustCrypto HKDF rejects only output longer than 255 digest
@@ -45,7 +45,7 @@ which valid wrapper calls permit. Native fill errors must still fail closed.
 These paths must not be fabricated or suppressed for a coverage number.
 
 Outstanding ADR 0007 gates: secret-taint checks for protocol-labelled glue,
-hosted cross-build execution and binding/device proofs.
+binding/device proofs and required-check enforcement configuration.
 CI enforces 100% source line/branch coverage, which now passes locally.
 Binding deployment
 floors/device proofs remain issue 44 and S0 obligations. Independent protocol
@@ -74,7 +74,7 @@ The existing raw HKDF interface recomputes extract per iteration; no
 reusable-PRK API is added or tested. All 200 SHA2-384 cases in the pinned
 corpus are now covered; no all-algorithm corpus or certification claim is made.
 The foundation adapter taint and mobile compilation follow-ups below
-provide local evidence; hosted Rust workflow execution remains open.
+provide local and hosted evidence.
 
 Foundation secret-taint follow-up: the separate locked `core/ct` workspace
 uses `crabgrind` 0.4.0 safe Memcheck requests around the existing primitive
@@ -86,14 +86,14 @@ reported zero errors; no harness suppressions or declassification were used.
 The initial compiler-folded control was detected as insensitive and replaced
 with post-taint memory reads. Storage exhaustion interrupted testing, but
 the final corrected runs completed after space was freed and the VM restarted.
-The Linux matrix is configured but not yet hosted. This is not mobile or
+The hosted Linux matrix passes with Valgrind 3.22.0. This is not mobile or
 full protocol-glue constant-time evidence.
 
 Apple foundation follow-up: release library compilation passes for
 `aarch64-apple-ios` and `aarch64-apple-ios-sim`, both crates/all features,
 with Rust 1.99.0, Xcode 27 SDKs, Apple clang 21.0.0 and an explicit
-`IPHONEOS_DEPLOYMENT_TARGET=15.0`. The workflow is wired but unexecuted
-remotely. This is not an application-link/runtime/package/binding deployment
+`IPHONEOS_DEPLOYMENT_TARGET=15.0`. The hosted job also passes.
+This is not an application-link/runtime/package/binding deployment
 proof and does not satisfy issue 44.
 
 Android foundation follow-up: both crates/all features compile as release
@@ -103,6 +103,24 @@ build --workspace --all-features --release --locked` from `core/`, with
 `ANDROID_NDK_HOME` pointing to NDK r30 (`30.0.16248370`).
 Local execution used Rust 1.99.0, cargo-ndk 4.1.2 and Android clang 21.0.0
 on macOS ARM64; all three targets built without cached target artifacts.
-The Linux job is wired but has not executed remotely. No final
+The hosted Linux job also passes. No final
 shared-library link, APK/JNI/KMP call, runtime/API-floor or mobile
 constant-time proof is claimed. Issue 44 remains open.
+
+Hosted foundation evidence: all 11 jobs passed in
+[run 37963154963](https://github.com/trancee/cairn/actions/runs/37963154963)
+on pushed commit `4ba49550b75bdfbce55f321f3ceee84258c670cb`:
+ordinary gates on three hosts, coverage, Miri/careful, two fuzz jobs,
+two native secret-taint jobs and Android/Apple cross-builds.
+This closes hosted execution for the approved partial foundation, not S0,
+binding/device readiness, independent review or composed-model completion.
+The same commit's
+[lifecycle run 37963154753](https://github.com/trancee/cairn/actions/runs/37963154753)
+also passed all 11 formal regression jobs. This does not close the
+resource-inconclusive full assembled replay.
+
+Merge enforcement check (2026-10-09): `gh api repos/trancee/cairn/rulesets`
+returned an empty list; `gh api repos/trancee/cairn/branches/main/protection`
+returned HTTP 404, "Branch not protected". Thus the current CI results are
+evidence, not an enforced merge prerequisite. No repository settings were
+changed; configuring enforcement requires explicit owner approval.

@@ -37,8 +37,9 @@ cargo +nightly-2026-10-08 fuzz run wire_encoding -- -max_total_time=60 -max_len=
 ```
 
 The Rust workflow runs the ordinary gates on Linux x86-64, Linux ARM64 and
-macOS, plus Miri/careful on Linux. Hosted results are not yet available for
-this increment. A separate coverage job requires 100% source line/branch
+macOS, plus Miri/careful on Linux. All 11 jobs passed in
+[hosted run 37963154963](https://github.com/trancee/cairn/actions/runs/37963154963)
+at commit `4ba4955`. A separate coverage job requires 100% source line/branch
 coverage; both crates currently meet that threshold locally.
 Interpreter checks do not prove constant-time behavior and
 Miri does not inspect the AWS-LC C implementation.
@@ -158,7 +159,7 @@ Both adapters passed release-build checks with Rust 1.99.0 and Valgrind
 An initial compiler-folded control was missed; the retained controls force
 post-taint memory reads and output shadow-bit checks confirm propagation.
 The workflow runs the same driver on native Linux x86-64/ARM64 runners;
-hosted results are still pending.
+both hosted jobs pass with Valgrind 3.22.0 in the run linked above.
 
 This checks existing primitive adapters, not the unimplemented
 protocol-labelled KDF, comparisons, AEAD or X-Wing glue in ADR 0007.
@@ -168,8 +169,10 @@ variable-latency arithmetic, or exhaustive provider-path coverage.
 ## Remaining gates
 
 [ADR 0007](../docs/adr/0007-ct-conformance-gates.md) remains authoritative.
-Protocol-glue secret-taint checks, hosted cross-build execution and
-binding/device proofs are not complete in this increment.
+Protocol-glue secret-taint checks and binding/device proofs are not complete
+in this increment. As checked on 2026-10-09, the repository has no rulesets
+and `main` has no branch protection; successful CI is not enforced as a
+merge prerequisite.
 Do not merge or release it as completed S0 or validated production crypto.
 Track the foundation gate completion in
 [issue 46](../.scratch/cairn-r1/issues/46-rust-foundation-gates.md).
@@ -187,7 +190,7 @@ coverage result does not prove all adapter error paths executed.
 Both foundation libraries compile in release mode with both backends for
 `aarch64-apple-ios` and `aarch64-apple-ios-sim`, using Rust 1.99.0,
 Xcode 27 SDKs and Apple clang 21.0.0. The workflow repeats these smoke
-builds from a fresh checkout; hosted results remain pending.
+builds from a fresh checkout; its hosted job passed in the run linked above.
 
 ```sh
 rustup target add aarch64-apple-ios aarch64-apple-ios-sim
@@ -210,7 +213,7 @@ Both foundation libraries compile in release mode with both backends for
 Local compilation used Rust 1.99.0, `cargo-ndk` 4.1.2 and NDK r30
 (`30.0.16248370`, Android clang 21.0.0) on macOS ARM64.
 The workflow pins the same tool versions for a Linux cross-build;
-hosted results are pending.
+the hosted job passed in the run linked above.
 
 Install NDK `30.0.16248370` with the Android SDK package manager, then run:
 

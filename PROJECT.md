@@ -21,8 +21,9 @@ state=protocol research/specification/formal models + host-only Rust foundation;
   armeabi-v7a and x86_64 with cargo-ndk 4.1.2 and NDK r30
   (`30.0.16248370`). No APK, linked shared-library or Android runtime proof
   exists.
-  Rust foundation gates pass locally on macOS ARM64; the new Rust workflow's
-  Linux x86-64/ARM64 and macOS jobs have not run yet.
+  Rust foundation gates pass locally on macOS ARM64 and in all 11 jobs of
+  [hosted run 37963154963](https://github.com/trancee/cairn/actions/runs/37963154963)
+  at `4ba4955`, including Linux x86-64/ARM64, macOS and mobile cross-builds.
 - **Prerequisites/setup:** tool installation is documented in
   [`docs/spec/models/README.md`](docs/spec/models/README.md#tooling).
 - **Environment:** before running Tamarin, replay or `act`, read
@@ -37,8 +38,9 @@ state=protocol research/specification/formal models + host-only Rust foundation;
   The standalone `core/ct` Memcheck driver (`bash scripts/check-ct.sh`)
   passes both primitive adapters in Linux x86-64/Rosetta and native ARM64
   containers, with required branch/address controls and output-taint checks.
-  Hosted native jobs, mobile binaries and unimplemented protocol glue are
-  not covered by that result.
+  Hosted native taint jobs also pass with Valgrind 3.22.0.
+  Mobile constant-time behavior and unimplemented protocol glue remain
+  outside that result.
 - **Targeted validation:** from the repository root,
   `tamarin-prover docs/spec/models/ratchet.spthy --open-chains=0 --saturation=0 --derivcheck-timeout=30`
   checks model loading/wellformedness, not lemma verification.
