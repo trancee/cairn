@@ -80,10 +80,23 @@ production tag-verification API. RFC 4231 case 1 supplies an additional HMAC
 known answer. The SHA-384 `abc` digest supplies an independent fixed example.
 Differential tests use reproducible varied inputs, not production randomness.
 
+Both adapters also run all 150 byte-aligned AFT cases from NIST's
+[`HMAC-SHA2-384-2.0` corpus](https://github.com/usnistgov/ACVP-Server/tree/975de31eb83d87039ec88934fdc47d8c312b892d/gen-val/json-files/HMAC-SHA2-384-2.0).
+The prompt and expected results are copied unchanged, pinned to commit
+`975de31eb83d87039ec88934fdc47d8c312b892d`, with the upstream NIST notice.
+The harness matches group/case IDs, verifies bit lengths and requires every
+case on both sides to be accounted for. These local vectors do not confer
+ACVP certification or CMVP validation.
+
+| ACVP file | SHA-256 |
+|---|---|
+| `prompt.json` | `cf1c34db3973949a2f53d9971472eba2b85fcaba43ca958ab527a4d62ef885cc` |
+| `expectedResults.json` | `86e208b8c7644c55b8c14028fb1a100ae2e5711f9db680623e0f6a511758aab8` |
+
 ## Remaining gates
 
 [ADR 0007](../docs/adr/0007-ct-conformance-gates.md) remains authoritative.
-ACVP ingestion, secret-taint checks, mobile
+HKDF ACVP ingestion, secret-taint checks, mobile
 cross-builds and binding/device proofs are not complete in this increment.
 Do not merge or release it as completed S0 or validated production crypto.
 Track the foundation gate completion in

@@ -53,3 +53,11 @@ review and the composed-ratchet gate also remain open.
 
 Done when the applicable ADR 0007 and Constitution gates are green, the
 CI results are recorded, and PROJECT/core documentation agrees with them.
+
+HMAC ACVP follow-up: both adapters pass all 150 AFT cases from the official
+NIST ACVP-Server HMAC-SHA2-384-2.0 corpus at commit
+`975de31eb83d87039ec88934fdc47d8c312b892d`. Prompt/results and NIST notice
+are retained unchanged with checksums in core/README. HKDF KDA ingestion
+remains open: it requires handling the fixed-info construction and separating
+SHA-384 groups from the multi-algorithm corpus, not treating it as raw RFC
+5869 vectors without checking the ACVP schema.
