@@ -148,6 +148,26 @@ not slow taint execution. Optimization changes require hosted cold/warm
 comparison before claiming a measured speedup; queue and mirror latency
 remain outside the repository's control.
 
+Hosted comparison at `aa470f2` (2026-10-09):
+[Rust run 37966263807](https://github.com/trancee/cairn/actions/runs/37966263807)
+passed all 11 jobs in 3m39s cold and 2m11s warm (attempt 2);
+[lifecycle run 37966263691](https://github.com/trancee/cairn/actions/runs/37966263691)
+passed all 11 jobs in 4m56s cold and 4m55s warm.
+Logs confirm warm binary/registry/archive cache hits. Same-PR reruns preserve
+cache scope; manual dispatch cannot read PR-merge-ref caches.
+The warm Rust reduction was 40% in this sample; lifecycle wall time did not
+materially improve because proof replay/queueing still dominates. These are
+single-run observations, not a guaranteed latency budget or attribution of
+the anomalous baseline's full 13m32s to repository-controlled work.
+
+Pre-merge scan (2026-10-09): Gitleaks 8.30.1 scanned all 11 proposed commits.
+Its 204 generic-key findings were confined to the pinned public Wycheproof
+and NIST HMAC fixtures; both file checksums matched recorded upstream
+provenance. A temporary exact-findings baseline excluded those known vector
+matches, and the remaining history scan passed. No blanket file exclusion
+or repository scan suppression was added. This is a point-in-time scan,
+not an independent cryptographic/security audit.
+
 The schema below is retained for the future implementation profile.
 
 ```text
