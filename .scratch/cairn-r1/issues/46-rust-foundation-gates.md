@@ -88,3 +88,10 @@ with post-taint memory reads. Storage exhaustion interrupted testing, but
 the final corrected runs completed after space was freed and the VM restarted.
 The Linux matrix is configured but not yet hosted. This is not mobile or
 full protocol-glue constant-time evidence.
+
+Apple foundation follow-up: release library compilation passes for
+`aarch64-apple-ios` and `aarch64-apple-ios-sim`, both crates/all features,
+with Rust 1.99.0, Xcode 27 SDKs, Apple clang 21.0.0 and an explicit
+`IPHONEOS_DEPLOYMENT_TARGET=15.0`. The workflow is wired but unexecuted
+remotely. This is not an application-link/runtime/package/binding deployment
+proof and does not satisfy issue 44. Android cross-builds remain untested.

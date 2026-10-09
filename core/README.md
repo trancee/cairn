@@ -168,7 +168,7 @@ variable-latency arithmetic, or exhaustive provider-path coverage.
 ## Remaining gates
 
 [ADR 0007](../docs/adr/0007-ct-conformance-gates.md) remains authoritative.
-Protocol-glue secret-taint checks, mobile cross-builds and binding/device
+Protocol-glue secret-taint checks, Android cross-builds and binding/device
 proofs are not complete in this increment.
 Do not merge or release it as completed S0 or validated production crypto.
 Track the foundation gate completion in
@@ -181,3 +181,23 @@ lengths. This proves the public conversion contract, not that failures
 occur within valid backend calls. LLVM records 100% source lines and
 branches locally, but misses four `?` error-propagation regions. Thus the
 coverage result does not prove all adapter error paths executed.
+
+## Apple cross-build smoke
+
+Both foundation libraries compile in release mode with both backends for
+`aarch64-apple-ios` and `aarch64-apple-ios-sim`, using Rust 1.99.0,
+Xcode 27 SDKs and Apple clang 21.0.0. The workflow repeats these smoke
+builds from a fresh checkout; hosted results remain pending.
+
+```sh
+rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+IPHONEOS_DEPLOYMENT_TARGET=15.0 cargo build --manifest-path core/Cargo.toml --workspace --all-features --release --locked --target aarch64-apple-ios
+IPHONEOS_DEPLOYMENT_TARGET=15.0 cargo build --manifest-path core/Cargo.toml --workspace --all-features --release --locked --target aarch64-apple-ios-sim
+```
+
+This is Rust/native-provider library compilation only. Configuring iOS 15
+does not establish the deployment floor of a packaged/generated binding.
+No application link, simulator/device execution, KMP boundary, SDK package
+or mobile constant-time check was performed. The binding smoke remains
+subject to issue 44's separate isolated-runner requirements; these foundation
+checks are not that prototype.

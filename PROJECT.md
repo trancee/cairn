@@ -13,7 +13,11 @@ state=protocol research/specification/formal models + host-only Rust foundation;
   dependencies, commands and remaining gates; [ADR 0012](docs/adr/0012-rust-foundation-increment.md)
   bounds this increment. No protocol state machines or FFI exist yet.
 - **Platforms:** formal checks have run on macOS/Apple silicon. Android/iOS
-  are intended application targets, not implemented or platform-tested here.
+  are intended application targets, not implemented or runtime-tested here.
+  Both foundation crates/all backends now cross-compile as release libraries
+  for iOS device/simulator ARM64 with Xcode 27 SDKs; this is not linked-app,
+  packaged-binding, deployment-floor or device proof. Android builds remain
+  untested.
   Rust foundation gates pass locally on macOS ARM64; the new Rust workflow's
   Linux x86-64/ARM64 and macOS jobs have not run yet.
 - **Prerequisites/setup:** tool installation is documented in
