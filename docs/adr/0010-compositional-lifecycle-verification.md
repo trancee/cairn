@@ -90,3 +90,23 @@ certificate with the same formula/attributes. Its 18-step replay is checked
 separately by the runner/workflow; the default's 31-step certificate remains
 unchanged. The refined safety-only context verifies 54/54 complete
 certificates, not full theory completion.
+
+Native mutation evidence remains separate from Lean's lifecycle projection.
+The mandatory-mix regression now exports both assembled transition systems,
+checks that `CLASSIC_FALLBACK` removes only `mandatory_mix`, retains the exact
+target formula/attributes and replays without any helper lemmas. The default
+claim must verify and the mutation must produce a solved native counterexample.
+The attack skeleton is generated from a guided native export and omits
+unselected alternatives, not protocol behavior. See the
+[mutation reference](../spec/models/README.md#native-mandatory-mix-mutation-regression).
+This adds a proof-only include and CI job, with no protocol, wire, API or
+runtime migration. The stored-prefix regression uses the same approach:
+`NO_PREFIX_GUARD` may add only the two tail rules without `!EK0`/`!CT0`
+premises and with renamed diagnostic actions; all default declarations,
+including `mandatory_mix`, remain unchanged. Its target `no_partial_mix`
+must verify by default and falsify under mutation. The generated native CT
+trace reaches mixed Resume without a prefix event. This establishes the
+second guard's sensitivity, not full protocol correctness or a separate EK
+attack. The shared generator is `extract_attack.py`; both mutation jobs are
+separate from the lifecycle projection. Source/equation and full-context
+gates remain open; hosted execution of the new jobs remains unverified.

@@ -29,4 +29,6 @@ if [ "${REPLAY:-0}" = 1 ]; then
   for target in kem_ciphertext_origin fresh_dk_origin encrypted_origin extract_origin ratchet_key_origin session_key_origin initial_ck_secret fresh_ss_origin; do
     python3 docs/spec/models/replay.py --disclosure-sources --target "$target" --timeout 180
   done
+  python3 docs/spec/models/mutation.py --timeout 180
+  python3 docs/spec/models/mutation.py --mutation NO_PREFIX_GUARD --timeout 180
 fi

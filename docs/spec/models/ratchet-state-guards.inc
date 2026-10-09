@@ -123,6 +123,9 @@ next
   by contradiction
 qed
 
+#ifdef CLASSIC_FALLBACK
+#include "ratchet-classic-fallback-attack.inc"
+#else
 lemma no_classical_downgrade [hide_lemma=fresh_dk_origin,
                               hide_lemma=fresh_ss_origin, hide_lemma=derived_ck_origin,
                               hide_lemma=derived_ck_predecessor, hide_lemma=ck_secret,
@@ -142,3 +145,4 @@ guarded formula characterizing all counter-examples:
 */
 simplify
 by contradiction
+#endif

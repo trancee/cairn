@@ -1,5 +1,8 @@
 /* Generated from Tamarin 1.12.0's verified default-model proof export. */
 
+#ifdef NO_PREFIX_GUARD
+#include "ratchet-no-prefix-guard-attack.inc"
+#else
 lemma no_partial_mix [hide_lemma=fresh_dk_origin,
                       hide_lemma=fresh_ss_origin, hide_lemma=derived_ck_origin,
                       hide_lemma=derived_ck_predecessor, hide_lemma=ck_secret,
@@ -48,6 +51,7 @@ next
   case Receive_CT_tail
   by contradiction
 qed
+#endif
 
 lemma ek_authenticated [reuse, hide_lemma=derived_ck_origin,
                         hide_lemma=derived_ck_predecessor, hide_lemma=initial_ck_secret,

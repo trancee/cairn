@@ -45,6 +45,12 @@ jobs:
             replay: '--disclosure-sources --target initial_ck_secret'
           - name: replay-fresh_ss_origin
             replay: '--disclosure-sources --target fresh_ss_origin'
+          - name: mutation-classic-fallback
+            replay: ''
+            mutation: CLASSIC_FALLBACK
+          - name: mutation-no-prefix-guard
+            replay: ''
+            mutation: NO_PREFIX_GUARD
     defaults:
       run:
         shell: bash
@@ -96,9 +102,14 @@ jobs:
         if: matrix.name == 'lifecycle'
         run: scripts/check.sh
       - name: Check exact-source witness replay
-        if: matrix.name != 'lifecycle'
+        if: matrix.name != 'lifecycle' && !matrix.mutation
         env:
           REPLAY_ARGUMENTS: ${{ matrix.replay }}
         run: |
           read -r -a arguments <<< "$REPLAY_ARGUMENTS"
           python3 docs/spec/models/replay.py "${arguments[@]}"
+      - name: Check native guard mutation sensitivity
+        if: matrix.mutation
+        env:
+          MUTATION: ${{ matrix.mutation }}
+        run: python3 docs/spec/models/mutation.py --mutation "$MUTATION" --timeout 180
