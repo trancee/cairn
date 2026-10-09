@@ -310,8 +310,13 @@ Certificate-only replay of the full assembled context also timed out at
 300 seconds. Thus this closes reproducible exact-transition-system witness
 replay, **not** full-context completion or a new 56/59 assembled result.
 The [workflow](../../../.github/workflows/lifecycle.yml) now runs these
-regressions and the witness runner alongside the lifecycle gate; hosted
-execution remains unverified.
+regressions and the witness runner alongside the lifecycle gate.
+The lifecycle gate, two witnesses and eight refined safety targets run as
+eleven independent matrix jobs, each with a 15-minute limit. Fail-fast is
+disabled so a failed target does not cancel the remaining checks.
+The first hosted run passed the lifecycle gate, both witnesses, KEM origin
+and fresh-DK origin before the former sequential job exceeded its shared
+15-minute limit. Completion of the new matrix remains unverified.
 
 ### Remaining lifecycle searches
 
