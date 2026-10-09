@@ -16,8 +16,11 @@ state=protocol research/specification/formal models + host-only Rust foundation;
   are intended application targets, not implemented or runtime-tested here.
   Both foundation crates/all backends now cross-compile as release libraries
   for iOS device/simulator ARM64 with Xcode 27 SDKs; this is not linked-app,
-  packaged-binding, deployment-floor or device proof. Android builds remain
-  untested.
+  packaged-binding, deployment-floor or device proof. Both crates/all backends
+  also cross-compile as release libraries for Android API 26 arm64-v8a,
+  armeabi-v7a and x86_64 with cargo-ndk 4.1.2 and NDK r30
+  (`30.0.16248370`). No APK, linked shared-library or Android runtime proof
+  exists.
   Rust foundation gates pass locally on macOS ARM64; the new Rust workflow's
   Linux x86-64/ARM64 and macOS jobs have not run yet.
 - **Prerequisites/setup:** tool installation is documented in

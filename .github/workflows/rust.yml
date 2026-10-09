@@ -74,6 +74,25 @@ jobs:
               if result["count"] == 0 or result["covered"] != result["count"]:
                   raise SystemExit(f"incomplete {metric} coverage: {result}")
           PY
+  android-cross-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned Android cross-build tools
+        run: |
+          rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+          cargo install cargo-ndk --version 4.1.2 --locked
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;30.0.16248370"
+      - name: Compile API 26 foundation libraries for three ABIs
+        working-directory: core
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/30.0.16248370"
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 --platform 26 \
+            build --workspace --all-features --release --locked
   apple-cross-build:
     runs-on: macos-latest
     timeout-minutes: 30

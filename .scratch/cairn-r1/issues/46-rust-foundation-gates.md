@@ -45,7 +45,7 @@ which valid wrapper calls permit. Native fill errors must still fail closed.
 These paths must not be fabricated or suppressed for a coverage number.
 
 Outstanding ADR 0007 gates: secret-taint checks for protocol-labelled glue,
-mobile cross-builds and hosted execution.
+hosted cross-build execution and binding/device proofs.
 CI enforces 100% source line/branch coverage, which now passes locally.
 Binding deployment
 floors/device proofs remain issue 44 and S0 obligations. Independent protocol
@@ -73,8 +73,8 @@ every expansion, including accepted/rejected VAL output-key lists.
 The existing raw HKDF interface recomputes extract per iteration; no
 reusable-PRK API is added or tested. All 200 SHA2-384 cases in the pinned
 corpus are now covered; no all-algorithm corpus or certification claim is made.
-Remaining pre-merge gates include secret-taint, mobile/target builds and
-hosted Rust workflow execution.
+The foundation adapter taint and mobile compilation follow-ups below
+provide local evidence; hosted Rust workflow execution remains open.
 
 Foundation secret-taint follow-up: the separate locked `core/ct` workspace
 uses `crabgrind` 0.4.0 safe Memcheck requests around the existing primitive
@@ -94,4 +94,15 @@ Apple foundation follow-up: release library compilation passes for
 with Rust 1.99.0, Xcode 27 SDKs, Apple clang 21.0.0 and an explicit
 `IPHONEOS_DEPLOYMENT_TARGET=15.0`. The workflow is wired but unexecuted
 remotely. This is not an application-link/runtime/package/binding deployment
-proof and does not satisfy issue 44. Android cross-builds remain untested.
+proof and does not satisfy issue 44.
+
+Android foundation follow-up: both crates/all features compile as release
+libraries for Android API 26 arm64-v8a, armeabi-v7a and x86_64.
+The command is `cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 --platform 26
+build --workspace --all-features --release --locked` from `core/`, with
+`ANDROID_NDK_HOME` pointing to NDK r30 (`30.0.16248370`).
+Local execution used Rust 1.99.0, cargo-ndk 4.1.2 and Android clang 21.0.0
+on macOS ARM64; all three targets built without cached target artifacts.
+The Linux job is wired but has not executed remotely. No final
+shared-library link, APK/JNI/KMP call, runtime/API-floor or mobile
+constant-time proof is claimed. Issue 44 remains open.

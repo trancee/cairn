@@ -168,8 +168,8 @@ variable-latency arithmetic, or exhaustive provider-path coverage.
 ## Remaining gates
 
 [ADR 0007](../docs/adr/0007-ct-conformance-gates.md) remains authoritative.
-Protocol-glue secret-taint checks, Android cross-builds and binding/device
-proofs are not complete in this increment.
+Protocol-glue secret-taint checks, hosted cross-build execution and
+binding/device proofs are not complete in this increment.
 Do not merge or release it as completed S0 or validated production crypto.
 Track the foundation gate completion in
 [issue 46](../.scratch/cairn-r1/issues/46-rust-foundation-gates.md).
@@ -201,3 +201,27 @@ No application link, simulator/device execution, KMP boundary, SDK package
 or mobile constant-time check was performed. The binding smoke remains
 subject to issue 44's separate isolated-runner requirements; these foundation
 checks are not that prototype.
+
+## Android cross-build smoke
+
+Both foundation libraries compile in release mode with both backends for
+`aarch64-linux-android` (`arm64-v8a`), `armv7-linux-androideabi`
+(`armeabi-v7a`) and `x86_64-linux-android`, targeting API 26.
+Local compilation used Rust 1.99.0, `cargo-ndk` 4.1.2 and NDK r30
+(`30.0.16248370`, Android clang 21.0.0) on macOS ARM64.
+The workflow pins the same tool versions for a Linux cross-build;
+hosted results are pending.
+
+Install NDK `30.0.16248370` with the Android SDK package manager, then run:
+
+```sh
+cargo install cargo-ndk --version 4.1.2 --locked
+rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+cd core
+ANDROID_NDK_HOME=/path/to/sdk/ndk/30.0.16248370 cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 --platform 26 build --workspace --all-features --release --locked
+```
+
+These are Rust/native-provider library compilation checks, not final
+shared-library linking, JNI/KMP calls, APK packaging, API-26 device
+execution or mobile constant-time evidence. No binding code was added;
+issue 44's isolated integration proof remains separate.
