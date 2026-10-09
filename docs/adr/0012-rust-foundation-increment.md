@@ -42,6 +42,15 @@ not a validated mobile module. All applicable gates from
 [ADR 0007](0007-ct-conformance-gates.md) and the Constitution still apply;
 this increment does not waive them. Open gates are recorded in issue 46.
 
+The foundation's internal `core/ct` harness uses safe `crabgrind` Memcheck
+requests around the existing public primitive seams, with required
+secret-branch/address negative controls and release builds on both Linux
+architectures. A separate locked workspace keeps its native tooling out of
+SDK dependencies and maintained-library coverage. Output shadow-bit checks
+require taint propagation to prevent compiler-folded success.
+This is an incremental adapter check, not completion of ADR 0007's
+unimplemented protocol-glue paths or a mobile constant-time proof.
+
 ## Migration
 
 No published APIs, deployed wire behavior or protocol labels change.

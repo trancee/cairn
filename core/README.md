@@ -126,11 +126,50 @@ algorithms or ACVP certification.
 | `prompt.json` | `cb6f72df9664c24679be8a6d409dc42bc0e4b1cd15d31ff0d509f46c4135cc74` |
 | `expectedResults.json` | `cbb0b99eb6601f8f7f5214a512c66f0e9ca0ed41ce3c01b0fc53e977ea879b02` |
 
+## Foundation secret-taint harness
+
+`ct/` is a separate, internal workspace, excluded from maintained-library
+coverage like `fuzz/`. It uses `crabgrind` 0.4.0 (MIT) for safe Valgrind
+client requests. Its C/bindgen/libclang dependencies are harness-only;
+`unicode-ident` additionally requires the permissive Unicode-3.0 license.
+Neither the standard library nor existing dependencies expose Memcheck
+shadow-memory requests. The committed lockfile currently matches the main
+workspace versions for shared dependencies; changes must preserve that
+agreement to keep this evidence applicable to the production dependency set.
+
+On Linux with Valgrind, clang, libclang and pkg-config installed, run:
+
+```sh
+bash scripts/check-ct.sh
+```
+
+The driver requires intentional secret-dependent branch and address
+controls to emit undefined-value diagnostics and exit code 42 before
+testing either backend. It fails outside Valgrind, without detected
+controls, on missing output taint, or on any reported backend memory error.
+The harness does not suppress errors or declassify secrets. Inputs, HMAC
+keys and HKDF salts are tainted; lengths and HKDF info remain public.
+Cases cross SHA-384 block/key boundaries and HKDF output boundaries,
+including empty and maximum-length output. Secret buffers stay tainted
+through drop.
+
+Both adapters passed release-build checks with Rust 1.99.0 and Valgrind
+3.19.0 on Linux x86-64 (Rosetta) and native Linux ARM64 containers.
+An initial compiler-folded control was missed; the retained controls force
+post-taint memory reads and output shadow-bit checks confirm propagation.
+The workflow runs the same driver on native Linux x86-64/ARM64 runners;
+hosted results are still pending.
+
+This checks existing primitive adapters, not the unimplemented
+protocol-labelled KDF, comparisons, AEAD or X-Wing glue in ADR 0007.
+It does not prove mobile constant-time behavior, all inputs,
+variable-latency arithmetic, or exhaustive provider-path coverage.
+
 ## Remaining gates
 
 [ADR 0007](../docs/adr/0007-ct-conformance-gates.md) remains authoritative.
-Secret-taint checks, mobile
-cross-builds and binding/device proofs are not complete in this increment.
+Protocol-glue secret-taint checks, mobile cross-builds and binding/device
+proofs are not complete in this increment.
 Do not merge or release it as completed S0 or validated production crypto.
 Track the foundation gate completion in
 [issue 46](../.scratch/cairn-r1/issues/46-rust-foundation-gates.md).

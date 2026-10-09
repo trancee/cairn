@@ -59,6 +59,7 @@ jobs:
           rustup toolchain install nightly-2026-10-08 --profile minimal --component llvm-tools
           cargo install cargo-llvm-cov --version 0.9.1 --locked
       - name: Require complete maintained-source coverage
+        # Internal fuzz/ and ct/ workspaces are excluded; maintained crates remain covered.
         working-directory: core
         run: |
           cargo +nightly-2026-10-08 llvm-cov --workspace --all-features --locked --branch \
@@ -73,6 +74,27 @@ jobs:
               if result["count"] == 0 or result["covered"] != result["count"]:
                   raise SystemExit(f"incomplete {metric} coverage: {result}")
           PY
+  secret-taint:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Memcheck build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y valgrind clang libclang-dev pkg-config
+          rustup show active-toolchain
+      - name: Check internal harness
+        run: cargo clippy --manifest-path core/ct/Cargo.toml --all-targets --locked -- -D warnings
+      - name: Reject secret-dependent branches and addresses
+        run: bash scripts/check-ct.sh
   fuzz:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20

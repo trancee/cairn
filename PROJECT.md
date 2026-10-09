@@ -27,6 +27,11 @@ state=protocol research/specification/formal models + host-only Rust foundation;
   100% for both crates; error-propagation regions remain uncovered.
   Other ADR 0007
   gates remain incomplete ([issue 46](.scratch/cairn-r1/issues/46-rust-foundation-gates.md)).
+  The standalone `core/ct` Memcheck driver (`bash scripts/check-ct.sh`)
+  passes both primitive adapters in Linux x86-64/Rosetta and native ARM64
+  containers, with required branch/address controls and output-taint checks.
+  Hosted native jobs, mobile binaries and unimplemented protocol glue are
+  not covered by that result.
 - **Targeted validation:** from the repository root,
   `tamarin-prover docs/spec/models/ratchet.spthy --open-chains=0 --saturation=0 --derivcheck-timeout=30`
   checks model loading/wellformedness, not lemma verification.

@@ -44,8 +44,8 @@ the same bound and fill rejects output/key length mismatch, neither of
 which valid wrapper calls permit. Native fill errors must still fail closed.
 These paths must not be fabricated or suppressed for a coverage number.
 
-Outstanding ADR 0007 gates: ACVP ingestion for implemented primitives,
-secret-taint checks for own cryptographic glue and mobile cross-builds.
+Outstanding ADR 0007 gates: secret-taint checks for protocol-labelled glue,
+mobile cross-builds and hosted execution.
 CI enforces 100% source line/branch coverage, which now passes locally.
 Binding deployment
 floors/device proofs remain issue 44 and S0 obligations. Independent protocol
@@ -75,3 +75,16 @@ reusable-PRK API is added or tested. All 200 SHA2-384 cases in the pinned
 corpus are now covered; no all-algorithm corpus or certification claim is made.
 Remaining pre-merge gates include secret-taint, mobile/target builds and
 hosted Rust workflow execution.
+
+Foundation secret-taint follow-up: the separate locked `core/ct` workspace
+uses `crabgrind` 0.4.0 safe Memcheck requests around the existing primitive
+seams. `bash scripts/check-ct.sh` passed both adapters under Rust 1.99.0 /
+Valgrind 3.19.0 on Linux x86-64 (Rosetta) and native Linux ARM64 containers.
+Required branch/address controls produced diagnostics and exit code 42;
+output shadow-bit checks confirmed secret propagation. Backend runs
+reported zero errors; no harness suppressions or declassification were used.
+The initial compiler-folded control was detected as insensitive and replaced
+with post-taint memory reads. Storage exhaustion interrupted testing, but
+the final corrected runs completed after space was freed and the VM restarted.
+The Linux matrix is configured but not yet hosted. This is not mobile or
+full protocol-glue constant-time evidence.
