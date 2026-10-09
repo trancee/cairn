@@ -124,6 +124,30 @@ state=protocol research/specification/formal models + host-only Rust foundation;
   full assembled-context replay remains inconclusive.
 
 Policy authority: [`CONSTITUTION.md`](CONSTITUTION.md)/[`AGENTS.md`](AGENTS.md).
+
+### CI scheduling and setup
+
+Rust and lifecycle workflows run on pull requests, pushes to `main`, merge
+groups and manual dispatch. Feature branches without a PR use manual dispatch;
+this avoids duplicate push/PR matrices. Superseded PR runs are cancelled, but
+main/merge-group/manual runs are not cancelled. All proof, build, test,
+coverage and fuzz gates still execute; results and compiled project targets
+are not cached.
+
+Setup caches contain version-keyed host tool binaries, lockfile-keyed Cargo
+registry downloads and pinned proof archives. Proof archives are checksum
+verified after every restore. Cache misses install the same pinned tools.
+The Memcheck apt install omits recommended packages, not its requested
+prerequisites. New cache actions are pinned to official `v6.1.0`.
+
+Baseline: PR Rust run `37963979548` took 13m32s; its x86-64 taint job spent
+9m26s installing prerequisites (55.8 MB at 103 kB/s), then about 63s checking
+and executing the harness. The same commit's push Rust run `37963974833`
+took 4m22s and its taint job 1m18s. This establishes setup/network variability,
+not slow taint execution. Optimization changes require hosted cold/warm
+comparison before claiming a measured speedup; queue and mirror latency
+remain outside the repository's control.
+
 The schema below is retained for the future implementation profile.
 
 ```text

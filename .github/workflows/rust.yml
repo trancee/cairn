@@ -2,12 +2,17 @@ name: Rust foundation
 
 on:
   push:
+    branches: [main]
   pull_request:
   merge_group:
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   foundation:
@@ -23,10 +28,23 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Cache dependency downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/registry
+          key: cargo-downloads-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('core/**/Cargo.lock') }}
       - name: Install pinned Rust and gate tools
+        id: gate-tools
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/bin/cargo-deny
+          key: gate-deny-${{ runner.os }}-${{ runner.arch }}-rust1.99.0-deny0.20.2
+      - name: Resolve Rust and install uncached gate tool
         run: |
           rustup show active-toolchain
-          cargo install cargo-deny --version 0.20.2 --locked
+          if [[ '${{ steps.gate-tools.outputs.cache-hit }}' != true ]]; then
+            cargo install cargo-deny --version 0.20.2 --locked
+          fi
       - name: Check workspace and both backends
         run: bash scripts/check-rust.sh
   interpreters:
@@ -37,10 +55,23 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Cache dependency downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/registry
+          key: cargo-downloads-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('core/**/Cargo.lock') }}
       - name: Install pinned interpreter toolchain
+        id: interpreter-tools
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/bin/cargo-careful
+          key: gate-careful-${{ runner.os }}-${{ runner.arch }}-rust1.99.0-careful0.4.10
+      - name: Resolve interpreter tools
         run: |
           rustup toolchain install nightly-2026-10-08 --profile minimal --component miri,rust-src
-          cargo install cargo-careful --version 0.4.10 --locked
+          if [[ '${{ steps.interpreter-tools.outputs.cache-hit }}' != true ]]; then
+            cargo install cargo-careful --version 0.4.10 --locked
+          fi
       - name: Check wire under Miri and crypto under careful
         working-directory: core
         run: |
@@ -54,10 +85,23 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Cache dependency downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/registry
+          key: cargo-downloads-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('core/**/Cargo.lock') }}
       - name: Install pinned coverage tools
+        id: coverage-tools
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/bin/cargo-llvm-cov
+          key: gate-coverage-${{ runner.os }}-${{ runner.arch }}-rust1.99.0-llvmcov0.9.1
+      - name: Resolve coverage tools
         run: |
           rustup toolchain install nightly-2026-10-08 --profile minimal --component llvm-tools
-          cargo install cargo-llvm-cov --version 0.9.1 --locked
+          if [[ '${{ steps.coverage-tools.outputs.cache-hit }}' != true ]]; then
+            cargo install cargo-llvm-cov --version 0.9.1 --locked
+          fi
       - name: Require complete maintained-source coverage
         # Internal fuzz/ and ct/ workspaces are excluded; maintained crates remain covered.
         working-directory: core
@@ -82,10 +126,23 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Cache dependency downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/registry
+          key: cargo-downloads-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('core/**/Cargo.lock') }}
       - name: Install pinned Android cross-build tools
+        id: android-tools
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/bin/cargo-ndk
+          key: gate-ndk-${{ runner.os }}-${{ runner.arch }}-rust1.99.0-cargondk4.1.2
+      - name: Resolve Android cross-build tools
         run: |
           rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
-          cargo install cargo-ndk --version 4.1.2 --locked
+          if [[ '${{ steps.android-tools.outputs.cache-hit }}' != true ]]; then
+            cargo install cargo-ndk --version 4.1.2 --locked
+          fi
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;30.0.16248370"
       - name: Compile API 26 foundation libraries for three ABIs
         working-directory: core
@@ -103,6 +160,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Cache dependency downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/registry
+          key: cargo-downloads-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('core/**/Cargo.lock') }}
       - name: Install Apple target libraries
         run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim
       - name: Compile device and simulator foundation libraries
@@ -122,10 +184,15 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Cache dependency downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/registry
+          key: cargo-downloads-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('core/**/Cargo.lock') }}
       - name: Install Memcheck build prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y valgrind clang libclang-dev pkg-config
+          sudo apt-get install -y --no-install-recommends valgrind clang libclang-dev pkg-config
           rustup show active-toolchain
       - name: Check internal harness
         run: cargo clippy --manifest-path core/ct/Cargo.toml --all-targets --locked -- -D warnings
@@ -143,10 +210,23 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Cache dependency downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/registry
+          key: cargo-downloads-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('core/**/Cargo.lock') }}
       - name: Install pinned fuzz tools
+        id: fuzz-tools
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/bin/cargo-fuzz
+          key: gate-fuzz-${{ runner.os }}-${{ runner.arch }}-rust1.99.0-fuzz0.13.2
+      - name: Resolve fuzz tools
         run: |
           rustup toolchain install nightly-2026-10-08 --profile minimal
-          cargo install cargo-fuzz --version 0.13.2 --locked
+          if [[ '${{ steps.fuzz-tools.outputs.cache-hit }}' != true ]]; then
+            cargo install cargo-fuzz --version 0.13.2 --locked
+          fi
       - name: Fuzz canonical wire encodings
         working-directory: core
         run: |
