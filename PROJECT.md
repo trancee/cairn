@@ -68,11 +68,14 @@ state=protocol research/specification/formal models; application/build/test-pipe
   constant-time, byte-parser, persistence or hardware proof.
   The lifecycle runner regenerates proof certificates into a temporary
   directory. The [lifecycle workflow](.github/workflows/lifecycle.yml)
-  configures an Ubuntu 24.04 job with Python 3.13.16, Lean 4.34.1,
+  configures Ubuntu 24.04 matrix jobs with Python 3.13.16, Lean 4.34.1,
   Tamarin 1.12.0 and Maude 3.5.1; official tool archives have pinned hashes
   and actions have immutable revisions. Local actionlint validation and the
-  macOS lifecycle runner pass. No Git remote is configured, so hosted
-  execution and required-check enforcement remain unverified. The same
+  macOS lifecycle runner pass. The first hosted run passed the lifecycle
+  gate, both witnesses, KEM origin and fresh-DK origin, then hit the shared
+  15-minute job timeout. Each of the ten replays now has its own 15-minute
+  matrix job, separate from the lifecycle gate, with fail-fast disabled.
+  Full hosted completion and required-check enforcement remain unverified. The same
   workflow also runs default and opt-in disclosure-profile exact-source
   witness replay, refined-certificate replays and its 42 regressions.
   `python3 docs/spec/models/replay.py --disclosure-sources --target kem_ciphertext_origin`
