@@ -3,6 +3,13 @@
 This is an unreleased, host-tested subset of [ADR 0004](../docs/adr/0004-core-architecture.md).
 It is not a secure channel implementation or completion of S0.
 
+For a first executable example, follow the
+[wire roundtrip tutorial](../docs/tutorials/first-wire-roundtrip.md).
+The [API reference](../docs/reference/foundation-api.md) describes the public
+contracts; [the validation guide](../docs/how-to/validate-foundation.md)
+selects contributor checks. This page records toolchains, test provenance
+and validation evidence.
+
 - `cairn-wire`: allocation-free `no_std` encoding/decoding of public u32
   unsigned LEB128 and u16-big-endian length-prefixed fields from
   [spec §2.2](../docs/spec/cairn-r1.md#22-conventions). Decoders consume one

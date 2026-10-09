@@ -124,3 +124,31 @@ returned an empty list; `gh api repos/trancee/cairn/branches/main/protection`
 returned HTTP 404, "Branch not protected". Thus the current CI results are
 evidence, not an enforced merge prerequisite. No repository settings were
 changed; configuring enforcement requires explicit owner approval.
+
+Final-head CI at `83e2edb`: Rust run 37967905365 passed.
+Lifecycle run 37967905307 failed in `replay-fresh_dk_origin` with
+`tamarin-prover: <<loop>>` and exit code 1 after derivation checks.
+The source hash was
+`c393e8cea8a93bef1112214dae2c22e5f750de4991cf05372ce525cf740e1b2b`;
+the replay hash was
+`9b6a25a568a9b3024d43263649009c2df4263d1625d7a56dccbfded489f3535d`.
+This resembles the previously observed runtime crash, but its cause remains
+unresolved. No automatic retry or workaround was added. PR #2 remains
+unmerged pending successful final-head validation and documentation review.
+
+Investigation (2026-10-09): successful lifecycle run 37966263691, attempt 2,
+has identical source/replay hashes and verifies all five retained certificates
+(12/8/18/9/46 steps). Both jobs used Ubuntu image `20261004.327.1` and
+checksum-verified Tamarin/Maude archives. Failure occurs in the final replay,
+after theory closure, not archive installation, canonical comparison or
+the 300-second timeout. No falsified lemma result was emitted.
+
+The official Linux archive identifies GHC 9.6.7 with threaded RTS and default
+`-N`, Tamarin revision `82780bbaf3328a45f624ddb41e51bf75425f851c`
+(reported with uncommitted build changes). Ten repeated final replays using
+that exact archive and matching canonical hashes on Ubuntu 24.04 through
+Colima/Rosetta all verified the five certificates in about 42.6 seconds.
+The native macOS replay also passed, but had different canonical hashes.
+Neither result reproduces the crash or establishes a root cause.
+The remaining diagnostic requirement is a repeatable native x86-64 Linux
+reproduction with retained process diagnostics; Rosetta is not hosted parity.

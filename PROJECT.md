@@ -4,6 +4,14 @@ state=protocol research/specification/formal models + host-only Rust foundation;
 
 ## Verified profile
 
+- **Public documentation:** [README.md](README.md) introduces the current
+  scope; [the documentation entry point](docs/README.md) links the runnable
+  wire tutorial, contributor validation guide, foundation API reference and
+  compact-PQ/BLE design explanation. Local Markdown links are checked with
+  the activated Diataxis skill's `scripts/check-links.py`; no repository
+  Markdown formatter or spelling gate is configured. All three Mermaid
+  diagrams render with `@mermaid-js/mermaid-cli` 12.0.0 and the installed
+  Chrome browser. This is a local documentation check, not a new CI gate.
 - **Purpose:** specify and verify `cairn-r1` before implementing the SDK.
 - **Languages/toolchains:** Markdown specification and Tamarin `.spthy` models;
   model commands use Tamarin 1.12.0 and Maude 3.5.1.
@@ -167,6 +175,18 @@ provenance. A temporary exact-findings baseline excluded those known vector
 matches, and the remaining history scan passed. No blanket file exclusion
 or repository scan suppression was added. This is a point-in-time scan,
 not an independent cryptographic/security audit.
+
+Final-head lifecycle run
+[37967905307](https://github.com/trancee/cairn/actions/runs/37967905307)
+at `83e2edb` failed in `replay-fresh_dk_origin` with
+`tamarin-prover: <<loop>>`, exit 1, after theory closure.
+Both canonical hashes match the successful warm run above, and both jobs
+used the same runner image version and checksum-verified tool archives.
+Ten local replays with the exact Linux archives and matching canonical hashes
+verified all five retained certificates, but used Rosetta rather than a
+native x86-64 runner. The cause remains unresolved; these passes do not
+establish that the intermittent crash is fixed. No retry, runtime workaround
+or proof change was added. PR #2 remains unmerged.
 
 The schema below is retained for the future implementation profile.
 
