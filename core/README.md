@@ -39,7 +39,7 @@ cargo +nightly-2026-10-08 fuzz run wire_encoding -- -max_total_time=60 -max_len=
 The Rust workflow runs the ordinary gates on Linux x86-64, Linux ARM64 and
 macOS, plus Miri/careful on Linux. Hosted results are not yet available for
 this increment. A separate coverage job requires 100% source line/branch
-coverage; the current crypto line coverage gap is expected to block it.
+coverage; both crates currently meet that threshold locally.
 Interpreter checks do not prove constant-time behavior and
 Miri does not inspect the AWS-LC C implementation.
 
@@ -83,8 +83,16 @@ Differential tests use reproducible varied inputs, not production randomness.
 ## Remaining gates
 
 [ADR 0007](../docs/adr/0007-ct-conformance-gates.md) remains authoritative.
-ACVP ingestion, secret-taint checks, complete line coverage, mobile
+ACVP ingestion, secret-taint checks, mobile
 cross-builds and binding/device proofs are not complete in this increment.
 Do not merge or release it as completed S0 or validated production crypto.
 Track the foundation gate completion in
 [issue 46](../.scratch/cairn-r1/issues/46-rust-foundation-gates.md).
+
+Provider errors have typed `From` conversions into `CryptoError`.
+The conversion tests induce genuine provider HKDF length errors; the HMAC
+length error is constructed explicitly because HMAC accepts arbitrary key
+lengths. This proves the public conversion contract, not that failures
+occur within valid backend calls. LLVM records 100% source lines and
+branches locally, but misses four `?` error-propagation regions. Thus the
+coverage result does not prove all adapter error paths executed.

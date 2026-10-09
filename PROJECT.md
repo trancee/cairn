@@ -23,7 +23,9 @@ state=protocol research/specification/formal models + host-only Rust foundation;
   `scripts/check.sh` runs the fast gates (also the pre-commit hook and CI).
   `bash scripts/check-rust.sh` runs Rust format/clippy/tests and cargo-deny;
   the pre-commit hook additionally calls it. Miri/careful use the pinned
-  nightly in the Rust workflow. Crypto line coverage and other ADR 0007
+  nightly in the Rust workflow. Local source line/branch coverage is now
+  100% for both crates; error-propagation regions remain uncovered.
+  Other ADR 0007
   gates remain incomplete ([issue 46](.scratch/cairn-r1/issues/46-rust-foundation-gates.md)).
 - **Targeted validation:** from the repository root,
   `tamarin-prover docs/spec/models/ratchet.spthy --open-chains=0 --saturation=0 --derivcheck-timeout=30`

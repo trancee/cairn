@@ -20,6 +20,27 @@ impl core::fmt::Display for CryptoError {
 
 impl std::error::Error for CryptoError {}
 
+#[cfg(feature = "aws-lc")]
+impl From<aws_lc_rs::error::Unspecified> for CryptoError {
+    fn from(_: aws_lc_rs::error::Unspecified) -> Self {
+        Self::BackendFailure
+    }
+}
+
+#[cfg(feature = "reference")]
+impl From<hmac::digest::InvalidLength> for CryptoError {
+    fn from(_: hmac::digest::InvalidLength) -> Self {
+        Self::BackendFailure
+    }
+}
+
+#[cfg(feature = "reference")]
+impl From<hkdf::InvalidLength> for CryptoError {
+    fn from(_: hkdf::InvalidLength) -> Self {
+        Self::BackendFailure
+    }
+}
+
 /// Compile-time backend boundary for the implemented symmetric primitives.
 pub trait CryptoBackend {
     fn sha384(input: &[u8]) -> [u8; 48];
@@ -71,11 +92,8 @@ impl CryptoBackend for AwsLc {
         let salt = hkdf::Salt::new(hkdf::HKDF_SHA384, salt);
         let prk = salt.extract(input);
         let information = [info];
-        let key = prk
-            .expand(&information, OutputLength(length))
-            .map_err(|_| CryptoError::BackendFailure)?;
-        key.fill(&mut output)
-            .map_err(|_| CryptoError::BackendFailure)?;
+        let key = prk.expand(&information, OutputLength(length))?;
+        key.fill(&mut output)?;
         Ok(output)
     }
 }
@@ -93,8 +111,7 @@ impl CryptoBackend for Reference {
 
     fn hmac_sha384(key: &[u8], input: &[u8]) -> Result<Zeroizing<[u8; 48]>, CryptoError> {
         use hmac::{KeyInit, Mac};
-        let mut mac = hmac::Hmac::<sha2::Sha384>::new_from_slice(key)
-            .map_err(|_| CryptoError::BackendFailure)?;
+        let mut mac = hmac::Hmac::<sha2::Sha384>::new_from_slice(key)?;
         mac.update(input);
         let tag = mac.finalize().into_bytes();
         Ok(Zeroizing::new(tag.into()))
@@ -108,8 +125,7 @@ impl CryptoBackend for Reference {
     ) -> Result<Zeroizing<Vec<u8>>, CryptoError> {
         let mut output = hkdf_output(length)?;
         let key = hkdf::Hkdf::<sha2::Sha384>::new(Some(salt), input);
-        key.expand(info, &mut output)
-            .map_err(|_| CryptoError::BackendFailure)?;
+        key.expand(info, &mut output)?;
         Ok(output)
     }
 }
