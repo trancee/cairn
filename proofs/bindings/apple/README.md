@@ -63,3 +63,13 @@ Trusted preparation
 passed with the exact daemon JDK `25.0.4.1+1` after correcting an erroneous
 version selector. Its artifacts contain versions, logs and input hashes,
 not a reusable frozen cache.
+
+`uid-supervisor.py` is a hosted-root-only CLI seam for the fresh
+`cairnbenignprobe` account. It rejects existing UID processes and non-private
+proof-output directories, applies approved CPU/process/file/core limits,
+drops supplementary groups and executes with an explicit environment.
+Completion, deadline and catchable interruption perform PID-specific UID
+cleanup. It does not itself apply the sandbox or provision build scratch.
+Hosted [run 38093375336](https://github.com/trancee/cairn/actions/runs/38093375336)
+passed actual child-limit/access-group assertions and detached-descendant
+deadline cleanup; all eight retained log checksums passed.

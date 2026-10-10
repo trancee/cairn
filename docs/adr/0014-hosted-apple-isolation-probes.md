@@ -216,3 +216,10 @@ unlimited variant returns directory membership, not the access list modified
 by `setgroups`. The corrected consumer uses libc's POSIX access-list interface:
 require only primary GID 20 and no supplementary groups. This replaces an
 invalid measurement, not the identity-isolation requirement.
+
+Hosted [run 38093375336](https://github.com/trancee/cairn/actions/runs/38093375336)
+at `3e19313` passed both dedicated supervisor regressions and all existing
+benign sandbox/resource checks. All eight downloaded artifact checksums passed.
+This closes the tested detached-deadline and child-limit slices only; a real
+build still requires sandbox composition, scratch reservation, immutable
+inputs and offline compiler/runtime compatibility.

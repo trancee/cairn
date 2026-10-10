@@ -128,6 +128,13 @@ at `3ffd8cf`: pinned Rust/iOS targets, checksum-verified Gradle and exact
 Temurin 25.0.4.1+1, plus locked fixture/Ubique Cargo downloads. No fixture
 compiled; frozen inputs, offline completeness and build-scale controls
 remain unverified.
+The dedicated hosted supervisor subsequently passed
+[run 38093375336](https://github.com/trancee/cairn/actions/runs/38093375336)
+at `3e19313`: deadline cleanup removes a deliberately detached descendant,
+retains partial output and confirms the UID is empty. A child observed hard/
+soft CPU 900s, NPROC 128, per-file 64 MiB, zero core limits, only primary GID
+20 and an explicit environment. These CLI tests are not yet composed with
+the sandbox, reserved 8 GiB build scratch or an actual compiler.
 No production Apple
 acceptance is implied.
 

@@ -82,3 +82,4 @@ else
   cat "$output/resources.log" >&2
   exit "$result"
 fi
+"$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
