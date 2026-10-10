@@ -61,6 +61,105 @@ are complete.
 
 ## Comments
 
+- 2026-10-10: Owner executed explicitly authorized canonical disposal:
+  boot log and both image hashes passed; all three raw-journal input markers
+  exported and verified, final runtime marker present. Only
+  `cairn-proof-canonical` undefined and its `run.qcow2` removed; script's
+  absence checks passed and retained base checksum OK. Canonical clone's
+  cold-build/runtime, protected base, journal and disposal lifecycle are
+  verified. Workspace shells/cache coordination metadata remain writable
+  scratch state, not immutable canonical inputs. Full runner acceptance and
+  Apple lane remain open; new mapping/scripts/evidence are uncommitted.
+
+- 2026-10-10: Owner raw-journal search found both early canonical read-only/
+  same-object mapping PASS markers at8.004821s. Unit-filtered export omitted
+  them; no logging loss established. All three input assertions now have
+  retained cold-clone evidence. Canonical extraction recipe updated to export
+  exact marker lines across the journal, require all three and checksum them.
+  Existing journal remains preserved. Writable workspace/cache metadata are
+  still explicit state; overlay disposal awaits separate authorization.
+
+- 2026-10-10: Owner's filtered canonical proof log contains the post-build
+  canonical manifest PASS, but neither requested early read-only/identity
+  marker. Those early assertions are not independently confirmed for this
+  cold clone from the retained unit-filtered log. Full raw-journal search
+  and possible logging-loss diagnostics remain needed; preparation-guest
+  probe passes do not substitute for this missing clone evidence.
+
+- 2026-10-10: Owner confirms canonical clone shut off, base still
+  `root:qemu 0640`, and read-only journal extraction PASS with original base
+  and pre/post overlay hashes OK. Evidence retained root-only at
+  `/var/lib/cairn-proof-evidence/canonical-replay-journal`.
+  Assistant retrieved exported live XML and verified sole independent base
+  backing, base-only DAC override, dynamic SELinux and no NIC/filesystem/
+  hostdev/channel. Early identity/mount probe log extraction still pending;
+  canonical overlay disposal not authorized.
+
+- 2026-10-10: Owner's live canonical-clone checks show sole disk `vda`
+  attached to `cairn-proof-canonical/run.qcow2`, no interfaces, base
+  `root:qemu 0640`, and QEMU-account `O_WRONLY` open denied. Live Unix base
+  write denial verified for this new clone. Full backing/share topology,
+  post-stop state/hash, journal and disposal remain pending.
+
+- 2026-10-10: Owner supplied canonical clone cold replay PASS:69/69 tasks
+  in4m25s, JVM assertions/native packaging, canonical manifest unchanged.
+  AAR unchanged; APK
+  `f473420b64a2a99896555f432508baff6549a0fcee3a57e2dcfb58aecd2ba76b`.
+  Fresh Android instrumentation code-1/marker and final bootstrap PASS.
+  Runtime20.032s peak4.5Gzero swap; build1.8M not accepted.
+  Excerpt omits early identity/mount probes; full journal still needed.
+  New clone topology/live base denial/post-stop ownership+hash/journal/
+  disposal pending. Changes uncommitted; final acceptance remains open.
+
+- 2026-10-10: Owner explicitly authorized clean shutdown of only
+  `cairn-prep` and a new `cairn-proof-canonical` clone in its own directory,
+  retaining prior base/evidence. Added bounded `canonical` selector to
+  clone/extraction/disposal recipes; defaults unchanged and other selectors
+  rejected. Current supervisors and canonical manifests verified before
+  poweroff, neither proof unit active. Shutdown requested over authorized SSH;
+  `~/cairn-create-canonical-clone.sh` staged on Fedora for owner sudo.
+  Creation/start and new cold-image results pending; disposal of the new
+  overlay is not yet authorized.
+
+- 2026-10-10: Complete canonical mapping implemented without changing
+  imported Gradle/Rust configs or pins. Trusted preparation creates separate
+  root-owned nonwritable canonical source/registry/module contents and a full
+  checksum manifest. Build binds each consumed source/config tree and
+  downloaded content from canonical objects into writable disposable shells;
+  probes assert samefile identity, covering read-only mounts and denied
+  canonical additions/file writes. Direct fresh-scratch forced build passed
+  69/69 tasks in4m17s, JVM assertions/native packaging, pre/post canonical
+  manifest checks. AAR unchanged; APK
+  `11958baaad9a61fc26a60511c1a93ae23403095360e3005f99c3cb7baed14d95`.
+  Fresh Android runtime passed19.436s, reported peak4.6G zero swap; build1.5M
+  not accepted. Updated bootstrap consumes current saved build supervisor.
+  New cold VM replay remains pending; writable workspace/cache metadata remain
+  explicit state. New scripts/docs are uncommitted.
+
+- 2026-10-10: Owner selected investigation of separated immutable inputs/
+  disposable writable workspace without changing pins. Direct preparation-
+  guest systemd probe passed: canonical archived source root-owned under
+  `/opt/cairn-binding-seeds/source-namespace-probe`, writable shells under
+  `/srv/cairn-source-namespace-probe`, read-only binds for build file/Rust
+  crate. Covering mount flags `ro`; canonical additions/removals and bound
+  source additions failed `EROFS`, existing-file writes failed `EACCES`;
+  project shells writable and mounted build/source/lock bytes identical.
+  Initial strict errno and exact-mount assumptions failed and were corrected.
+  No baseline changes or complete Gradle build in this layout yet. Full
+  mapping/cache separation and cold-clone replay remain required before any
+  acceptance change.
+
+- 2026-10-10: Committed extraction/disposal as `1fe7471`. Investigated
+  remaining project-namespace constraint against pinned upstream Gradle.
+  `DefaultSettingsPreparer.java` at v9.7.0 lines307-333 unconditionally checks
+  every project's directory exists/is-directory/`canWrite()` after settings
+  evaluation. A wholly read-only project directory cannot pass this baseline;
+  moving caches/output alone does not bypass the check. Existing actual
+  sources/config/dependency files remain read-only; writable scratch project
+  shells are explicit state. No validation bypass or pin change proposed.
+  Any different workspace layout or acceptance interpretation needs a
+  documented decision before implementation.
+
 - 2026-10-10: Owner explicitly approved targeted domain/overlay disposal,
   then supplied successful `dispose-overlay.sh` output. Preserved proof log
   and both pre-disposal image hashes checked OK; both replay markers retained.

@@ -65,6 +65,12 @@ Prerequisites must be prepared through trusted downloads before any build:
   Separate graphs include Android runtime/JNA AARs, lint `32.3.1` and
   Linux AAPT2 `9.3.1-15703166`. Cache preparation uses Google Maven and Maven
   Central; the build itself may not fetch dependencies.
+- Root-owned canonical inputs under
+  `/opt/cairn-binding-seeds/final-image-inputs-e75437d/canonical-inputs`,
+  prepared once with `sudo bash prepare-canonical-inputs.sh` from the verified
+  preserved archives. Preparation rejects an existing destination, extracts
+  source/registry/modules, creates a content checksum manifest and removes
+  write permissions. Canonical content is not a writable Gradle cache.
 
 Deploy this directory's source and scripts to
 `/srv/cairn-generator-scratch/android-interop`, owned by `cairn-build`.
@@ -83,11 +89,15 @@ sudo bash /srv/cairn-generator-scratch/android-interop/build-offline.sh
 It forces the three proof tasks to rerun in one offline, allowlisted
 systemd unit, executes the JVM assertions and checks the delivered native
 entries. It does not install packages, boot an emulator or retry online.
-The build now mounts all Gradle build/settings/properties files, the Rust
+The build now binds all Gradle build/settings/properties files, the Rust
 crate tree and consumer source trees read-only. Cargo's entire registry
 (source/archive/index) and Gradle's downloaded `files-2.1` artifacts are
-read-only too. The unit checks representative existing inputs for `EROFS`
-before invoking Gradle; an unexpectedly writable input fails the proof.
+read-only too. Bind sources are separate root-owned canonical inputs, not
+the workspace's copied files. The unit verifies every mapped object resolves
+to the canonical inode and its covering mount is read-only, checks canonical
+namespace additions and representative existing-file writes are denied with
+`EROFS` or `EACCES`, and requires project shells remain writable. The complete
+canonical content manifest is checked before and after the build.
 The strengthened forced build passed with all 69 actionable tasks executed
 and unchanged AAR/APK hashes. Original source hashes were unchanged.
 
@@ -100,6 +110,41 @@ Cargo target outputs and cache coordination/Gradle metadata remain writable
 state; this is downloaded-input immutability, not an entirely immutable
 cache namespace or a complete immutable project namespace. The root-owned
 generator/toolchain sources remain protected by `ProtectSystem=strict`.
+The pinned upstream
+[`DefaultSettingsPreparer.validate`](https://github.com/gradle/gradle/blob/v9.7.0/subprojects/core/src/main/java/org/gradle/initialization/DefaultSettingsPreparer.java#L307-L333)
+unconditionally rejects any project directory whose `File.canWrite()` is
+false, after settings processing. Moving only `.gradle` or module outputs
+does not remove that check. A fully read-only Gradle project directory is
+therefore incompatible with this baseline; disabling validation or changing
+the Gradle pin is not part of this proof.
+An owner-selected separated-input investigation passed a bounded systemd
+probe on the preparation guest. The archived fixture was restored root-owned
+at `/opt/cairn-binding-seeds/source-namespace-probe`; writable project shells
+were created separately at `/srv/cairn-source-namespace-probe`. Read-only
+binds exposed the canonical root build file and Rust crate inside those shells.
+The unprivileged probe verified the covering mounts were read-only, canonical
+file writes were denied (`EACCES`), canonical additions/removals and Rust
+source additions were denied (`EROFS`), and workspace project directories
+remained writable. Mounted build/Rust/lockfile bytes matched canonical inputs.
+An initial probe incorrectly required `EROFS` for every denial despite Unix
+permissions producing `EACCES`; another incorrectly required an exact mount
+entry rather than the read-only covering mount. Both assertions were corrected
+before the recorded pass. This is filesystem feasibility evidence only:
+that initial probe did not execute the complete Gradle fixture/cache mapping.
+Writable project shells/cache metadata remain state, not canonical inputs.
+The full mapping subsequently passed direct preparation-guest execution with
+all 69 tasks executed in 4m17s, JVM assertions and native packaging checks.
+The AAR hash matched; APK hash was
+`11958baaad9a61fc26a60511c1a93ae23403095360e3005f99c3cb7baed14d95`.
+All canonical input identities/read-only mount checks and pre/post content
+manifest checks passed. Fresh Android instrumentation then passed in 19.436s
+with reported 4.6G peak memory and zero swap. The reported 1.5M build peak is
+not accepted. This new layout has not yet run in a newly cloned networkless VM.
+The replay bootstrap now requires a saved `build-offline.sh` and generated
+`replay-scripts.sha256` manifest in addition to canonical inputs. It restores
+scratch from the original archives but installs the current trusted build
+supervisor before invoking it. Writable workspace/cache metadata are not
+claimed immutable; generated sources are build outputs, not canonical inputs.
 Final disposable-image and full namespace acceptance remain open.
 A dedicated eight-worker saturation probe measured 4.008 effective CPU
 cores under the exact 400% quota; see the runner evidence. Implausible
@@ -186,6 +231,60 @@ overlay is attached to `cairn-proof-offline`; the clone XML removes all NICs,
 cloud-init CD, guest-agent channels, host devices and filesystem sharing.
 SELinux remains enabled. The original preparation disk is not a backing file
 and the original guest is restarted after the conversion.
+An explicit `canonical` argument selects `cairn-proof-canonical` and
+`/var/lib/libvirt/images/cairn-proof-canonical`, preserving the previous
+offline proof's base/evidence. The same selector on `preserve-journal.sh` and
+`dispose-overlay.sh` selects the canonical clone and
+`/var/lib/cairn-proof-evidence/canonical-replay-journal`; deletion still
+requires separate explicit owner approval. Unknown arguments are rejected.
+The owner authorized this new clone and clean preparation-guest shutdown.
+Persistent canonical inputs and current supervisor checksums were verified,
+proof units were not active, and poweroff was requested. Host creation/start
+is pending owner sudo; no new cold-image pass is claimed.
+The owner subsequently supplied the new canonical clone's successful replay:
+all 69 tasks executed in 4m25s, JVM assertions/native packaging passed, and
+the canonical manifest remained unchanged after the build. The AAR hash
+matched prior evidence; APK SHA-256 was
+`f473420b64a2a99896555f432508baff6549a0fcee3a57e2dcfb58aecd2ba76b`.
+Fresh Android instrumentation returned code `-1` and its completion marker,
+followed by the final cold-build/runtime PASS. Runtime was 20.032s with
+reported peak4.5G and zero swap; build peak1.8M is not accepted.
+The supplied excerpt starts after the mount-identity probes; their output
+has not yet been recovered from this clone's journal. New-clone live topology,
+base write denial, post-stop checks, journal preservation and disposal remain
+pending. This extends cold-image behavior evidence without claiming full
+namespace or final runner acceptance.
+Subsequent owner live checks confirm the canonical clone's sole disk is its
+`run.qcow2`, interface list is empty, base remains `root:qemu 0640`, and
+QEMU-account write-open is denied. Full backing/share topology and post-stop
+state/hash/journal/disposal remain pending.
+The owner then confirmed the canonical clone shut off with base still
+`root:qemu 0640`, and read-only journal extraction passed with unchanged
+base/overlay hashes. Evidence is root-only under
+`/var/lib/cairn-proof-evidence/canonical-replay-journal`.
+The exported live XML was independently checked over authorized SSH: sole
+independent backing base, base-only DAC override, dynamic SELinux, and no
+network/shared filesystem/hostdev/channel. Early mount-identity log confirmation
+and separately authorized canonical-overlay disposal remain pending.
+Searching the exported unit log returned only the post-build manifest marker,
+not the two early input-probe markers. Their absence is unresolved; raw-journal
+search and logging diagnostics are required before treating them as retained
+cold-clone evidence.
+The owner subsequently found both early markers in the preserved raw journal
+at boot time 8.004821s. The unit-only export omitted these entries, so the
+canonical extraction recipe now exports exact input-probe markers across
+the journal and requires all three. No logging loss is established.
+Together with the post-build manifest marker, retained cold-clone evidence
+confirms read-only canonical input mapping and unchanged content. This does
+not make writable workspace shells or cache coordination metadata immutable.
+The owner then explicitly authorized and executed canonical disposal.
+The boot log and both image hashes checked OK, all three input markers were
+exported/verified, and the final runtime marker was present. Only
+`cairn-proof-canonical` was undefined and its overlay removed; domain/overlay
+absence checks and retained-base checksum passed. Canonical base and journal,
+including `input-probes.txt` and its checksum, remain retained. This completes
+the new canonical clone's observed lifecycle without closing the remaining
+workspace/cache-state or Apple acceptance questions.
 
 The staged `cairn-disposable-boot-proof.service` runs only with loopback as
 the sole guest interface. Its condition was verified to skip execution in

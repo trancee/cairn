@@ -10,6 +10,18 @@ if [ "$source_directory" != /srv/cairn-generator-scratch/android-interop ]; then
   echo 'Deploy this fixture to /srv/cairn-generator-scratch/android-interop first' >&2
   exit 2
 fi
+canonical=/opt/cairn-binding-seeds/final-image-inputs-e75437d/canonical-inputs
+(cd "$canonical" && sha256sum --quiet --check SHA256SUMS)
+bindings=()
+for input in settings.gradle.kts build.gradle.kts gradle.properties \
+  sdk/build.gradle.kts sdk/rust consumer/build.gradle.kts consumer/src \
+  androidConsumer/build.gradle.kts androidConsumer/src; do
+  bindings+=(-p "BindReadOnlyPaths=$canonical/fixture/$input:$source_directory/$input")
+done
+bindings+=(
+  -p "BindReadOnlyPaths=$canonical/cargo/registry:/srv/cairn-generator-scratch/fixture-cargo/registry"
+  -p "BindReadOnlyPaths=$canonical/gradle/caches/modules-2/files-2.1:/srv/cairn-generator-scratch/kmp-gradle-cache/caches/modules-2/files-2.1"
+)
 
 for directory in .gradle .kotlin build sdk/build consumer/build androidConsumer/build; do
   sudo install -d -o cairn-build -g cairn-build -m 0755 "$source_directory/$directory"
@@ -28,7 +40,8 @@ sudo systemd-run --unit=cairn-binding-proof-build \
   -p 'TemporaryFileSystem=/run:ro' \
   -p InaccessiblePaths=/dev/shm \
   -p ReadWritePaths=/srv/cairn-generator-scratch \
-  -p "ReadOnlyPaths=$source_directory/settings.gradle.kts $source_directory/build.gradle.kts $source_directory/gradle.properties $source_directory/sdk/build.gradle.kts $source_directory/sdk/rust $source_directory/consumer/build.gradle.kts $source_directory/consumer/src $source_directory/androidConsumer/build.gradle.kts $source_directory/androidConsumer/src /srv/cairn-generator-scratch/fixture-cargo/registry /srv/cairn-generator-scratch/kmp-gradle-cache/caches/modules-2/files-2.1" \
+  -p "ReadOnlyPaths=$canonical" \
+  "${bindings[@]}" \
   -p "ReadWritePaths=$source_directory/.gradle $source_directory/.kotlin $source_directory/build $source_directory/sdk/build $source_directory/consumer/build $source_directory/androidConsumer/build" \
   -p MemoryMax=12G -p MemorySwapMax=0 \
   -p TasksMax=256 -p CPUQuota=400% \
@@ -53,7 +66,52 @@ cd /srv/cairn-generator-scratch/android-interop
 
 /usr/bin/python3 - <<'PROBE'
 import errno
+import os
 from pathlib import Path
+
+canonical = Path("/opt/cairn-binding-seeds/final-image-inputs-e75437d/canonical-inputs")
+workspace = Path.cwd()
+mounts = {
+    line.split()[4]: line.split()[5].split(",")
+    for line in Path("/proc/self/mountinfo").read_text().splitlines()
+}
+mapped = [
+    (canonical / "fixture" / name, workspace / name)
+    for name in [
+        "settings.gradle.kts", "build.gradle.kts", "gradle.properties",
+        "sdk/build.gradle.kts", "sdk/rust", "consumer/build.gradle.kts",
+        "consumer/src", "androidConsumer/build.gradle.kts", "androidConsumer/src",
+    ]
+]
+mapped += [
+    (canonical / "cargo/registry", Path("/srv/cairn-generator-scratch/fixture-cargo/registry")),
+    (canonical / "gradle/caches/modules-2/files-2.1",
+     Path("/srv/cairn-generator-scratch/kmp-gradle-cache/caches/modules-2/files-2.1")),
+]
+for original, mounted in mapped:
+    if not os.path.samefile(original, mounted):
+        raise SystemExit(f"Input does not resolve to canonical object: {mounted}")
+    covering = max(
+        (mount for mount in mounts if mounted == Path(mount) or Path(mount) in mounted.parents),
+        key=len,
+    )
+    if "ro" not in mounts[covering]:
+        raise SystemExit(f"Canonical input mount is writable: {mounted}")
+for project in [workspace, workspace / "sdk", workspace / "consumer", workspace / "androidConsumer"]:
+    if not os.access(project, os.W_OK):
+        raise SystemExit(f"Disposable project shell is not writable: {project}")
+for directory in [
+    canonical / "fixture", canonical / "cargo/registry",
+    canonical / "gradle/caches/modules-2/files-2.1",
+]:
+    try:
+        descriptor = os.open(directory / ".cairn-write-probe", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except OSError as error:
+        if error.errno not in (errno.EROFS, errno.EACCES):
+            raise
+    else:
+        os.close(descriptor)
+        raise SystemExit(f"Canonical namespace permits additions: {directory}")
 
 inputs = [
     Path("settings.gradle.kts"),
@@ -79,11 +137,12 @@ for path in inputs:
         with path.open("ab"):
             pass
     except OSError as error:
-        if error.errno != errno.EROFS:
+        if error.errno not in (errno.EROFS, errno.EACCES):
             raise
     else:
         raise SystemExit(f"Input is writable: {path}")
 print("PASS: source/configuration and downloaded dependency inputs are read-only")
+print("PASS: complete input mapping resolves to canonical read-only objects; project shells writable")
 PROBE
 
 /opt/cairn-toolchains/gradle-9.7.0/bin/gradle \
@@ -105,3 +164,5 @@ done
 sha256sum "$aar" "$apk"
 echo 'PASS: offline JVM calls and Android debug packaging'
 BUILD
+(cd "$canonical" && sha256sum --quiet --check SHA256SUMS)
+echo 'PASS: canonical input manifest unchanged after build'

@@ -41,6 +41,13 @@ override passed live QEMU-account write denial and start/stop ownership/hash
 checks. Read-only journal extraction and explicitly authorized proof-domain/
 overlay disposal passed, retaining base and evidence. Full namespace
 immutability and final runner acceptance remain open.
+The separated canonical-input layout also passed a new networkless clone:
+69 forced tasks, read-only/same-object source and dependency mapping assertions,
+unchanged canonical manifest and fresh Android instrumentation. Its base
+write denial, shutdown, read-only journal preservation and explicitly
+authorized overlay disposal passed. Canonical inputs are immutable in the
+build namespace; project shells and cache coordination metadata remain
+writable disposable state. This does not close full runner or Apple acceptance.
 
 ## Verified profile
 

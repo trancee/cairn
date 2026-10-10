@@ -6,8 +6,16 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 2
 fi
 export LC_ALL=C
-name=cairn-proof-offline
-directory=/var/lib/libvirt/images/cairn-proof-offline
+if [ "$#" -gt 1 ]; then
+  echo 'Usage: create-offline-clone.sh [canonical]' >&2
+  exit 2
+fi
+case "${1:-}" in
+  '') name=cairn-proof-offline ;;
+  canonical) name=cairn-proof-canonical ;;
+  *) echo 'Unknown proof selection' >&2; exit 2 ;;
+esac
+directory="/var/lib/libvirt/images/$name"
 source=/var/lib/libvirt/images/cairn-prep/prep.qcow2
 test "$(virsh -c qemu:///system domstate cairn-prep)" = 'shut off'
 test ! -e "$directory"
@@ -24,7 +32,7 @@ chmod 0640 "$directory/base.qcow2"
 qemu-img create -f qcow2 -F qcow2 -b "$directory/base.qcow2" "$directory/run.qcow2"
 chown root:qemu "$directory/run.qcow2"
 chmod 0660 "$directory/run.qcow2"
-python3 - "$directory" <<'XML'
+python3 - "$directory" "$name" <<'XML'
 from pathlib import Path
 import sys
 import xml.etree.ElementTree as ET
@@ -32,7 +40,7 @@ import xml.etree.ElementTree as ET
 directory = Path(sys.argv[1])
 root = ET.parse(directory / "preparation.xml").getroot()
 root.attrib.pop("id", None)
-root.find("name").text = "cairn-proof-offline"
+root.find("name").text = sys.argv[2]
 for child in list(root):
     if child.tag in {"uuid", "genid", "seclabel"}:
         root.remove(child)
