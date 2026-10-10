@@ -84,16 +84,23 @@ state=protocol research/specification/formal models + host-only Rust foundation;
   searches with `--prove`. Full-context certificate-only replay still timed
   out at 300 seconds; assembled completion remains unverified (re-run: both profiles exhaust the 5 GiB heap, no lemma result).
   The [source inventory](docs/spec/models/ratchet-source-evidence.md)
-  accounts for 43 goal groups/179 branches; all 30 residual chains belong
-  to CK/SS disclosure branches. The
+  accounts for 43 goal groups/179 branches; the raw inventory has 30
+  residual CK/SS disclosure chains, while the current refined profile has
+  16 `Reveal_SS` residual chains. The
   [equation review](docs/spec/models/ratchet-equation-evidence.md) supplies
-  an internal termination/confluence/FVP rationale, not independent
-  acceptance of the mixed message/natural theory. Both gates remain open.
+  an internal termination/confluence/FVP rationale. Separate
+  [checker research](docs/research/2026-10-09-tamarin-equational-theory-independent-checkers.md)
+  records Tamarin's subterm-convergence check and an external CRC
+  local-confluence check on the reduced message equations; CRC assumes
+  termination. Neither closes independent combined-theory/FVP acceptance.
+  Both gates remain open.
   The opt-in proof-only `DISCLOSURE_SOURCES` profile proves CK/SS
-  disclosure origins in 12/8 steps and reduces refined chains to 15
-  (all SS). Run `python3 docs/spec/models/replay.py --disclosure-sources`.
-  It replays the unchanged lost-data certificate in 802 steps and all
-  three source certificates. Default proof contexts are unchanged:
+  disclosure origins in 12/8 steps. Before the KEM-origin `[sources]`
+  promotion it had 15 refined residual chains; the current profile has 16,
+  all `Reveal_SS`. Run
+  `python3 docs/spec/models/replay.py --disclosure-sources`. It replays the
+  unchanged lost-data certificate in 802 steps and all three source
+  certificates. Default proof contexts are unchanged:
   all eight existing safety certificates are migrated in the refined profile.
   No application or SDK build/compatibility gate is available.
 - **CI gates/code generation:** no application pipeline or generated SDK
@@ -107,7 +114,7 @@ state=protocol research/specification/formal models + host-only Rust foundation;
   and actions have immutable revisions. Local actionlint validation and the
   macOS lifecycle runner pass. The first hosted run passed the lifecycle
   gate, both witnesses, KEM origin and fresh-DK origin, then hit the shared
-  15-minute job timeout. Each of the ten replays now has its own 15-minute
+  15-minute job timeout. Each of the eleven replays now has its own 15-minute
   matrix job, separate from the lifecycle gate, with fail-fast disabled.
   The merged matrix run
   [37952930237](https://github.com/trancee/cairn/actions/runs/37952930237)
@@ -115,15 +122,25 @@ state=protocol research/specification/formal models + host-only Rust foundation;
   workflow also runs default and opt-in disclosure-profile exact-source
   witness replay, refined-certificate replays and its 42 regressions.
   `python3 docs/spec/models/replay.py --disclosure-sources --target kem_ciphertext_origin`
-  verifies the migrated KEM origin certificate in 18 steps with all
+  verifies the KEM origin `[sources]` certificate in 31 steps with all
   three source certificates. Default KEM replay remains 31 steps.
   All eight refined certificates are migrated (`--target`
   `kem_ciphertext_origin`, `fresh_dk_origin`, `encrypted_origin`,
-  `extract_origin`, `ratchet_key_origin`, `session_key_origin`,
-  `initial_ck_secret`, `fresh_ss_origin`). The exact-prefix safety-only
-  profile replay verifies 54/54 complete certificates (38.7 s); the three
-  incomplete serialization lemmas and four existential witnesses are
-  excluded, so this is not assembled/full-profile completion.
+  `extract_origin`,   `ratchet_key_origin`, `session_key_origin`,
+  `initial_ck_secret`, `fresh_ss_origin`). After the KEM-origin `[sources]`
+  promotion, the exact-prefix safety-only context built from the current
+  native export verified 55/55 complete all-traces certificates. It excludes
+  the three incomplete serialization lemmas and four existential witnesses;
+  it does not establish assembled/full-profile completion. Exact commands,
+  hashes, and exclusions are recorded in the
+  [source evidence](docs/spec/models/ratchet-source-evidence.md#combined-safety-only-context).
+  The focused `encrypted_ct_tail_encapsulated` certificate also verifies in
+  four steps in default and disclosure-source contexts. It ties an honest
+  outgoing CT tail to an earlier encapsulation; it does not establish the
+  origin of arbitrary incoming ciphertext or close the 16 residual refined
+  SS chains. Promoting the KEM origin lemma to `[sources]` preserved all
+  43 rules and 13 restrictions but increased refined precomputation residuals
+  from 15 to 16; source closure remains open.
   A local `gh act` 0.2.89 Linux/amd64 run on Colima/Rosetta passed
   checksum installation, lifecycle proofs and replay regressions, but
   default witness replay hit guest OOM; a bounded-runtime retry timed

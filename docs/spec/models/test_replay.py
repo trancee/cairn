@@ -31,6 +31,20 @@ end
 
 
 class ProfileTests(unittest.TestCase):
+    def test_ct_tail_origin_target_is_accepted(self):
+        version = "tamarin-prover 1.12.0,\nMaude version 3.5.1\n"
+        with patch.object(
+            sys, "argv",
+            ["replay.py", "--disclosure-sources", "--target", "encrypted_ct_tail_encapsulated"],
+        ), patch(
+            "replay.run", side_effect=[version, ReplayError("export probe")]
+        ) as execute, patch("sys.stderr", new_callable=io.StringIO) as diagnostics:
+            result = main()
+
+        self.assertEqual(result, 1)
+        self.assertIn("export probe", diagnostics.getvalue())
+        self.assertIn("--defines=DISCLOSURE_SOURCES", execute.call_args_list[1].args[0])
+
     def test_disclosure_profile_is_forwarded_to_native_source_export(self):
         version = "tamarin-prover 1.12.0,\nMaude version 3.5.1\n"
         with patch.object(sys, "argv", ["replay.py", "--disclosure-sources"]), patch(

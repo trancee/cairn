@@ -16,10 +16,12 @@ Run commands from the repository root; setup and limits are in [`ENVIRONMENT.md`
 |---|---|---|
 | Lifecycle invariants hold for the projected 43 rules | [`lifecycle/`](lifecycle/README.md) | `python3 docs/spec/models/lifecycle/check.py --lean <lean>` |
 | Lost-data witness and KEM origin replay exactly against the source | `replay.py`, [`ratchet-source-evidence.md`](ratchet-source-evidence.md) | `python3 docs/spec/models/replay.py [--disclosure-sources [--target <certificate>]]` |
+| CT-tail ciphertext outputs follow an earlier encapsulation of the same KEM ciphertext | `encrypted_ct_tail_encapsulated` in [`ratchet-transfer-origins.inc`](ratchet-transfer-origins.inc) | `python3 docs/spec/models/replay.py [--disclosure-sources] --target encrypted_ct_tail_encapsulated` |
+| Open `Reveal_SS` source chains and local proof experiments | [Review brief](../../research/2026-10-10-tamarin-reveal-ss-source-review-brief.md), [`ratchet-source-evidence.md`](ratchet-source-evidence.md) | KEM origin is now a proved `[sources]` lemma; 16 refined SS chains remain |
 | Replay tooling selects and compares certificates correctly | `test_replay.py` | `python3 -m unittest discover -s docs/spec/models -p 'test_replay.py'` |
 | Certificates are finished and every include file is wired in | `check_certificates.py`, `test_check_certificates.py` | `python3 docs/spec/models/check_certificates.py` |
 | Branch driver parses methods and picks the closing priority | `test_branch.py` | `python3 -m unittest discover -s docs/spec/models -p 'test_branch.py'` |
-| Custom equations terminate and are confluent | [`ratchet-equation-evidence.md`](ratchet-equation-evidence.md) | Independent review open |
+| Ratchet equation evidence: internal termination/FVP rationale and independent CRC local-confluence check on the reduced message theory | [`ratchet-equation-evidence.md`](ratchet-equation-evidence.md), [checker research](../../research/2026-10-09-tamarin-equational-theory-independent-checkers.md) | Independent combined-theory/FVP acceptance open |
 | All fast gates | `scripts/check.sh` | pre-commit hook and CI |
 
 ## Tooling
@@ -255,7 +257,8 @@ python3 -m unittest discover -s docs/spec/models -p 'test_replay.py'
 python3 docs/spec/models/replay.py --timeout 180
 python3 docs/spec/models/replay.py --disclosure-sources --timeout 180
 for target in kem_ciphertext_origin fresh_dk_origin encrypted_origin extract_origin \
-    ratchet_key_origin session_key_origin initial_ck_secret fresh_ss_origin; do
+    ratchet_key_origin session_key_origin initial_ck_secret fresh_ss_origin \
+    encrypted_ct_tail_encapsulated; do
   python3 docs/spec/models/replay.py --disclosure-sources --target "$target" --timeout 180
 done
 ```
@@ -396,32 +399,39 @@ Default precomputation still reports 43 source cases and 30 partial
 deconstructions. The proved origin/source helpers are progress, not a
 claim that this source-coverage gate is closed.
 The [fresh source inventory](ratchet-source-evidence.md) accounts for all
-43 goal groups and 179 branches: the 30 residual chains are exclusively
-`Reveal_CK`/`Reveal_SS` branches across 15 attacker-knowledge shapes.
-Raw and refined residual inventories agree; no source closure is claimed.
-The opt-in `DISCLOSURE_SOURCES` profile reduces refined chains to 15
-across 172 branches. Every remaining partial branch is `Reveal_SS`.
+43 goal groups and 179 branches. The raw inventory has 30 residual chains
+across `Reveal_CK`/`Reveal_SS` branches and 15 attacker-knowledge shapes;
+the current refined profile has 16 residual chains, all `Reveal_SS`.
+No source closure is claimed.
+Before promoting the KEM-origin lemma to `[sources]`, the opt-in
+`DISCLOSURE_SOURCES` profile reduced refined chains to 15 across 172
+branches. The current profile reports 16 refined residual chains after
+that promotion; every remaining partial branch is `Reveal_SS`.
 Its new CK/SS origin certificates replay in 12/8 steps, respectively;
 the unchanged lost-data certificate checks in 802 steps under this
 refined context (100.98 seconds), versus 826 under the default.
 This changes replay step counts, not the saved witness or transitions.
 The [refinement evidence](ratchet-source-evidence.md#opt-in-disclosure-refinement)
 records its limits: all eight affected safety certificates are now migrated,
-but 15 SS chains and full assembled-context verification remain unresolved.
+but 16 refined SS chains and full assembled-context verification remain
+unresolved.
 The profile is therefore not enabled by default.
-`kem_ciphertext_origin` has now been migrated: its unchanged formula
-verifies in 18 steps in the profile, versus 31 in the default context.
+`kem_ciphertext_origin` is now a verified `[sources]` lemma in the opt-in
+profile: its unchanged formula verifies in 31 steps there and in the default
+context.
 `--target kem_ciphertext_origin` checks its certificate and all sources
 without relying on ordinary reuse helpers; the default target remains
 `lost_data_recovery`. Seven more are migrated (`fresh_dk_origin`,
 `encrypted_origin`, `extract_origin`, `ratchet_key_origin`,
 `session_key_origin`, `initial_ck_secret`, `fresh_ss_origin`); each is
 checked by `--target` together with its dependency `kem_ciphertext_origin`.
-The exact-prefix safety-only profile context now verifies **54 of 54**
-complete certificates in 38.7 s (it was 47/54 before these migrations); the
-three incomplete serialization lemmas and four existential witnesses are not
-in that context. Earlier bulk regeneration timed out at 240 seconds. Neither this profile nor its selected-certificate CI
-check establishes a new full-theory completion count.
+After the KEM-origin `[sources]` promotion, the exact-prefix safety-only
+context built from the current native export verified **55 of 55** complete
+all-traces certificates. It excludes the three incomplete serialization
+lemmas and four existential witnesses, and does not establish assembled or
+full-profile completion. Exact commands, hashes, and exclusions are
+recorded in the [source evidence](ratchet-source-evidence.md#combined-safety-only-context).
+Earlier bulk regeneration timed out at 240 seconds.
 The [equation argument](ratchet-equation-evidence.md) records termination,
 the repeated-key confluence caveat and the subterm/ground FVP rationale
 for the exact six message equations. Independent convergence
