@@ -31,5 +31,5 @@ tar -xzf "$saved/gradle-modules.tar.gz" -C "$scratch/kmp-gradle-cache"
 chown -R cairn-build:cairn-build "$scratch"
 install -o root -g root -m 0644 "$saved/build-offline.sh" "$scratch/android-interop/build-offline.sh"
 bash "$scratch/android-interop/build-offline.sh"
-bash "$saved/run-isolated-android.sh"
+bash "$saved/run-isolated-android-current.sh"
 echo 'PASS: cold disposable guest build and fresh Android runtime'

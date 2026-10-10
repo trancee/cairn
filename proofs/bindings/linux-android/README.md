@@ -6,6 +6,56 @@ implementation or an accepted final runner. No cryptographic API is exported.
 
 ## Source and observed evidence
 
+Linux runner acceptance is assessed against issue 45, not against an entirely
+read-only Gradle working directory. Canonical inputs must be immutable;
+project shells, generated sources, cache coordination and compiler outputs
+may be writable only in assigned disposable scratch. The canonical replay
+proves that distinction. Remaining reconciliation is effective resource-limit
+assertions for the integrated units and an explicit retained proof-log bound;
+the successful replay alone does not establish those checks or Apple support.
+
+### Pending integrated resource and output checks
+
+`check-resources.py build|runtime` observes its own cgroup v2 membership and
+checks effective memory/swap/tasks/CPU quota plus inherited CPU/file/core
+rlimits. The `--snapshot` option checks saved observations for CLI regression
+tests; proof units always use live observations. Both resource profiles passed
+direct guest execution, including the actual build/runtime units.
+
+The owner approved a 64 MiB per-replay proof-output budget, failing explicitly
+on overflow. `bounded-proof.py OUTPUT COMMAND...` retains and mirrors combined
+command output up to that bound, propagates child failures and terminates its
+owned process group on overflow. `run-bounded-replay.sh` wraps the bootstrap
+and stops the two proof units if the command fails. The updated boot unit uses
+this supervisor. This limits captured proof output, not all guest system
+journals, emulator side logs or aggregate multi-replay evidence retention.
+The new boot unit is installed and passed `systemd-analyze verify`; its
+loopback-only condition correctly skips replay on the networked preparation
+guest. It has not been cold-clone verified.
+
+CLI tests passed intended red/green cases for invalid resource ceilings and
+output overflow, exact-budget output and child-error propagation. The direct
+fresh-scratch build passed all 69 tasks in 4m24s with live limits and canonical
+checks. AAR hash matched; APK hash was
+`cd3ab60c801a021caf4468663402f2fdc95a3c4362110aa3a4da9816a424effc`.
+Its combined collector retained 8,689 bytes but the following fresh runtime
+timed out at 300 seconds, despite the emulator reporting boot completion in
+18,098 ms. A comparison without the collector failed differently: the emulator
+segfaulted before ADB connected. No cause is established, and no retry or
+limit weakening was added. Integrated runtime/collector acceptance is
+incomplete; the earlier canonical cold-clone pass remains separate evidence.
+The stage-instrumented runtime subsequently passed under the same collector
+and unchanged limits in 19.159s, with live resource assertions and Android
+instrumentation success (reported peak3.2G, zero swap). Runtime cleanup was
+confirmed. The earlier failures remain unresolved; this pass is not evidence
+of a root-cause fix or a new automatic retry policy.
+An actual guest overflow test emitted 64 MiB plus one byte: the collector
+failed explicitly and retained exactly 67,108,864 bytes. The synthetic output
+file was removed. All current supervisors/runtime/unit files are covered by
+the saved `replay-scripts.sha256` manifest. Per-replay collector behavior and
+individual integrated units are verified, but full networkless boot-wrapper
+execution and reliability acceptance remain open.
+
 Gradle/Cargo/Kotlin/Rust/manifest files are imported unchanged from
 `android-source.tar.gz`, SHA-256
 `b64dcbea8f0b1d374f39cb64c06cc14e8b1d124fd7c387735631ad502effbdf2`.

@@ -71,6 +71,7 @@ systemd-run --unit=cairn-isolated-android-proof --wait --pipe --collect \
   /bin/bash -se <<'RUN'
 set -euo pipefail
 sdk="$ANDROID_HOME"
+/usr/bin/python3 /opt/cairn-binding-seeds/final-image-inputs-e75437d/check-resources.py runtime
 adb="$sdk/platform-tools/adb"
 serial=emulator-5554
 test -r /dev/kvm && test -w /dev/kvm
@@ -132,10 +133,12 @@ trap cleanup EXIT
   -gpu swiftshader -memory 2048 -cores 2 \
   > "$HOME/artifacts/isolated-emulator.log" 2>&1 &
 emulator_pid=$!
+echo 'PROOF: waiting for Android transport'
 if ! timeout 120s "$adb" -s "$serial" wait-for-device </dev/null; then
   cat "$HOME/artifacts/isolated-emulator.log" >&2
   exit 1
 fi
+echo 'PROOF: Android transport connected; waiting for boot completion'
 ready=0
 for attempt in $(seq 1 60); do
   if test "$(timeout 5s "$adb" -s "$serial" shell -T \
@@ -147,6 +150,7 @@ for attempt in $(seq 1 60); do
   sleep 2
 done
 test "$ready" = 1
+echo 'PROOF: Android boot completion observed; checking SDK and ABI'
 test "$(timeout 10s "$adb" -s "$serial" shell -T \
   getprop ro.build.version.sdk </dev/null | tr -d '\r')" = 26
 test "$(timeout 10s "$adb" -s "$serial" shell -T \
@@ -157,6 +161,7 @@ if printf '%s\n' "$packages" | grep -Fxq 'package:ch.trancee.cairn.consumer'; th
   echo 'Smoke package already installed in fresh AVD' >&2
   exit 1
 fi
+echo 'PROOF: fresh package state verified; installing APK'
 timeout 60s "$adb" -s "$serial" install --user 0 \
   "$HOME/artifacts/androidConsumer-debug.apk" </dev/null
 timeout 60s "$adb" -s "$serial" shell -T \

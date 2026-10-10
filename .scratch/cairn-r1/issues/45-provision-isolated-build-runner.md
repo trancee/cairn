@@ -22,7 +22,7 @@ caches read-only and disable network access during target-controlled work.
 
 | Lane | Required scope | Current state |
 |---|---|---|
-| Linux/Android | Disposable Linux environment; Rust host tests, Kotlin/JVM integration, Android builds and generated-call execution | Cold networkless build/runtime, protected base start/stop, read-only journal extraction and authorized overlay disposal pass; full namespace immutability remains open |
+| Linux/Android | Disposable Linux environment; Rust host tests, Kotlin/JVM integration, Android builds and generated-call execution | Separate canonical inputs, cold networkless build/runtime, protected base, journal and disposal pass; writable workspace/cache metadata remain explicit state pending final acceptance reconciliation |
 | macOS/iOS | Isolated environment on Apple hardware; Xcode, iOS-device and simulator-arm64 builds, generated-call execution and packaged deployment-floor inspection | No compliant runner established |
 
 The owner approved splitting the work on 2026-10-10. Each lane must satisfy
@@ -60,6 +60,61 @@ gate remain blocked until both lanes and all binding acceptance conditions
 are complete.
 
 ## Comments
+
+- 2026-10-10: Runtime failure follow-up: guest had13GiB available RAM and
+  4.3GiB free scratch, no retained emulator/ADB process observed. Added
+  observable transport/boot/SDK/package stage markers. Same bounded collector
+  and unchanged limits subsequently passed fresh runtime19.159s, live resource
+  assertions and instrumentation; peak3.2G zero swap, cleanup confirmed.
+  Earlier timeout/segfault cause remains unresolved, no automatic retry or
+  claimed fix. Guest synthetic64MiB+1 output test failed explicitly and
+  retained exactly67108864bytes; synthetic file removed. Current supervisors
+  checksum-verified and boot unit installed/verified; loopback condition skips
+  networked prep with Result=exec-condition/inactive. No new cold boot-wrapper
+  proof yet. Changes uncommitted, lane acceptance remains open.
+
+- 2026-10-10: Owner approved resource-check CLI and bounded output test
+  seams, 64MiB/replay with explicit overflow failure. Added live cgroup v2/
+  rlimit checker, bounded process-output collector and boot wrapper; CLI
+  intended red->green tests pass. Both profiles pass direct real guest
+  observation. Actual fresh-scratch build passes live limits, canonical
+  checks and69/69tasks4m24s, AAR unchanged; APK
+  `cd3ab60c801a021caf4468663402f2fdc95a3c4362110aa3a4da9816a424effc`.
+  Following actual runtime passes live resource assertions but times out
+  after300s; emulator reports boot in18098ms. Combined proof collector retained
+  8689bytes. Comparison runtime without collector segfaults before ADB
+  connection. Cause not established; no retry/limit change. New boot wrapper
+  not installed/cold-clone tested. Integrated runtime/collector acceptance
+  incomplete, prior cold-clone evidence unaffected. Changes uncommitted.
+
+- 2026-10-10: Owner selected Linux acceptance/gap reconciliation first.
+  Re-read current build/runtime/clone/bootstrap controls against acceptance:
+  canonical source/config/registry/downloaded artifacts are read-only;
+  writable project shells and cache coordination metadata are assigned
+  scratch state, so their writability alone is not a violation of the
+  source-read-only/scratch-only clause. Do not demand an impossible read-only
+  Gradle project directory as an additional acceptance condition.
+  Networkless disposable VM, empty environment plus allowlist, protected
+  base and disposal have observed proof. Build/runtime resource settings are
+  explicit, but current replay does not self-assert effective cgroup/rlimit
+  values; prior owner resource probes are separate evidence. Runtime artifacts
+  have a 16GiB volume bound, build scratch 6GiB, but boot proof's
+  journal/console output lacks a repository-defined log-retention ceiling.
+  Next bounded increment: verify effective build/runtime controls and
+  establish explicit bounded retained proof logs. No lane acceptance declared
+  yet; Apple work paused, canonical replay remains valid.
+
+- 2026-10-10: Committed canonical input/lifecycle evidence as `b3ad7df`.
+  Rechecked local Apple host for the next lane: `df -h .` reports 6.1GiB
+  available (97% capacity), `hw.memsize` is 8,589,934,592 bytes, Xcode27.0
+  build27A266a installed. No guest creation or iOS binding build attempted.
+  This is less disk headroom than the prior feasibility assessment; no
+  compliant local macOS VM runner is established. Apple infrastructure/storage
+  choice is owner-only; do not delete host data or provision a paid service
+  without explicit approval. Linux canonical inputs are now enforced
+  read-only; workspace shells/cache coordination state are writable scratch,
+  requiring explicit final acceptance reconciliation, not an unqualified
+  immutable-workspace claim.
 
 - 2026-10-10: Owner executed explicitly authorized canonical disposal:
   boot log and both image hashes passed; all three raw-journal input markers

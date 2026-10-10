@@ -63,6 +63,7 @@ sudo systemd-run --unit=cairn-binding-proof-build \
 set -euo pipefail
 mkdir -p "$ANDROID_USER_HOME"
 cd /srv/cairn-generator-scratch/android-interop
+/usr/bin/python3 /opt/cairn-binding-seeds/final-image-inputs-e75437d/check-resources.py build
 
 /usr/bin/python3 - <<'PROBE'
 import errno
