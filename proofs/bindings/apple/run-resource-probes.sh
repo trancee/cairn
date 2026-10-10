@@ -55,6 +55,8 @@ chown "$uid:20" "$volume"
 chmod 0700 "$volume"
 "$python" -B -m unittest discover -s "$scripts" -p 'test_uid_supervisor.py'
 mkdir "$work/inputs"
+mkdir "$work/proof-output"
+chmod 0700 "$work/proof-output"
 cp "$scripts/probe.py" "$work/inputs/probe.py"
 cp "$scripts/probe.sb" "$work/probe.sb"
 printf 'benign sentinel\n' > "$work/host-sentinel"
@@ -63,15 +65,12 @@ chmod 0644 "$work/inputs/probe.py" "$work/probe.sb" "$work/host-sentinel"
 cat > "$work/command.sh" <<'COMMAND'
 #!/usr/bin/env bash
 set -euo pipefail
-exec /usr/bin/sudo -u cairnbenignprobe /usr/bin/env -i \
-  PATH=/usr/bin:/bin HOME="$1/scratch" TMPDIR="$1/scratch" \
+exec "$3" -I "$2/uid-supervisor.py" --seconds 30 "$1/proof-output/sandbox.log" \
   /usr/bin/sandbox-exec -D "INPUTS=$1/inputs" -D "SCRATCH=$1/scratch" \
   -D "SENTINEL=$1/host-sentinel" -f "$2/probe.sb" \
   "$3" -I "$1/inputs/probe.py" "$1/scratch" "$1/inputs" "$1/host-sentinel" "$4" "$5" --build-limits
 COMMAND
 chmod 0644 "$work/command.sh"
-"$python" -I "$scripts/launch-probes.py" "$work" "$work" "$python" \
-  | tee "$output/dedicated-sandbox.log"
 cp "$scripts/probe-resources.py" "$work/probe-resources.py"
 chmod 0644 "$work/probe-resources.py"
 if sudo -u "$user" /usr/bin/env -i PATH=/usr/bin:/bin HOME="$volume" TMPDIR="$volume" \
@@ -92,4 +91,7 @@ mounted=1
 diskutil enableOwnership "$volume"
 chown "$uid:20" "$volume"
 chmod 0700 "$volume"
+"$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
+"$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
+  | tee "$output/dedicated-sandbox.log"
 "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"

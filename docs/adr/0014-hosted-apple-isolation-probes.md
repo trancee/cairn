@@ -243,3 +243,15 @@ filesystem capacity was 8,245,960,704 bytes. The approved budget is a ceiling,
 not a guarantee of 8 GiB usable payload storage. Require exactly 8 GiB image
 size, full backing and positive filesystem capacity no greater than that
 ceiling; record actual usable bytes. No budget is increased.
+
+The corrected full-reservation probe passed
+[run 38093725410](https://github.com/trancee/cairn/actions/runs/38093725410)
+at `0a9f6ee`. Composition then failed as intended in
+[run 38093862154](https://github.com/trancee/cairn/actions/runs/38093862154):
+the sudo-only sandbox child still had unlimited CPU.
+Route the sandbox command through the dedicated-UID supervisor, with its
+private root proof-output directory, after mounting verified 8 GiB scratch.
+Require the sandbox child to observe all approved rlimits before the existing
+input/network/IPC/symlink checks. Recheck scratch backing/capacity after those
+probes and require UID cleanup. This still uses the initial broad-system-read
+policy; compiler compatibility and complete read-boundary acceptance remain open.
