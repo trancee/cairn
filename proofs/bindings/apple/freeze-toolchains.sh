@@ -16,7 +16,8 @@ ditto "$rust" "$destination/rust"
 ditto "$daemon" "$destination/daemon-jdk"
 ditto "$compiler" "$destination/compiler-jdk"
 chown -R root:wheel "$destination"
-chmod -R a-w "$destination"
+chmod -R a+rX,a-w "$destination"
+ls -ld "$destination" "$destination/rust" "$destination/rust/bin" "$destination/rust/bin/rustc"
 (cd "$destination" && /usr/bin/find . -type f -print0 \
   | LC_ALL=C /usr/bin/sort -z | /usr/bin/xargs -0 shasum -a 256) \
   > "$prepared/toolchains.sha256"

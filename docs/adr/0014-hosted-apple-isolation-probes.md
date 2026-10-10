@@ -289,3 +289,12 @@ execution. The shell also reported an inherited working directory outside
 the allowed data roots. Permit only the fixed root-owned tool seed subtree
 and change to the dedicated account's scratch before exec; do not widen
 reads to the workflow checkout or all of `/opt`.
+
+The assigned-root replay
+[run 38094699822](https://github.com/trancee/cairn/actions/runs/38094699822)
+still rejected Rust startup after the cwd correction. The copied Rustup
+tool permissions must not retain owner-only readability after root ownership
+transfer. Normalize tool copies to readable/traversable but non-writable
+permissions, preserving existing execute bits, and require a dedicated-UID
+DAC executable-access control before entering the sandbox. Record the tool
+path modes; do not silently relax the read policy further.

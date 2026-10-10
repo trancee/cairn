@@ -98,6 +98,7 @@ if [ "$#" -eq 2 ]; then
   tools=$2
   test "$tools" = /opt/cairn-apple-tools
   test "$(stat -f %u "$tools")" -eq 0
+  sudo -n -u "$user" /usr/bin/test -x "$tools/rust/bin/rustc"
   cp "$scripts/probe-toolchains.sh" "$work/inputs/probe-toolchains.sh"
   chmod 0644 "$work/inputs/probe-toolchains.sh"
   "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/toolchains.log" \
