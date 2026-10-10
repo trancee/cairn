@@ -9,7 +9,7 @@ if launchctl print "$service" >/dev/null 2>&1; then
 else
   echo 'DIAGNOSTIC: dynamic pager service was not loaded'
 fi
-launchctl print-disabled system | grep -F '"com.apple.dynamic_pager" => true'
+launchctl print-disabled system | grep -E '"com\.apple\.dynamic_pager" => (true|disabled)'
 if launchctl print "$service" >/dev/null 2>&1; then
   echo 'FAIL: dynamic pager remains loaded' >&2
   exit 1

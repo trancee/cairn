@@ -113,3 +113,8 @@ build cell, the current hosted-only root step disables/unloads
 `com.apple.dynamic_pager`, verifies disabled/not-loaded state and then checks
 zero swap. Existing nonzero swap fails rather than being deleted. Only the
 disposable hosted VM is affected; local swap remains unchanged.
+The first swap-control run's empty log exposed a workflow-shell bug:
+implicit `bash -e` did not propagate pipeline failure. Explicit `shell: bash`
+enables GitHub's `-o pipefail` invocation. Do not accept that run's green job
+as swap-control proof. Current service checks accept the native disabled-state
+display (`disabled` or `true`) and require the final explicit success marker.
