@@ -194,3 +194,16 @@ seconds before returning. It also rejects pre-existing UID processes and
 requires a root-owned private proof-output directory. Signal interruption
 cleans the owned collector group and UID; uncatchable root `SIGKILL` and
 whole-VM termination remain outside this in-process cleanup guarantee.
+
+The detached-child correction passed
+[run 38093092451](https://github.com/trancee/cairn/actions/runs/38093092451)
+at `afdb188`. The next composed-limit regression failed as intended in
+[run 38093180086](https://github.com/trancee/cairn/actions/runs/38093180086):
+the sudo-launched child inherited unlimited CPU/file limits, a larger process
+ceiling and supplementary groups. Replace sudo child launch with a trusted
+root setup that fixes hard/soft CPU 900s, NPROC 128, per-file 64 MiB and
+zero core-file limits before dropping all supplementary groups and UID/GID.
+Exec receives only PATH/HOME/TMPDIR and a fixed UTF-8 LANG. Apple runtime's
+automatically inserted `__CF_USER_TEXT_ENCODING` is distinct from inherited
+workflow environment; the child-environment assertion excludes that key.
+Whole-VM RAM/swap and aggregate scratch remain separate gates.

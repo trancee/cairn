@@ -4,11 +4,32 @@
 import argparse
 import os
 import pwd
+import resource
 import signal
 import subprocess
 import sys
 import time
 from pathlib import Path
+
+
+def launch_child(command):
+    if os.geteuid() != 0 or os.environ.get("GITHUB_ACTIONS") != "true" or not command:
+        raise SystemExit("FAIL: child setup requires the hosted root supervisor")
+    account = pwd.getpwnam("cairnbenignprobe")
+    if account.pw_uid != 59000 or account.pw_gid != 20 or account.pw_shell != "/usr/bin/false":
+        raise SystemExit("FAIL: child account identity does not match")
+    for limit, value in (
+        (resource.RLIMIT_CPU, 900), (resource.RLIMIT_NPROC, 128),
+        (resource.RLIMIT_FSIZE, 64 * 1024**2), (resource.RLIMIT_CORE, 0),
+    ):
+        resource.setrlimit(limit, (value, value))
+    os.setgroups([])
+    os.setgid(account.pw_gid)
+    os.setuid(account.pw_uid)
+    os.execvpe(command[0], command, {
+        "PATH": "/usr/bin:/bin", "HOME": account.pw_dir,
+        "TMPDIR": account.pw_dir, "LANG": "en_US.UTF-8",
+    })
 
 
 def account_processes(uid):
@@ -46,6 +67,9 @@ def interrupted(number, _frame):
 
 
 def main():
+    if sys.argv[1:2] == ["--child"]:
+        launch_child(sys.argv[2:])
+        return 1
     parser = argparse.ArgumentParser()
     parser.add_argument("--seconds", type=float, default=30)
     parser.add_argument("output")
@@ -67,9 +91,8 @@ def main():
     collector = Path(__file__).parent.parent / "linux-android" / "bounded-proof.py"
     process = subprocess.Popen([
         sys.executable, str(collector), "--seconds", str(arguments.seconds),
-        arguments.output, "/usr/bin/sudo", "-n", "-u", account.pw_name,
-        "/usr/bin/env", "-i", "PATH=/usr/bin:/bin",
-        f"HOME={account.pw_dir}", f"TMPDIR={account.pw_dir}", *arguments.command,
+        arguments.output, sys.executable, "-I", str(Path(__file__).resolve()),
+        "--child", *arguments.command,
     ], start_new_session=True)
     try:
         return process.wait()

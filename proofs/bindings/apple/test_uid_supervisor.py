@@ -21,7 +21,8 @@ class DedicatedSupervisorTest(unittest.TestCase):
             "'processes':resource.getrlimit(resource.RLIMIT_NPROC),"
             "'file':resource.getrlimit(resource.RLIMIT_FSIZE),"
             "'core':resource.getrlimit(resource.RLIMIT_CORE),"
-            "'environment':sorted(os.environ)}))"
+            "'environment':sorted(k for k in os.environ "
+            "if k != '__CF_USER_TEXT_ENCODING')}))"
         )
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "proof.log"
@@ -37,7 +38,7 @@ class DedicatedSupervisorTest(unittest.TestCase):
                 "uid": 59000, "gid": 20, "groups": [],
                 "cpu": [900, 900], "processes": [128, 128],
                 "file": [67108864, 67108864], "core": [0, 0],
-                "environment": ["HOME", "PATH", "TMPDIR"],
+                "environment": ["HOME", "LANG", "PATH", "TMPDIR"],
             })
 
     def test_deadline_removes_detached_descendant_and_preserves_output(self):
