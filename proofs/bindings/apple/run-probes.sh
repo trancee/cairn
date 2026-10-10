@@ -24,9 +24,10 @@ set -euo pipefail
 exec /usr/bin/env -i PATH=/usr/bin:/bin HOME="$1/scratch" TMPDIR="$1/scratch" \
   /usr/bin/sandbox-exec -D "INPUTS=$1/inputs" -D "SCRATCH=$1/scratch" \
   -D "SENTINEL=$1/host-sentinel" -f "$2/probe.sb" \
-  "$3" -I "$1/inputs/probe.py" "$1/scratch" "$1/inputs" "$1/host-sentinel"
+  "$3" -I "$1/inputs/probe.py" "$1/scratch" "$1/inputs" "$1/host-sentinel" "$4" "$5"
 COMMAND
-if bash "$output/command.sh" "$output" "$scripts" "$python" > "$output/probe.log" 2>&1; then
+if "$python" -I "$scripts/launch-probes.py" "$output" "$scripts" "$python" \
+  > "$output/probe.log" 2>&1; then
   cat "$output/probe.log"
 else
   result=$?

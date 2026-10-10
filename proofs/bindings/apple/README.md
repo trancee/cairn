@@ -12,8 +12,11 @@ bash proofs/bindings/apple/run-probes.sh /absolute/unused/probe-output
 
 The output directory must not exist. Logs, environment observations and SHA-256
 checksums remain there after success or failure. The workload checks input
-write denial, a designated host sentinel read, network bind denial, child
-inheritance, writable scratch and a 1 MiB per-file ceiling.
+write denial, a designated host sentinel read, network bind/outbound TCP,
+Unix-socket IPC, scratch symlink escape denial, child inheritance,
+writable scratch and a 1 MiB per-file ceiling. TCP/Unix fixtures first
+connect outside the sandbox; the supervisor owns/closes them.
+Use a short output path so the Unix socket pathname remains below 104 bytes.
 
 The unprotected CLI went red on allowed input mutation. The protected local
 CLI passed. An initial narrow read profile aborted process startup; the current

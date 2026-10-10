@@ -24,10 +24,13 @@ the initial authorized run before the new workflow exists on the default branch.
 
 Invoke a native sandbox with an empty environment and explicit scratch/input
 paths. Check denied input writes, a designated benign host sentinel read,
-network bind, inherited child write denial, permitted scratch writes and a
+network bind/outbound TCP, Unix IPC, scratch symlink escapes, inherited
+child write denial, permitted scratch writes and a
 1 MiB per-file limit. System reads are allowed; reads of other `/Users` data
 are denied. This is not a complete filesystem-read allowlist or proof of all
-network operations. Narrow system-read allowlisting aborted even `/bin/echo`
+network operations. TCP/Unix listeners are benign supervisor-owned fixtures;
+unsandboxed controls connect first so missing listeners cannot explain denial.
+Narrow system-read allowlisting aborted even `/bin/echo`
 locally; widening system reads permits these initial probes but does not
 authorize target-controlled work.
 

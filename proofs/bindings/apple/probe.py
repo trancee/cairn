@@ -26,6 +26,18 @@ def main():
     denied("host sentinel read denied", sentinel.read_bytes)
     with socket.socket() as connection:
         denied("network bind denied", lambda: connection.bind(("127.0.0.1", 0)))
+    with socket.socket() as connection:
+        denied("outbound TCP connect denied",
+               lambda: connection.connect(("127.0.0.1", int(sys.argv[4]))))
+    with socket.socket(socket.AF_UNIX) as connection:
+        denied("Unix socket IPC denied", lambda: connection.connect(sys.argv[5]))
+    escape = scratch / "input-escape"
+    escape.symlink_to(inputs, target_is_directory=True)
+    denied("scratch symlink input mutation denied",
+           lambda: (escape / "symlink-write").write_text("probe"))
+    read_escape = scratch / "sentinel-escape"
+    read_escape.symlink_to(sentinel)
+    denied("scratch symlink host read denied", read_escape.read_bytes)
     output = scratch / "allowed"
     output.write_text("scratch")
     assert output.read_text() == "scratch"
