@@ -60,8 +60,9 @@ chmod 0700 "$work/proof-output"
 cp "$scripts/probe.py" "$work/inputs/probe.py"
 cp "$scripts/probe.sb" "$work/probe.sb"
 printf 'benign sentinel\n' > "$work/host-sentinel"
+printf 'benign unlisted host data\n' > "$work/host-unlisted"
 chmod 0755 "$work/inputs"
-chmod 0644 "$work/inputs/probe.py" "$work/probe.sb" "$work/host-sentinel"
+chmod 0644 "$work/inputs/probe.py" "$work/probe.sb" "$work/host-sentinel" "$work/host-unlisted"
 cat > "$work/command.sh" <<'COMMAND'
 #!/usr/bin/env bash
 set -euo pipefail

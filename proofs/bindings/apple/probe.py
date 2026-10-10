@@ -32,6 +32,8 @@ def main():
                 raise SystemExit(f"FAIL: sandbox child limit {limit} is {observed}, "
                                  f"expected {(expected, expected)}")
         print("PASS: sandbox child inherits approved build limits", flush=True)
+        denied("unlisted host file read denied",
+               sentinel.with_name("host-unlisted").read_bytes)
     denied("input mutation denied", lambda: (inputs / "write-probe").write_text("probe"))
     denied("host sentinel read denied", sentinel.read_bytes)
     with socket.socket() as connection:
