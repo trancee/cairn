@@ -5,7 +5,8 @@ if [ "${GITHUB_ACTIONS:-}" != true ]; then
   exit 2
 fi
 test "$(id -u)" -eq 0
-test "$#" -eq 1
+test "$#" -ge 1
+test "$#" -le 2
 output=$1
 test -d "$output"
 scripts="$(cd "$(dirname "$0")" && pwd -P)"
@@ -93,6 +94,17 @@ diskutil enableOwnership "$volume"
 chown "$uid:20" "$volume"
 chmod 0700 "$volume"
 "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
+if [ "$#" -eq 2 ]; then
+  tools=$2
+  test "$tools" = /opt/cairn-apple-tools
+  test "$(stat -f %u "$tools")" -eq 0
+  cp "$scripts/probe-toolchains.sh" "$work/inputs/probe-toolchains.sh"
+  chmod 0644 "$work/inputs/probe-toolchains.sh"
+  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/toolchains.log" \
+    /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+    -f "$work/build.sb" /bin/bash "$work/inputs/probe-toolchains.sh" "$tools"
+  "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
+fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
   | tee "$output/dedicated-sandbox.log"
 "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"

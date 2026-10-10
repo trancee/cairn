@@ -269,3 +269,15 @@ additional dyld-cache paths or read suboperations had not fixed it.
 Local CLI regressions cover startup and readable data outside named roots.
 Hosted composition must still pass; compiler-required IPC is not authorized
 by this read-policy change.
+
+Named read-policy composition passed
+[run 38094262857](https://github.com/trancee/cairn/actions/runs/38094262857)
+at `9eeba17`; all eight retained checksums passed.
+The authorized preparation workflow next copies only the selected Rust,
+Gradle and JDK tools into root-owned read-only `/opt/cairn-apple-tools` and
+hashes their regular files. It probes version commands inside the bounded
+UID/sandbox/scratch cell, then requires unchanged tool hashes. This does not
+configure a Gradle project, compile the fixture, freeze Maven/Native caches
+or establish daemon IPC compatibility. The initial read policy must reject
+the new unlisted tool root; admit only that assigned root once the negative
+startup result is observed, not all of `/opt`.
