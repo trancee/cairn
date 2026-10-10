@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
-test "${GITHUB_ACTIONS:-}" = true
+if [ "${GITHUB_ACTIONS:-}" != true ]; then
+  echo 'FAIL: resource probes require the authorized hosted job environment' >&2
+  exit 2
+fi
 test "$(id -u)" -eq 0
 test "$#" -eq 1
 output=$1

@@ -36,8 +36,11 @@ jobs:
         if: always()
         run: |
           result=0
-          sudo -n /bin/bash proofs/bindings/apple/run-resource-probes.sh \
-            "$RUNNER_TEMP/apple-probe" || result=$?
+          sudo -n /usr/bin/env GITHUB_ACTIONS=true \
+            /bin/bash proofs/bindings/apple/run-resource-probes.sh \
+            "$RUNNER_TEMP/apple-probe" 2>&1 \
+            | tee "$RUNNER_TEMP/apple-probe/resource-setup.log" || result=$?
+          (cd "$RUNNER_TEMP/apple-probe" && shasum -a 256 resource-setup.log >> SHA256SUMS)
           if [ -f "$RUNNER_TEMP/apple-probe/resources.log" ]; then
             (cd "$RUNNER_TEMP/apple-probe" && shasum -a 256 resources.log >> SHA256SUMS)
           fi
