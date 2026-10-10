@@ -15,8 +15,14 @@ from pathlib import Path
 class DedicatedSupervisorTest(unittest.TestCase):
     def test_child_receives_approved_limits_and_only_dedicated_identity(self):
         program = (
-            "import json,os,resource; print(json.dumps({"
-            "'uid':os.getuid(),'gid':os.getgid(),'groups':os.getgroups(),"
+            "import ctypes,json,os,resource; "
+            "libc=ctypes.CDLL(None,use_errno=True); "
+            "count=libc.getgroups(0,None); "
+            "assert count >= 0,ctypes.get_errno(); "
+            "groups=(ctypes.c_uint32*count)(); "
+            "assert libc.getgroups(count,groups)==count,ctypes.get_errno(); "
+            "print(json.dumps({"
+            "'uid':os.getuid(),'gid':os.getgid(),'groups':list(groups),"
             "'cpu':resource.getrlimit(resource.RLIMIT_CPU),"
             "'processes':resource.getrlimit(resource.RLIMIT_NPROC),"
             "'file':resource.getrlimit(resource.RLIMIT_FSIZE),"
@@ -35,7 +41,7 @@ class DedicatedSupervisorTest(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(json.loads(output.read_text()), {
-                "uid": 59000, "gid": 20, "groups": [],
+                "uid": 59000, "gid": 20, "groups": [20],
                 "cpu": [900, 900], "processes": [128, 128],
                 "file": [67108864, 67108864], "core": [0, 0],
                 "environment": ["HOME", "LANG", "PATH", "TMPDIR"],

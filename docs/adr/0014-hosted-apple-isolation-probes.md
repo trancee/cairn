@@ -207,3 +207,12 @@ Exec receives only PATH/HOME/TMPDIR and a fixed UTF-8 LANG. Apple runtime's
 automatically inserted `__CF_USER_TEXT_ENCODING` is distinct from inherited
 workflow environment; the child-environment assertion excludes that key.
 Whole-VM RAM/swap and aggregate scratch remain separate gates.
+
+The first composed-limit replay
+[run 38093275298](https://github.com/trancee/cairn/actions/runs/38093275298)
+verified the requested rlimits and explicit environment but failed the Python
+group-list assertion. Darwin's `getgroups(2)` documentation states that its
+unlimited variant returns directory membership, not the access list modified
+by `setgroups`. The corrected consumer uses libc's POSIX access-list interface:
+require only primary GID 20 and no supplementary groups. This replaces an
+invalid measurement, not the identity-isolation requirement.
