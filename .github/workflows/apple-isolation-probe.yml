@@ -22,6 +22,15 @@ jobs:
           persist-credentials: false
       - name: Test benign sandbox boundaries
         run: bash proofs/bindings/apple/run-probes.sh "$RUNNER_TEMP/apple-probe"
+      - name: Test candidate hard memory limit
+        run: |
+          python="$(xcrun --find python3)"
+          result=0
+          "$python" -I proofs/bindings/apple/probe-memory.py \
+            > "$RUNNER_TEMP/apple-probe/memory.log" 2>&1 || result=$?
+          cat "$RUNNER_TEMP/apple-probe/memory.log"
+          (cd "$RUNNER_TEMP/apple-probe" && shasum -a 256 memory.log >> SHA256SUMS)
+          exit "$result"
       - name: Retain probe diagnostics
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

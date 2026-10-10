@@ -28,3 +28,9 @@ memory/CPU/process limits or Xcode/Kotlin compatibility.
 standard `macos-26` runner, with a 10-minute job timeout and seven-day artifacts.
 No secrets, signing, dependencies or target-controlled build are involved.
 Hosted results must be observed before claiming any hosted probe passed.
+
+The hosted resource slice first runs `probe-memory.py`: request a 32 MiB
+address-space limit and attempt a bounded 64 MiB allocation. If allocation
+succeeds, the job fails and retains checksummed `memory.log`. This is a
+candidate-control test, not an accepted memory budget. Wider dedicated-user/
+disk/process probes remain pending; no target build is authorized.

@@ -67,3 +67,12 @@ environment: ARM64 macOS 26.6.2, Xcode 26.6; `df` reported 95 GiB available,
 not a guaranteed scratch allocation. This differs from research's 14 GB
 runner specification and must not be promoted to an enforced budget.
 Full runner acceptance and target-controlled builds remain gated.
+
+The owner authorized hosted-only benign resource probes with an ephemeral
+unprivileged account and fixed scratch. First test the memory boundary before
+implementing that wider setup: request a 32 MiB `RLIMIT_AS`, then attempt a
+bounded 64 MiB allocation. Failure to enforce the limit fails the job and
+retains `memory.log`; it must not become an accepted memory control.
+Darwin exposes `RLIMIT_AS` with the same constant as `RLIMIT_RSS` locally,
+and its `setrlimit` manual describes RSS as memory-pressure preference.
+Hosted enforcement therefore remains an empirical question, not a guarantee.
