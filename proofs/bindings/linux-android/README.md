@@ -83,9 +83,25 @@ sudo bash /srv/cairn-generator-scratch/android-interop/build-offline.sh
 It forces the three proof tasks to rerun in one offline, allowlisted
 systemd unit, executes the JVM assertions and checks the delivered native
 entries. It does not install packages, boot an emulator or retry online.
-Source and caches are still writable inside bounded scratch; final
-read-only-source/cache enforcement and disposable-image acceptance remain
-open. A dedicated eight-worker saturation probe measured 4.008 effective CPU
+The build now mounts all Gradle build/settings/properties files, the Rust
+crate tree and consumer source trees read-only. Cargo's entire registry
+(source/archive/index) and Gradle's downloaded `files-2.1` artifacts are
+read-only too. The unit checks representative existing inputs for `EROFS`
+before invoking Gradle; an unexpectedly writable input fails the proof.
+The strengthened forced build passed with all 69 actionable tasks executed
+and unchanged AAR/APK hashes. Original source hashes were unchanged.
+
+Gradle 9.7.0 rejected whole-project-directory read-only mounts because it
+requires writable project directories during configuration. Project-directory
+shells therefore remain writable inside bounded scratch, with the actual
+configuration files and source subtrees mounted read-only. Named
+`.gradle`, `.kotlin` and module/root `build` directories are writable.
+Cargo target outputs and cache coordination/Gradle metadata remain writable
+state; this is downloaded-input immutability, not an entirely immutable
+cache namespace or a complete immutable project namespace. The root-owned
+generator/toolchain sources remain protected by `ProtectSystem=strict`.
+Final disposable-image and full namespace acceptance remain open.
+A dedicated eight-worker saturation probe measured 4.008 effective CPU
 cores under the exact 400% quota; see the runner evidence. Implausible
 historical systemd memory peaks are not accepted.
 

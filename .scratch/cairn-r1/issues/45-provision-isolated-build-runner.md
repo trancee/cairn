@@ -185,3 +185,26 @@ are complete.
   CPU quota enforcement is no longer an unmeasured gate for this preparation
   setup. Final read-only-source/cache enforcement, runtime network isolation,
   disposable-image reproduction and macOS acceptance remain open.
+
+- 2026-10-10: The build recipe now uses read-only mounts for Gradle
+  configuration files, Rust crate/lockfile and consumer source trees,
+  Cargo registry source/archive/index and Gradle downloaded artifact files.
+  A probe verified `EROFS` on existing inputs and writable named output
+  directories. Whole-project read-only mounts failed Gradle 9.7.0's
+  writable-project-directory configuration check; the actual input files
+  and source subtrees were mounted individually instead. Project shells,
+  coordination/metadata state and scratch outputs remain writable.
+  This does not silently waive the final immutable-namespace gate.
+
+  The strengthened `build-offline.sh` includes an input-write-denial
+  assertion before Gradle and passed directly over SSH with 69/69 tasks
+  executed, 11s build time, 12.040s service runtime and 36.741s aggregate
+  CPU. Both AAR/APK hashes matched earlier evidence. All original source
+  hashes except the intentionally updated script remained unchanged.
+  Exact script SHA-256 is
+  `9a53e64fdf898ed5ddd3ab7998d369e3dbca957491f0fa7d560e48d70563577b`;
+  a root-owned copy is retained under
+  `/opt/cairn-binding-seeds/readonly-input-proof/`.
+  This used retained Cargo outputs/dependency caches, not a fresh final VM.
+  Final cache/project namespace immutability, offline runtime isolation,
+  disposable-image reproduction and Apple runner acceptance remain open.

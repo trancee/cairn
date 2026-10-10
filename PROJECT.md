@@ -21,6 +21,10 @@ claims below are unchanged.
 The [bounded allocator evidence](proofs/bindings/linux-android/ALLOCATOR-AUDIT.md)
 covers the fixture and delivered Linux/Android runtime ELFs, not Apple or
 future dependency graphs.
+The standalone build script now self-checks read-only actual source,
+configuration and downloaded dependency mounts; its forced 69-task build
+passed with unchanged artifacts. Writable Gradle project shells/metadata and
+retained outputs remain explicit limitations, not final runner acceptance.
 
 ## Verified profile
 

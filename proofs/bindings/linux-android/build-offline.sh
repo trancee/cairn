@@ -11,6 +11,10 @@ if [ "$source_directory" != /srv/cairn-generator-scratch/android-interop ]; then
   exit 2
 fi
 
+for directory in .gradle .kotlin build sdk/build consumer/build androidConsumer/build; do
+  sudo install -d -o cairn-build -g cairn-build -m 0755 "$source_directory/$directory"
+done
+
 sudo systemd-run --unit=cairn-binding-proof-build \
   --wait --pipe --collect \
   -p User=cairn-build -p Group=cairn-build \
@@ -24,6 +28,8 @@ sudo systemd-run --unit=cairn-binding-proof-build \
   -p 'TemporaryFileSystem=/run:ro' \
   -p InaccessiblePaths=/dev/shm \
   -p ReadWritePaths=/srv/cairn-generator-scratch \
+  -p "ReadOnlyPaths=$source_directory/settings.gradle.kts $source_directory/build.gradle.kts $source_directory/gradle.properties $source_directory/sdk/build.gradle.kts $source_directory/sdk/rust $source_directory/consumer/build.gradle.kts $source_directory/consumer/src $source_directory/androidConsumer/build.gradle.kts $source_directory/androidConsumer/src /srv/cairn-generator-scratch/fixture-cargo/registry /srv/cairn-generator-scratch/kmp-gradle-cache/caches/modules-2/files-2.1" \
+  -p "ReadWritePaths=$source_directory/.gradle $source_directory/.kotlin $source_directory/build $source_directory/sdk/build $source_directory/consumer/build $source_directory/androidConsumer/build" \
   -p MemoryMax=12G -p MemorySwapMax=0 \
   -p TasksMax=256 -p CPUQuota=400% \
   -p RuntimeMaxSec=900 -p TimeoutStopSec=10 \
@@ -44,6 +50,41 @@ sudo systemd-run --unit=cairn-binding-proof-build \
 set -euo pipefail
 mkdir -p "$ANDROID_USER_HOME"
 cd /srv/cairn-generator-scratch/android-interop
+
+/usr/bin/python3 - <<'PROBE'
+import errno
+from pathlib import Path
+
+inputs = [
+    Path("settings.gradle.kts"),
+    Path("build.gradle.kts"),
+    Path("gradle.properties"),
+    Path("sdk/build.gradle.kts"),
+    Path("sdk/rust/Cargo.lock"),
+    Path("sdk/rust/src/lib.rs"),
+    Path("consumer/build.gradle.kts"),
+    Path("consumer/src/jvmMain/kotlin/Smoke.kt"),
+    Path("androidConsumer/build.gradle.kts"),
+    Path("androidConsumer/src/main/AndroidManifest.xml"),
+]
+for directory in [
+    "/srv/cairn-generator-scratch/fixture-cargo/registry/src",
+    "/srv/cairn-generator-scratch/fixture-cargo/registry/cache",
+    "/srv/cairn-generator-scratch/fixture-cargo/registry/index",
+    "/srv/cairn-generator-scratch/kmp-gradle-cache/caches/modules-2/files-2.1",
+]:
+    inputs.append(next(path for path in Path(directory).rglob("*") if path.is_file()))
+for path in inputs:
+    try:
+        with path.open("ab"):
+            pass
+    except OSError as error:
+        if error.errno != errno.EROFS:
+            raise
+    else:
+        raise SystemExit(f"Input is writable: {path}")
+print("PASS: source/configuration and downloaded dependency inputs are read-only")
+PROBE
 
 /opt/cairn-toolchains/gradle-9.7.0/bin/gradle \
   --offline --no-daemon --max-workers=2 --console=plain --rerun-tasks \

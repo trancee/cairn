@@ -201,3 +201,10 @@ then; no protocol implementation is authorized by this split.
   inspected bytes. No runtime replacement or feature change was made.
   This does not attest reproducible upstream builds, Apple allocator/linkage,
   new feature graphs, or overall memory safety. The full ticket remains open.
+
+- 2026-10-10: The strengthened offline build with read-only actual source,
+  configuration and downloaded dependency mounts passed all 69 actionable
+  tasks and the same artifact hashes. Automated input probes require `EROFS`
+  before Gradle. Writable project shells/metadata and retained build outputs
+  remain limitations; see issue 45. No new runtime/platform coverage was
+  claimed from this build-only replay.
