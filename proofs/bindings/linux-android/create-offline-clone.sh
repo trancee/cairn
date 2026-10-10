@@ -41,6 +41,13 @@ disks = [node for node in devices.findall("disk") if node.get("device") == "disk
 assert len(disks) == 1
 disk = disks[0]
 disk.find("source").attrib = {"file": str(directory / "run.qcow2")}
+for existing in list(disk.findall("backingStore")):
+    disk.remove(existing)
+backing = ET.SubElement(disk, "backingStore", {"type": "file"})
+ET.SubElement(backing, "format", {"type": "qcow2"})
+base = ET.SubElement(backing, "source", {"file": str(directory / "base.qcow2")})
+ET.SubElement(base, "seclabel", {"model": "dac", "relabel": "no"})
+ET.SubElement(backing, "backingStore")
 for child in list(devices):
     if child.tag in {"interface", "filesystem", "channel", "hostdev"}:
         devices.remove(child)

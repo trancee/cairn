@@ -237,6 +237,43 @@ now; persistence of that protection across future starts remains unverified.
 Full namespace immutability and final runner
 acceptance are not established by this successful replay.
 
+### Preparing base ownership protection
+
+The creation recipe now explicitly declares the independent backing store and
+sets `<seclabel model='dac' relabel='no'/>` only on its source.
+The [libvirt security-label reference](https://libvirt.org/formatdomain.html#security-label)
+documents per-source overrides. Dynamic SELinux labeling remains enabled;
+overlay ownership handling is unchanged. The owner defined and started the
+corrected clone, then confirmed the base remained `root:qemu 0640` and an
+actual `os.open(..., os.O_WRONLY)` as QEMU failed with `PermissionError`.
+The probe did not truncate or write data. Start-survival and Unix-account
+write denial are verified by supplied output; post-stop ownership/checksum
+remain pending.
+The corrected boot subsequently passed: all 69 actionable tasks executed in
+4m17s, JVM assertions and native packaging passed, and fresh Android
+instrumentation returned code `-1` and its completion marker. Runtime finished
+successfully in 18.468s (reported peak 4.6G, zero swap), followed by the final
+cold-build/runtime PASS. AAR hash again matched; APK SHA-256 was
+`ad7955fc171d47cc7f9604f7dd7c433e09a182473a12e2b34c9dd66709af08a3`.
+The varying debug APK bytes remain unexplained. The reported build-memory
+peak 1.7M is not accepted. This reused the retained VM overlay with newly
+restored tmpfs build inputs and a fresh AVD, not a newly created VM overlay.
+The owner subsequently confirmed `shut off`, base ownership/mode
+`root:qemu 0640` and a passing original base checksum. The targeted DAC
+override therefore survived the observed start/stop cycle without changing
+base bytes. Journal preservation and overlay disposal remain open.
+
+For the existing stopped clone, `protect-base.py INPUT.xml OUTPUT.xml` prepares
+the same override from its inactive XML. It rejects other domain names,
+unexpected disks/paths, networking/sharing/passthrough and an existing
+backing-store override before mutation. The output file must not already
+exist. Run `python3 -B proofs/bindings/linux-android/test_protect_base.py` for
+its behavior tests. The owner's exported inactive XML was transformed and
+`virt-xml-validate OUTPUT.xml domain` passed on Fedora. Definition, live
+permissions and QEMU-account write denial subsequently passed as above;
+noninteractive host sudo remains unavailable. Do not globally disable libvirt
+dynamic ownership or SELinux, and do not discard the retained overlay.
+
 Before the owner-approved shutdown, persistent inputs were saved under
 `/opt/cairn-binding-seeds/final-image-inputs-e75437d/`. Cargo registry and
 Gradle modules archives exclude compiled Cargo outputs. The fixture archive

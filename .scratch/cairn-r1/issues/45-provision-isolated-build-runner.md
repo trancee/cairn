@@ -61,6 +61,53 @@ are complete.
 
 ## Comments
 
+- 2026-10-10: After the protected replay, owner confirms clone `shut off`,
+  base still `root:qemu 0640`, original base checksum OK. Combined with live
+  QEMU-account write denial, targeted base ownership protection survives the
+  observed start/stop cycle and base bytes remain unchanged. Journal
+  preservation/overlay disposal and full namespace/Apple acceptance remain
+  open; correction and follow-up evidence are uncommitted.
+
+- 2026-10-10: Owner supplied corrected boot completion: 69/69 build tasks
+  executed in 4m17s, JVM assertions/native packaging passed; fresh Android
+  instrumentation code `-1` and completion marker passed, followed by final
+  cold-build/runtime PASS. Runtime 18.468s, reported peak4.6G, zero swap.
+  AAR unchanged; APK SHA-256
+  `ad7955fc171d47cc7f9604f7dd7c433e09a182473a12e2b34c9dd66709af08a3`.
+  Debug APK differences remain unexamined; build peak1.7M not accepted.
+  This boot reused retained VM overlay, while scratch/build outputs and AVD
+  were recreated. Live base write denial was already verified; post-stop
+  ownership/checksum and journal/disposal remain pending.
+
+- 2026-10-10: Owner defined the protected XML and started the clone
+  successfully. While running, base remained `root:qemu 0640`; QEMU-account
+  `os.open` with `O_WRONLY` failed with `PermissionError` and printed the
+  required PASS. Probe did not truncate/write data. DAC override survives
+  this start and Unix-account write denial is observed. Corrected boot
+  completion, post-stop permissions/checksum and journal preservation/
+  overlay disposal remain pending.
+
+- 2026-10-10: Retrieved owner's inactive XML over authorized SSH.
+  `protect-base.py` prepares explicit independent base backing-store with
+  DAC-only `relabel='no'`; creation recipe now uses the same override.
+  Intended-behavior tests failed before implementation and passed afterwards,
+  including rejection without mutation of unrelated/unsafe inputs.
+  Generated `~/cairn-proof-protected.xml` on Fedora passed
+  `virt-xml-validate ... domain`. No domain definition/start or write-denial
+  check has run; original overlay retained. Host owner authentication remains
+  the blocker. Changes after `a7b7721` are uncommitted.
+
+- 2026-10-10: Committed cold replay evidence/bootstrap as `a7b7721`.
+  Follow-up host inspection finds no `guestfish` or `virt-copy-out`; Fedora
+  sudo still requires owner authentication. Official libvirt
+  [domain/security-label reference](https://libvirt.org/formatdomain.html#security-label)
+  documents per-source labeling overrides, including a DAC-only
+  `<seclabel model='dac' relabel='no'/>`. Candidate correction is on the
+  base's explicit backing-store source only, retaining dynamic SELinux and
+  normal overlay ownership management. No correction or start-survival test
+  has been executed. Obtain inactive XML before preparing the guarded change;
+  do not globally disable dynamic ownership or SELinux.
+
 - 2026-10-10: With the proof clone stopped, owner restored base ownership/
   mode and supplied `root:qemu 0640`. Current Unix permissions deny QEMU
   writes to the retained base. Durable enforcement across future libvirt
