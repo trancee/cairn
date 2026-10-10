@@ -42,3 +42,11 @@ a disabled-login UID only in the disposable hosted VM, enables ownership on
 a fixed 256 MiB scratch image and runs real capacity/process/CPU exhaustion.
 The user/volume are removed/detached afterwards; diagnostics remain retained.
 These are benign test thresholds, not build budgets or memory acceptance.
+
+The shared Linux collector now supports optional `--seconds` deadlines.
+`python3 -B -m unittest discover -s proofs/bindings/apple -p 'test_*.py'`
+checks partial output retention, closed-output waiting and invalid deadlines.
+The hosted sandbox command uses a 30-second deadline and 64 MiB output cap;
+the collector log is included in the checksummed artifact. Whole-VM memory
+requires 7 GiB RAM and disabled/unloaded dynamic pager with zero swap.
+These controls still need composition into an unprivileged binding-build cell.

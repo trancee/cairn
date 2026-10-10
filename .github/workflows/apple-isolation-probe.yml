@@ -25,7 +25,16 @@ jobs:
         with:
           persist-credentials: false
       - name: Test benign sandbox boundaries
-        run: bash proofs/bindings/apple/run-probes.sh "$RUNNER_TEMP/apple-probe"
+        run: |
+          python="$(xcrun --find python3)"
+          "$python" -B -m unittest discover -s proofs/bindings/apple -p 'test_*.py'
+          result=0
+          "$python" proofs/bindings/linux-android/bounded-proof.py --seconds 30 \
+            "$RUNNER_TEMP/apple-supervisor.log" \
+            /bin/bash proofs/bindings/apple/run-probes.sh "$RUNNER_TEMP/apple-probe" || result=$?
+          cp "$RUNNER_TEMP/apple-supervisor.log" "$RUNNER_TEMP/apple-probe/supervisor.log"
+          (cd "$RUNNER_TEMP/apple-probe" && shasum -a 256 supervisor.log >> SHA256SUMS)
+          exit "$result"
       - name: Verify candidate whole-VM memory envelope
         if: always()
         run: |

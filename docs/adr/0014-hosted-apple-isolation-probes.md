@@ -118,3 +118,11 @@ implicit `bash -e` did not propagate pipeline failure. Explicit `shell: bash`
 enables GitHub's `-o pipefail` invocation. Do not accept that run's green job
 as swap-control proof. Current service checks accept the native disabled-state
 display (`disabled` or `true`) and require the final explicit success marker.
+
+Reuse the Linux collector for Apple output/deadline enforcement: optional
+`--seconds` uses a monotonic deadline, retains partial output and terminates
+the owned command process group on expiry. The default Linux invocation has
+no new deadline. The CLI deadline regression first rejected the missing option,
+then passed with partial output and exit 124. Hosted benign sandbox execution
+uses a 30-second collector deadline and unchanged 64 MiB streamed-output cap.
+This does not yet prove containment of deliberate process-group escape.
