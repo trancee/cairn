@@ -108,6 +108,13 @@ not earlier emulator instability or full Linux runner acceptance.
 
 ## Verified profile
 
+Apple isolation assessment has resumed using benign
+[hosted probes](proofs/bindings/apple/README.md) under
+[ADR 0014](docs/adr/0014-hosted-apple-isolation-probes.md). The unprotected
+local CLI failed intended input denial; sandboxed probes passed locally.
+Hosted execution, full isolation/resource enforcement and binding builds
+remain unverified. No production Apple acceptance is implied.
+
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable
   wire tutorial, contributor validation guide, foundation API reference and

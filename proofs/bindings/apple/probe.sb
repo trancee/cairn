@@ -1,0 +1,13 @@
+(version 1)
+(deny default)
+(allow process-exec)
+(allow process-fork)
+(allow sysctl-read)
+(allow file-read*)
+(deny file-read-data (literal (param "SENTINEL")))
+(deny file-read-data
+  (require-all
+    (subpath "/Users")
+    (require-not (subpath (param "INPUTS")))
+    (require-not (subpath (param "SCRATCH")))))
+(allow file-write* (subpath (param "SCRATCH")) (literal "/dev/null"))

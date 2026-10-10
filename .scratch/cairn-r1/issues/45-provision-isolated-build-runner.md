@@ -61,6 +61,15 @@ are complete.
 
 ## Comments
 
+- 2026-10-10: Owner approved free hosted Apple probe workflow, commit, push
+  and execution. Initial sandbox seam red: unprotected input write succeeds.
+  Protected local probe passes input/sentinel/network/child denial, scratch
+  access and 1 MiB file limit. Narrow system-read profile aborted process
+  launch; current profile permits system reads, denies other `/Users` data
+  and designated sentinel. This is a partial benign probe, not full isolation.
+  Hosted workflow has a 10-minute timeout and seven-day artifacts; no binding
+  build or secrets. See ADR 0014. Hosted result remains unverified.
+
 - 2026-10-10: Owner requested committing verified Linux work and moving to
   Apple. Linux retention integration is complete; intermittent emulator
   diagnosis and final lane acceptance remain explicitly open, not waived or
