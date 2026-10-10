@@ -234,3 +234,12 @@ image. This is an explicit full-backing check, not reliance on image creation
 or apparent host free space. Allocation failure prevents target execution.
 The mounted scratch remains private to the dedicated UID and the image stays
 root-owned. The owner-approved job ceiling is now 30 minutes.
+
+The first reservation replay
+[run 38093628086](https://github.com/trancee/cairn/actions/runs/38093628086)
+proved an exactly 8 GiB fully allocated image, but the test's invented
+16 MiB metadata allowance rejected HFS+'s EFI/partition overhead: usable
+filesystem capacity was 8,245,960,704 bytes. The approved budget is a ceiling,
+not a guarantee of 8 GiB usable payload storage. Require exactly 8 GiB image
+size, full backing and positive filesystem capacity no greater than that
+ceiling; record actual usable bytes. No budget is increased.

@@ -15,8 +15,9 @@ def main():
     capacity = os.statvfs(volume)
     filesystem_bytes = capacity.f_blocks * capacity.f_frsize
     budget = 8 * 1024**3
-    if not budget - 16 * 1024**2 <= filesystem_bytes <= budget:
-        raise SystemExit(f"FAIL: scratch capacity {filesystem_bytes} is not the approved 8 GiB")
+    if image_metadata.st_size != budget or not 0 < filesystem_bytes <= budget:
+        raise SystemExit(f"FAIL: scratch image/capacity {image_metadata.st_size}/"
+                         f"{filesystem_bytes} does not satisfy the 8 GiB ceiling")
     if (image_metadata.st_uid != 0 or image_metadata.st_nlink != 1 or image.is_symlink()
             or not stat.S_ISREG(image_metadata.st_mode)):
         raise SystemExit("FAIL: build scratch image must be an unshared root-owned regular file")
