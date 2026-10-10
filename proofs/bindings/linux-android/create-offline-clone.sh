@@ -7,12 +7,13 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 export LC_ALL=C
 if [ "$#" -gt 1 ]; then
-  echo 'Usage: create-offline-clone.sh [canonical]' >&2
+  echo 'Usage: create-offline-clone.sh [canonical|bounded]' >&2
   exit 2
 fi
 case "${1:-}" in
   '') name=cairn-proof-offline ;;
   canonical) name=cairn-proof-canonical ;;
+  bounded) name=cairn-proof-bounded ;;
   *) echo 'Unknown proof selection' >&2; exit 2 ;;
 esac
 directory="/var/lib/libvirt/images/$name"

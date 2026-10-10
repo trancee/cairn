@@ -55,6 +55,68 @@ file was removed. All current supervisors/runtime/unit files are covered by
 the saved `replay-scripts.sha256` manifest. Per-replay collector behavior and
 individual integrated units are verified, but full networkless boot-wrapper
 execution and reliability acceptance remain open.
+The owner authorized a new independent `cairn-proof-bounded` cold clone.
+`create-offline-clone.sh bounded` preserves previous bases and evidence in a
+new directory; preparation inputs/service readiness were verified before the
+approved prep poweroff request. Host creation/start is pending.
+`preserve-journal.sh bounded` additionally extracts `/var/lib/cairn-proof-logs`
+read-only, validates the saved per-boot output checksum and 64MiB ceiling,
+and requires build/runtime effective-resource and completion markers.
+These new selector paths are syntax-checked, not yet execution-verified.
+No disposal authorization is implied by creating this clone.
+The owner supplied successful bounded-clone boot output:69 tasks executed in
+4m28s, JVM/native packaging and canonical manifest checks passed. AAR hash
+matched; APK hash was
+`9f20309fcc9445073e762bee13c8261f904e9d74b12f0fa045299629d1dbec17`.
+Fresh runtime passed effective resource assertions, startup stages and
+instrumentation in18.675s (reported peak4.5G,zero swap), followed by the final
+bootstrap PASS. Reported build peak1.7M is not accepted. The excerpt omits
+the earlier build-resource assertion; retained bounded-log checksum/size and
+both resource markers still require extraction. New-clone lifecycle checks
+remain pending; the prior emulator failures remain unexplained.
+Subsequent stopped-clone extraction passed: the saved replay checksum and
+64MiB size check, both effective-resource markers, completion marker and all
+canonical input markers are retained. Base/overlay hashes stayed unchanged.
+The exported live XML was independently checked for sole overlay, independent
+base-only DAC override, dynamic SELinux and no network/shares/passthrough/
+channel. Base ownership/write-denial output for this clone has not been
+supplied; it is not inferred from the hash. Bounded evidence is root-only at
+`/var/lib/cairn-proof-evidence/bounded-replay-journal`. Disposal is pending
+separate authorization.
+The owner's subsequent bounded-base check failed: ownership was
+`qemu:qemu 0640` and QEMU could open it for writing. Despite the exported
+DAC-only override and unchanged hashes, durable Unix write denial is not
+established for this new clone. The cause is unresolved. The earlier protected
+clone's passing cycle does not generalize to all newly created clones;
+bounded runner acceptance remains blocked. Keep the stopped overlay intact.
+Controlled synthetic extraction reproduced `root:qemu 0640` becoming
+`qemu:qemu 0640` under guestfish's default libvirt backend. The same synthetic
+image retained `root:qemu 0640` with `LIBGUESTFS_BACKEND=direct`.
+The extraction recipe now explicitly selects direct backend and compares
+ownership/modes as well as bytes before/after both appliance operations.
+This avoids the demonstrated extraction-side ownership change without global
+libvirt/SELinux changes. Corrected full extraction is still pending, and the
+bounded proof's live base permissions cannot be reconstructed from this test.
+The owner then executed the corrected extraction on the stopped bounded
+overlay. Starting base was `root:qemu 0640`; bounded log checksum/size,
+resource/canonical/completion markers, image hashes and before/after
+ownership/mode comparisons all passed. Separate evidence is retained at
+`/var/lib/cairn-proof-evidence/bounded-replay-journal-direct`.
+The extraction-side correction is verified end-to-end; it does not establish
+live base permissions during the original bounded boot. Overlay remains
+retained pending separate disposal authorization.
+An owner-authorized resumed replay on the retained overlay passed all69tasks
+in4m31s and fresh Android instrumentation in18.502s. AAR hash matched; APK was
+`bbc1266053ca8728b0179f8f4d1c34002ebe468f96b3e1cf84e8f2e88a599dec`.
+Owner then observed live base `root:qemu 0640` and QEMU write-open denial,
+followed by shutoff with ownership unchanged. Direct extraction preserved both
+boots' log checksums/64MiB bounds, effective-resource and canonical assertions,
+completion markers, unchanged image bytes and unchanged ownership/modes.
+Evidence is retained at
+`/var/lib/cairn-proof-evidence/bounded-replay-journal-live-verified`.
+This closes the observed live-protection/preservation gap for the resumed
+run, not retroactively for the first bounded boot. Disposal still requires
+approval; earlier intermittent emulator failures remain unresolved.
 
 Gradle/Cargo/Kotlin/Rust/manifest files are imported unchanged from
 `android-source.tar.gz`, SHA-256

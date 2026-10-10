@@ -61,6 +61,115 @@ are complete.
 
 ## Comments
 
+- 2026-10-10: Owner chose to keep the stopped bounded clone and overlay.
+  No bounded domain undefinition or overlay deletion is authorized. Preserve
+  that state and all evidence; bounded disposal remains intentionally pending.
+
+- 2026-10-10: Owner confirms live-verified bounded replay shut off with
+  base still `root:qemu 0640`. Corrected direct extraction passed both
+  per-boot log checksums/64MiB bounds, resource/completion markers, both boots'
+  canonical markers, image hashes and ownership/mode comparison. Separate
+  evidence retained at bounded-replay-journal-live-verified. Combined live/
+  post-stop write protection and extraction preservation are verified for
+  the resumed run; overlay disposal awaits approval. Earlier intermittent
+  emulator failures remain a reliability limitation, not an isolation bypass.
+
+- 2026-10-10: Owner confirms resumed bounded clone live base
+  `root:qemu 0640` and actual QEMU write-open denied. Live protection is now
+  observed for this replay (paused pre-execution output still omitted).
+  Clean shutdown requested for only bounded clone; completion, post-stop
+  permissions/hash and updated replay-log preservation pending.
+
+- 2026-10-10: Owner supplied resumed bounded replay PASS:69/69tasks4m31s,
+  JVM/native packaging/canonical manifest passed, AAR unchanged; APK
+  `bbc1266053ca8728b0179f8f4d1c34002ebe468f96b3e1cf84e8f2e88a599dec`.
+  Runtime effective limits/startup/instrumentation/final marker passed in
+  18.502s,reported peak4.5Gzero swap; build1.6M not accepted.
+  Reused retained overlay, fresh tmpfs outputs/AVD. Supplied excerpt omits
+  paused-start ownership/denial checks, so those remain unconfirmed pending
+  the exact host output. Post-stop preservation pending; earlier sporadic
+  emulator failures unresolved, no new reliability claim.
+
+- 2026-10-10: Owner full corrected direct-backend extraction passed on
+  stopped bounded clone: starting base `root:qemu 0640`, saved bounded-log
+  checksum/size and both resource/final/canonical markers verified,
+  base/overlay hashes unchanged and before/after ownership/mode comparison
+  passed. Evidence retained separately in bounded-replay-journal-direct.
+  Extraction-side ownership fix now verified end-to-end. Original bounded
+  boot's live base permissions remain unverified; no retroactive claim.
+  Overlay retained, disposal still unauthorized; changes uncommitted.
+
+- 2026-10-10: Controlled synthetic comparison passed with
+  `LIBGUESTFS_BACKEND=direct`: same image remained `root:qemu 0640` across
+  appliance launch, unlike default libvirt backend. Extraction recipe now
+  explicitly selects direct backend for each appliance and compares image
+  ownership/modes before/after, alongside hashes. No global SELinux/libvirt
+  change. Full corrected extraction on bounded overlay pending; its live
+  proof-run base protection remains unverified. Synthetic test alone does
+  not retroactively close that gap.
+
+- 2026-10-10: Owner synthetic extraction probe reproduced ownership change:
+  empty64MiB qcow2 began `root:qemu 0640`; `guestfish --ro` with default
+  libvirt backend launched/listed `/dev/sda`, then image was `qemu:qemu 0640`.
+  This proves extraction can independently introduce the DAC write-permission
+  gap despite read-only image access. Diagnostic image retained at
+  `/var/lib/libvirt/images/cairn-ownership-probe-T5xjyNBq/base.qcow2`.
+  It does not establish proof-base live ownership during the bounded run.
+  Next controlled comparison: direct backend on this synthetic image,
+  retaining SELinux and production images unchanged.
+
+- 2026-10-10: Owner supplied another passing bounded-base checksum after
+  requested stopped-base ownership correction; ownership output was not
+  supplied, so correction is not yet verified. Direct Fedora query
+  `guestfish get-backend` returns `libvirt`. Extraction's appliance is
+  therefore a second libvirt-managed domain, independent of the proof VM's
+  per-source DAC override. Extraction-induced ownership change is a candidate
+  cause, not established. Isolate with synthetic image ownership observations
+  before changing the proof VM policy or repeating its build.
+
+- 2026-10-10: Owner's bounded-clone post-stop check found base
+  `qemu:qemu 0640`; QEMU write-open succeeded and probe explicitly failed.
+  Base-specific DAC XML override therefore did not establish durable Unix
+  write denial for this newly created clone. Unchanged image hashes show no
+  observed mutation, not enforced immutability. Prior protected-clone
+  start/stop pass remains limited to that configuration/run. Cause unresolved;
+  bounded runner acceptance blocked, overlay retained, no restart or disposal
+  authorized by this finding.
+
+- 2026-10-10: Owner confirms bounded clone shut off and extraction PASS.
+  Saved replay log checksum matches, extraction's64MiB ceiling check passes,
+  both effective resource markers and final bootstrap marker present.
+  All three canonical input markers retained; base/overlay before-after
+  extraction hashes OK. Assistant checked exported live XML: sole bounded
+  overlay, independent base-specific DAC override, dynamic SELinux and no
+  NIC/shares/hostdev/channel. Supplied excerpt omits ownership/write-denial
+  observations for this clone; those are not inferred from topology/hash.
+  Bounded evidence root-only at bounded-replay-journal. Disposal unauthorized.
+
+- 2026-10-10: Owner supplied bounded-clone cold boot PASS:69/69tasks4m28s,
+  JVM assertions/native packaging and canonical manifest unchanged. AAR
+  unchanged; APK
+  `9f20309fcc9445073e762bee13c8261f904e9d74b12f0fa045299629d1dbec17`.
+  Runtime effective limits explicitly reported (6GiB memory,zero swap,
+  256tasks,four CPUs,240s CPU/20GiB file/core0), startup stages and Android
+  instrumentation/final bootstrap passed. Runtime18.675s,peak4.5Gzero swap;
+  build1.7M not accepted. Excerpt starts after build resource marker; bounded
+  retained log extraction must confirm build marker,checksum and size.
+  New-clone topology/base denial/shutdown/journal/disposal pending.
+  Earlier sporadic emulator failures still unresolved; no reliability fix
+  inferred. New selectors/evidence uncommitted.
+
+- 2026-10-10: Committed resource/output checks as `c159434`. Owner explicitly
+  authorized preparation-guest shutdown and a new independent
+  `cairn-proof-bounded` clone/directory, retaining prior bases/evidence.
+  Persistent canonical/supervisor manifests verified, installed boot service
+  matches saved source and is enabled, proof units inactive. Approved prep
+  poweroff requested. Bounded selector added to clone/extraction recipes and
+  staged on Fedora; extraction will preserve the bounded replay log, check
+  its saved checksum/64MiB ceiling and both live-resource PASS markers.
+  Host clone creation/start awaits owner sudo. New clone disposal not
+  authorized; intermittent emulator failures remain unresolved.
+
 - 2026-10-10: Runtime failure follow-up: guest had13GiB available RAM and
   4.3GiB free scratch, no retained emulator/ADB process observed. Added
   observable transport/boot/SDK/package stage markers. Same bounded collector
