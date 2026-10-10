@@ -6,10 +6,15 @@ import sys
 
 
 limit = 32 * 1024**2
-resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
 print(f"PROBE: requested RLIMIT_AS={limit} bytes", flush=True)
+print(f"PROBE: initial RLIMIT_AS={resource.getrlimit(resource.RLIMIT_AS)}", flush=True)
 print(f"PROBE: RLIMIT_AS aliases RLIMIT_RSS={resource.RLIMIT_AS == resource.RLIMIT_RSS}",
       flush=True)
+try:
+    resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
+except (ValueError, OSError):
+    print("FAIL: Darwin rejected setting the candidate hard memory limit", flush=True)
+    sys.exit(1)
 try:
     allocation = bytearray(64 * 1024**2)
 except MemoryError:

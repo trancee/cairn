@@ -61,6 +61,17 @@ are complete.
 
 ## Comments
 
+- 2026-10-10: Strengthened hosted
+  [run 38089142955](https://github.com/trancee/cairn/actions/runs/38089142955)
+  at `0195d02` passed live TCP/Unix unsandboxed controls plus sandboxed
+  outbound/IPC denial and scratch symlink input-write/host-read denial.
+  Resource [run 38089266646](https://github.com/trancee/cairn/actions/runs/38089266646)
+  at `d85bc60` failed setting a 32 MiB `RLIMIT_AS` (`ValueError`) before its
+  bounded allocation. All downloaded log checksums passed. This is a setup
+  failure, not intended allocation-rejection proof or accepted memory control.
+  Dedicated-account/scratch/process resource setup remains pending; binding
+  builds remain unauthorized.
+
 - 2026-10-10: Free ARM64 hosted
   [Apple probe run 38088954525](https://github.com/trancee/cairn/actions/runs/38088954525)
   at `608dee0` passed in eight seconds. Downloaded environment/probe

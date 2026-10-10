@@ -76,3 +76,9 @@ retains `memory.log`; it must not become an accepted memory control.
 Darwin exposes `RLIMIT_AS` with the same constant as `RLIMIT_RSS` locally,
 and its `setrlimit` manual describes RSS as memory-pressure preference.
 Hosted enforcement therefore remains an empirical question, not a guarantee.
+Hosted [run 38089266646](https://github.com/trancee/cairn/actions/runs/38089266646)
+at `d85bc60` failed while setting the candidate limit (`ValueError`), before
+allocation. Downloaded diagnostic checksums passed. This is an unsupported
+setup result, not proof that an allocation exceeded a successfully applied
+limit. The probe now records initial limits and reports this failure explicitly.
+No process-level hard-memory control or full Apple runner is accepted.
