@@ -27,6 +27,11 @@ jobs:
         run: |
           python="$(xcrun --find python3)"
           result=0
+          sudo -n /usr/bin/env GITHUB_ACTIONS=true \
+            /bin/bash proofs/bindings/apple/disable-hosted-swap.sh \
+            2>&1 | tee "$RUNNER_TEMP/apple-probe/swap-control.log" || result=$?
+          (cd "$RUNNER_TEMP/apple-probe" && shasum -a 256 swap-control.log >> SHA256SUMS)
+          if [ "$result" -ne 0 ]; then exit "$result"; fi
           "$python" -I proofs/bindings/apple/probe-memory.py \
             > "$RUNNER_TEMP/apple-probe/memory.log" 2>&1 || result=$?
           cat "$RUNNER_TEMP/apple-probe/memory.log"

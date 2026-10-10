@@ -107,3 +107,9 @@ against a candidate 7 GiB ceiling and requires zero configured swap. The
 candidate uses the documented standard ARM64 runner resource table, but any
 observed mismatch fails setup rather than silently raising the budget.
 No process-level cap, OOM failure test or swap reconfiguration is implied.
+The initial whole-VM observation at `2958705` matched 7,516,192,768 bytes
+of RAM and zero configured swap. To prevent later dynamic swap growth in a
+build cell, the current hosted-only root step disables/unloads
+`com.apple.dynamic_pager`, verifies disabled/not-loaded state and then checks
+zero swap. Existing nonzero swap fails rather than being deleted. Only the
+disposable hosted VM is affected; local swap remains unchanged.
