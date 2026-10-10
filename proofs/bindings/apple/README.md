@@ -33,4 +33,11 @@ The hosted resource slice first runs `probe-memory.py`: request a 32 MiB
 address-space limit and attempt a bounded 64 MiB allocation. If allocation
 succeeds, the job fails and retains checksummed `memory.log`. This is a
 candidate-control test, not an accepted memory budget. Wider dedicated-user/
-disk/process probes remain pending; no target build is authorized.
+disk/process probes run separately even when memory fails; no target build
+is authorized.
+
+`run-resource-probes.sh` requires root and `GITHUB_ACTIONS=true`; it creates
+a disabled-login UID only in the disposable hosted VM, enables ownership on
+a fixed 256 MiB scratch image and runs real capacity/process/CPU exhaustion.
+The user/volume are removed/detached afterwards; diagnostics remain retained.
+These are benign test thresholds, not build budgets or memory acceptance.

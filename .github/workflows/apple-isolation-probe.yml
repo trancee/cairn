@@ -23,6 +23,7 @@ jobs:
       - name: Test benign sandbox boundaries
         run: bash proofs/bindings/apple/run-probes.sh "$RUNNER_TEMP/apple-probe"
       - name: Test candidate hard memory limit
+        if: always()
         run: |
           python="$(xcrun --find python3)"
           result=0
@@ -30,6 +31,16 @@ jobs:
             > "$RUNNER_TEMP/apple-probe/memory.log" 2>&1 || result=$?
           cat "$RUNNER_TEMP/apple-probe/memory.log"
           (cd "$RUNNER_TEMP/apple-probe" && shasum -a 256 memory.log >> SHA256SUMS)
+          exit "$result"
+      - name: Test dedicated-user disk process and CPU limits
+        if: always()
+        run: |
+          result=0
+          sudo -n /bin/bash proofs/bindings/apple/run-resource-probes.sh \
+            "$RUNNER_TEMP/apple-probe" || result=$?
+          if [ -f "$RUNNER_TEMP/apple-probe/resources.log" ]; then
+            (cd "$RUNNER_TEMP/apple-probe" && shasum -a 256 resources.log >> SHA256SUMS)
+          fi
           exit "$result"
       - name: Retain probe diagnostics
         if: always()

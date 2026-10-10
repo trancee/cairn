@@ -82,3 +82,12 @@ allocation. Downloaded diagnostic checksums passed. This is an unsupported
 setup result, not proof that an allocation exceeded a successfully applied
 limit. The probe now records initial limits and reports this failure explicitly.
 No process-level hard-memory control or full Apple runner is accepted.
+
+Continue independent hosted-only resource probes even while memory fails:
+create a fresh disabled-login UID with no administrator membership, mount a
+fixed 256 MiB HFS+ image with ownership enabled, and run bounded scratch
+exhaustion plus a 16-process UID ceiling and two-second child CPU ceiling.
+An ordinary local filesystem failed the capacity assertion before writes.
+The account is removed and the volume detached after execution; fixture files
+remain only in the disposable hosted VM. This is not yet a generic build
+supervisor, aggregate memory bound or validated whole-process-tree deadline.
