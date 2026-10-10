@@ -208,3 +208,11 @@ then; no protocol implementation is authorized by this split.
   before Gradle. Writable project shells/metadata and retained build outputs
   remain limitations; see issue 45. No new runtime/platform coverage was
   claimed from this build-only replay.
+
+- 2026-10-10: The same Android FFI assertions passed with emulator and ADB
+  together in an externally disconnected network namespace, after explicit
+  route/interface and `ENETUNREACH` checks. The transcript hash matched prior
+  evidence and cleanup was verified. This closes the previous exploratory
+  runtime-network gap for these calls, not final runner disk/disposability,
+  Compose, release, ARM64 hardware or Apple proof. See issue 45 and the
+  fixture README for the new bounded runtime command.

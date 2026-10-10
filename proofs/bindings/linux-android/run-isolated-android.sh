@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$#" -ne 0 ]; then
+  echo 'Usage: sudo bash run-isolated-android.sh' >&2
+  exit 2
+fi
+runtime=/home/builder/cairn-emulator
+install -d -o builder -g builder -m 0700 "$runtime/artifacts"
+install -o builder -g builder -m 0600 \
+  /srv/cairn-generator-scratch/android-interop/androidConsumer/build/outputs/apk/debug/androidConsumer-debug.apk \
+  "$runtime/artifacts/androidConsumer-debug.apk"
+
+systemd-run --unit=cairn-isolated-android-proof --wait --pipe --collect \
+  -p User=builder -p Group=builder -p SupplementaryGroups=kvm \
+  -p ProtectSystem=strict -p ProtectHome=tmpfs \
+  -p "BindPaths=$runtime" -p "ReadWritePaths=$runtime" \
+  -p PrivateNetwork=yes -p PrivateTmp=yes \
+  -p NoNewPrivileges=yes -p 'CapabilityBoundingSet=' \
+  -p RestrictNamespaces=yes -p RestrictSUIDSGID=yes \
+  -p ProtectKernelTunables=yes -p ProtectKernelModules=yes \
+  -p ProtectControlGroups=yes -p ProtectProc=invisible \
+  -p 'TemporaryFileSystem=/run:ro' -p InaccessiblePaths=/dev/shm \
+  -p DevicePolicy=closed -p 'DeviceAllow=/dev/kvm rw' \
+  -p 'RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6' \
+  -p MemoryMax=6G -p MemorySwapMax=0 -p TasksMax=256 \
+  -p CPUQuota=400% -p RuntimeMaxSec=300 -p TimeoutStopSec=20 \
+  -p LimitCPU=240 -p LimitFSIZE=12G -p LimitCORE=0 \
+  /usr/bin/env -i \
+    PATH=/usr/bin:/bin LANG=C.UTF-8 \
+    HOME="$runtime" ANDROID_USER_HOME="$runtime" \
+    ANDROID_AVD_HOME="$runtime/avd" \
+    ANDROID_HOME=/opt/cairn-toolchains/android-sdk \
+  /bin/bash -se <<'RUN'
+set -euo pipefail
+sdk="$ANDROID_HOME"
+adb="$sdk/platform-tools/adb"
+serial=emulator-5554
+test -r /dev/kvm && test -w /dev/kvm
+/usr/bin/python3 - <<'NETWORK'
+from pathlib import Path
+import errno
+import socket
+
+assert {path.name for path in Path("/sys/class/net").iterdir()} == {"lo"}
+for line in Path("/proc/net/route").read_text().splitlines()[1:]:
+    fields = line.split()
+    assert fields[1] != "00000000", "IPv4 default route present"
+for line in Path("/proc/net/ipv6_route").read_text().splitlines():
+    fields = line.split()
+    is_default = fields[0] == "0" * 32 and fields[1] == "00"
+    is_reject = int(fields[8], 16) & 0x200
+    assert not is_default or is_reject, "Usable IPv6 default route present"
+try:
+    with socket.create_connection(("192.0.2.1", 443), timeout=1):
+        raise SystemExit("External test address unexpectedly reachable")
+except OSError as error:
+    if error.errno != errno.ENETUNREACH:
+        raise
+NETWORK
+echo 'PASS: private runtime network has only loopback and no default routes'
+
+emulator_pid=
+cleanup() {
+  if [ -n "$emulator_pid" ]; then
+    kill "$emulator_pid" 2>/dev/null || true
+    wait "$emulator_pid" 2>/dev/null || true
+  fi
+  "$adb" kill-server </dev/null
+}
+trap cleanup EXIT
+"$sdk/emulator/emulator" -avd cairn-api26-x86_64 \
+  -port 5554 -accel on -no-window -no-audio -no-snapshot \
+  -gpu swiftshader -memory 2048 -cores 2 \
+  > "$HOME/artifacts/isolated-emulator.log" 2>&1 &
+emulator_pid=$!
+timeout 120s "$adb" -s "$serial" wait-for-device </dev/null
+ready=0
+for attempt in $(seq 1 60); do
+  if test "$(timeout 5s "$adb" -s "$serial" shell -T \
+    getprop sys.boot_completed </dev/null | tr -d '\r')" = 1; then
+    ready=1
+    break
+  fi
+  kill -0 "$emulator_pid"
+  sleep 2
+done
+test "$ready" = 1
+test "$(timeout 10s "$adb" -s "$serial" shell -T \
+  getprop ro.build.version.sdk </dev/null | tr -d '\r')" = 26
+test "$(timeout 10s "$adb" -s "$serial" shell -T \
+  getprop ro.product.cpu.abi </dev/null | tr -d '\r')" = x86_64
+timeout 60s "$adb" -s "$serial" install --user 0 -r \
+  "$HOME/artifacts/androidConsumer-debug.apk" </dev/null
+timeout 60s "$adb" -s "$serial" shell -T \
+  am instrument --user 0 -w -r ch.trancee.cairn.consumer/.SmokeInstrumentation \
+  </dev/null > "$HOME/artifacts/isolated-instrumentation.txt" 2>&1
+cat "$HOME/artifacts/isolated-instrumentation.txt"
+grep -Fx 'INSTRUMENTATION_CODE: -1' "$HOME/artifacts/isolated-instrumentation.txt"
+grep -F 'PASS: Android value, boundary, typed error and object lifetime' \
+  "$HOME/artifacts/isolated-instrumentation.txt"
+if grep -Eq 'INSTRUMENTATION_FAILED|INSTRUMENTATION_ABORTED|shortMsg=' \
+  "$HOME/artifacts/isolated-instrumentation.txt"; then
+  echo 'Instrumentation reported failure' >&2
+  exit 1
+fi
+echo 'PASS: Android FFI executed without external runtime networking'
+RUN

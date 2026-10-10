@@ -208,3 +208,31 @@ are complete.
   This used retained Cargo outputs/dependency caches, not a fresh final VM.
   Final cache/project namespace immutability, offline runtime isolation,
   disposable-image reproduction and Apple runner acceptance remain open.
+
+- 2026-10-10: New `run-isolated-android.sh` runs ADB and the emulator in
+  the same `PrivateNetwork=yes` unit, with only loopback, no usable default
+  routes and an explicit external-address `ENETUNREACH` assertion.
+  An initial `ip route` probe could not open netlink under the AF allowlist;
+  it was replaced with fail-closed `/proc` route inspection rather than
+  interpreting failed commands as empty routes. The corrected script passed
+  directly: Android API 26 x86_64 instrumentation completed, 16.405s service
+  runtime, 17.107s CPU and 1.7 GiB reported peak memory. The runtime memory
+  measurement is distinct from the implausible historical build-unit peaks.
+
+  The unit exposes only the dedicated AVD home through `ProtectHome=tmpfs`
+  plus a bind mount, protects the system, hides `/run` and `/dev/shm`,
+  and uses device policy for standard pseudo-devices plus `/dev/kvm`.
+  It sets 6 GiB memory/no swap, 256 tasks, 400% CPU, 300s runtime,
+  240s per-process CPU and 12 GiB per-file limits. It grants no permanent
+  KVM access to the build account. Trap cleanup stops the owned emulator
+  and private ADB server; service inactive/dead and no owned emulator process
+  were verified afterwards. Existing outside-namespace ADB was untouched.
+
+  Exact script SHA-256 is
+  `b9f41ade53fe181c2dd22e8cebc63cb0009daf528189529c149f8673b28da9af`.
+  Script/logs and the matching instrumentation transcript hash are retained
+  root-owned under `/opt/cairn-binding-seeds/isolated-runtime-proof/`.
+  Runtime AVD/private temporary storage still lacks a dedicated total-disk
+  quota and persists between runs. Final runtime filesystem/disk acceptance,
+  full input namespace immutability, disposable image and Apple lane remain
+  open; network-isolated Android execution alone does not resolve the ticket.

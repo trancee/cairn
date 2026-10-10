@@ -25,6 +25,9 @@ The standalone build script now self-checks read-only actual source,
 configuration and downloaded dependency mounts; its forced 69-task build
 passed with unchanged artifacts. Writable Gradle project shells/metadata and
 retained outputs remain explicit limitations, not final runner acceptance.
+Android instrumentation also passes in a private runtime network namespace
+with explicit route-denial assertions and verified emulator cleanup. Dedicated
+runtime total-disk quota and disposable AVD/image reproduction remain open.
 
 ## Verified profile
 
