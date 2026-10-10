@@ -61,6 +61,21 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Hosted
+  [run 38090454490](https://github.com/trancee/cairn/actions/runs/38090454490)
+  at `3db7ee7` passed unprivileged sandbox/network/IPC/symlink probes on the
+  fixed scratch volume, disk/process/CPU exhaustion, three shared-collector
+  deadline tests and a 7 GiB whole-VM envelope with disabled/unloaded dynamic
+  pager and zero swap. All eight downloaded artifact log checksums passed;
+  account cleanup succeeded and disk detached.
+  Earlier `1720806` green job is not accepted as swap proof: an empty log
+  exposed missing workflow pipeline failure propagation. Explicit Bash
+  pipefail and a required swap success marker corrected that defect at
+  `d874b0c`. Later runs establish actual swap control.
+  No dependency provisioning or binding build occurred. Read policy remains
+  broader for system files, deliberate process-group escapes untested, and
+  compiler/build compatibility unverified. Full Apple acceptance remains open.
+
 - 2026-10-10: Hosted resource
   [run 38089701128](https://github.com/trancee/cairn/actions/runs/38089701128)
   at `721828f` passed fixed 256 MiB scratch exhaustion (`ENOSPC`,

@@ -132,3 +132,10 @@ the dedicated non-administrator UID with its writable paths on the fixed
 scratch disk. Fixtures and inputs remain root-owned; an empty environment
 enters the sandbox after UID drop. Resource exhaustion is still a separate
 benign invocation, not an accepted compiler/build supervisor.
+
+Hosted [run 38090454490](https://github.com/trancee/cairn/actions/runs/38090454490)
+at `3db7ee7` passed that unprivileged fixed-scratch composition along with
+the independent resource probes, three shared-collector deadline tests,
+disabled/unloaded pager and 7 GiB/zero-swap observations. All eight downloaded
+artifact log checksums passed. Whole-process-tree escape containment and
+compiler/build compatibility are not established by these benign results.

@@ -115,7 +115,14 @@ local CLI failed intended input denial; sandboxed probes passed locally.
 Hosted [run 38088954525](https://github.com/trancee/cairn/actions/runs/38088954525)
 at `608dee0` passed the same benign probes on ARM64 macOS 26.6.2/Xcode 26.6;
 downloaded log/environment checksums passed. Full isolation/resource
-enforcement and binding builds remain unverified. No production Apple
+enforcement and binding builds remain unverified. Subsequent
+[run 38090454490](https://github.com/trancee/cairn/actions/runs/38090454490)
+at `3db7ee7` verified unprivileged sandbox/fixed-scratch composition,
+real disk/process/CPU enforcement, and a 7 GiB whole-VM RAM envelope
+with dynamic pager disabled/unloaded and zero swap. Shared collector
+deadline regressions passed; downloaded artifact checksums passed.
+Build-tool compatibility and whole-process-tree containment remain open.
+No production Apple
 acceptance is implied.
 
 - **Public documentation:** [README.md](README.md) introduces the current

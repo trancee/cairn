@@ -56,7 +56,7 @@ def main():
     )
     assert result.returncode in (-signal.SIGKILL, -signal.SIGXCPU), result.returncode
     print("PASS: per-process CPU limit terminated busy child", flush=True)
-    print("PASS: benign disk/process/CPU probes; memory acceptance remains blocked")
+    print("PASS: benign disk/process/CPU probes; whole-VM memory checked separately")
 
 
 if __name__ == "__main__":
