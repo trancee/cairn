@@ -10,11 +10,28 @@ Linux runner acceptance is assessed against issue 45, not against an entirely
 read-only Gradle working directory. Canonical inputs must be immutable;
 project shells, generated sources, cache coordination and compiler outputs
 may be writable only in assigned disposable scratch. The canonical replay
-proves that distinction. Remaining reconciliation is effective resource-limit
-assertions for the integrated units and an explicit retained proof-log bound;
-the successful replay alone does not establish those checks or Apple support.
+proves that distinction. Effective resource-limit assertions and the 64 MiB
+captured-output bound subsequently passed in the bounded replay. Current
+limitations are listed below; no Apple support or reliability fix is implied.
 
-### Pending integrated resource and output checks
+### Resource and output checks: current status
+
+The resumed bounded replay passed live build/runtime resource checks,
+canonical input checks and Android instrumentation. Its base write denial
+was observed while running and its ownership/hash survived shutdown and
+direct-backend extraction. Both per-boot logs passed checksum and size checks.
+The owner chose to retain the stopped bounded clone and overlay; do not delete
+them. Earlier clone disposal proofs remain valid.
+
+| Acceptance surface | Observed evidence | Remaining limitation |
+| --- | --- | --- |
+| Input and write boundary | Canonical read-only object identity, denied writes, unchanged manifest; writable state in assigned scratch | Not an immutable Gradle workspace |
+| Network and environment | No VM NIC/shares; private unit networking and explicit `env -i` allowlists | Trusted supervisor remains privileged |
+| Resources | Live CPU/memory/swap/tasks and CPU/file/core rlimits; bounded scratch/runtime volumes; timeout failure observed | Build memory-peak reporting remains unreliable |
+| Captured proof output | 64 MiB overflow rejection; V4 cold startup/replay checksums and streamed emulator/instrumentation verified | Startup identity/mount errors precede capture |
+| Base and evidence | Live write denial, post-stop ownership/hash, direct extraction preserving metadata/bytes | First bounded boot's live base permissions were not captured |
+| New host extraction storage | V4 guest logging and 1 GiB extraction inside 8 GiB aggregate/4 GiB scratch pass | Historical evidence remains outside new aggregate |
+| Repeatability | Cold and resumed bounded replays pass | Earlier emulator timeout/segfault unresolved; no automatic retry |
 
 `check-resources.py build|runtime` observes its own cgroup v2 membership and
 checks effective memory/swap/tasks/CPU quota plus inherited CPU/file/core
@@ -27,96 +44,51 @@ on overflow. `bounded-proof.py OUTPUT COMMAND...` retains and mirrors combined
 command output up to that bound, propagates child failures and terminates its
 owned process group on overflow. `run-bounded-replay.sh` wraps the bootstrap
 and stops the two proof units if the command fails. The updated boot unit uses
-this supervisor. This limits captured proof output, not all guest system
-journals, emulator side logs or aggregate multi-replay evidence retention.
-The new boot unit is installed and passed `systemd-analyze verify`; its
-loopback-only condition correctly skips replay on the networked preparation
-guest. It has not been cold-clone verified.
+this supervisor. Emulator output inherits the stream; instrumentation is
+streamed through `tee` while retaining its result file and assertions.
+There is no new separate emulator log. Existing historical logs are retained.
+This limits captured proof output, not all guest system journals, retained
+instrumentation copies or aggregate multi-replay evidence storage.
+The installed boot unit passed `systemd-analyze verify`, skips the networked
+preparation guest, and passed cold and resumed networkless execution.
+CLI tests cover invalid ceilings, overflow, exact-budget output and child
+failure. A real guest test rejected 64 MiB plus one byte while retaining
+exactly 67,108,864 bytes. Supervisors are checksum-verified.
 
-CLI tests passed intended red/green cases for invalid resource ceilings and
-output overflow, exact-budget output and child-error propagation. The direct
-fresh-scratch build passed all 69 tasks in 4m24s with live limits and canonical
-checks. AAR hash matched; APK hash was
-`cd3ab60c801a021caf4468663402f2fdc95a3c4362110aa3a4da9816a424effc`.
-Its combined collector retained 8,689 bytes but the following fresh runtime
-timed out at 300 seconds, despite the emulator reporting boot completion in
-18,098 ms. A comparison without the collector failed differently: the emulator
-segfaulted before ADB connected. No cause is established, and no retry or
-limit weakening was added. Integrated runtime/collector acceptance is
-incomplete; the earlier canonical cold-clone pass remains separate evidence.
-The stage-instrumented runtime subsequently passed under the same collector
-and unchanged limits in 19.159s, with live resource assertions and Android
-instrumentation success (reported peak3.2G, zero swap). Runtime cleanup was
-confirmed. The earlier failures remain unresolved; this pass is not evidence
-of a root-cause fix or a new automatic retry policy.
-An actual guest overflow test emitted 64 MiB plus one byte: the collector
-failed explicitly and retained exactly 67,108,864 bytes. The synthetic output
-file was removed. All current supervisors/runtime/unit files are covered by
-the saved `replay-scripts.sha256` manifest. Per-replay collector behavior and
-individual integrated units are verified, but full networkless boot-wrapper
-execution and reliability acceptance remain open.
-The owner authorized a new independent `cairn-proof-bounded` cold clone.
-`create-offline-clone.sh bounded` preserves previous bases and evidence in a
-new directory; preparation inputs/service readiness were verified before the
-approved prep poweroff request. Host creation/start is pending.
-`preserve-journal.sh bounded` additionally extracts `/var/lib/cairn-proof-logs`
-read-only, validates the saved per-boot output checksum and 64MiB ceiling,
-and requires build/runtime effective-resource and completion markers.
-These new selector paths are syntax-checked, not yet execution-verified.
-No disposal authorization is implied by creating this clone.
-The owner supplied successful bounded-clone boot output:69 tasks executed in
-4m28s, JVM/native packaging and canonical manifest checks passed. AAR hash
-matched; APK hash was
+The owner approved a real preparation-guest routing red/green proof.
+A fresh forced build executed all 69 tasks in 4m32s. The old runtime passed
+in 19.873s but omitted emulator diagnostics from its 1,421-byte captured log.
+The changed runtime passed in 18.836s: its 7,307-byte bounded log contains
+emulator diagnostics, resource assertions and instrumentation success.
+Evidence and prior logs are retained root-only under
+`/opt/cairn-binding-seeds/streamed-runtime-proof-20261010`.
+The saved current script and supervisor manifest were updated; scratch was
+unmounted after runtime cleanup. This is direct preparation-guest routing
+evidence, not a new networkless clone or a fix for intermittent failures.
+
+The first bounded cold replay executed 69 tasks in 4m28s and Android runtime
+in 18.675s. Its APK hash was
 `9f20309fcc9445073e762bee13c8261f904e9d74b12f0fa045299629d1dbec17`.
-Fresh runtime passed effective resource assertions, startup stages and
-instrumentation in18.675s (reported peak4.5G,zero swap), followed by the final
-bootstrap PASS. Reported build peak1.7M is not accepted. The excerpt omits
-the earlier build-resource assertion; retained bounded-log checksum/size and
-both resource markers still require extraction. New-clone lifecycle checks
-remain pending; the prior emulator failures remain unexplained.
-Subsequent stopped-clone extraction passed: the saved replay checksum and
-64MiB size check, both effective-resource markers, completion marker and all
-canonical input markers are retained. Base/overlay hashes stayed unchanged.
-The exported live XML was independently checked for sole overlay, independent
-base-only DAC override, dynamic SELinux and no network/shares/passthrough/
-channel. Base ownership/write-denial output for this clone has not been
-supplied; it is not inferred from the hash. Bounded evidence is root-only at
-`/var/lib/cairn-proof-evidence/bounded-replay-journal`. Disposal is pending
-separate authorization.
-The owner's subsequent bounded-base check failed: ownership was
-`qemu:qemu 0640` and QEMU could open it for writing. Despite the exported
-DAC-only override and unchanged hashes, durable Unix write denial is not
-established for this new clone. The cause is unresolved. The earlier protected
-clone's passing cycle does not generalize to all newly created clones;
-bounded runner acceptance remains blocked. Keep the stopped overlay intact.
-Controlled synthetic extraction reproduced `root:qemu 0640` becoming
-`qemu:qemu 0640` under guestfish's default libvirt backend. The same synthetic
-image retained `root:qemu 0640` with `LIBGUESTFS_BACKEND=direct`.
-The extraction recipe now explicitly selects direct backend and compares
-ownership/modes as well as bytes before/after both appliance operations.
-This avoids the demonstrated extraction-side ownership change without global
-libvirt/SELinux changes. Corrected full extraction is still pending, and the
-bounded proof's live base permissions cannot be reconstructed from this test.
-The owner then executed the corrected extraction on the stopped bounded
-overlay. Starting base was `root:qemu 0640`; bounded log checksum/size,
-resource/canonical/completion markers, image hashes and before/after
-ownership/mode comparisons all passed. Separate evidence is retained at
-`/var/lib/cairn-proof-evidence/bounded-replay-journal-direct`.
-The extraction-side correction is verified end-to-end; it does not establish
-live base permissions during the original bounded boot. Overlay remains
-retained pending separate disposal authorization.
-An owner-authorized resumed replay on the retained overlay passed all69tasks
-in4m31s and fresh Android instrumentation in18.502s. AAR hash matched; APK was
+The resumed replay executed 69 tasks in 4m31s and runtime in 18.502s; APK was
 `bbc1266053ca8728b0179f8f4d1c34002ebe468f96b3e1cf84e8f2e88a599dec`.
-Owner then observed live base `root:qemu 0640` and QEMU write-open denial,
-followed by shutoff with ownership unchanged. Direct extraction preserved both
-boots' log checksums/64MiB bounds, effective-resource and canonical assertions,
-completion markers, unchanged image bytes and unchanged ownership/modes.
-Evidence is retained at
+Both AAR hashes matched the preserved artifact. Runtime reported 4.5G peak
+memory and zero swap; implausible build-memory peaks remain unaccepted.
+
+Default libvirt-backed `guestfish --ro` changed a synthetic image's ownership
+from root to QEMU; direct backend preserved it. Corrected full extraction
+uses `LIBGUESTFS_BACKEND=direct` and verifies hashes and ownership/modes.
+The resumed run's live base write denial was observed before shutdown.
+Both per-boot bounded logs and assertions are retained root-only under
 `/var/lib/cairn-proof-evidence/bounded-replay-journal-live-verified`.
-This closes the observed live-protection/preservation gap for the resumed
-run, not retroactively for the first bounded boot. Disposal still requires
-approval; earlier intermittent emulator failures remain unresolved.
+The first bounded boot's live permissions were not observed and are not
+retroactively claimed. The stopped bounded domain/overlay remain retained
+by owner choice. `preserve-journal.sh bounded` preserves evidence but does
+not authorize disposal.
+
+Earlier preparation-guest runtime attempts timed out or segfaulted; a
+stage-instrumented runtime later passed with identical limits and collector.
+No root cause, automatic retry or reliability fix is claimed. Historical
+timings, hashes and diagnostic details remain recorded in issue 45.
 
 Gradle/Cargo/Kotlin/Rust/manifest files are imported unchanged from
 `android-source.tar.gz`, SHA-256
@@ -349,54 +321,23 @@ offline proof's base/evidence. The same selector on `preserve-journal.sh` and
 `dispose-overlay.sh` selects the canonical clone and
 `/var/lib/cairn-proof-evidence/canonical-replay-journal`; deletion still
 requires separate explicit owner approval. Unknown arguments are rejected.
-The owner authorized this new clone and clean preparation-guest shutdown.
-Persistent canonical inputs and current supervisor checksums were verified,
-proof units were not active, and poweroff was requested. Host creation/start
-is pending owner sudo; no new cold-image pass is claimed.
-The owner subsequently supplied the new canonical clone's successful replay:
-all 69 tasks executed in 4m25s, JVM assertions/native packaging passed, and
-the canonical manifest remained unchanged after the build. The AAR hash
-matched prior evidence; APK SHA-256 was
+The owner-authorized canonical clone passed all 69 tasks in 4m25s,
+JVM assertions/native packaging, canonical manifest checks and fresh Android
+instrumentation in 20.032s. Its AAR hash matched prior evidence; APK was
 `f473420b64a2a99896555f432508baff6549a0fcee3a57e2dcfb58aecd2ba76b`.
-Fresh Android instrumentation returned code `-1` and its completion marker,
-followed by the final cold-build/runtime PASS. Runtime was 20.032s with
-reported peak4.5G and zero swap; build peak1.8M is not accepted.
-The supplied excerpt starts after the mount-identity probes; their output
-has not yet been recovered from this clone's journal. New-clone live topology,
-base write denial, post-stop checks, journal preservation and disposal remain
-pending. This extends cold-image behavior evidence without claiming full
-namespace or final runner acceptance.
-Subsequent owner live checks confirm the canonical clone's sole disk is its
-`run.qcow2`, interface list is empty, base remains `root:qemu 0640`, and
-QEMU-account write-open is denied. Full backing/share topology and post-stop
-state/hash/journal/disposal remain pending.
-The owner then confirmed the canonical clone shut off with base still
-`root:qemu 0640`, and read-only journal extraction passed with unchanged
-base/overlay hashes. Evidence is root-only under
-`/var/lib/cairn-proof-evidence/canonical-replay-journal`.
-The exported live XML was independently checked over authorized SSH: sole
-independent backing base, base-only DAC override, dynamic SELinux, and no
-network/shared filesystem/hostdev/channel. Early mount-identity log confirmation
-and separately authorized canonical-overlay disposal remain pending.
-Searching the exported unit log returned only the post-build manifest marker,
-not the two early input-probe markers. Their absence is unresolved; raw-journal
-search and logging diagnostics are required before treating them as retained
-cold-clone evidence.
-The owner subsequently found both early markers in the preserved raw journal
-at boot time 8.004821s. The unit-only export omitted these entries, so the
-canonical extraction recipe now exports exact input-probe markers across
-the journal and requires all three. No logging loss is established.
-Together with the post-build manifest marker, retained cold-clone evidence
-confirms read-only canonical input mapping and unchanged content. This does
-not make writable workspace shells or cache coordination metadata immutable.
-The owner then explicitly authorized and executed canonical disposal.
-The boot log and both image hashes checked OK, all three input markers were
-exported/verified, and the final runtime marker was present. Only
-`cairn-proof-canonical` was undefined and its overlay removed; domain/overlay
-absence checks and retained-base checksum passed. Canonical base and journal,
-including `input-probes.txt` and its checksum, remain retained. This completes
-the new canonical clone's observed lifecycle without closing the remaining
-workspace/cache-state or Apple acceptance questions.
+Runtime reported 4.5G peak and zero swap; build peak 1.8M is not accepted.
+Live XML confirmed the sole independent backing base, base-only DAC override,
+dynamic SELinux and no network/shares/passthrough/channel. QEMU write-open
+was denied with base `root:qemu 0640`, unchanged after shutdown.
+Read-only extraction preserved both image hashes. Early input markers were
+present in the raw journal but omitted from the initial unit-only export;
+the recipe now exports and requires all three canonical markers.
+The owner separately authorized canonical domain/overlay disposal and
+verified absence and unchanged retained-base bytes. Root-only evidence at
+`/var/lib/cairn-proof-evidence/canonical-replay-journal` includes the boot
+log, input markers and checksums. The full chronology remains in issue 45.
+This proves the canonical clone lifecycle, not immutable workspace shells,
+final runner acceptance or Apple support.
 
 The staged `cairn-disposable-boot-proof.service` runs only with loopback as
 the sole guest interface. Its condition was verified to skip execution in
@@ -404,8 +345,7 @@ the networked preparation guest. `replay-disposable-guest.sh` then mounts
 fresh 6 GiB scratch, restores source and downloaded dependencies from
 checksum-verified archives, runs the forced build without retained Cargo
 outputs, and executes the fresh-seed runtime. Results go to journal/console.
-The owner supplied the clone's successful console output on 2026-10-10.
-The cold build completed in 4m21s with all 69 actionable tasks executed,
+Owner console output records a 4m21s cold build with all 69 tasks executed,
 including compilation/installation of the pinned generator. JVM value,
 boundary, typed-error and object-lifetime assertions passed. Native packaging
 checks passed for Android ARM64/x86_64. The AAR SHA-256 matched
@@ -466,7 +406,6 @@ instrumentation returned code `-1` and its completion marker. Runtime finished
 successfully in 18.468s (reported peak 4.6G, zero swap), followed by the final
 cold-build/runtime PASS. AAR hash again matched; APK SHA-256 was
 `ad7955fc171d47cc7f9604f7dd7c433e09a182473a12e2b34c9dd66709af08a3`.
-The varying debug APK bytes remain unexplained. The reported build-memory
 peak 1.7M is not accepted. This reused the retained VM overlay with newly
 restored tmpfs build inputs and a fresh AVD, not a newly created VM overlay.
 The owner subsequently confirmed `shut off`, base ownership/mode
@@ -487,56 +426,75 @@ dynamic ownership or SELinux, and do not discard the retained overlay.
 
 ### Preserving the stopped clone's journal
 
-`preserve-journal.sh` requires the clone to be shut off and a new root-only
-evidence directory. It uses installed `guestfish` with explicit qcow2 format
-and `--ro` to copy `/var/log/journal` through a libguestfs appliance, without
-host-mounting guest filesystems or enabling appliance networking. It exports
-only the boot-proof unit's entries to `boot-proof.txt`, requires a completion
-marker, and compares both image hashes before/after extraction.
+New `preserve-journal.sh` runs require a stopped clone and unused `-volume`
+destination inside `/var/lib/cairn-proof-evidence/bounded-store`.
+`with-evidence-store.sh COMMAND...` opens the approved 8 GiB aggregate image.
+`extract-with-scratch.sh` reserves 4 GiB for appliance temp/cache plus
+1 GiB for extraction output; reservation failure rejects work before guestfish.
+Successful scratch is removed; failed scratch/output remain inside the store.
+`bounded-evidence.sh [--profile evidence|appliance|store] OUTPUT COMMAND...`
+creates the respective 1/4/8 GiB root-only image and unmounts after the command.
+It preserves failed output with an `INCOMPLETE` status; only successful
+command execution and unmount produce `COMPLETE`. Existing paths are refused.
+`extract-journal.sh` performs the direct-backend read-only guestfish extraction
+inside that volume and verifies the previous image/marker/checksum contracts.
+See [the storage decision](../../../docs/adr/0013-bounded-host-proof-evidence.md).
+No old evidence is migrated or deleted. Inspect a future completed extraction:
 
-The owner executed it successfully with guestfish 1.60.1 on Fedora. Both
-cold-replay completion markers were present, and base/overlay hash checks
-passed. Evidence is retained root-only under
-`/var/lib/cairn-proof-evidence/protected-replay-journal`, including the raw
-journal, filtered proof log and checksum manifests. The journal hostname
-remains the preparation image's `cairn-prep`; it is not a claim that the
-networked preparation domain ran these boots. The extraction checks the
-stopped `cairn-proof-offline` domain's fixed overlay path. The owner explicitly authorized targeted disposal and executed
-`dispose-overlay.sh`. It verified the preserved proof log and both image
-hashes, saved inactive domain XML with the evidence, undefined only
-`cairn-proof-offline`, and removed only `run.qcow2`. Domain absence and overlay
-absence checks passed, followed by a passing retained-base checksum.
-The independent base, original preparation guest and root-only journal remain
-retained. This completes the observed disposable-overlay lifecycle, not full
-source/cache namespace immutability or final cross-platform runner acceptance.
+```bash
+sudo bash with-evidence-store.sh bash -se <<'INSPECT'
+output="$PWD/bounded-replay-journal-live-verified-volume"
+grep -Fx COMPLETE "$output.status"
+mount -o loop,ro,noload,nosuid,nodev,noexec "$output.ext4" "$output"
+trap 'umount "$output"' EXIT
+ls "$output"
+INSPECT
+```
 
-Before the owner-approved shutdown, persistent inputs were saved under
-`/opt/cairn-binding-seeds/final-image-inputs-e75437d/`. Cargo registry and
-Gradle modules archives exclude compiled Cargo outputs. The fixture archive
-excludes Gradle build/state directories. Scratch was a nonpersistent mount,
-so the original guest's previous tmpfs state will not survive shutdown.
-The clone console is reached through libvirt, not a network connection.
-After the proof, final acceptance requires its actual output, original/base
-integrity and overlay lifecycle checks; do not infer success from domain
-creation. Failed host clone preparation leaves exact files for diagnosis;
-it does not destructively remove them or weaken host permissions.
+Incomplete images do not authorize disposal. Authorized offline/canonical
+disposal needs a writable evidence mount for its XML record; unmount afterwards.
+No bounded disposal selector is added. Run `sudo bash test-bounded-evidence.sh`:
+capacity, ENOSPC, preserved partial output, child failure and exclusive
+creation passed on Ubuntu. The image is 1,073,741,824 bytes; usable capacity
+was 1,020,702,720 bytes. Owner-run Fedora synthetic integration also passed:
+direct guestfish copied a marker into the bounded image, source bytes and
+ownership stayed unchanged, and the image unmounted successfully.
+Evidence is retained at `/var/lib/cairn-guestfish-evidence-test-fwapXFW5`;
+the image is `root:root 0600`. The owner also completed actual stopped
+bounded-VM extraction into `bounded-replay-journal-live-verified-volume.ext4`.
+Both boot logs, resource/input/completion assertions and checksums passed;
+VM image bytes/ownership were unchanged, and the volume unmounted.
+The complete image is `root:root 0600`, exactly 1 GiB. This extracts existing
+boots; it does not prove the later runtime-streaming change in a cold clone.
+Those extraction runs preceded the aggregate/scratch cutover. Its composition
+tests pass on Ubuntu and Fedora: aggregate ENOSPC, distinct capacity checks,
+marker recovery and scratch cleanup. Fedora guestfish also copied a marker
+using bounded scratch with source bytes/ownership unchanged.
+Historical evidence remains outside the new store. The new `retention` clone
+receives a 1 GiB ext4 log disk labelled `CAIRN_PROOF_LOGS`.
+That networkless clone reserves 64 MiB before work, stores instrumentation
+on the log disk, disables persistent syslog and uses volatile journald.
+General diagnostics may rotate; they are not proof evidence. V1/V2/V3 failed
+before target work and remain unchanged. Identity, trigger-first cutover and
+reported/reset retained-failure state pass synthetic tests. Approved
+`retention-v4` additionally captures startup cutover on the proof disk with a
+separate reserved 64 MiB collector before journald changes; only success gets
+a checksum. V4 extraction requires startup/replay success from the same boot.
+V4 cold build (69 tasks), fresh Android instrumentation, startup/replay checksums,
+live base denial, graceful stop and metadata-preserving extraction passed.
+Complete 1 GiB root-only `bounded-store/retention-v4-replay-volume.ext4` remains;
+scratch removed, clones retained.
+Prior directory extraction and authorized offline disposal passed; base and
+root-only evidence remain at `/var/lib/cairn-proof-evidence/protected-replay-journal`.
+Journal hostname `cairn-prep` identifies the cloned image; see issue 45 for chronology.
 
-The unbooted seed was created through the installed `avdmanager create avd`
-for `system-images;android-26;google_apis;x86_64`, with a dedicated staging
-`ANDROID_USER_HOME`/`ANDROID_AVD_HOME` and the name `cairn-api26-x86_64`.
-Only the custom hardware-profile prompt was answered `no`. The resulting
-`avd/` directory was copied root-owned into the seed path above; a SHA-256
-manifest covers its three initial files (AVD registration, config and userdata
-image). The script rewrites only the disposable copy's registration path.
-The seed manifest passed before and after execution.
-One trial adding `-no-metrics` segfaulted before ADB connected; reverting that
-unproven launch argument yielded the recorded pass. No general emulator bug
-or metrics-option compatibility claim is made; external networking remains
-blocked by the namespace independent of emulator metrics settings.
-
-The additional dependency-only APK ABI directories do not expand supported
-ABIs. The [bounded allocator audit](ALLOCATOR-AUDIT.md) checked resolved source and
+Saved archives exclude compiled outputs/state; scratch is nonpersistent.
+Clone consoles use libvirt, not guest networking. The root-owned AVD seed
+has checksummed registration/config/userdata; only disposable registration
+changes. A reverted `-no-metrics` segfault trial is not a general fix; see issue 45.
+Dependency-only APK ABI directories do not expand supported ABIs.
+The [bounded allocator audit](ALLOCATOR-AUDIT.md) checked resolved source and
 default allocator forwarding in all six delivered Linux/Android Rust ELFs.
-Remaining gates include final image/lifecycle acceptance, allocator evidence for new targets/artifacts,
-Unicode-specific coverage, Compose, ARM64 hardware, release/R8/page alignment,
+Remaining gates include runtime reliability/final acceptance, new-target allocator evidence,
+Unicode coverage, Compose, ARM64 hardware, release/R8/page alignment,
 iOS 15 device/simulator linkage and runtime, and final runner acceptance.

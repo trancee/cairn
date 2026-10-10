@@ -5,6 +5,7 @@ After=local-fs.target
 [Service]
 Type=oneshot
 ExecCondition=/usr/bin/python3 -c "from pathlib import Path; import sys; sys.exit(0 if {p.name for p in Path('/sys/class/net').iterdir()} == {'lo'} else 1)"
+ExecStartPre=/bin/bash /opt/cairn-binding-seeds/final-image-inputs-e75437d/prepare-guest-proof-logs.sh
 ExecStart=/bin/bash /opt/cairn-binding-seeds/final-image-inputs-e75437d/run-bounded-replay.sh
 TimeoutStartSec=1800
 TimeoutStopSec=30

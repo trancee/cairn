@@ -22,7 +22,7 @@ caches read-only and disable network access during target-controlled work.
 
 | Lane | Required scope | Current state |
 |---|---|---|
-| Linux/Android | Disposable Linux environment; Rust host tests, Kotlin/JVM integration, Android builds and generated-call execution | Separate canonical inputs, cold networkless build/runtime, protected base, journal and disposal pass; writable workspace/cache metadata remain explicit state pending final acceptance reconciliation |
+| Linux/Android | Disposable Linux environment; Rust host tests, Kotlin/JVM integration, Android builds and generated-call execution | V4 cold build/runtime, canonical inputs, resource/logging controls, streamed output, live base denial and bounded metadata-preserving extraction pass; intermittent emulator reliability and final acceptance remain open |
 | macOS/iOS | Isolated environment on Apple hardware; Xcode, iOS-device and simulator-arm64 builds, generated-call execution and packaged deployment-floor inspection | No compliant runner established |
 
 The owner approved splitting the work on 2026-10-10. Each lane must satisfy
@@ -60,6 +60,254 @@ gate remain blocked until both lanes and all binding acceptance conditions
 are complete.
 
 ## Comments
+
+- 2026-10-10: Owner requested committing verified Linux work and moving to
+  Apple. Linux retention integration is complete; intermittent emulator
+  diagnosis and final lane acceptance remain explicitly open, not waived or
+  claimed fixed. Apple isolation assessment is resumed. This does not
+  authorize target-controlled builds on the shared Mac, VM deletion,
+  publication or an external runner registration.
+
+- 2026-10-10: Owner V4 console passed 69/69 cold-build tasks in 4m35s,
+  JVM value/boundary/error/lifetime assertions and Android native packaging.
+  AAR SHA-256 `9876666c5f0eee81389463db7845deb14a69ced46764652fca82f0490d430658`;
+  APK `199f59cfa190ded6e65ce04bc43be60e3c95822d487e8386f40a82bb8ea542df`.
+  Canonical manifest unchanged. Fresh Android instrumentation passed in
+  20.565s (4.6G peak, zero swap), with runtime resource/network assertions,
+  emulator diagnostics and final cold-build/runtime marker. Build-memory
+  peak 1.6M is not accepted as compilation-memory evidence.
+  Owner then authorized/executed
+  `sudo bash "$HOME/cairn-retention-v4/preserve-retention-v4.sh"` on Fedora.
+  Live topology/base write denial, graceful stop, unchanged base checksum
+  and read-only extraction passed. Boot
+  `67e02a91-1f25-4721-b9a9-31cae6343de2` has matching successful startup/replay
+  checksums, logging/capacity/resource/emulator/final markers. All three
+  image hashes/metadata unchanged. Complete root-only 1 GiB evidence:
+  `/var/lib/cairn-proof-evidence/bounded-store/retention-v4-replay-volume.ext4`,
+  SHA-256 `e2e3291c5509726ee3ccbb9730a1ccceae82bdc4a4b9997b52c6216062274ea1`;
+  status SHA-256 `a4bccf5c13ef5ff8311e59b34d492bc7072a55298723601a6a9c127053aee8fc`.
+  4 GiB scratch removed after success; output/aggregate unmounted; all clones
+  and historical evidence retained. Retention-control integration is complete.
+  Earlier intermittent emulator failures, original timer cause and final Linux
+  acceptance remain unverified; Apple paused. No further run/deletion approved.
+
+- 2026-10-10: Owner selected separate corrected `retention-v4` with durable
+  startup diagnostics, keeping V1/V2/V3 unchanged. Startup capture reserves
+  a separate 64 MiB record within the existing 1 GiB proof disk before
+  journald cutover, using the existing collector; replay limit unchanged.
+  Real systemd capture seam went red when failure diagnostics only reached
+  the console, then green with retained stdout/stderr and exit-2 failure
+  output. Synthetic units/masks removed; records retained at
+  `/var/lib/cairn-startup-capture-test-txQtFlQH`.
+  Command: `sudo bash test-socket-cutover.sh`.
+  Successful startup gets a checksum; V4 extraction requires matching boot
+  startup/replay records. Identity/mount failures still precede capture.
+  Corrected supervisors are installed and checksum-verified; previous
+  supervisors/manifest/unit are preserved at
+  `/opt/cairn-binding-seeds/retention-v4-supervisor-backup-63a7381b-af84-4d88-a34d-09362c423dc2`.
+  Saved/canonical manifests and systemd unit verification passed. Networked
+  preparation still skips without logging cutover. Owner launch is staged at
+  `~/cairn-retention-v4/launch-retention-v4.sh` on Fedora and checks available
+  aggregate capacity before graceful preparation shutdown/new clone creation.
+  No eviction or budget increase authorized. V4 boot/extraction remain
+  pending; no Android reliability or original timer-cause claim is implied.
+
+- 2026-10-10: Stopped v3 inspection passed all image bytes/metadata checks;
+  no replay file exists. The journal confirms unique log identity, volatile
+  configuration, successful syslog/rsyslog cutover, then guard rejection of
+  masked `logrotate.timer` with retained `ActiveState=failed`.
+  Evidence is `bounded-store/retention-v3-failed-boot.ext4`; scratch removed.
+  Synthetic invalid/missing-target timers did not reproduce that state and
+  are not claimed as regression proof. A real failing oneshot service does
+  reproduce shared-helper rejection before the fix. After masking/stopping,
+  the helper now emits prior ActiveState/SubState/Result, resets historical
+  failure, then still requires inactive and actual runtime mask. The same
+  failed-service regression and socket-trigger test passed with teardown.
+  Command: `sudo bash test-socket-cutover.sh`. Original timer boot cause and
+  corrected clone integration remain unverified; no new clone/restart or
+  Android reliability fix is implied.
+
+- 2026-10-10: Owner's stopped v2 inspection preserved disk hashes/metadata
+  and partial replay `replay-c331a112-e852-4339-9feb-30954d9b1fb5.log`
+  (82 bytes: correct disk `/dev/vda` and filesystem capacity PASS).
+  Journal confirms volatile configuration and rsyslog stop, then active
+  `syslog.socket` reactivation during masking, leaving rsyslog failed.
+  Bootstrap rejected its state before any target build. Evidence is
+  `bounded-store/retention-v2-failed-boot.ext4`; diagnostic scratch removed.
+  Owner approved shared synthetic systemd socket/service testing and a
+  separate `retention-v3` clone, preserving both failed clones unchanged.
+  First synthetic cutover failed because `is-enabled` display spelling did
+  not match the assumed `masked-runtime` string. Runtime-mask symlink and
+  actual inactive-state checks replace that assumption. Final helper masks
+  and stops the trigger first, then services. Real synthetic socket activation
+  test passed without reactivation warnings; synthetic units/masks removed,
+  preparation logging unchanged. Command: `sudo bash test-socket-cutover.sh`.
+  V3 boot remains pending; no Android reliability fix claimed.
+
+- 2026-10-10: Failed retention boot 0429806dda624def9cb4df31dbf83311
+  exposed kernel device-order reversal: 1 GiB proof disk was `vda`,
+  128 GiB root disk was `vdb`. The supervisor's positional size assertion
+  failed before mounting or target work; proof disk contained only lost+found.
+  Graceful shutdown and bounded read-only failure extraction passed, retaining
+  unchanged base/overlay/log-disk bytes and ownership. Evidence is
+  `bounded-store/retention-failed-boot.ext4`. This is an introduced disk
+  identity bug, not prior Android instability.
+  Owner selected a separate corrected clone, preserving failed disks.
+  New ext4 label `CAIRN_PROOF_LOGS` is resolved uniquely and checked for
+  ext4/1 GiB capacity. `sudo bash test-proof-log-identity.sh` passed on
+  preparation using real loop devices, including ambiguous, wrong-size and
+  missing-device rejection. Corrected supervisors and manifest are installed;
+  systemd unit verification passes. `retention-v2` boot/extraction remain
+  pending; no failed-clone repair/restart or reliability fix is claimed.
+
+- 2026-10-10: Owner selected authoritative replay records, not preservation
+  of all system diagnostics. New retention clone uses a separate fully
+  allocated 1 GiB raw `/dev/vdb` log disk. Its networkless boot supervisor
+  mounts it, configures bounded volatile journald, disables forwarding and
+  runtime-masks rsyslog/logrotate. Persistent duplicate logging is disabled
+  only after the clone's networkless condition; preparation remains unchanged.
+  Instrumentation copies move to the same proof disk. Collector `--reserve`
+  failed intended CLI test before implementation; all four collector tests
+  pass on Linux. A real capacity test proves reservation ENOSPC prevents
+  command execution and leaves an empty incomplete log.
+  Preparation supervisors were backed up, checksummed and installed;
+  `systemd-analyze verify` passed and networked prep execution correctly
+  skipped with ExecCondition status 1. Retention clone boot/extraction
+  remain pending. New clone starts paused and requires base ownership,
+  checksum and QEMU write denial before resume. No retained-clone restart
+  or deletion authorized by this work.
+
+- 2026-10-10: Owner-run Fedora retention check passed
+  `sudo bash "$HOME/cairn-retention-check/check-fedora-retention.sh"`.
+  All staged checksums passed; aggregate overflow rejection, distinct
+  output/scratch filesystem bounds, complete status, marker recovery and
+  unmount cleanup passed. Direct guestfish used 4 GiB scratch inside the
+  8 GiB store, preserved synthetic source bytes/ownership, and copied the
+  marker into complete retained evidence. Successful scratch was removed.
+  Synthetic source is retained at `/var/lib/cairn-retention-source-UwocLVOp`;
+  outputs are `synthetic-guestfish-retention.ext4` and
+  `synthetic-composition-bac18d2d-26c4-4217-a9c2-284f29af8938.ext4`
+  inside the store. New proof-clone extraction and 1 GiB guest logging
+  remain unverified; runtime reliability is not established by these tests.
+
+- 2026-10-10: Owner clarified completion scope as Linux only, keeping Apple
+  paused; approved 1 GiB guest logs, 4 GiB appliance scratch and 8 GiB NEW
+  host aggregate storage, fail/preserve/no eviction, and a separate new clone.
+  Retained bounded clone stays untouched. Approved composed CLI and separate
+  clone boot/service test seams. The missing appliance profile failed CLI
+  test before implementation. New profiles passed on Ubuntu: usable scratch
+  4,143,677,440 bytes and aggregate 8,350,298,112 bytes.
+  Full `fallocate` reservation precedes formatting; partial allocations
+  remain incomplete on failure. New extraction/output and appliance images
+  reside inside the aggregate store; successful scratch is removed, failed
+  scratch preserved. The composed CLI passed aggregate ENOSPC, distinct
+  output/scratch capacities, marker recovery and unmount/cleanup; retained
+  synthetic output is
+  `/var/lib/cairn-proof-evidence/bounded-store/synthetic-composition-b6c526e9-15eb-4213-813f-36d9e06aa6ee.ext4`
+  on the preparation guest. Commands:
+  `sudo bash test-bounded-evidence.sh` and
+  `sudo bash test-retention-composition.sh`.
+  Official libguestfs environment documentation confirms command-local
+  `LIBGUESTFS_TMPDIR` and `LIBGUESTFS_CACHEDIR` control appliance temp/cache.
+  Fedora composed guestfish check and guest logging/new clone remain pending;
+  no runtime reliability fix or full lane acceptance claimed.
+
+- 2026-10-10: Owner completed approved stopped bounded-VM extraction:
+  `sudo bash "$HOME/cairn-bounded-volume-extraction/run-bounded-volume-extraction.sh"`.
+  Staged checksums, both replay-log checksums/64 MiB ceilings, effective
+  resource/completion markers and both boots' canonical input assertions
+  passed. Base/overlay byte and ownership/mode comparisons passed.
+  VM remained stopped; evidence volume unmounted and status is `COMPLETE`.
+  New evidence image at
+  `/var/lib/cairn-proof-evidence/bounded-replay-journal-live-verified-volume.ext4`
+  is `root:root 0600`, exactly 1,073,741,824 bytes; image/status checksums pass.
+  Existing evidence and retained VM remain intact. The bounded-extraction
+  increment is verified end-to-end. Guest/syslog, appliance temp, aggregate
+  retention, runtime reliability and Apple acceptance remain separate gaps;
+  these preserved old boots do not prove updated runtime streaming.
+
+- 2026-10-10: Owner-run Fedora synthetic integration passed
+  `sudo bash "$HOME/cairn-bounded-evidence-check/check-fedora-evidence-integration.sh"`.
+  All staged checksums passed. Capacity, ENOSPC, retained partial output,
+  exit-7 propagation, exclusive creation and cleanup checks passed at
+  `/var/lib/cairn-evidence-test-ayUmcTZN`. Direct-backend guestfish copied
+  a synthetic marker into the bounded evidence image and verified unchanged
+  source bytes/ownership, complete status, read-only marker inspection and
+  unmount cleanup. Evidence retained at
+  `/var/lib/cairn-guestfish-evidence-test-fwapXFW5`; extraction image is
+  `root:root 0600`, exactly 1,073,741,824 bytes; status is `COMPLETE`.
+  This closes Fedora synthetic guestfish integration, not actual proof-VM
+  journal extraction, aggregate retention, guest/syslog or appliance temp
+  limits. Retained proof VM and historical evidence remain untouched.
+
+- 2026-10-10: Read-only inventory found guest journal 51,433,472 bytes on
+  shared 132,011,507,712-byte root filesystem; proof logs 24,576 bytes.
+  Journald has no explicit capacity/retention override and forwards to active
+  rsyslog with weekly rotation, not a hard size ceiling. Fedora evidence is
+  on a shared 1,998,694,907,904-byte filesystem; protected evidence totals
+  require owner sudo. Owner selected 1 GiB per NEW host extraction,
+  fail/preserve without eviction, and approved ext4-image access format
+  plus real synthetic preparation-guest CLI tests.
+  The initial directory-backed CLI failed its intended capacity assertion
+  (`132011507712 > 1073741824`). The fixed CLI passed with a
+  1,073,741,824-byte image and 1,020,702,720 usable bytes. Oversized
+  allocation failed with ENOSPC; partial marker survived read-only remount,
+  child exit 7 propagated, existing image/status reuse was rejected without
+  mutation, and mounts were removed.
+  Command: `sudo bash test-bounded-evidence.sh`; final synthetic evidence
+  retained at `/var/lib/cairn-evidence-test-pn6YMs6C` on the preparation guest
+  after the final signal-cleanup change; earlier synthetic runs remain evidence.
+  New extraction uses separate `-volume` destinations; no existing evidence
+  or stopped VM was re-extracted. ADR 0013 records the approved storage
+  boundary and migration. Fedora guestfish integration remains unverified;
+  guest/syslog, appliance temp and total multi-image retention remain open.
+  No host privileged operation, VM start, historical deletion or commit
+  occurred in this increment.
+  ShellCheck also required simplifying the runtime's now-single-file
+  retention loop. The real-tested script is preserved as `runtime-tested.sh`
+  in the streamed-runtime evidence; its manifest no longer references the
+  mutable saved current script. The final behavior-preserving cleanup
+  simplification was deployed with current SHA-256
+  `9f1cfbdf4b6baf4f236ecaf61a2694fdb68db0b533f1ed6366ccbc537c0a7017`.
+  The saved supervisor manifest and original routing evidence checksums pass.
+  No new Android execution is claimed for this cleanup-only simplification.
+
+- 2026-10-10: Owner selected emulator/instrumentation streaming into the
+  existing shared 64 MiB per-replay budget, leaving aggregate retention open,
+  and approved real preparation-guest CLI red/green execution and staging.
+  Fresh scratch build passed 69/69 tasks in 4m32s. The old runtime passed
+  in 19.873s but this behavior assertion failed for the intended reason:
+  `grep -F 'Android emulator version' /opt/cairn-binding-seeds/streamed-runtime-proof-20261010/red.log`.
+  The session harness's later stop of already-collected units returned 5;
+  this cleanup-command error was separate from the observed missing-output
+  failure. Its cleanup was corrected to stop only active units.
+  The changed runtime passed in 18.836s, peak 3.2G and zero swap. The
+  collector invocation was
+  `sudo python3 /opt/cairn-binding-seeds/final-image-inputs-e75437d/bounded-proof.py /opt/cairn-binding-seeds/streamed-runtime-proof-20261010/green.log /bin/bash /opt/cairn-binding-seeds/final-image-inputs-e75437d/run-isolated-android-current.sh`.
+  Emulator version, effective runtime limits, instrumentation code `-1`,
+  value/boundary/error/lifetime and final runtime markers are present.
+  Green output is 7,307 bytes, SHA-256
+  `465005c75aaddb91dac8708c0e11096a8c4ad3435a4723c1e75931b1274a6a54`;
+  red output is 1,421 bytes. Runtime script SHA-256 is
+  `616a4ecfa82d97ae92acce2bafeffa0a4b913d16a5d01495ede129cda6906538`.
+  Saved current script/manifest were updated; original runtime archive and
+  prior diagnostic artifacts were preserved. Root-only evidence at
+  `/opt/cairn-binding-seeds/streamed-runtime-proof-20261010` passes checksums.
+  Runtime removed, unit inactive, scratch unmounted, staging file removed.
+  Local shell syntax, 10 existing CLI tests and diff checks pass.
+  No retained bounded-clone mutation, new cold-clone proof, retry, reliability
+  fix, aggregate retention cap, final lane acceptance or commit is implied.
+
+- 2026-10-10: Committed extraction fix and observed live-verified replay as
+  `a2f840b`. Current reconciliation separates demonstrated isolation from
+  runtime reliability: canonical input, network/environment, resource,
+  bounded captured-output, live base and extraction checks have passed.
+  The 64 MiB collector covers streamed proof output, not separately redirected
+  emulator logs or total journald/aggregate evidence retention. Prior timeout/
+  segfault remains unresolved. Bounded overlay retention is intentional,
+  not permission to delete. No further VM start/proof execution is required
+  merely to recheck these already observed controls; no final lane acceptance
+  or Apple claim made.
 
 - 2026-10-10: Owner chose to keep the stopped bounded clone and overlay.
   No bounded domain undefinition or overlay deletion is authorized. Preserve

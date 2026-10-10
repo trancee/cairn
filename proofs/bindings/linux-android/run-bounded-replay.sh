@@ -10,11 +10,15 @@ fi
 install -d -o root -g root -m 0700 "$logs"
 output="$logs/replay-$(cat /proc/sys/kernel/random/boot_id).log"
 (cd "$saved" && sha256sum --check replay-scripts.sha256)
-if python3 "$saved/bounded-proof.py" "$output" /bin/bash "$saved/replay-disposable-guest.sh"; then
+if python3 "$saved/bounded-proof.py" --reserve "$output" /bin/bash "$saved/replay-disposable-guest.sh"; then
   sha256sum "$output" > "$output.sha256"
 else
   result=$?
-  systemctl stop cairn-binding-proof-build.service cairn-isolated-android-proof.service
+  for unit in cairn-binding-proof-build.service cairn-isolated-android-proof.service; do
+    if systemctl is-active --quiet "$unit"; then
+      systemctl stop "$unit"
+    fi
+  done
   echo 'FAIL: bounded replay failed; logs retained, proof units stopped' >&2
   exit "$result"
 fi

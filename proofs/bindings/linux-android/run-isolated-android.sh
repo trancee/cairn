@@ -8,6 +8,9 @@ fi
 seed=/opt/cairn-binding-seeds/fresh-api26-avd
 runtime=/home/builder/cairn-disposable-runtime
 evidence=/opt/cairn-binding-seeds/disposable-runtime-proof
+if mountpoint -q /var/lib/cairn-proof-logs; then
+  evidence="/var/lib/cairn-proof-logs/runtime-$(cat /proc/sys/kernel/random/boot_id)"
+fi
 (cd "$seed" && sha256sum --check SHA256SUMS)
 if [ -e "$runtime" ]; then
   echo 'Disposable runtime path already exists; refusing concurrent reuse' >&2
@@ -19,11 +22,10 @@ mounted=0
 cleanup_disk() {
   if [ "$mounted" = 1 ]; then
     install -d -o root -g root -m 0755 "$evidence"
-    for log in isolated-emulator.log isolated-instrumentation.txt; do
-      if [ -f "$runtime/artifacts/$log" ]; then
-        install -o root -g root -m 0644 "$runtime/artifacts/$log" "$evidence/$log"
-      fi
-    done
+    if [ -f "$runtime/artifacts/isolated-instrumentation.txt" ]; then
+      install -o root -g root -m 0644 "$runtime/artifacts/isolated-instrumentation.txt" \
+        "$evidence/isolated-instrumentation.txt"
+    fi
     umount "$runtime" || return
   fi
   rmdir "$runtime"
@@ -131,11 +133,11 @@ trap cleanup EXIT
 "$sdk/emulator/emulator" -avd cairn-api26-x86_64 \
   -port 5554 -accel on -no-window -no-audio -no-snapshot \
   -gpu swiftshader -memory 2048 -cores 2 \
-  > "$HOME/artifacts/isolated-emulator.log" 2>&1 &
+  </dev/null &
 emulator_pid=$!
 echo 'PROOF: waiting for Android transport'
 if ! timeout 120s "$adb" -s "$serial" wait-for-device </dev/null; then
-  cat "$HOME/artifacts/isolated-emulator.log" >&2
+  echo 'FAIL: Android transport did not connect; emulator diagnostics are in proof output' >&2
   exit 1
 fi
 echo 'PROOF: Android transport connected; waiting for boot completion'
@@ -166,8 +168,7 @@ timeout 60s "$adb" -s "$serial" install --user 0 \
   "$HOME/artifacts/androidConsumer-debug.apk" </dev/null
 timeout 60s "$adb" -s "$serial" shell -T \
   am instrument --user 0 -w -r ch.trancee.cairn.consumer/.SmokeInstrumentation \
-  </dev/null > "$HOME/artifacts/isolated-instrumentation.txt" 2>&1
-cat "$HOME/artifacts/isolated-instrumentation.txt"
+  </dev/null 2>&1 | tee "$HOME/artifacts/isolated-instrumentation.txt"
 grep -Fx 'INSTRUMENTATION_CODE: -1' "$HOME/artifacts/isolated-instrumentation.txt"
 grep -F 'PASS: Android value, boundary, typed error and object lifetime' \
   "$HOME/artifacts/isolated-instrumentation.txt"

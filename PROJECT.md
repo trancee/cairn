@@ -48,6 +48,63 @@ write denial, shutdown, read-only journal preservation and explicitly
 authorized overlay disposal passed. Canonical inputs are immutable in the
 build namespace; project shells and cache coordination metadata remain
 writable disposable state. This does not close full runner or Apple acceptance.
+The bounded supervisor also passed cold and resumed replay with live cgroup/
+rlimit assertions and checksum-verified captured output below 64 MiB. The
+resumed run's live base write denial and shutdown/extraction metadata checks
+passed. Direct-backend extraction avoids the reproduced libvirt appliance
+ownership change. The stopped bounded overlay is retained by owner choice.
+Emulator diagnostics and instrumentation now stream into the shared 64 MiB
+collector. A real preparation-guest red/green routing proof passed, with
+7,307 bytes captured after the change; saved current script/manifest are
+updated. No new cold-clone routing proof is claimed. Earlier emulator
+timeout/segfault and aggregate journal/evidence retention remain limitations;
+successful replay is not a deterministic reliability claim.
+New host extraction now uses the owner-approved 1 GiB ext4 evidence-image
+boundary with explicit failure and preserved incomplete output.
+Real synthetic CLI tests pass on the preparation guest and Fedora direct
+guestfish synthetic integration passes. Owner-run stopped bounded-VM journal
+extraction in the new format also passes, preserving image bytes/ownership
+and both boot logs with complete status and unmount cleanup.
+Existing evidence stays unchanged. See
+[ADR 0013](docs/adr/0013-bounded-host-proof-evidence.md) for access-format
+migration and the excluded guest/appliance/aggregate storage surfaces.
+The owner subsequently approved 8 GiB NEW host aggregate storage, 4 GiB
+appliance scratch and 1 GiB guest logging, without eviction, plus a separate
+new clone. Host scripts now reserve full images inside the aggregate store;
+profile/composition tests pass on Ubuntu and Fedora. Fedora direct guestfish
+synthetic extraction with bounded scratch also passes with unchanged source
+bytes/ownership. V4 subsequently verified new-clone extraction and guest
+logging controls as recorded below. Apple stays paused. The retention clone has a separate 1 GiB
+raw log disk; its supervisor reserves replay output before execution and
+disables duplicate persistent logging only inside that networkless clone.
+Linux collector reservation and no-command-on-ENOSPC tests pass.
+Supervisors are installed on preparation; its boot condition correctly skips.
+Earlier retention boots failed before target work as recorded below.
+The first retention boot failed before target work because kernel disk
+enumeration reversed proof/root devices. It is stopped and preserved.
+The corrected supervisor resolves the unique `CAIRN_PROOF_LOGS` ext4 label,
+validating 1 GiB capacity; real Linux identity/failure tests pass.
+The `retention-v2` boot resolved the log disk but failed before target work:
+active `syslog.socket` reactivated rsyslog during cutover. Both failed clones
+are preserved. Trigger-first stopping/masking and runtime-mask identity
+checks pass a shared-helper real synthetic systemd test.
+V3 failed before replay on retained `logrotate.timer` failed state after
+masking; disks/evidence are preserved. Explicit prior-failure reporting and
+post-disable state normalization pass real synthetic failed-unit tests.
+The timer's original boot failure remains unverified.
+The owner approved a separate V4 clone, preserving V1/V2/V3. Startup cutover
+now uses the existing reserved 64 MiB collector on the 1 GiB proof disk,
+before journald changes; replay retains its separate unchanged 64 MiB limit.
+Real synthetic systemd output-capture red/green passed, including retained
+failure diagnostics and child exit. Owner-run V4 passed all 69 cold-build tasks,
+JVM assertions and fresh Android instrumentation (20.565s, 4.6G peak, zero swap).
+Live topology/base write denial and graceful shutdown passed. Read-only
+extraction verified matching startup/replay records for boot
+`67e02a91-1f25-4721-b9a9-31cae6343de2`, resource/logging markers and unchanged
+base/overlay/log-disk bytes and metadata. Complete root-only 1 GiB evidence is
+`bounded-store/retention-v4-replay-volume.ext4`; bounded appliance scratch was
+removed and all clones retained. This closes the retention-control integration,
+not earlier emulator instability or full Linux runner acceptance.
 
 ## Verified profile
 

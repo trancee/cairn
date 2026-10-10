@@ -16,25 +16,40 @@ case "${1:-}" in
   *) echo 'Unknown proof selection' >&2; exit 2 ;;
 esac
 directory="/var/lib/libvirt/images/$name"
+store=/var/lib/cairn-proof-evidence/bounded-store
+if [ -e "$store.ext4" ]; then
+  if ! mountpoint -q "$store"; then
+    echo 'FAIL: open the bounded evidence store before disposal checks' >&2
+    exit 2
+  fi
+  stored="$store/$(basename "$evidence")-volume"
+  if [ -e "$stored.status" ]; then
+    evidence="$stored"
+    grep -Fx COMPLETE "$evidence.status"
+    mountpoint -q "$evidence"
+  fi
+fi
+if [ -e "$evidence-volume.status" ]; then
+  evidence="$evidence-volume"
+  grep -Fx COMPLETE "$evidence.status"
+  if ! mountpoint -q "$evidence"; then
+    echo 'FAIL: mount the complete bounded evidence volume before disposal checks' >&2
+    exit 2
+  fi
+fi
 test "$(virsh -c qemu:///system domstate "$name")" = 'shut off'
 test -f "$directory/run.qcow2"
 test ! -L "$directory/run.qcow2"
 sha256sum --check "$evidence/boot-proof.sha256"
 sha256sum --check "$evidence/images-before.sha256"
 if [ "$name" = cairn-proof-canonical ]; then
-  test ! -e "$evidence/input-probes.txt"
-  journalctl --directory="$evidence/journal" --no-pager -o short-monotonic |
-    grep -F \
-      -e 'PASS: source/configuration and downloaded dependency inputs are read-only' \
-      -e 'PASS: complete input mapping resolves to canonical read-only objects; project shells writable' \
-      -e 'PASS: canonical input manifest unchanged after build' > "$evidence/input-probes.txt"
+  sha256sum --check "$evidence/input-probes.sha256"
   for marker in \
     'PASS: source/configuration and downloaded dependency inputs are read-only' \
     'PASS: complete input mapping resolves to canonical read-only objects; project shells writable' \
     'PASS: canonical input manifest unchanged after build'; do
     grep -F "$marker" "$evidence/input-probes.txt"
   done
-  sha256sum "$evidence/input-probes.txt" > "$evidence/input-probes.sha256"
 fi
 grep -F 'PASS: cold disposable guest build and fresh Android runtime' \
   "$evidence/boot-proof.txt"

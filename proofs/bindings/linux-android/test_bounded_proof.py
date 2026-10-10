@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 import tempfile
@@ -6,6 +7,21 @@ from pathlib import Path
 
 
 class BoundedProofTest(unittest.TestCase):
+    @unittest.skipUnless(hasattr(os, "posix_fallocate"), "Linux allocation boundary")
+    def test_reserved_budget_retains_only_actual_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "proof.log"
+
+            result = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name("bounded-proof.py")),
+                 "--reserve", "--limit", "16", str(output), sys.executable, "-c",
+                 "print('proof')"],
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(output.read_bytes(), b"proof\n")
+
     def test_exact_budget_is_retained_and_mirrored(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "proof.log"

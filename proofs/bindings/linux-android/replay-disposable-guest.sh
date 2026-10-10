@@ -13,6 +13,23 @@ NETWORK
 saved=/opt/cairn-binding-seeds/final-image-inputs-e75437d
 canonical="$saved/canonical-inputs"
 scratch=/srv/cairn-generator-scratch
+if [ -f "$saved/resolve-proof-log-disk.sh" ]; then
+  bash "$saved/resolve-proof-log-disk.sh"
+  mountpoint -q /var/lib/cairn-proof-logs
+  python3 - <<'LOGS'
+import os
+state = os.statvfs("/var/lib/cairn-proof-logs")
+capacity = state.f_blocks * state.f_frsize
+assert 0 < capacity <= 1024**3, capacity
+print(f"PASS: authoritative guest proof-log filesystem capacity {capacity} bytes")
+LOGS
+  for unit in rsyslog.service logrotate.timer logrotate.service syslog.socket; do
+    test "$(systemctl is-active "$unit")" = inactive
+    test -L "/run/systemd/system/$unit"
+    test "$(readlink "/run/systemd/system/$unit")" = /dev/null
+  done
+  echo 'PASS: proof logs authoritative; persistent duplicate services disabled'
+fi
 (cd "$saved" && sha256sum --check SHA256SUMS)
 (cd "$saved" && sha256sum --check replay-scripts.sha256)
 (cd "$canonical" && sha256sum --quiet --check SHA256SUMS)
