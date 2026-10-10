@@ -170,3 +170,22 @@ then; no protocol implementation is authorized by this split.
   task execution and explicit target/result checks. Their combined replay
   still requires execution on the capable guest; no new platform pass is
   claimed from local source checks.
+
+- 2026-10-10: Owner authorized direct SSH through the Fedora host to the
+  preparation guest. The assistant deployed commit `8deda79`, preserving
+  the previous scratch fixture as `android-interop-before-8deda79`.
+  `sudo bash /srv/cairn-generator-scratch/android-interop/build-offline.sh`
+  passed: 69 actionable tasks executed, `BUILD SUCCESSFUL` in 3m46s,
+  service exit 0, 3m46.235s runtime and 5m57.247s aggregate CPU.
+  JVM assertions and both ARM64/x86_64 native packaging checks passed;
+  AAR/APK hashes matched the earlier preserved artifacts exactly.
+  The committed `run-android.sh emulator-5554` also passed after explicit
+  API 26 x86_64 boot readiness, with instrumentation code -1 and completion
+  marker. Transcript SHA-256 matched
+  `5f08708a8a1f1aaad51d9adac7f79350d3fe1488a8a02434d7a215871fd44c7b`.
+  APK/transcript were retained root-owned under
+  `/opt/cairn-binding-seeds/repository-replay-8deda79/`.
+  Emulator shutdown ran through an exit trap. This is directly observed
+  replay, not merely owner-pasted output; retained Cargo/dependency caches
+  were used and no fresh disposable image, allocator audit or additional
+  platform gate is claimed.

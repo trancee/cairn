@@ -11,8 +11,10 @@ implement protocol or SDK behavior. Its README records the
 `{module,target,host,prerequisites,task,proof,limitations}` matrix and the
 interop-specific Rust 1.97.1/Kotlin 2.4.20/Gradle 9.7.0/AGP 9.3.1 tuple.
 Owner-reported offline JVM calls and Android debug APK execution on an API 26
-x86_64 emulator passed. Repository scripts for a combined forced build and
-runtime replay are newly captured and not yet runner-executed. No default CI
+x86_64 emulator passed. Repository scripts from commit `8deda79` also passed
+an owner-authorized SSH replay: 69 actionable tasks executed, followed by
+Android instrumentation, with matching AAR/APK/transcript hashes. Retained
+dependency/Cargo caches were used; this is not a fresh disposable image. No default CI
 gate, accepted final sandbox, Compose, allocator audit, ARM64 hardware,
 release/R8 or iOS binding proof is implied. The foundation-specific platform
 claims below are unchanged.

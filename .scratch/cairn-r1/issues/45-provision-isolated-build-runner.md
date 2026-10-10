@@ -160,3 +160,15 @@ are complete.
   The owner preserved source/artifacts/results root-owned under
   `/opt/cairn-binding-seeds/`; repository import is pending.
   Neither runner lane nor this ticket is resolved.
+
+- 2026-10-10: Owner-authorized SSH replay of the committed fixture passed
+  both the combined forced offline build and Android instrumentation.
+  The previous scratch source was preserved rather than overwritten.
+  The initial preparation-account `cd` into private scratch was correctly
+  denied; using `sudo bash` with the absolute script path required no
+  permission widening. The emulator ran outside the build sandbox and was
+  stopped via an exit trap; subsequent service inspection confirmed
+  `ActiveState=inactive`, `SubState=dead`. Retained APK/transcript hashes
+  were checked directly. Read-only-source/cache, fresh-image,
+  runtime network isolation, CPU enforcement and macOS acceptance remain
+  open. See issue 44 for exact results.

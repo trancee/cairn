@@ -34,7 +34,8 @@ A working `cairn` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform sh
   This is not Compose, ARM64 hardware, release/R8, allocator, iOS or final
   isolated-runner acceptance. The exact passing source is now imported in
   [the standalone proof fixture](../../proofs/bindings/linux-android/README.md);
-  the newly captured reusable scripts still need a runner replay.
+  its committed build/runtime scripts passed an authorized SSH replay with
+  retained caches; fresh disposable-runner acceptance remains open.
 - Refer to tickets by name.
 - Current ratchet contract: spec draft 0.6 includes CK-bound recovery,
   conditional honest-epoch healing, durable KEM_PROGRESS and strict

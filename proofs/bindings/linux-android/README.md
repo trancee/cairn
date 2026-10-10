@@ -41,9 +41,14 @@ and [runner limitations](../../../.scratch/cairn-r1/issues/45-provision-isolated
 
 ## Replaying on the provisioned Ubuntu guest
 
-These scripts capture the tested invocation in reusable form. The combined
-forced build and replacement-install script have not yet been executed on the
-runner. They are not general provisioning tools or default CI gates.
+These scripts capture the tested invocation in reusable form. The combined forced build and replacement-install script were replayed over
+owner-authorized SSH on the preparation guest from commit `8deda79`.
+All 69 actionable build tasks executed successfully in 3m46s; JVM assertions
+and native packaging checks passed. The rebuilt AAR/APK hashes matched the
+preserved artifacts above. Android instrumentation passed on API 26 x86_64;
+its transcript hash also matched. The owned emulator was stopped afterwards.
+These are not general provisioning tools or default CI gates; retained Cargo
+and dependency caches were used, not a fresh disposable image.
 
 Prerequisites must be prepared through trusted downloads before any build:
 
@@ -68,10 +73,11 @@ guest paths in the imported build configuration are intentionally retained.
 The root Gradle project name remains the historical `cairn-jvm-interop`.
 The fixture uses a trusted preinstalled Gradle distribution, not a wrapper.
 
-From that directory, as the preparation administrator:
+As the preparation administrator, use the absolute script path: private
+scratch is not traversable by `builder` without sudo.
 
 ```bash
-bash build-offline.sh
+sudo bash /srv/cairn-generator-scratch/android-interop/build-offline.sh
 ```
 
 It forces the three proof tasks to rerun in one offline, allowlisted
