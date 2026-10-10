@@ -91,3 +91,12 @@ An ordinary local filesystem failed the capacity assertion before writes.
 The account is removed and the volume detached after execution; fixture files
 remain only in the disposable hosted VM. This is not yet a generic build
 supervisor, aggregate memory bound or validated whole-process-tree deadline.
+
+Hosted [run 38089701128](https://github.com/trancee/cairn/actions/runs/38089701128)
+at `721828f` passed actual scratch `ENOSPC` at filesystem capacity 268,394,496
+bytes, per-UID process rejection and child CPU termination. Downloaded setup/
+resource logs passed checksums; the account cleanup command succeeded and disk
+detach was observed. Prior setup failures were preserved: sudo sanitized the
+hosted guard, then invalid blank-image options failed. Explicit environment
+passing and documented `hdiutil -type UDIF` resolved those setup errors.
+The memory test still fails setting `RLIMIT_AS`; the overall job remains failed.

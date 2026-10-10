@@ -61,6 +61,16 @@ are complete.
 
 ## Comments
 
+- 2026-10-10: Hosted resource
+  [run 38089701128](https://github.com/trancee/cairn/actions/runs/38089701128)
+  at `721828f` passed fixed 256 MiB scratch exhaustion (`ENOSPC`,
+  filesystem capacity 268,394,496 bytes), dedicated UID 16-process
+  rejection and two-second busy-child CPU termination. Account cleanup
+  succeeded and disk detached; downloaded setup/resource log checksums passed.
+  Earlier setup failures (sudo environment guard, blank-image options) were
+  retained and corrected. Memory setup still fails, so the overall job is red.
+  No target-controlled build, memory acceptance or full Apple runner claimed.
+
 - 2026-10-10: Strengthened hosted
   [run 38089142955](https://github.com/trancee/cairn/actions/runs/38089142955)
   at `0195d02` passed live TCP/Unix unsandboxed controls plus sandboxed
