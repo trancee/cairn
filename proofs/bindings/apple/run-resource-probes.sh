@@ -40,7 +40,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 chmod 0755 "$work"
 mkdir "$volume"
-hdiutil create -size 256m -fs HFS+ -format UDRW -volname cairn-benign-scratch "$image"
+hdiutil create -size 256m -fs HFS+ -type UDIF -volname cairn-benign-scratch "$image"
 hdiutil attach -nobrowse -mountpoint "$volume" "$image"
 mounted=1
 diskutil enableOwnership "$volume"
