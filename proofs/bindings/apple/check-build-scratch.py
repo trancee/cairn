@@ -2,6 +2,7 @@
 """Require the approved fixed, fully backed hosted build scratch boundary."""
 
 import os
+import stat
 import sys
 from pathlib import Path
 
@@ -16,7 +17,8 @@ def main():
     budget = 8 * 1024**3
     if not budget - 16 * 1024**2 <= filesystem_bytes <= budget:
         raise SystemExit(f"FAIL: scratch capacity {filesystem_bytes} is not the approved 8 GiB")
-    if image_metadata.st_uid != 0 or image_metadata.st_nlink != 1 or image.is_symlink():
+    if (image_metadata.st_uid != 0 or image_metadata.st_nlink != 1 or image.is_symlink()
+            or not stat.S_ISREG(image_metadata.st_mode)):
         raise SystemExit("FAIL: build scratch image must be an unshared root-owned regular file")
     if image_metadata.st_blocks * 512 < image_metadata.st_size:
         raise SystemExit("FAIL: build scratch image is not fully allocated")

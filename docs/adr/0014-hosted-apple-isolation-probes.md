@@ -223,3 +223,14 @@ benign sandbox/resource checks. All eight downloaded artifact checksums passed.
 This closes the tested detached-deadline and child-limit slices only; a real
 build still requires sandbox composition, scratch reservation, immutable
 inputs and offline compiler/runtime compatibility.
+
+The approved build-scratch assertion failed for the intended reason in
+[run 38093539208](https://github.com/trancee/cairn/actions/runs/38093539208):
+the existing benign resource disk was 256 MiB, not 8 GiB.
+Keep that independent ENOSPC probe, detach it, and create a separate 8 GiB
+HFS+ image. Before mounting, rewrite its existing bytes in bounded 32 MiB
+chunks and fsync; require allocated blocks to cover the complete logical
+image. This is an explicit full-backing check, not reliance on image creation
+or apparent host free space. Allocation failure prevents target execution.
+The mounted scratch remains private to the dedicated UID and the image stays
+root-owned. The owner-approved job ceiling is now 30 minutes.

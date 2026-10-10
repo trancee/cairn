@@ -82,4 +82,14 @@ else
   cat "$output/resources.log" >&2
   exit "$result"
 fi
+hdiutil detach "$volume"
+mounted=0
+image="$work/build-scratch.dmg"
+hdiutil create -size 8g -fs HFS+ -type UDIF -volname cairn-build-scratch "$image"
+"$python" -I "$scripts/reserve-build-image.py" "$image"
+hdiutil attach -nobrowse -mountpoint "$volume" "$image"
+mounted=1
+diskutil enableOwnership "$volume"
+chown "$uid:20" "$volume"
+chmod 0700 "$volume"
 "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
