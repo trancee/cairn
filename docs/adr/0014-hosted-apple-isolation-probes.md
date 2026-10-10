@@ -255,3 +255,17 @@ Require the sandbox child to observe all approved rlimits before the existing
 input/network/IPC/symlink checks. Recheck scratch backing/capacity after those
 probes and require UID cleanup. This still uses the initial broad-system-read
 policy; compiler compatibility and complete read-boundary acceptance remain open.
+
+The composed broad-read policy failed the accessible unlisted-file denial
+assertion in
+[run 38094051180](https://github.com/trancee/cairn/actions/runs/38094051180).
+The new build policy allows global file metadata, named system/Xcode data
+roots, assigned inputs/scratch and designated entropy devices, not arbitrary
+host data. Root-directory enumeration is explicitly allowed without granting
+data reads of its descendants. A minimized local `echo` probe initially
+aborted with signal 6. Targeted kernel denials identified `file-read-data /`;
+adding only that literal fixed `echo` and Xcode Python startup. Granting
+additional dyld-cache paths or read suboperations had not fixed it.
+Local CLI regressions cover startup and readable data outside named roots.
+Hosted composition must still pass; compiler-required IPC is not authorized
+by this read-policy change.
