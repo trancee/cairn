@@ -22,7 +22,7 @@ caches read-only and disable network access during target-controlled work.
 
 | Lane | Required scope | Current state |
 |---|---|---|
-| Linux/Android | Disposable Linux environment; Rust host tests, Kotlin/JVM integration, Android builds and generated-call execution | Cold networkless clone build and fresh Android runtime pass; full namespace immutability, host base/overlay verification and disposal remain open |
+| Linux/Android | Disposable Linux environment; Rust host tests, Kotlin/JVM integration, Android builds and generated-call execution | Cold networkless build/runtime, protected base start/stop, read-only journal extraction and authorized overlay disposal pass; full namespace immutability remains open |
 | macOS/iOS | Isolated environment on Apple hardware; Xcode, iOS-device and simulator-arm64 builds, generated-call execution and packaged deployment-floor inspection | No compliant runner established |
 
 The owner approved splitting the work on 2026-10-10. Each lane must satisfy
@@ -60,6 +60,26 @@ gate remain blocked until both lanes and all binding acceptance conditions
 are complete.
 
 ## Comments
+
+- 2026-10-10: Owner explicitly approved targeted domain/overlay disposal,
+  then supplied successful `dispose-overlay.sh` output. Preserved proof log
+  and both pre-disposal image hashes checked OK; both replay markers retained.
+  Inactive XML saved with evidence, only `cairn-proof-offline` undefined and
+  only `run.qcow2` removed. Script's domain/overlay absence checks passed;
+  retained base checksum OK. Journal and base remain intact; original prep
+  unaffected by this script. Observed disposal lifecycle is complete.
+  Full source/cache namespace and macOS lane remain unresolved; ticket stays
+  claimed. Extraction/disposal recipes and evidence are uncommitted.
+
+- 2026-10-10: Owner executed `preserve-journal.sh` successfully with
+  guestfish 1.60.1. Read-only extraction retained the journal and filtered
+  boot-proof log root-only at
+  `/var/lib/cairn-proof-evidence/protected-replay-journal`; both replay
+  completion markers were present. Base and overlay checksum comparisons
+  passed after extraction. Guest hostname in the log is inherited
+  `cairn-prep`, not the libvirt domain identity. Clone-state/path guards target
+  the stopped proof overlay. Journal preservation is verified; overlay
+  disposal awaits explicit approval. Extraction script/docs are uncommitted.
 
 - 2026-10-10: After the protected replay, owner confirms clone `shut off`,
   base still `root:qemu 0640`, original base checksum OK. Combined with live

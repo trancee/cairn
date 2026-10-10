@@ -36,8 +36,11 @@ JVM assertions and fresh Android instrumentation passed, and the AAR hash
 matched. The APK hash differed from the historical artifact; byte-identical
 APK reproduction is not established. Owner-supplied host checks verify unchanged
 base bytes and a sole overlay disk backed by the independent base, with no
-NIC/shares/passthrough/guest-agent channel in live XML. Host permissions and disposal,
-full namespace immutability and final runner acceptance remain open.
+NIC/shares/passthrough/guest-agent channel in live XML. A base-specific DAC
+override passed live QEMU-account write denial and start/stop ownership/hash
+checks. Read-only journal extraction and explicitly authorized proof-domain/
+overlay disposal passed, retaining base and evidence. Full namespace
+immutability and final runner acceptance remain open.
 
 ## Verified profile
 

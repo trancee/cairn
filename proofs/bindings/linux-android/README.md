@@ -274,6 +274,31 @@ permissions and QEMU-account write denial subsequently passed as above;
 noninteractive host sudo remains unavailable. Do not globally disable libvirt
 dynamic ownership or SELinux, and do not discard the retained overlay.
 
+### Preserving the stopped clone's journal
+
+`preserve-journal.sh` requires the clone to be shut off and a new root-only
+evidence directory. It uses installed `guestfish` with explicit qcow2 format
+and `--ro` to copy `/var/log/journal` through a libguestfs appliance, without
+host-mounting guest filesystems or enabling appliance networking. It exports
+only the boot-proof unit's entries to `boot-proof.txt`, requires a completion
+marker, and compares both image hashes before/after extraction.
+
+The owner executed it successfully with guestfish 1.60.1 on Fedora. Both
+cold-replay completion markers were present, and base/overlay hash checks
+passed. Evidence is retained root-only under
+`/var/lib/cairn-proof-evidence/protected-replay-journal`, including the raw
+journal, filtered proof log and checksum manifests. The journal hostname
+remains the preparation image's `cairn-prep`; it is not a claim that the
+networked preparation domain ran these boots. The extraction checks the
+stopped `cairn-proof-offline` domain's fixed overlay path. The owner explicitly authorized targeted disposal and executed
+`dispose-overlay.sh`. It verified the preserved proof log and both image
+hashes, saved inactive domain XML with the evidence, undefined only
+`cairn-proof-offline`, and removed only `run.qcow2`. Domain absence and overlay
+absence checks passed, followed by a passing retained-base checksum.
+The independent base, original preparation guest and root-only journal remain
+retained. This completes the observed disposable-overlay lifecycle, not full
+source/cache namespace immutability or final cross-platform runner acceptance.
+
 Before the owner-approved shutdown, persistent inputs were saved under
 `/opt/cairn-binding-seeds/final-image-inputs-e75437d/`. Cargo registry and
 Gradle modules archives exclude compiled Cargo outputs. The fixture archive
