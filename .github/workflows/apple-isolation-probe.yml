@@ -64,6 +64,9 @@ jobs:
           if [ -f "$RUNNER_TEMP/apple-probe/resources.log" ]; then
             (cd "$RUNNER_TEMP/apple-probe" && shasum -a 256 resources.log >> SHA256SUMS)
           fi
+          if [ -f "$RUNNER_TEMP/apple-probe/dedicated-sandbox.log" ]; then
+            (cd "$RUNNER_TEMP/apple-probe" && shasum -a 256 dedicated-sandbox.log >> SHA256SUMS)
+          fi
           exit "$result"
       - name: Retain probe diagnostics
         if: always()

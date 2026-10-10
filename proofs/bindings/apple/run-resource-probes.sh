@@ -18,7 +18,7 @@ if dscl . -read "/Users/$user" >/dev/null 2>&1; then
   exit 1
 fi
 work=$(mktemp -d /private/tmp/cairn-resource-XXXXXXXX)
-volume="$work/volume"
+volume="$work/scratch"
 image="$work/scratch.dmg"
 created=0
 mounted=0
@@ -53,6 +53,24 @@ dscl . -create "/Users/$user" NFSHomeDirectory "$volume"
 dscl . -create "/Users/$user" AuthenticationAuthority ';DisabledUser;'
 chown "$uid:20" "$volume"
 chmod 0700 "$volume"
+mkdir "$work/inputs"
+cp "$scripts/probe.py" "$work/inputs/probe.py"
+cp "$scripts/probe.sb" "$work/probe.sb"
+printf 'benign sentinel\n' > "$work/host-sentinel"
+chmod 0755 "$work/inputs"
+chmod 0644 "$work/inputs/probe.py" "$work/probe.sb" "$work/host-sentinel"
+cat > "$work/command.sh" <<'COMMAND'
+#!/usr/bin/env bash
+set -euo pipefail
+exec /usr/bin/sudo -u cairnbenignprobe /usr/bin/env -i \
+  PATH=/usr/bin:/bin HOME="$1/scratch" TMPDIR="$1/scratch" \
+  /usr/bin/sandbox-exec -D "INPUTS=$1/inputs" -D "SCRATCH=$1/scratch" \
+  -D "SENTINEL=$1/host-sentinel" -f "$2/probe.sb" \
+  "$3" -I "$1/inputs/probe.py" "$1/scratch" "$1/inputs" "$1/host-sentinel" "$4" "$5"
+COMMAND
+chmod 0644 "$work/command.sh"
+"$python" -I "$scripts/launch-probes.py" "$work" "$work" "$python" \
+  | tee "$output/dedicated-sandbox.log"
 cp "$scripts/probe-resources.py" "$work/probe-resources.py"
 chmod 0644 "$work/probe-resources.py"
 if sudo -u "$user" /usr/bin/env -i PATH=/usr/bin:/bin HOME="$volume" TMPDIR="$volume" \

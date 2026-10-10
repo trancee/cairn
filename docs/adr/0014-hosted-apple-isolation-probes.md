@@ -126,3 +126,9 @@ no new deadline. The CLI deadline regression first rejected the missing option,
 then passed with partial output and exit 124. Hosted benign sandbox execution
 uses a 30-second collector deadline and unchanged 64 MiB streamed-output cap.
 This does not yet prove containment of deliberate process-group escape.
+
+The next composition runs the same network/IPC/input/symlink probes under
+the dedicated non-administrator UID with its writable paths on the fixed
+scratch disk. Fixtures and inputs remain root-owned; an empty environment
+enters the sandbox after UID drop. Resource exhaustion is still a separate
+benign invocation, not an accepted compiler/build supervisor.
