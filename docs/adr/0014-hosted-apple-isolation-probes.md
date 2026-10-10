@@ -298,3 +298,11 @@ transfer. Normalize tool copies to readable/traversable but non-writable
 permissions, preserving existing execute bits, and require a dedicated-UID
 DAC executable-access control before entering the sandbox. Record the tool
 path modes; do not silently relax the read policy further.
+
+After correcting the native `/bin/test` path, startup
+[run 38095140743](https://github.com/trancee/cairn/actions/runs/38095140743)
+passed the DAC control and Rust 1.97.1 startup. Cargo's linked system
+LibreSSL then failed reading `/private/etc/ssl/openssl.cnf`. Permit that
+specific system configuration file, not the parent configuration tree;
+network operations remain denied. Java/Gradle startup remains unverified
+until the original version-command sequence completes.

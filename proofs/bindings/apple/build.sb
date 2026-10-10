@@ -20,4 +20,5 @@
   (literal "/dev/null")
   (literal "/dev/random")
   (literal "/dev/urandom"))
+(allow file-read* (literal "/private/etc/ssl/openssl.cnf"))
 (allow file-write* (subpath (param "SCRATCH")) (literal "/dev/null"))
