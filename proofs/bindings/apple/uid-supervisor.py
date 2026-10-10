@@ -26,6 +26,7 @@ def launch_child(command):
     os.setgroups([])
     os.setgid(account.pw_gid)
     os.setuid(account.pw_uid)
+    os.chdir(account.pw_dir)
     os.execvpe(command[0], command, {
         "PATH": "/usr/bin:/bin", "HOME": account.pw_dir,
         "TMPDIR": account.pw_dir, "LANG": "en_US.UTF-8",

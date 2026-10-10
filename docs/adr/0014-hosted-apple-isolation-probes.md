@@ -281,3 +281,11 @@ configure a Gradle project, compile the fixture, freeze Maven/Native caches
 or establish daemon IPC compatibility. The initial read policy must reject
 the new unlisted tool root; admit only that assigned root once the negative
 startup result is observed, not all of `/opt`.
+
+Trusted startup
+[run 38094445085](https://github.com/trancee/cairn/actions/runs/38094445085)
+failed as intended on denied `/opt/cairn-apple-tools/rust/bin/rustc`
+execution. The shell also reported an inherited working directory outside
+the allowed data roots. Permit only the fixed root-owned tool seed subtree
+and change to the dedicated account's scratch before exec; do not widen
+reads to the workflow checkout or all of `/opt`.

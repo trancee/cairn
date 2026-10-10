@@ -14,6 +14,7 @@
   (subpath "/Library/Java")
   (subpath "/Library/Apple")
   (regex #"^/Applications/Xcode[^/]*\.app(/|$)")
+  (subpath "/opt/cairn-apple-tools")
   (subpath (param "INPUTS"))
   (subpath (param "SCRATCH"))
   (literal "/dev/null")

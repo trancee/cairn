@@ -6,9 +6,10 @@ on:
     branches: [docs/split-runner-proof-lanes]
     paths:
       - .github/workflows/apple-toolchain-preparation.yml
-      - proofs/bindings/apple/prepare-toolchains.sh
-      - proofs/bindings/apple/freeze-toolchains.sh
-      - proofs/bindings/apple/probe-toolchains.sh
+      - proofs/bindings/apple/*.sh
+      - proofs/bindings/apple/*.py
+      - proofs/bindings/apple/build.sb
+      - proofs/bindings/linux-android/bounded-proof.py
 
 permissions:
   contents: read
