@@ -22,7 +22,7 @@ caches read-only and disable network access during target-controlled work.
 
 | Lane | Required scope | Current state |
 |---|---|---|
-| Linux/Android | Disposable Linux environment; Rust host tests, Kotlin/JVM integration, Android builds and generated-call execution | Preparation VM/probes, measured CPU quota and committed offline JVM/Android replay pass; immutable source/cache, runtime network isolation and disposable final image incomplete |
+| Linux/Android | Disposable Linux environment; Rust host tests, Kotlin/JVM integration, Android builds and generated-call execution | Cold networkless clone build and fresh Android runtime pass; full namespace immutability, host base/overlay verification and disposal remain open |
 | macOS/iOS | Isolated environment on Apple hardware; Xcode, iOS-device and simulator-arm64 builds, generated-call execution and packaged deployment-floor inspection | No compliant runner established |
 
 The owner approved splitting the work on 2026-10-10. Each lane must satisfy
@@ -60,6 +60,54 @@ gate remain blocked until both lanes and all binding acceptance conditions
 are complete.
 
 ## Comments
+
+- 2026-10-10: With the proof clone stopped, owner restored base ownership/
+  mode and supplied `root:qemu 0640`. Current Unix permissions deny QEMU
+  writes to the retained base. Durable enforcement across future libvirt
+  starts remains unverified; this does not retroactively establish a
+  host-enforced immutable base during the completed run.
+
+- 2026-10-10: Owner confirms proof clone `shut off`; directory is
+  `root:qemu 0750`, overlay `root:qemu 0660`, base `qemu:qemu 0640`.
+  Base ownership differs from the creation script's root-owned intent:
+  QEMU has owner-write permission. Unchanged base hashes prove no observed
+  mutation, not enforced host-level base immutability. Ownership-change cause
+  and durable enforcement across libvirt starts remain unresolved. Overlay/
+  journal are retained; no deletion authorized or performed.
+
+- 2026-10-10: Owner supplied another passing base checksum and a successful
+  `qemu-img check` of the overlay: no errors, 10,161/2,097,152 allocated
+  clusters and image end offset 667,877,376 bytes. The supplied excerpt omits
+  `domstate` and host ownership/mode output, so shutdown and permissions are
+  not inferred from image-check success. Overlay remains retained for journal
+  extraction; disposal is not verified.
+
+- 2026-10-10: Owner supplied `base.qcow2: OK` from the saved checksum
+  check, a sole `vda` attachment to `run.qcow2`, and effective live XML showing
+  that overlay backed only by the independent `base.qcow2`. No NIC, CD,
+  filesystem share, hostdev or guest-agent channel is present. Dynamic
+  SELinux/DAC labels are active in the reported XML; VM has 8 vCPUs and
+  16 GiB RAM. Base bytes and attachment topology are verified by supplied
+  output. Host permission enforcement, clean shutdown and overlay disposal
+  remain open; this does not close full namespace or Apple acceptance.
+
+- 2026-10-10: Owner supplied successful cold clone console output. All 69
+  actionable build tasks executed in 4m21s, including pinned bindgen
+  installation; JVM assertions and ARM64/x86_64 native packaging passed.
+  Fresh Android runtime checked loopback/no default routes and filesystem
+  capacity 16,729,894,912 bytes, then installed the APK and passed
+  instrumentation code `-1` and the value/boundary/error/lifetime marker.
+  Runtime exited 0 after 19.828s (reported memory peak 4.4G, zero swap).
+  Bootstrap printed `PASS: cold disposable guest build and fresh Android runtime`.
+  AAR hash matched the preserved artifact; APK hash changed to
+  `1a4bfc129c20baf10669ce6f3b76a6fdcb350e973c516dff8515851bdb04c1de`;
+  the difference is unexplained, not byte-identical reproduction.
+  Reported build peak 1.6M is not accepted as reliable memory evidence.
+  Assistant separately confirmed original prep SSH reachability and inactive
+  boot-proof service after restart. Host base-checksum/permissions, effective
+  clone XML, shutdown and overlay disposal remain unverified; full source/cache
+  namespace immutability and macOS lane remain open. This is partial evidence,
+  not resolution or final runner acceptance.
 
 - 2026-10-10: Owner-executed Linux setup uses Fedora 44 x86_64 with
   KVM/libvirt and SELinux enforcing. The dedicated Ubuntu 24.04.5 preparation
@@ -281,3 +329,15 @@ are complete.
   Fresh runtime state is now evidenced, not a disposable final guest image.
   Full source/cache namespace enforcement and final VM-image/Apple
   acceptance remain open.
+
+- 2026-10-10: Owner supplied live VM XML and explicitly approved clean
+  shutdown of `cairn-prep` plus owner-run host clone commands. Source, Cargo
+  registry and Gradle modules were checksum-verified on persistent guest disk
+  under `final-image-inputs-e75437d`, excluding compiled build outputs.
+  A loopback-only boot service was staged and verified to skip in the
+  networked preparation guest. Clean guest poweroff was requested over SSH.
+  Fedora noninteractive sudo/libvirt authorization remains unavailable;
+  `create-offline-clone.sh` is staged for the owner's terminal authentication.
+  It creates an independent qcow2 base and overlay, removes network/sharing
+  and restarts the original guest after copying. Clone execution, cold-build
+  results and base/overlay integrity remain pending, not passed evidence.

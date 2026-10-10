@@ -1,0 +1,16 @@
+[Unit]
+Description=Cold offline Cairn binding proof in networkless disposable guest
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecCondition=/usr/bin/python3 -c "from pathlib import Path; import sys; sys.exit(0 if {p.name for p in Path('/sys/class/net').iterdir()} == {'lo'} else 1)"
+ExecStart=/bin/bash /opt/cairn-binding-seeds/final-image-inputs-e75437d/replay-disposable-guest.sh
+TimeoutStartSec=1800
+TimeoutStopSec=30
+KillMode=control-group
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target

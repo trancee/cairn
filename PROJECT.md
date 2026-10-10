@@ -30,8 +30,14 @@ with explicit route-denial assertions and verified emulator cleanup. A
 disposable 16 GiB loop-backed runtime volume bounds fresh AVD/artifact/temp writes;
 over-capacity allocation fails with `ENOSPC`, and cleanup is verified.
 The unbooted root-owned AVD seed passes checksum checks before/after runtime;
-the smoke package is absent before installation. The preparation VM is not
-a fresh final guest image.
+the smoke package is absent before installation. Owner-supplied console output
+also records a cold networkless clone replay: all 69 build tasks executed,
+JVM assertions and fresh Android instrumentation passed, and the AAR hash
+matched. The APK hash differed from the historical artifact; byte-identical
+APK reproduction is not established. Owner-supplied host checks verify unchanged
+base bytes and a sole overlay disk backed by the independent base, with no
+NIC/shares/passthrough/guest-agent channel in live XML. Host permissions and disposal,
+full namespace immutability and final runner acceptance remain open.
 
 ## Verified profile
 

@@ -47,6 +47,18 @@ then; no protocol implementation is authorized by this split.
 
 ## Comments
 
+- 2026-10-10: Owner's cold networkless clone replay executed all 69 build
+  tasks and passed generated JVM value/boundary/typed-error/object-lifetime
+  assertions and Android ARM64/x86_64 packaging. Fresh API 26 x86_64
+  installation/instrumentation passed code `-1` and its completion marker;
+  the bootstrap reported cold build/runtime success. AAR hash matched prior
+  evidence; APK hash was
+  `1a4bfc129c20baf10669ce6f3b76a6fdcb350e973c516dff8515851bdb04c1de`,
+  different from the prior debug APK for an unexamined reason. See issue 45
+  and the fixture README for timings and remaining base/overlay acceptance.
+  This extends standalone cold-build closure evidence, not Compose, hardware,
+  release, Apple, byte-identical APK or full runner acceptance.
+
 - 2026-10-10: Owner-executed unified-plugin JVM smoke also passed offline.
   Ubique plugin 1.3.1 ran `cargoBuildX64LinuxGnuDebug`, `installBindgen`
   against the preserved pinned local source, `buildBindings` and

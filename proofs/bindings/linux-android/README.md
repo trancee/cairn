@@ -177,6 +177,77 @@ be absent; installation does not use replacement mode. The source/toolchain
 guest and trusted administrator remain part of the preparation environment.
 Final VM image acceptance remains open.
 
+## Disposable VM replay preparation
+
+`create-offline-clone.sh` is an owner-run Fedora root operation. It requires
+`cairn-prep` to be cleanly shut off, refuses an existing proof domain/directory,
+and independently converts its qcow2 disk into a root-owned base. A writable
+overlay is attached to `cairn-proof-offline`; the clone XML removes all NICs,
+cloud-init CD, guest-agent channels, host devices and filesystem sharing.
+SELinux remains enabled. The original preparation disk is not a backing file
+and the original guest is restarted after the conversion.
+
+The staged `cairn-disposable-boot-proof.service` runs only with loopback as
+the sole guest interface. Its condition was verified to skip execution in
+the networked preparation guest. `replay-disposable-guest.sh` then mounts
+fresh 6 GiB scratch, restores source and downloaded dependencies from
+checksum-verified archives, runs the forced build without retained Cargo
+outputs, and executes the fresh-seed runtime. Results go to journal/console.
+The owner supplied the clone's successful console output on 2026-10-10.
+The cold build completed in 4m21s with all 69 actionable tasks executed,
+including compilation/installation of the pinned generator. JVM value,
+boundary, typed-error and object-lifetime assertions passed. Native packaging
+checks passed for Android ARM64/x86_64. The AAR SHA-256 matched
+`9876666c5f0eee81389463db7845deb14a69ced46764652fca82f0490d430658`;
+the newly built APK SHA-256 was
+`1a4bfc129c20baf10669ce6f3b76a6fdcb350e973c516dff8515851bdb04c1de`,
+different from the historical APK. The cause of that difference has not been
+examined; this is behavior/build-closure proof, not byte-identical APK proof.
+
+The fresh Android runtime passed the loopback/no-default-route and
+16,729,894,912-byte filesystem-capacity checks, normal APK installation,
+instrumentation code `-1` and value/boundary/error/lifetime completion marker.
+The runtime unit exited successfully after 19.828s with reported peak memory
+4.4 GiB and zero swap. The final bootstrap marker was
+`PASS: cold disposable guest build and fresh Android runtime`.
+The 1.6 MiB reported build-memory peak remains implausible and is not accepted
+as compilation-memory evidence. The original preparation guest was separately
+confirmed reachable over SSH after restart, with its boot-proof unit inactive.
+The owner subsequently supplied a passing base checksum and effective live
+clone XML. Its sole disk is `run.qcow2`, backed only by the independent
+`base.qcow2`; no NIC, CD, filesystem share, host-device passthrough or
+guest-agent channel is present. Live XML shows dynamic SELinux/DAC isolation,
+8 vCPUs and 16 GiB RAM. This verifies the reported attachment/topology and
+unchanged base bytes, not host permission enforcement or completed disposal.
+Host base permissions and overlay shutdown/disposal evidence remain pending.
+The owner supplied a subsequent passing base checksum and error-free overlay
+`qemu-img check` (10,161 allocated clusters, image end offset 667,877,376 bytes).
+That excerpt did not include domain state or ownership/modes; neither is
+inferred from the image-check result. The overlay remains retained for logs.
+Subsequent owner output confirms the clone is `shut off`. Directory mode/
+ownership is `root:qemu 0750`, overlay is `root:qemu 0660`, but the base is
+`qemu:qemu 0640`, not the requested `root:qemu 0640`. The QEMU account owns
+the base and has owner-write permission. The unchanged checksum establishes
+no observed mutation during this run, not host-enforced base immutability.
+The ownership change's cause has not been verified; future starts must not
+assume the creation-time ownership survives libvirt management.
+With the clone stopped, the owner restored and confirmed `root:qemu 0640`
+on the base. This removes QEMU's Unix write permission for the retained base
+now; persistence of that protection across future starts remains unverified.
+Full namespace immutability and final runner
+acceptance are not established by this successful replay.
+
+Before the owner-approved shutdown, persistent inputs were saved under
+`/opt/cairn-binding-seeds/final-image-inputs-e75437d/`. Cargo registry and
+Gradle modules archives exclude compiled Cargo outputs. The fixture archive
+excludes Gradle build/state directories. Scratch was a nonpersistent mount,
+so the original guest's previous tmpfs state will not survive shutdown.
+The clone console is reached through libvirt, not a network connection.
+After the proof, final acceptance requires its actual output, original/base
+integrity and overlay lifecycle checks; do not infer success from domain
+creation. Failed host clone preparation leaves exact files for diagnosis;
+it does not destructively remove them or weaken host permissions.
+
 The unbooted seed was created through the installed `avdmanager create avd`
 for `system-images;android-26;google_apis;x86_64`, with a dedicated staging
 `ANDROID_USER_HOME`/`ANDROID_AVD_HOME` and the name `cairn-api26-x86_64`.
@@ -193,6 +264,6 @@ blocked by the namespace independent of emulator metrics settings.
 The additional dependency-only APK ABI directories do not expand supported
 ABIs. The [bounded allocator audit](ALLOCATOR-AUDIT.md) checked resolved source and
 default allocator forwarding in all six delivered Linux/Android Rust ELFs.
-Remaining gates include clean-run reproduction, allocator evidence for new targets/artifacts,
+Remaining gates include final image/lifecycle acceptance, allocator evidence for new targets/artifacts,
 Unicode-specific coverage, Compose, ARM64 hardware, release/R8/page alignment,
 iOS 15 device/simulator linkage and runtime, and final runner acceptance.
