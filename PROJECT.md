@@ -15,9 +15,12 @@ x86_64 emulator passed. Repository scripts from commit `8deda79` also passed
 an owner-authorized SSH replay: 69 actionable tasks executed, followed by
 Android instrumentation, with matching AAR/APK/transcript hashes. Retained
 dependency/Cargo caches were used; this is not a fresh disposable image. No default CI
-gate, accepted final sandbox, Compose, allocator audit, ARM64 hardware,
+gate, accepted final sandbox, Compose, ARM64 hardware,
 release/R8 or iOS binding proof is implied. The foundation-specific platform
 claims below are unchanged.
+The [bounded allocator evidence](proofs/bindings/linux-android/ALLOCATOR-AUDIT.md)
+covers the fixture and delivered Linux/Android runtime ELFs, not Apple or
+future dependency graphs.
 
 ## Verified profile
 

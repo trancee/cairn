@@ -22,7 +22,7 @@ caches read-only and disable network access during target-controlled work.
 
 | Lane | Required scope | Current state |
 |---|---|---|
-| Linux/Android | Disposable Linux environment; Rust host tests, Kotlin/JVM integration, Android builds and generated-call execution | Preparation VM/probes and offline JVM/Android debug proofs pass; immutable source/cache, CPU-budget proof, reusable invocation and disposable final image incomplete |
+| Linux/Android | Disposable Linux environment; Rust host tests, Kotlin/JVM integration, Android builds and generated-call execution | Preparation VM/probes, measured CPU quota and committed offline JVM/Android replay pass; immutable source/cache, runtime network isolation and disposable final image incomplete |
 | macOS/iOS | Isolated environment on Apple hardware; Xcode, iOS-device and simulator-arm64 builds, generated-call execution and packaged deployment-floor inspection | No compliant runner established |
 
 The owner approved splitting the work on 2026-10-10. Each lane must satisfy
@@ -172,3 +172,16 @@ are complete.
   were checked directly. Read-only-source/cache, fresh-image,
   runtime network isolation, CPU enforcement and macOS acceptance remain
   open. See issue 44 for exact results.
+
+- 2026-10-10: Dedicated CPU saturation probe directly verified the build's
+  `CPUQuota=400%`. The unit's cgroup `cpu.max` was `400000 100000`.
+  Eight CPU-bound subprocesses ran for five seconds each, consuming
+  20.290267493 worker CPU seconds over 5.062122952 wall seconds
+  (4.008 effective cores). The automated check required 2.5-4.5 effective
+  cores and the configured four-core cgroup quota; it passed. The observed
+  quota bounded the eight-worker load, not an application performance budget.
+  Result JSON is root-owned at
+  `/opt/cairn-binding-seeds/allocator-audit-8deda79/cpu-quota-proof.json`.
+  CPU quota enforcement is no longer an unmeasured gate for this preparation
+  setup. Final read-only-source/cache enforcement, runtime network isolation,
+  disposable-image reproduction and macOS acceptance remain open.

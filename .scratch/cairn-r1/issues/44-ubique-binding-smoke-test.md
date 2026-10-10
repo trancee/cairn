@@ -189,3 +189,15 @@ then; no protocol implementation is authorized by this split.
   replay, not merely owner-pasted output; retained Cargo/dependency caches
   were used and no fresh disposable image, allocator audit or additional
   platform gate is claimed.
+
+- 2026-10-10: Direct SSH inspection completed bounded
+  [Linux/Android allocator evidence](../../../proofs/bindings/linux-android/ALLOCATOR-AUDIT.md).
+  Locked offline metadata plus package-scoped normal/build trees covered
+  Linux x86_64 and both packaged Android targets. Identified custom
+  allocator declarations were standalone dependency test targets, not
+  production library overrides. Actual delivered smoke/runtime ELFs for
+  all three targets were inspected: all four global allocator entry points
+  forward to Rust default `__rdl_*` functions. APK/JAR entries matched the
+  inspected bytes. No runtime replacement or feature change was made.
+  This does not attest reproducible upstream builds, Apple allocator/linkage,
+  new feature graphs, or overall memory safety. The full ticket remains open.

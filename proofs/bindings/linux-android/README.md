@@ -85,8 +85,9 @@ systemd unit, executes the JVM assertions and checks the delivered native
 entries. It does not install packages, boot an emulator or retry online.
 Source and caches are still writable inside bounded scratch; final
 read-only-source/cache enforcement and disposable-image acceptance remain
-open. CPU quota is configured, but its dedicated enforcement measurement
-remains open. Implausible historical systemd memory peaks are not accepted.
+open. A dedicated eight-worker saturation probe measured 4.008 effective CPU
+cores under the exact 400% quota; see the runner evidence. Implausible
+historical systemd memory peaks are not accepted.
 
 For runtime proof, first boot the dedicated `cairn-api26-x86_64` AVD outside
 the build unit. The observed setup used emulator `37.2.12.0` (build
@@ -115,6 +116,8 @@ sudo systemctl stop cairn-api26-emulator
 
 This runtime recipe is not yet an enforced offline/no-network test unit.
 The additional dependency-only APK ABI directories do not expand supported
-ABIs. Remaining gates include clean-run reproduction, allocator-source audit,
+ABIs. The [bounded allocator audit](ALLOCATOR-AUDIT.md) checked resolved source and
+default allocator forwarding in all six delivered Linux/Android Rust ELFs.
+Remaining gates include clean-run reproduction, allocator evidence for new targets/artifacts,
 Unicode-specific coverage, Compose, ARM64 hardware, release/R8/page alignment,
 iOS 15 device/simulator linkage and runtime, and final runner acceptance.
