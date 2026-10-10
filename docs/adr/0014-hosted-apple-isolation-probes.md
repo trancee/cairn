@@ -100,3 +100,10 @@ detach was observed. Prior setup failures were preserved: sudo sanitized the
 hosted guard, then invalid blank-image options failed. Explicit environment
 passing and documented `hdiutil -type UDIF` resolved those setup errors.
 The memory test still fails setting `RLIMIT_AS`; the overall job remains failed.
+
+The owner subsequently selected whole disposable VM memory enforcement rather
+than a separate process-memory cap. The current probe checks actual VM RAM
+against a candidate 7 GiB ceiling and requires zero configured swap. The
+candidate uses the documented standard ARM64 runner resource table, but any
+observed mismatch fails setup rather than silently raising the budget.
+No process-level cap, OOM failure test or swap reconfiguration is implied.

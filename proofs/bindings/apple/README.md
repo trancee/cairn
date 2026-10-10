@@ -29,10 +29,11 @@ standard `macos-26` runner, with a 10-minute job timeout and seven-day artifacts
 No secrets, signing, dependencies or target-controlled build are involved.
 Hosted results must be observed before claiming any hosted probe passed.
 
-The hosted resource slice first runs `probe-memory.py`: request a 32 MiB
-address-space limit and attempt a bounded 64 MiB allocation. If allocation
-succeeds, the job fails and retains checksummed `memory.log`. This is a
-candidate-control test, not an accepted memory budget. Wider dedicated-user/
+The initial process-memory probe failed while setting the limit. The owner
+selected a whole-VM boundary instead: `probe-memory.py` checks observed RAM
+against a candidate 7 GiB ceiling and requires zero configured swap.
+Any mismatch fails with checksummed `memory.log`; this is not a process cap.
+Wider dedicated-user/
 disk/process probes run separately even when memory fails; no target build
 is authorized.
 

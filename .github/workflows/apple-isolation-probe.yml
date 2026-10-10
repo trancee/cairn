@@ -22,7 +22,7 @@ jobs:
           persist-credentials: false
       - name: Test benign sandbox boundaries
         run: bash proofs/bindings/apple/run-probes.sh "$RUNNER_TEMP/apple-probe"
-      - name: Test candidate hard memory limit
+      - name: Verify candidate whole-VM memory envelope
         if: always()
         run: |
           python="$(xcrun --find python3)"

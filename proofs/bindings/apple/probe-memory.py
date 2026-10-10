@@ -1,25 +1,22 @@
 #!/usr/bin/env python3
-"""Check whether Darwin's address-space limit actually rejects allocation."""
+"""Verify whole-VM RAM and swap observations; not a process-memory control."""
 
-import resource
+import re
+import subprocess
 import sys
 
 
-limit = 32 * 1024**2
-print(f"PROBE: requested RLIMIT_AS={limit} bytes", flush=True)
-print(f"PROBE: initial RLIMIT_AS={resource.getrlimit(resource.RLIMIT_AS)}", flush=True)
-print(f"PROBE: RLIMIT_AS aliases RLIMIT_RSS={resource.RLIMIT_AS == resource.RLIMIT_RSS}",
-      flush=True)
-try:
-    resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
-except (ValueError, OSError):
-    print("FAIL: Darwin rejected setting the candidate hard memory limit", flush=True)
+limit = 7 * 1024**3
+memory = int(subprocess.check_output(["/usr/sbin/sysctl", "-n", "hw.memsize"], text=True))
+swap = subprocess.check_output(["/usr/sbin/sysctl", "-n", "vm.swapusage"], text=True).strip()
+print(f"PROBE: whole-VM RAM={memory} bytes; candidate ceiling={limit} bytes", flush=True)
+print(f"PROBE: swap {swap}", flush=True)
+if not 0 < memory <= limit:
+    print("FAIL: observed VM RAM does not match the seven GiB candidate ceiling", flush=True)
     sys.exit(1)
-try:
-    allocation = bytearray(64 * 1024**2)
-except MemoryError:
-    print("PASS: allocation beyond requested process memory limit rejected")
-else:
-    print(f"FAIL: allocated {len(allocation)} bytes beyond requested memory limit",
-          flush=True)
+match = re.search(r"total = ([0-9.]+)M", swap)
+if not match or float(match.group(1)) != 0:
+    print("FAIL: zero-swap VM memory policy not established", flush=True)
+    sys.exit(1)
+print("PASS: whole-VM RAM matches candidate envelope; swap disabled", flush=True)
     sys.exit(1)
