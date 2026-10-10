@@ -52,3 +52,15 @@ Physical iPhone execution is separate from hosted simulator execution.
 No production/API or existing Linux runner contract changes. Linux retention
 is committed separately; its earlier intermittent emulator failures remain open.
 The probes do not waive issue 45 or authorize a binding build on success.
+
+## Observed evidence
+
+The unprotected local CLI failed on allowed input mutation; the protected CLI
+passed. Hosted
+[run 38088954525](https://github.com/trancee/cairn/actions/runs/38088954525)
+at `608dee0` passed all six benign checks in an eight-second job.
+Downloaded artifact log/environment SHA-256 checksums passed. Observed
+environment: ARM64 macOS 26.6.2, Xcode 26.6; `df` reported 95 GiB available,
+not a guaranteed scratch allocation. This differs from research's 14 GB
+runner specification and must not be promoted to an enforced budget.
+Full runner acceptance and target-controlled builds remain gated.

@@ -61,6 +61,17 @@ are complete.
 
 ## Comments
 
+- 2026-10-10: Free ARM64 hosted
+  [Apple probe run 38088954525](https://github.com/trancee/cairn/actions/runs/38088954525)
+  at `608dee0` passed in eight seconds. Downloaded environment/probe
+  checksums verify denied input mutation, sentinel read, network bind,
+  child input write, allowed scratch and 1 MiB file enforcement.
+  macOS 26.6.2/Xcode 26.6 observed; 95 GiB available reported by `df`,
+  not a promised/enforced scratch budget. No binding build occurred.
+  Full file-read boundary, external network/IPC denial, aggregate resource
+  enforcement and Xcode/Kotlin compatibility remain open. Repository
+  hooks, ShellCheck, actionlint, local link checks and staged secret scan passed.
+
 - 2026-10-10: Owner approved free hosted Apple probe workflow, commit, push
   and execution. Initial sandbox seam red: unprotected input write succeeds.
   Protected local probe passes input/sentinel/network/child denial, scratch
