@@ -53,6 +53,7 @@ dscl . -create "/Users/$user" NFSHomeDirectory "$volume"
 dscl . -create "/Users/$user" AuthenticationAuthority ';DisabledUser;'
 chown "$uid:20" "$volume"
 chmod 0700 "$volume"
+"$python" -B -m unittest discover -s "$scripts" -p 'test_uid_supervisor.py'
 mkdir "$work/inputs"
 cp "$scripts/probe.py" "$work/inputs/probe.py"
 cp "$scripts/probe.sb" "$work/probe.sb"

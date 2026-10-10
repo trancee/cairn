@@ -173,3 +173,13 @@ The Gradle archive matched the published checksum; locked fixture and Ubique
 Cargo downloads completed. The artifact retains logs and input hashes, not
 the downloaded seed itself. No offline completeness, Kotlin/Native build,
 Apple allocator audit or runtime result is established.
+
+## Dedicated-UID supervisor seam
+
+The owner approved a hosted root-owned supervisor CLI seam for deadline,
+detached-descendant cleanup and output retention. Its tests require the
+existing fresh disabled-login account; local non-root execution skips them.
+The first hosted regression deliberately checks the current process-group-only
+baseline and must fail if a detached child survives. Test teardown kills only
+the specific owned child PID. Fixture builds remain unauthorized until these
+and the remaining isolation gates pass.
