@@ -1,4 +1,5 @@
 import os
+import json
 import signal
 import subprocess
 import sys
@@ -12,6 +13,33 @@ from pathlib import Path
     "Dedicated-UID supervision requires the disposable hosted root fixture",
 )
 class DedicatedSupervisorTest(unittest.TestCase):
+    def test_child_receives_approved_limits_and_only_dedicated_identity(self):
+        program = (
+            "import json,os,resource; print(json.dumps({"
+            "'uid':os.getuid(),'gid':os.getgid(),'groups':os.getgroups(),"
+            "'cpu':resource.getrlimit(resource.RLIMIT_CPU),"
+            "'processes':resource.getrlimit(resource.RLIMIT_NPROC),"
+            "'file':resource.getrlimit(resource.RLIMIT_FSIZE),"
+            "'core':resource.getrlimit(resource.RLIMIT_CORE),"
+            "'environment':sorted(os.environ)}))"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "proof.log"
+
+            result = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name("uid-supervisor.py")),
+                 str(output), sys.executable, "-I", "-c", program],
+                capture_output=True, timeout=25,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(output.read_text()), {
+                "uid": 59000, "gid": 20, "groups": [],
+                "cpu": [900, 900], "processes": [128, 128],
+                "file": [67108864, 67108864], "core": [0, 0],
+                "environment": ["HOME", "PATH", "TMPDIR"],
+            })
+
     def test_deadline_removes_detached_descendant_and_preserves_output(self):
         program = (
             "import os,time; "
