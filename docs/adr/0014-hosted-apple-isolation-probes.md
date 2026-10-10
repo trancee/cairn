@@ -139,3 +139,20 @@ the independent resource probes, three shared-collector deadline tests,
 disabled/unloaded pager and 7 GiB/zero-swap observations. All eight downloaded
 artifact log checksums passed. Whole-process-tree escape containment and
 compiler/build compatibility are not established by these benign results.
+
+## Authorized preparation phase
+
+The owner approved a separate trusted preparation/compatibility phase and
+build-scale ceilings: 7 GiB whole-VM RAM/zero swap, 8 GiB reserved scratch,
+64 MiB output, 128 processes, 900 CPU seconds per process and a 30-minute job
+deadline. These are not yet composed or accepted build controls.
+Only permit a fixture build after remaining isolation gates pass.
+
+`apple-toolchain-preparation.yml` first requires the reusable benign preflight
+and then starts a separate fresh hosted preparation VM. It selects the
+existing fixture's Rust 1.97.1, Gradle 9.7.0 and daemon JDK 25.0.4+1, plus
+compile JDK 21. The Gradle ZIP has an official fixed SHA-256; Ubique source
+uses the existing immutable 1.3.1 revision. Cargo downloads use locked
+manifests. Preparation has network access and does not compile the fixture.
+Its output is not a frozen seed or build-isolation proof. Kotlin/Native and
+Maven preparation, compiler compatibility and input freezing remain pending.

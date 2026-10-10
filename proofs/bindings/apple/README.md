@@ -50,3 +50,11 @@ The hosted sandbox command uses a 30-second deadline and 64 MiB output cap;
 the collector log is included in the checksummed artifact. Whole-VM memory
 requires 7 GiB RAM and disabled/unloaded dynamic pager with zero swap.
 These controls still need composition into an unprivileged binding-build cell.
+
+The separately authorized `apple-toolchain-preparation.yml` requires benign
+preflight before downloading the existing Rust/Gradle/JDK/Ubique pins and
+locked Cargo inputs on a fresh hosted VM. It does not compile the fixture.
+Downloaded inputs are not yet frozen or replayed offline. The selected
+Kotlin/Gradle/Ubique versions are unchanged; Xcode 26.6 is a separately
+recorded hosted environment. Further compiler/Maven/Native preparation and
+build-scale enforcement remain pending.

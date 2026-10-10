@@ -1,6 +1,7 @@
 name: Apple isolation probe
 
 on:
+  workflow_call:
   workflow_dispatch:
   push:
     branches: [docs/split-runner-proof-lanes]

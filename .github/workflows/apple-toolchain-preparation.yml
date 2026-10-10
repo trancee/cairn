@@ -1,0 +1,58 @@
+name: Apple toolchain preparation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [docs/split-runner-proof-lanes]
+    paths:
+      - .github/workflows/apple-toolchain-preparation.yml
+      - proofs/bindings/apple/prepare-toolchains.sh
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  benign-preflight:
+    uses: ./.github/workflows/apple-isolation-probe.yml
+  prepare:
+    needs: benign-preflight
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - name: Check out trusted preparation scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Select pinned daemon JDK
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 25.0.4+1
+      - name: Record daemon JDK location
+        run: printf 'CAIRN_DAEMON_JAVA_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
+      - name: Select compile JDK
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Prepare pinned downloads without a fixture build
+        run: |
+          python="$(xcrun --find python3)"
+          "$python" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
+            "$RUNNER_TEMP/apple-preparation.log" \
+            /bin/bash proofs/bindings/apple/prepare-toolchains.sh "$RUNNER_TEMP/apple-preparation"
+      - name: Retain preparation diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apple-toolchain-preparation
+          path: |
+            ${{ runner.temp }}/apple-preparation.log
+            ${{ runner.temp }}/apple-preparation/versions.txt
+            ${{ runner.temp }}/apple-preparation/inputs.sha256
+          if-no-files-found: error
+          retention-days: 7
