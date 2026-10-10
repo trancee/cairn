@@ -19,4 +19,3 @@ if not match or float(match.group(1)) != 0:
     print("FAIL: zero-swap VM memory policy not established", flush=True)
     sys.exit(1)
 print("PASS: whole-VM RAM matches candidate envelope; swap disabled", flush=True)
-    sys.exit(1)
