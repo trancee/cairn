@@ -150,9 +150,17 @@ Only permit a fixture build after remaining isolation gates pass.
 
 `apple-toolchain-preparation.yml` first requires the reusable benign preflight
 and then starts a separate fresh hosted preparation VM. It selects the
-existing fixture's Rust 1.97.1, Gradle 9.7.0 and daemon JDK 25.0.4+1, plus
+existing fixture's Rust 1.97.1, Gradle 9.7.0 and daemon JDK 25.0.4.1+1, plus
 compile JDK 21. The Gradle ZIP has an official fixed SHA-256; Ubique source
 uses the existing immutable 1.3.1 revision. Cargo downloads use locked
 manifests. Preparation has network access and does not compile the fixture.
 Its output is not a frozen seed or build-isolation proof. Kotlin/Native and
 Maven preparation, compiler compatibility and input freezing remain pending.
+
+Preparation [run 38090825696](https://github.com/trancee/cairn/actions/runs/38090825696)
+passed benign preflight but failed before downloads: the workflow incorrectly
+encoded the existing daemon version as `25.0.4+1`, which the vendor resolver
+could not find. The official release is `jdk-25.0.4.1+1`. Use its exact ARM64
+macOS archive with the published SHA-256, preserving the Linux fixture's
+version rather than substituting another JDK. This setup failure is not a
+behavior-test red or compiler compatibility result.

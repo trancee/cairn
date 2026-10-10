@@ -27,13 +27,18 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Select pinned daemon JDK
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
-        with:
-          distribution: temurin
-          java-version: 25.0.4+1
-      - name: Record daemon JDK location
-        run: printf 'CAIRN_DAEMON_JAVA_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
+      - name: Download exact pinned daemon JDK
+        run: |
+          archive="$RUNNER_TEMP/temurin-25.0.4.1.tar.gz"
+          curl --fail --silent --show-error --location \
+            'https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jdk_aarch64_mac_hotspot_25.0.4.1_1.tar.gz' \
+            -o "$archive"
+          printf '%s  %s\n' \
+            61979887f7506a24a57439ff99adb8b3a7fc89977d9cfe3b8984f58a981b7b9d "$archive" \
+            | shasum -a 256 --check
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          printf 'CAIRN_DAEMON_JAVA_HOME=%s/jdk-25.0.4.1+1/Contents/Home\n' \
+            "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Select compile JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
