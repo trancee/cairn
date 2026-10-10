@@ -5,8 +5,42 @@ if [ "$#" -ne 0 ]; then
   echo 'Usage: sudo bash run-isolated-android.sh' >&2
   exit 2
 fi
-runtime=/home/builder/cairn-emulator
-install -d -o builder -g builder -m 0700 "$runtime/artifacts"
+seed=/home/builder/cairn-emulator
+runtime=/home/builder/cairn-disposable-runtime
+evidence=/opt/cairn-binding-seeds/disposable-runtime-proof
+if [ -e "$runtime" ]; then
+  echo 'Disposable runtime path already exists; refusing concurrent reuse' >&2
+  exit 2
+fi
+install -d -o root -g root -m 0700 /var/lib/cairn-runtime-proof
+image=$(mktemp /var/lib/cairn-runtime-proof/runtime-XXXXXXXX.ext4)
+mounted=0
+cleanup_disk() {
+  if [ "$mounted" = 1 ]; then
+    install -d -o root -g root -m 0755 "$evidence"
+    for log in isolated-emulator.log isolated-instrumentation.txt; do
+      if [ -f "$runtime/artifacts/$log" ]; then
+        install -o root -g root -m 0644 "$runtime/artifacts/$log" "$evidence/$log"
+      fi
+    done
+    umount "$runtime" || return
+  fi
+  rmdir "$runtime"
+  rm -- "$image"
+}
+trap cleanup_disk EXIT
+truncate -s 8G "$image"
+mkfs.ext4 -q -m 0 "$image"
+install -d -o root -g root -m 0755 "$runtime"
+mount -o loop,nosuid,nodev "$image" "$runtime"
+mounted=1
+chown builder:builder "$runtime"
+chmod 0700 "$runtime"
+cp -a --sparse=always "$seed/avd" "$runtime/avd"
+sed -i "s|^path=.*|path=$runtime/avd/cairn-api26-x86_64.avd|" \
+  "$runtime/avd/cairn-api26-x86_64.ini"
+install -d -o builder -g builder -m 0700 "$runtime/artifacts" \
+  "$runtime/tmp" "$runtime/var-tmp"
 install -o builder -g builder -m 0600 \
   /srv/cairn-generator-scratch/android-interop/androidConsumer/build/outputs/apk/debug/androidConsumer-debug.apk \
   "$runtime/artifacts/androidConsumer-debug.apk"
@@ -14,8 +48,9 @@ install -o builder -g builder -m 0600 \
 systemd-run --unit=cairn-isolated-android-proof --wait --pipe --collect \
   -p User=builder -p Group=builder -p SupplementaryGroups=kvm \
   -p ProtectSystem=strict -p ProtectHome=tmpfs \
-  -p "BindPaths=$runtime" -p "ReadWritePaths=$runtime" \
-  -p PrivateNetwork=yes -p PrivateTmp=yes \
+  -p "BindPaths=$runtime $runtime/tmp:/tmp $runtime/var-tmp:/var/tmp" \
+  -p "ReadWritePaths=$runtime /tmp /var/tmp" \
+  -p PrivateNetwork=yes \
   -p NoNewPrivileges=yes -p 'CapabilityBoundingSet=' \
   -p RestrictNamespaces=yes -p RestrictSUIDSGID=yes \
   -p ProtectKernelTunables=yes -p ProtectKernelModules=yes \
@@ -37,6 +72,27 @@ sdk="$ANDROID_HOME"
 adb="$sdk/platform-tools/adb"
 serial=emulator-5554
 test -r /dev/kvm && test -w /dev/kvm
+/usr/bin/python3 - <<'DISK'
+import errno
+import os
+
+state = os.statvfs(os.environ["HOME"])
+capacity = state.f_blocks * state.f_frsize
+assert 0 < capacity <= 8 * 1024**3, capacity
+probe = os.path.join(os.environ["HOME"], "disk-capacity-probe")
+try:
+    with open(probe, "wb") as output:
+        try:
+            os.posix_fallocate(output.fileno(), 0, capacity + state.f_frsize)
+        except OSError as error:
+            if error.errno != errno.ENOSPC:
+                raise
+        else:
+            raise SystemExit("Filesystem allocation exceeded its capacity")
+finally:
+    os.unlink(probe)
+print(f"PASS: disposable AVD/artifact/temp filesystem capacity {capacity} bytes")
+DISK
 /usr/bin/python3 - <<'NETWORK'
 from pathlib import Path
 import errno

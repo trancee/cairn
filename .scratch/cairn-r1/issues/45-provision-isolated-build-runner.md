@@ -236,3 +236,22 @@ are complete.
   quota and persists between runs. Final runtime filesystem/disk acceptance,
   full input namespace immutability, disposable image and Apple lane remain
   open; network-isolated Android execution alone does not resolve the ticket.
+
+- 2026-10-10: Runtime storage is now a disposable sparse 8 GiB ext4 image
+  mounted `nosuid,nodev`; a copied AVD, artifacts, `/tmp` and `/var/tmp`
+  share its bounded filesystem. Measured capacity is 8,350,298,112 bytes.
+  Before emulator launch, over-capacity `posix_fallocate` must fail with
+  `ENOSPC`; that assertion and the network/Android FFI assertions passed.
+  Final service runtime was 16.467s, CPU 17.234s, reported peak 1.8 GiB.
+  Seed AVD is copied sparsely and not intentionally modified.
+  The runtime unit was inactive/dead afterwards, with mount directory,
+  image and loop-device attachment confirmed removed. Logs/script are
+  retained root-owned under
+  `/opt/cairn-binding-seeds/disposable-runtime-proof/`.
+  Exact script SHA-256 is
+  `4f247ab1b0380e0c2dab4045214821c99716149f01d255e46ec1beee1ac3e4fb`;
+  transcript hash matches earlier successful instrumentation.
+  This supersedes the missing runtime total-disk bound and persistent
+  per-run AVD state, not the retained seed or final disposable guest-image
+  requirement. Source namespace/metadata immutability, fresh seed/image
+  reproduction and macOS lane remain open.

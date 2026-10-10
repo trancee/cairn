@@ -137,8 +137,12 @@ The preferred bounded runtime replay is now:
 sudo bash run-isolated-android.sh
 ```
 
-Run it as the preparation administrator from a trusted copy of this directory.
-It copies the built APK into the dedicated AVD artifact directory, then runs
+Run it as root through sudo from a trusted copy of this directory.
+It creates a sparse 8 GiB ext4 loop-backed filesystem, copies the retained AVD
+into it without modifying the seed, and stages the built APK there. AVD state,
+artifacts and both `/tmp` and `/var/tmp` are confined to this bounded volume.
+An over-capacity `posix_fallocate` probe must fail with `ENOSPC`.
+It then runs
 emulator and ADB together in a private network namespace. It requires only
 loopback, rejects usable default routes and checks an external documentation
 address fails with `ENETUNREACH` before booting Android. The unit hides other
@@ -147,19 +151,23 @@ home, restricts devices to standard pseudo-devices plus KVM, and bounds memory,
 CPU, process count, per-file size and runtime. No blanket permissions or
 network fallback are enabled.
 
-The corrected script passed directly on the guest: API 26 x86_64
-instrumentation succeeded, service runtime was 16.405s, and its result
+The disk-bounded script passed directly on the guest: API 26 x86_64
+instrumentation succeeded, service runtime was 16.467s, and its result
 transcript matched the previous hash. The unit was inactive/dead afterwards
 and no owned emulator process remained. Exact script SHA-256 is
-`b9f41ade53fe181c2dd22e8cebc63cb0009daf528189529c149f8673b28da9af`;
+`4f247ab1b0380e0c2dab4045214821c99716149f01d255e46ec1beee1ac3e4fb`;
 script, logs and checksum manifest are retained root-owned under
-`/opt/cairn-binding-seeds/isolated-runtime-proof/`.
+`/opt/cairn-binding-seeds/disposable-runtime-proof/`.
 The existing outside-namespace ADB server is not stopped; cleanup targets
-only the private server and owned emulator. AVD state persists between runs.
-`PrivateTmp` provides additional writable private temporary storage; no
-dedicated total-disk quota for the runtime AVD/private tmp has yet been
-established. This is network-boundary evidence, not full runtime runner
-acceptance or disposable-image reproduction.
+only the private server and owned emulator. The volume is unmounted and its
+exact temporary image removed after results are retained; mount directory,
+image and loop attachment cleanup were verified. Concurrent reuse of the
+fixed disposable path is rejected. The measured filesystem capacity was
+8,350,298,112 bytes (less than the image's 8 GiB bound).
+This is disposable runtime-state and network/disk-boundary evidence, not a
+fresh guest-image reproduction. The AVD seed retains earlier installed state;
+the source/toolchain guest and trusted administrator remain part of the
+preparation environment. Fresh seed and final VM image acceptance remain open.
 
 The additional dependency-only APK ABI directories do not expand supported
 ABIs. The [bounded allocator audit](ALLOCATOR-AUDIT.md) checked resolved source and

@@ -216,3 +216,9 @@ then; no protocol implementation is authorized by this split.
   runtime-network gap for these calls, not final runner disk/disposability,
   Compose, release, ARM64 hardware or Apple proof. See issue 45 and the
   fixture README for the new bounded runtime command.
+
+- 2026-10-10: Android instrumentation also passed with a disposable copied
+  AVD on a bounded 8 GiB ext4 runtime volume. Over-capacity allocation
+  rejected with `ENOSPC`; emulator/ADB cleanup, mount/image removal and
+  unchanged success transcript were verified. This is not fresh VM/AVD seed,
+  release, Compose or additional hardware/platform coverage.
