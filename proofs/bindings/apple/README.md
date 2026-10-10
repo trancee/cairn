@@ -90,3 +90,8 @@ then verified all frozen tool-file hashes unchanged. Tool copies are read-only
 under `/opt/cairn-apple-tools`; this does not freeze fixture/Maven/Native caches.
 The next compatibility probe runs `help` on a script-owned empty Groovy Gradle
 project, still offline. No Ubique/Kotlin plugin or fixture is compiled.
+That probe
+[failed](https://github.com/trancee/cairn/actions/runs/38095639900) on the
+required wildcard UDP lock-service bind. The preparation workflow remains
+failed at this explicit IPC gate; version startup is not initialization
+acceptance. No socket-policy exception or PF change has been authorized.

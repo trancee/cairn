@@ -140,6 +140,11 @@ Rust/Cargo/JDK/Gradle version commands; frozen tool hashes remained unchanged.
 The named read policy also rejected accessible unrelated host data.
 Fixture/Maven/Native input freezing, Gradle initialization/IPC, actual
 compilation and generated runtime calls remain unverified.
+Trusted empty-project initialization in
+[run 38095639900](https://github.com/trancee/cairn/actions/runs/38095639900)
+failed on Gradle's required wildcard UDP lock-service socket; `--offline`
+does not remove this IPC requirement. A proven external/cross-UID network
+boundary and owner approval are required before permitting those sockets.
 No production Apple
 acceptance is implied.
 

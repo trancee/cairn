@@ -316,3 +316,23 @@ Next probe `help` on a script-owned empty Groovy Gradle project, offline,
 inside the same cell. This checks Gradle initialization/daemon IPC without
 loading fixture or third-party plugin build logic. It does not waive the
 remaining gates or permit a target fixture build.
+
+Empty Gradle initialization failed in
+[run 38095639900](https://github.com/trancee/cairn/actions/runs/38095639900)
+at `f83ec6e`: `FileLockContentionHandler` construction raised
+`SocketException: Operation not permitted`. Pinned Gradle 9.7.0 source
+[creates a wildcard UDP socket unconditionally](https://github.com/gradle/gradle/blob/v9.7.0/platforms/core-execution/persistent-cache/src/main/java/org/gradle/cache/internal/locklistener/DefaultFileLockCommunicator.java);
+this is not fixed by `--offline` or `--no-daemon`.
+Its [address factory](https://github.com/gradle/gradle/blob/v9.7.0/platforms/core-runtime/messaging/src/main/java/org/gradle/internal/remote/internal/inet/InetAddressFactory.java)
+normally selects loopback for peer communication, but the daemon bind-address
+environment setting does not change this wildcard UDP bind.
+
+A socket-policy change therefore requires a separate owner decision. Blanket
+loopback access alone could expose other runner services and is not accepted.
+One candidate is a hosted-only, separately releasable PF anchor that denies
+external traffic and cross-UID local communication, with native sandbox
+permissions limited to the required socket classes. PF documentation describes
+socket-owner UID matching and enable-reference release, but the complete
+composition is unproven. Require live positive controls and external/cross-UID
+negative controls before any fixture work. Do not replace global PF rules,
+flush global states, weaken isolation or modify local Mac networking.

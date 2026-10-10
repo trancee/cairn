@@ -61,6 +61,13 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Trusted empty Gradle initialization
+  [run 38095639900](https://github.com/trancee/cairn/actions/runs/38095639900)
+  failed on required wildcard UDP file-lock IPC. Pinned Gradle source confirms
+  unconditional socket creation despite offline/no-daemon flags. Blanket
+  loopback access would expose other runner services and is not accepted.
+  A hosted-only PF/socket-policy experiment requires separate owner approval
+  and live external/cross-UID denial proof; no fixture build is authorized.
 - 2026-10-11: Apple trusted-tool startup
   [run 38095349642](https://github.com/trancee/cairn/actions/runs/38095349642)
   at `cee5a9d` passed after intended red/green UID, resource-composition,
