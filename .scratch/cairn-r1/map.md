@@ -23,6 +23,18 @@ A working `cairn` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform sh
   - Store-and-forward: see ADR 0002.
 - Skills every session should consult: `grilling`, `domain-modeling`; by topic: `ble-protocol-stack`, `ble-throughput`, `android-ble`, `android-ble-gatt-server`, `android-bluetooth-sockets`, `corebluetooth`, `kotlin-multiplatform`, `compose-multiplatform`, `tdd`, `security-audit`, `wycheproof`, `nist-cavp`.
 - Standing rules: established primitives only (no novel crypto); no commits/pushes without explicit approval; research findings go to `docs/research/` and are linked from the ticket (no throwaway branches — commits need approval).
+- Runner work now has independent Linux/Android and macOS/iOS lanes in
+  [issue 45](issues/45-provision-isolated-build-runner.md). Each accepted
+  runner lane permits its matching portion of the
+  [binding smoke test](issues/44-ubique-binding-smoke-test.md); neither ticket
+  nor S0 is complete until both lanes meet their original gates.
+- Owner-executed standalone JVM and Android API 26 x86_64 debug binding
+  calls now pass; AAR/APK native packaging and preserved runtime evidence
+  are recorded in [issue 44](issues/44-ubique-binding-smoke-test.md).
+  This is not Compose, ARM64 hardware, release/R8, allocator, iOS or final
+  isolated-runner acceptance. The exact passing source is now imported in
+  [the standalone proof fixture](../../proofs/bindings/linux-android/README.md);
+  the newly captured reusable scripts still need a runner replay.
 - Refer to tickets by name.
 - Current ratchet contract: spec draft 0.6 includes CK-bound recovery,
   conditional honest-epoch healing, durable KEM_PROGRESS and strict

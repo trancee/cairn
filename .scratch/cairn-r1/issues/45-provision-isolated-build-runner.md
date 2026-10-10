@@ -13,9 +13,25 @@ builds until the acceptance conditions below are established.
 
 The runner must support the pinned Kotlin/Gradle/AGP/JDK/Rust tuple and provide
 the macOS/Xcode, Android SDK/NDK, Rust targets, and linker tools needed for
-JVM, Android, iOS-device, and iOS-simulator-arm64 compilation. Pre-provision
+JVM, Android, iOS-device, and iOS-simulator-arm64 compilation across the two
+proof lanes below. A single machine need not support both lanes. Pre-provision
 required dependencies through a trusted process, then make toolchains and
 caches read-only and disable network access during target-controlled work.
+
+## Proof lanes
+
+| Lane | Required scope | Current state |
+|---|---|---|
+| Linux/Android | Disposable Linux environment; Rust host tests, Kotlin/JVM integration, Android builds and generated-call execution | Preparation VM/probes and offline JVM/Android debug proofs pass; immutable source/cache, CPU-budget proof, reusable invocation and disposable final image incomplete |
+| macOS/iOS | Isolated environment on Apple hardware; Xcode, iOS-device and simulator-arm64 builds, generated-call execution and packaged deployment-floor inspection | No compliant runner established |
+
+The owner approved splitting the work on 2026-10-10. Each lane must satisfy
+every isolation acceptance condition below independently. Linux success
+allows the Linux/Android portion of issue 44 to run; it does not resolve this
+ticket or authorize iOS proof on Linux. Resolve only when both lanes have
+recorded enforcement evidence. No GitHub self-hosted runner registration is
+required for a local offline proof; registration is a separate owner-approved
+external-service change.
 
 Acceptance:
 
@@ -38,7 +54,37 @@ Acceptance:
 When complete, unblock the dependent smoke-test ticket with the runner
 instructions and evidence needed to execute it.
 
+For partial completion, record the accepted lane and its instructions here.
+Issue 44 may execute only that accepted lane; issue 30 and the full binding
+gate remain blocked until both lanes and all binding acceptance conditions
+are complete.
+
 ## Comments
+
+- 2026-10-10: Owner-executed Linux setup uses Fedora 44 x86_64 with
+  KVM/libvirt and SELinux enforcing. The dedicated Ubuntu 24.04.5 preparation
+  guest has 8 vCPUs, 16 GiB configured RAM and a 128 GiB virtual disk, with
+  NAT for trusted provisioning and no configured host-directory sharing.
+  Installed tools: Temurin 25.0.4.1, Ubuntu JDK 21.0.12.1, Gradle 9.7.0,
+  Rust 1.97.1 with all three Android target libraries, Android CLI tools
+  15859902, platform 26 revision 2, platform 37.0 revision 2, build-tools
+  37.0.0, NDK 30.0.16248370 and platform-tools 37.0.1. Downloaded Ubuntu,
+  Temurin, Gradle and Rust archives passed their selected published SHA-256
+  checks. Android packages were installed through the official SDK tools.
+  SDK/toolchain provisioning is not compatibility or cross-build proof.
+
+  Owner reports successful systemd sandbox probes with an unprivileged
+  `cairn-build` account: writes outside scratch denied, guest service sockets
+  hidden, 8 MiB per-file limit rejected writes with `EFBIG`, and 16 MiB
+  scratch tmpfs rejected writes with `ENOSPC`. A 64 MiB memory limit caused
+  `Result=oom-kill` with zero swap; a two-second runtime limit caused
+  `Result=timeout`. Private loopback succeeded, external networking failed
+  without a route, and `TasksMax=16` rejected additional processes with
+  `EAGAIN`. These are owner-supplied outputs, not independently executed
+  measurements. Subsequent integrated launches and standalone generated-call
+  proofs passed as recorded below. CPU-budget verification, immutable
+  source/cache mounts, reusable repository invocation and disposable
+  final-image execution remain outstanding.
 
 - 2026-10-08: Assessed the current host. It is a Mac mini M1 with 8 GB RAM and
   15.6 GB free disk, Xcode 27 / iOS SDK 27, Android SDK platforms 21 and
@@ -80,3 +126,37 @@ instructions and evidence needed to execute it.
   and missing-remote observations above are historical, not current setup
   claims. No compliant isolated macOS/KMP runner with all acceptance controls
   was established. These additions do not unblock the binding smoke test.
+
+- 2026-10-10: Subsequent owner-executed restricted offline builds passed
+  manual and unified-plugin JVM consumers, Android AAR packaging and the
+  separate Android debug APK consumer. Exact results and artifact hashes
+  are recorded in [issue 44](44-ubique-binding-smoke-test.md).
+  Trusted preparation populated separate plugin/compiler, Android runtime,
+  lint 32.3.1 and Linux AAPT2 9.3.1-15703166 dependency graphs online, then
+  verified their offline resolution before copying the modules cache.
+  Google Maven was required for AndroidX/tool artifacts. Build Tools 36.0.0
+  was installed alongside 37.0.0. No sandbox network fallback or task
+  disabling was used to bypass the missing artifacts.
+
+  Build units used `env -i`, private loopback without an external route,
+  read-only system/home protection, scratch-only writes, `MemoryMax=12G`,
+  zero swap, `TasksMax=256`, `CPUQuota=400%`, `RuntimeMaxSec=900`,
+  `LimitCPU=600`, `LimitFSIZE=2G` and a 6 GiB scratch tmpfs. Java temporary
+  files and Android user state were redirected into scratch. Source and
+  copied caches were inside writable scratch: these successful exploratory
+  builds do not meet the final read-only-source/cache requirement.
+  Reported service memory peaks of approximately 1.7M are not accepted as
+  reliable build peak measurements.
+
+  Android runtime execution occurred outside the restricted build unit in
+  the preparation guest. Only `builder` received KVM group access;
+  `cairn-build` did not. The dedicated emulator used API 26 x86_64 image
+  revision 16 and emulator 37.2.12.0 with nested KVM, headless software
+  graphics, no audio/snapshots, 2 GiB guest RAM and two virtual CPUs.
+  Its supervisor specified a 30-minute runtime and 6 GiB memory limit.
+  The actual generated calls passed through installed APK libraries.
+  This runtime unit is not proof of offline/no-network test execution:
+  the final device/emulator isolation and lifecycle recipe remains open.
+  The owner preserved source/artifacts/results root-owned under
+  `/opt/cairn-binding-seeds/`; repository import is pending.
+  Neither runner lane nor this ticket is resolved.
