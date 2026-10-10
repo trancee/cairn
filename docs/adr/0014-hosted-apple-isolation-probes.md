@@ -306,3 +306,13 @@ LibreSSL then failed reading `/private/etc/ssl/openssl.cnf`. Permit that
 specific system configuration file, not the parent configuration tree;
 network operations remain denied. Java/Gradle startup remains unverified
 until the original version-command sequence completes.
+
+Trusted version startup passed in
+[run 38095349642](https://github.com/trancee/cairn/actions/runs/38095349642)
+at `cee5a9d`: pinned Rust/Cargo, daemon/compiler JDKs and Gradle version
+commands completed with the sandbox/network/resource controls composed.
+All frozen tool-file hashes verified unchanged afterwards.
+Next probe `help` on a script-owned empty Groovy Gradle project, offline,
+inside the same cell. This checks Gradle initialization/daemon IPC without
+loading fixture or third-party plugin build logic. It does not waive the
+remaining gates or permit a target fixture build.

@@ -133,8 +133,13 @@ The dedicated hosted supervisor subsequently passed
 at `3e19313`: deadline cleanup removes a deliberately detached descendant,
 retains partial output and confirms the UID is empty. A child observed hard/
 soft CPU 900s, NPROC 128, per-file 64 MiB, zero core limits, only primary GID
-20 and an explicit environment. These CLI tests are not yet composed with
-the sandbox, reserved 8 GiB build scratch or an actual compiler.
+20 and an explicit environment. Subsequent
+[run 38095349642](https://github.com/trancee/cairn/actions/runs/38095349642)
+at `cee5a9d` composed the sandbox, fully backed 8 GiB scratch and trusted
+Rust/Cargo/JDK/Gradle version commands; frozen tool hashes remained unchanged.
+The named read policy also rejected accessible unrelated host data.
+Fixture/Maven/Native input freezing, Gradle initialization/IPC, actual
+compilation and generated runtime calls remain unverified.
 No production Apple
 acceptance is implied.
 

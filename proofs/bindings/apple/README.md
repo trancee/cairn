@@ -25,7 +25,7 @@ This does not prove a complete filesystem/network boundary, total disk,
 memory/CPU/process limits or Xcode/Kotlin compatibility.
 
 `.github/workflows/apple-isolation-probe.yml` runs only these probes on the free
-standard `macos-26` runner, with a 10-minute job timeout and seven-day artifacts.
+standard `macos-26` runner, with the approved 30-minute job timeout and seven-day artifacts.
 No secrets, signing, dependencies or target-controlled build are involved.
 Hosted results must be observed before claiming any hosted probe passed.
 
@@ -49,15 +49,16 @@ checks partial output retention, closed-output waiting and invalid deadlines.
 The hosted sandbox command uses a 30-second deadline and 64 MiB output cap;
 the collector log is included in the checksummed artifact. Whole-VM memory
 requires 7 GiB RAM and disabled/unloaded dynamic pager with zero swap.
-These controls still need composition into an unprivileged binding-build cell.
+The bounded supervisor now composes these controls for benign probes, not an
+accepted binding build.
 
 The separately authorized `apple-toolchain-preparation.yml` requires benign
 preflight before downloading the existing Rust/Gradle/JDK/Ubique pins and
 locked Cargo inputs on a fresh hosted VM. It does not compile the fixture.
-Downloaded inputs are not yet frozen or replayed offline. The selected
+Fixture/dependency caches are not yet frozen or replayed offline. The selected
 Kotlin/Gradle/Ubique versions are unchanged; Xcode 26.6 is a separately
 recorded hosted environment. Further compiler/Maven/Native preparation and
-build-scale enforcement remain pending.
+binding-build acceptance remain pending.
 Trusted preparation
 [run 38090961772](https://github.com/trancee/cairn/actions/runs/38090961772)
 passed with the exact daemon JDK `25.0.4.1+1` after correcting an erroneous
@@ -73,3 +74,19 @@ cleanup. It does not itself apply the sandbox or provision build scratch.
 Hosted [run 38093375336](https://github.com/trancee/cairn/actions/runs/38093375336)
 passed actual child-limit/access-group assertions and detached-descendant
 deadline cleanup; all eight retained log checksums passed.
+
+The hosted resource script next provisions an exactly 8 GiB root-owned image,
+fully backs every logical byte and verifies private HFS+ scratch. Its usable
+capacity is `8,245,960,704` bytes after filesystem/partition overhead. It runs
+the existing sandbox probes through the dedicated supervisor and rechecks
+backing/capacity afterwards. `build.sb` uses named data-read roots, unlike the
+initial broad-read `probe.sb`; global metadata and root-directory enumeration
+are allowed, but unrelated host file data is denied.
+
+Trusted tool preparation
+[run 38095349642](https://github.com/trancee/cairn/actions/runs/38095349642)
+passed pinned Rust/Cargo, both JDKs and Gradle version startup in that cell,
+then verified all frozen tool-file hashes unchanged. Tool copies are read-only
+under `/opt/cairn-apple-tools`; this does not freeze fixture/Maven/Native caches.
+The next compatibility probe runs `help` on a script-owned empty Groovy Gradle
+project, still offline. No Ubique/Kotlin plugin or fixture is compiled.

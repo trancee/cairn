@@ -61,6 +61,16 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Apple trusted-tool startup
+  [run 38095349642](https://github.com/trancee/cairn/actions/runs/38095349642)
+  at `cee5a9d` passed after intended red/green UID, resource-composition,
+  scratch and read-boundary slices. The cell has 7 GiB VM RAM/zero swap,
+  exactly 8 GiB fully backed image (8,245,960,704 usable filesystem bytes),
+  128-process/900s CPU/64 MiB per-file limits, explicit environment and
+  detached-child deadline cleanup. Pinned Rust/Cargo/JDK/Gradle versions
+  start under the sandbox; copied tool-file hashes remain unchanged.
+  Empty Gradle initialization/IPC, frozen fixture/Maven/Native caches and
+  actual binding builds/runtime proof remain gated, not accepted.
 - 2026-10-11: Hosted
   [run 38090454490](https://github.com/trancee/cairn/actions/runs/38090454490)
   at `3db7ee7` passed unprivileged sandbox/network/IPC/symlink probes on the
