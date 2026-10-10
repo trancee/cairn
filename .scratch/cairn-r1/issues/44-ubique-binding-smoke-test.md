@@ -222,3 +222,11 @@ then; no protocol implementation is authorized by this split.
   rejected with `ENOSPC`; emulator/ADB cleanup, mount/image removal and
   unchanged success transcript were verified. This is not fresh VM/AVD seed,
   release, Compose or additional hardware/platform coverage.
+
+- 2026-10-10: First-boot instrumentation passed from an unbooted
+  checksum-verified root-owned AVD seed, with the smoke package absent
+  before installation. A 16 GiB disposable runtime volume was required
+  for initial userdata creation. The seed was unchanged after execution,
+  results matched prior checks, and disposable cleanup passed. This removes
+  retained installed-app state from runtime evidence; final VM isolation,
+  Compose/release/hardware and Apple gates are unchanged.

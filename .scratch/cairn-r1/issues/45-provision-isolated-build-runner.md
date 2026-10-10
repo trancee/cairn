@@ -255,3 +255,29 @@ are complete.
   per-run AVD state, not the retained seed or final disposable guest-image
   requirement. Source namespace/metadata immutability, fresh seed/image
   reproduction and macOS lane remain open.
+
+- 2026-10-10: Fresh AVD-seed runtime reproduction passed. A dedicated
+  `avdmanager` staging directory created an unbooted API 26 x86_64 image
+  revision 16 AVD; its three files were preserved root-owned with checksums
+  under `/opt/cairn-binding-seeds/fresh-api26-avd/`. The runtime script
+  verifies checksums, sparsely copies this seed and rewrites only the copy's
+  registration path. The smoke package must be absent before normal install.
+
+  Initial 8 GiB first boot failed because the emulator requires 12 GiB free
+  for userdata creation; the disposable filesystem now has a 16 GiB image
+  bound (16,729,894,912 usable bytes), with a separate 20 GiB per-file
+  logical-size ceiling so the disk probe reaches `ENOSPC`. That assertion,
+  private network checks and first-boot instrumentation passed. A trial
+  adding `-no-metrics` crashed before ADB connection; removing the unproven
+  flag restored the previously tested launch argument set. No unsupported
+  suppression, network fallback or claimed emulator root-cause fix was used.
+
+  Successful service runtime: 19.078s, CPU 25.672s, reported peak 3.1 GiB.
+  Seed hashes remained unchanged. Service inactive/dead, disposable image,
+  mount and loop cleanup were verified. Exact script SHA-256 is
+  `be78f549798a3fd66f53a22a7f5e60cbb87a5c2f1a17e007b612ba7273c9f57c`;
+  transcript again matched prior evidence. Root-owned retained results are
+  under `/opt/cairn-binding-seeds/fresh-seed-runtime-proof/`.
+  Fresh runtime state is now evidenced, not a disposable final guest image.
+  Full source/cache namespace enforcement and final VM-image/Apple
+  acceptance remain open.

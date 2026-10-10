@@ -27,9 +27,11 @@ passed with unchanged artifacts. Writable Gradle project shells/metadata and
 retained outputs remain explicit limitations, not final runner acceptance.
 Android instrumentation also passes in a private runtime network namespace
 with explicit route-denial assertions and verified emulator cleanup. A
-disposable 8 GiB loop-backed runtime volume bounds AVD/artifact/temp writes;
+disposable 16 GiB loop-backed runtime volume bounds fresh AVD/artifact/temp writes;
 over-capacity allocation fails with `ENOSPC`, and cleanup is verified.
-The retained AVD seed and preparation VM are not a fresh final guest image.
+The unbooted root-owned AVD seed passes checksum checks before/after runtime;
+the smoke package is absent before installation. The preparation VM is not
+a fresh final guest image.
 
 ## Verified profile
 

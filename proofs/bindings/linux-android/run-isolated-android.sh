@@ -5,9 +5,10 @@ if [ "$#" -ne 0 ]; then
   echo 'Usage: sudo bash run-isolated-android.sh' >&2
   exit 2
 fi
-seed=/home/builder/cairn-emulator
+seed=/opt/cairn-binding-seeds/fresh-api26-avd
 runtime=/home/builder/cairn-disposable-runtime
 evidence=/opt/cairn-binding-seeds/disposable-runtime-proof
+(cd "$seed" && sha256sum --check SHA256SUMS)
 if [ -e "$runtime" ]; then
   echo 'Disposable runtime path already exists; refusing concurrent reuse' >&2
   exit 2
@@ -29,7 +30,7 @@ cleanup_disk() {
   rm -- "$image"
 }
 trap cleanup_disk EXIT
-truncate -s 8G "$image"
+truncate -s 16G "$image"
 mkfs.ext4 -q -m 0 "$image"
 install -d -o root -g root -m 0755 "$runtime"
 mount -o loop,nosuid,nodev "$image" "$runtime"
@@ -37,6 +38,7 @@ mounted=1
 chown builder:builder "$runtime"
 chmod 0700 "$runtime"
 cp -a --sparse=always "$seed/avd" "$runtime/avd"
+chown -R builder:builder "$runtime/avd"
 sed -i "s|^path=.*|path=$runtime/avd/cairn-api26-x86_64.avd|" \
   "$runtime/avd/cairn-api26-x86_64.ini"
 install -d -o builder -g builder -m 0700 "$runtime/artifacts" \
@@ -60,7 +62,7 @@ systemd-run --unit=cairn-isolated-android-proof --wait --pipe --collect \
   -p 'RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6' \
   -p MemoryMax=6G -p MemorySwapMax=0 -p TasksMax=256 \
   -p CPUQuota=400% -p RuntimeMaxSec=300 -p TimeoutStopSec=20 \
-  -p LimitCPU=240 -p LimitFSIZE=12G -p LimitCORE=0 \
+  -p LimitCPU=240 -p LimitFSIZE=20G -p LimitCORE=0 \
   /usr/bin/env -i \
     PATH=/usr/bin:/bin LANG=C.UTF-8 \
     HOME="$runtime" ANDROID_USER_HOME="$runtime" \
@@ -78,7 +80,7 @@ import os
 
 state = os.statvfs(os.environ["HOME"])
 capacity = state.f_blocks * state.f_frsize
-assert 0 < capacity <= 8 * 1024**3, capacity
+assert 0 < capacity <= 16 * 1024**3, capacity
 probe = os.path.join(os.environ["HOME"], "disk-capacity-probe")
 try:
     with open(probe, "wb") as output:
@@ -130,7 +132,10 @@ trap cleanup EXIT
   -gpu swiftshader -memory 2048 -cores 2 \
   > "$HOME/artifacts/isolated-emulator.log" 2>&1 &
 emulator_pid=$!
-timeout 120s "$adb" -s "$serial" wait-for-device </dev/null
+if ! timeout 120s "$adb" -s "$serial" wait-for-device </dev/null; then
+  cat "$HOME/artifacts/isolated-emulator.log" >&2
+  exit 1
+fi
 ready=0
 for attempt in $(seq 1 60); do
   if test "$(timeout 5s "$adb" -s "$serial" shell -T \
@@ -146,7 +151,13 @@ test "$(timeout 10s "$adb" -s "$serial" shell -T \
   getprop ro.build.version.sdk </dev/null | tr -d '\r')" = 26
 test "$(timeout 10s "$adb" -s "$serial" shell -T \
   getprop ro.product.cpu.abi </dev/null | tr -d '\r')" = x86_64
-timeout 60s "$adb" -s "$serial" install --user 0 -r \
+packages=$(timeout 10s "$adb" -s "$serial" shell -T \
+  pm list packages --user 0 ch.trancee.cairn.consumer </dev/null)
+if printf '%s\n' "$packages" | grep -Fxq 'package:ch.trancee.cairn.consumer'; then
+  echo 'Smoke package already installed in fresh AVD' >&2
+  exit 1
+fi
+timeout 60s "$adb" -s "$serial" install --user 0 \
   "$HOME/artifacts/androidConsumer-debug.apk" </dev/null
 timeout 60s "$adb" -s "$serial" shell -T \
   am instrument --user 0 -w -r ch.trancee.cairn.consumer/.SmokeInstrumentation \

@@ -138,7 +138,9 @@ sudo bash run-isolated-android.sh
 ```
 
 Run it as root through sudo from a trusted copy of this directory.
-It creates a sparse 8 GiB ext4 loop-backed filesystem, copies the retained AVD
+It verifies the unbooted seed's checksum manifest at
+`/opt/cairn-binding-seeds/fresh-api26-avd/SHA256SUMS`, creates a sparse
+16 GiB ext4 loop-backed filesystem, and copies that fresh AVD
 into it without modifying the seed, and stages the built APK there. AVD state,
 artifacts and both `/tmp` and `/var/tmp` are confined to this bounded volume.
 An over-capacity `posix_fallocate` probe must fail with `ENOSPC`.
@@ -152,22 +154,41 @@ CPU, process count, per-file size and runtime. No blanket permissions or
 network fallback are enabled.
 
 The disk-bounded script passed directly on the guest: API 26 x86_64
-instrumentation succeeded, service runtime was 16.467s, and its result
+instrumentation succeeded, service runtime was 19.078s, and its result
 transcript matched the previous hash. The unit was inactive/dead afterwards
 and no owned emulator process remained. Exact script SHA-256 is
-`4f247ab1b0380e0c2dab4045214821c99716149f01d255e46ec1beee1ac3e4fb`;
+`be78f549798a3fd66f53a22a7f5e60cbb87a5c2f1a17e007b612ba7273c9f57c`;
 script, logs and checksum manifest are retained root-owned under
-`/opt/cairn-binding-seeds/disposable-runtime-proof/`.
+`/opt/cairn-binding-seeds/fresh-seed-runtime-proof/`.
 The existing outside-namespace ADB server is not stopped; cleanup targets
 only the private server and owned emulator. The volume is unmounted and its
 exact temporary image removed after results are retained; mount directory,
 image and loop attachment cleanup were verified. Concurrent reuse of the
 fixed disposable path is rejected. The measured filesystem capacity was
-8,350,298,112 bytes (less than the image's 8 GiB bound).
+16,729,894,912 bytes (less than the image's 16 GiB bound).
+First boot requires 12 GiB free for the default userdata partition; the earlier
+8 GiB volume supported only an already initialized AVD. `LimitFSIZE=20G`
+allows the over-capacity disk probe to exercise `ENOSPC` rather than fail first
+at the per-file limit. Aggregate allocated storage remains bounded by the
+16 GiB filesystem; sparse file logical length has a separate per-file ceiling.
 This is disposable runtime-state and network/disk-boundary evidence, not a
-fresh guest-image reproduction. The AVD seed retains earlier installed state;
-the source/toolchain guest and trusted administrator remain part of the
-preparation environment. Fresh seed and final VM image acceptance remain open.
+fresh guest-image reproduction. Before APK installation, the smoke package must
+be absent; installation does not use replacement mode. The source/toolchain
+guest and trusted administrator remain part of the preparation environment.
+Final VM image acceptance remains open.
+
+The unbooted seed was created through the installed `avdmanager create avd`
+for `system-images;android-26;google_apis;x86_64`, with a dedicated staging
+`ANDROID_USER_HOME`/`ANDROID_AVD_HOME` and the name `cairn-api26-x86_64`.
+Only the custom hardware-profile prompt was answered `no`. The resulting
+`avd/` directory was copied root-owned into the seed path above; a SHA-256
+manifest covers its three initial files (AVD registration, config and userdata
+image). The script rewrites only the disposable copy's registration path.
+The seed manifest passed before and after execution.
+One trial adding `-no-metrics` segfaulted before ADB connected; reverting that
+unproven launch argument yielded the recorded pass. No general emulator bug
+or metrics-option compatibility claim is made; external networking remains
+blocked by the namespace independent of emulator metrics settings.
 
 The additional dependency-only APK ABI directories do not expand supported
 ABIs. The [bounded allocator audit](ALLOCATOR-AUDIT.md) checked resolved source and
