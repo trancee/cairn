@@ -22,6 +22,16 @@ def denied(name, operation):
 
 def main():
     scratch, inputs, sentinel = map(Path, sys.argv[1:4])
+    if sys.argv[6:] == ["--build-limits"]:
+        for limit, expected in (
+            (resource.RLIMIT_CPU, 900), (resource.RLIMIT_NPROC, 128),
+            (resource.RLIMIT_FSIZE, 64 * 1024**2), (resource.RLIMIT_CORE, 0),
+        ):
+            observed = resource.getrlimit(limit)
+            if observed != (expected, expected):
+                raise SystemExit(f"FAIL: sandbox child limit {limit} is {observed}, "
+                                 f"expected {(expected, expected)}")
+        print("PASS: sandbox child inherits approved build limits", flush=True)
     denied("input mutation denied", lambda: (inputs / "write-probe").write_text("probe"))
     denied("host sentinel read denied", sentinel.read_bytes)
     with socket.socket() as connection:
