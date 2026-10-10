@@ -164,3 +164,12 @@ could not find. The official release is `jdk-25.0.4.1+1`. Use its exact ARM64
 macOS archive with the published SHA-256, preserving the Linux fixture's
 version rather than substituting another JDK. This setup failure is not a
 behavior-test red or compiler compatibility result.
+
+Corrected [run 38090961772](https://github.com/trancee/cairn/actions/runs/38090961772)
+at `3ffd8cf` passed benign preflight and trusted preparation. Retained versions
+show Rust 1.97.1 with ARM64 Darwin/iOS device/iOS simulator targets,
+Temurin 25.0.4.1+1, Gradle 9.7.0 and Xcode 26.6 on macOS 26.6.2.
+The Gradle archive matched the published checksum; locked fixture and Ubique
+Cargo downloads completed. The artifact retains logs and input hashes, not
+the downloaded seed itself. No offline completeness, Kotlin/Native build,
+Apple allocator audit or runtime result is established.

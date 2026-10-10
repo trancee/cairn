@@ -58,3 +58,8 @@ Downloaded inputs are not yet frozen or replayed offline. The selected
 Kotlin/Gradle/Ubique versions are unchanged; Xcode 26.6 is a separately
 recorded hosted environment. Further compiler/Maven/Native preparation and
 build-scale enforcement remain pending.
+Trusted preparation
+[run 38090961772](https://github.com/trancee/cairn/actions/runs/38090961772)
+passed with the exact daemon JDK `25.0.4.1+1` after correcting an erroneous
+version selector. Its artifacts contain versions, logs and input hashes,
+not a reusable frozen cache.

@@ -122,6 +122,12 @@ real disk/process/CPU enforcement, and a 7 GiB whole-VM RAM envelope
 with dynamic pager disabled/unloaded and zero swap. Shared collector
 deadline regressions passed; downloaded artifact checksums passed.
 Build-tool compatibility and whole-process-tree containment remain open.
+Trusted preparation subsequently passed in
+[run 38090961772](https://github.com/trancee/cairn/actions/runs/38090961772)
+at `3ffd8cf`: pinned Rust/iOS targets, checksum-verified Gradle and exact
+Temurin 25.0.4.1+1, plus locked fixture/Ubique Cargo downloads. No fixture
+compiled; frozen inputs, offline completeness and build-scale controls
+remain unverified.
 No production Apple
 acceptance is implied.
 
