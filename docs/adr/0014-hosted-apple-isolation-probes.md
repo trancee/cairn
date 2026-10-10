@@ -183,3 +183,14 @@ The first hosted regression deliberately checks the current process-group-only
 baseline and must fail if a detached child survives. Test teardown kills only
 the specific owned child PID. Fixture builds remain unauthorized until these
 and the remaining isolation gates pass.
+
+Hosted [run 38091251447](https://github.com/trancee/cairn/actions/runs/38091251447)
+at `fae9175` failed for the intended reason: the collector returned 124 and
+retained the child PID, but that detached descendant was still alive.
+The fixture's PID-specific teardown ran and disk detach succeeded.
+The corrected CLI enumerates only the dedicated UID, signals individual PIDs
+after rechecking ownership, and requires an empty UID process set within ten
+seconds before returning. It also rejects pre-existing UID processes and
+requires a root-owned private proof-output directory. Signal interruption
+cleans the owned collector group and UID; uncatchable root `SIGKILL` and
+whole-VM termination remain outside this in-process cleanup guarantee.
