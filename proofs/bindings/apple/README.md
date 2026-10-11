@@ -153,3 +153,13 @@ at `adc22c5` passed these inputs, tool startup and isolated script-owned
 arithmetic KLIB compilation for device/simulator ARM64, with unchanged hashes.
 SDK cinterop/linker access, allocator audit, fixture compilation and generated
 runtime calls remain unverified. KLIB output alone is not ABI/runtime evidence.
+
+Trusted C-header cinterop passes offline for device/simulator ARM64 in
+[run 38136851477](https://github.com/trancee/cairn/actions/runs/38136851477)
+at `74673d1`. Extracted LLVM/libffi inputs are root-owned/read-only and
+hash-verified after replay; Native airplane mode and blanket socket denial
+remain active. SDK lookup reads only the exact existing Xcode preferences
+file, without accepting/modifying licenses or opening Mach services.
+The next trusted CLI probe links arithmetic frameworks and checks their
+actual Mach-O platform and deployment floor `15.0`. Fixture bindings,
+allocator audit and generated runtime calls remain gated.

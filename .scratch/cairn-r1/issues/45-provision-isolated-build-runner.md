@@ -61,6 +61,13 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Trusted header cinterop passed offline in
+  [run 38136851477](https://github.com/trancee/cairn/actions/runs/38136851477)
+  at `74673d1`, both Apple ARM64 targets, airplane mode and blanket socket
+  denial. Frozen LLVM/libffi/tool/Gradle/Cargo hashes and cleanup pass.
+  Trusted framework linkage/deployment floor, allocator evidence, fixture
+  generation/compilation/runtime and final lane acceptance remain open.
+
 - 2026-10-11: Run
   [38133904604](https://github.com/trancee/cairn/actions/runs/38133904604)
   at `adc22c5` passes offline external artifacts/cinterop metadata, immutable

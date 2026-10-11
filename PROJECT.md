@@ -192,6 +192,13 @@ trusted compiler probes, not FFI, native linkage, fixture or runtime proof.
 Native SDK/cinterop/linker access, Apple allocator evidence and binding
 generation/generated calls remain open.
 
+Trusted header cinterop subsequently passed offline for both ARM64 targets
+in [run 38136851477](https://github.com/trancee/cairn/actions/runs/38136851477)
+at `74673d1`. LLVM/libffi inputs are frozen read-only; airplane mode and
+blanket socket denial remain active. All tool/Gradle/Cargo/Native hash checks
+and cleanup pass. Linkage/deployment-floor inspection, allocator evidence,
+fixture generation/compilation and runtime remain open.
+
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable
   wire tutorial, contributor validation guide, foundation API reference and

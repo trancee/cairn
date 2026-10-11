@@ -149,6 +149,12 @@ if [ "$#" -eq 2 ]; then
       || echo 'DIAGNOSTIC: targeted sandbox denial collection failed'
     exit "$cinterop_result"
   fi
+  for target in ios_arm64 ios_simulator_arm64; do
+    "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/native-linkage-$target.log" \
+      /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+      -D PRIVATE_IPC=false -f "$work/build.sb" \
+      /bin/bash "$tools/check-native-linkage.sh" "$tools" "$target"
+  done
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
   | tee "$output/dedicated-sandbox.log"

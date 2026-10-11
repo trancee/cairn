@@ -657,3 +657,13 @@ syntax; cinterop's actual help requires separate option/value arguments.
 Correct that invocation without disabling airplane mode. Narrow kernel
 diagnostics to named compiler/SDK processes rather than unrelated system
 sandbox events.
+
+Offline device/simulator header cinterop passed in
+[run 38136851477](https://github.com/trancee/cairn/actions/runs/38136851477)
+at `74673d1`, with airplane mode, blanket socket denial, immutable LLVM/libffi
+inputs and unchanged tool/Gradle/Cargo/Native hashes. UID, scratch and PF cleanup
+passed. This closes header-probe input availability, not fixture FFI/runtime.
+Next exercise the already-approved trusted linker seam: link script-owned
+arithmetic frameworks for each target in separate unchanged 60-second cells
+and inspect actual Mach-O build-version platform and minimum OS `15.0`.
+Missing dependencies fail offline before changing preparation.
