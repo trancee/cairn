@@ -259,6 +259,9 @@ boot/generated call is authorized by this diagnostic.
 Narrowed replay `38158407544` at `98e52e6` confirms denied Mach lookup of
 CoreSimulatorService and simdiskimaged, with UID cleanup/ordinary detach.
 Service-helper containment is unverified; no service allowance was added.
+The owner subsequently approved a separate trusted inventory-only profile
+with exactly those two lookups and helper identity/resource observations.
+Generated/build commands remain unchanged; no boot or runtime is permitted.
 
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable

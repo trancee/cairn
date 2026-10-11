@@ -226,6 +226,10 @@ without widening access. Simulator runtime and final acceptance remain open.
 The narrowed replay `38158407544` explicitly identifies denied Mach lookup
 of CoreSimulatorService and simdiskimaged; UID cleanup/ordinary detach passed.
 No service allowance was added, and helper containment remains unverified.
+The owner then approved exactly those two lookups for the trusted inventory
+invocation only, using a separately composed profile. Helper identity and
+sampled memory/CPU observations and scratch capacity are recorded; all other
+services remain denied. No boot or generated-call allowance is included.
 
 | Module | Target | Owning proof task | Evidence/limitation |
 | --- | --- | --- | --- |

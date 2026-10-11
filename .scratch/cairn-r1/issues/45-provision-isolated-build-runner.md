@@ -61,6 +61,11 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Owner approved a separate trusted inventory-only profile with
+  exactly CoreSimulatorService/simdiskimaged lookup. Retain other denials,
+  60-second ceiling and scratch device set; observe exact helper identities/
+  sampled memory/CPU and recheck scratch capacity. No boot or generated calls;
+  observations are not proof of helper containment.
 - 2026-10-11: Narrowed replay `38158407544` at `98e52e6` explicitly reports
   denied Mach lookup of CoreSimulatorService and simdiskimaged before fixture
   work. UID cleanup/ordinary detach passed. No allowance was added; service

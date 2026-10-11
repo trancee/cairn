@@ -894,3 +894,14 @@ No allowance has been added. Granting service lookup is a material boundary
 change: service helpers are not proven to inherit the caller's UID limits,
 sandbox, disk or network policy. A trusted inventory-only diagnostic profile
 versus an alternative simulator runtime boundary requires owner selection.
+
+The owner selected the trusted inventory-only probe. Compose the existing
+read/write/network policy with exactly the two named CoreSimulator Mach
+lookups for this script-owned invocation only. No other denied service is
+allowed automatically; failure is retained. Keep the 60-second command
+deadline, no boot, private scratch device set and no generated calls.
+Root-side observation records only exact helper executable names and
+UID/PID/parent/RSS/virtual-memory/CPU fields, with a five-second snapshot
+deadline, and rechecks scratch capacity. These observations do not prove
+helper containment or authorize simulator boot. Generated fixture/build
+commands retain the unchanged blanket Mach denial.

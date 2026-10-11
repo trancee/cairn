@@ -1,0 +1,3 @@
+(allow mach-lookup
+  (global-name "com.apple.CoreSimulator.CoreSimulatorService")
+  (global-name "com.apple.CoreSimulator.simdiskimaged"))
