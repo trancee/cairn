@@ -570,3 +570,12 @@ Offline [run 38130908209](https://github.com/trancee/cairn/actions/runs/38130908
 failed as intended on uncached stdlib, Ubique runtime, Okio, atomicfu and
 coroutines dependencies. Use the same external-artifact resolver during
 approved networked preparation before freezing the dependency seed.
+
+Networked run `38131273835` exposed a harness overreach: directly resolving
+the synthetic `kotlin-commonized-cinterop` usage requests a runtime variant
+that is not published. Pinned Ubique source instead feeds extracted runtime
+cinterop metadata through `transformNativeMainCInteropDependenciesMetadata`.
+Exclude that synthetic usage from direct artifact resolution and invoke the
+owning metadata extraction task explicitly in preparation/offline replay.
+No compiler/commonizer validation is disabled; this changes the preparation
+seam to match the plugin's actual consumer path.

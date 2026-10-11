@@ -1,11 +1,15 @@
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.attributes.Usage
 
 gradle.projectsEvaluated {
     gradle.rootProject.tasks.register("cairnResolveAppleInputs") {
         doLast {
             def resolvedCount = 0
             gradle.rootProject.allprojects.each { project ->
-                project.configurations.findAll { it.canBeResolved }.each { configuration ->
+                project.configurations.findAll {
+                    it.canBeResolved &&
+                        it.attributes.getAttribute(Usage.USAGE_ATTRIBUTE)?.name != "kotlin-commonized-cinterop"
+                }.each { configuration ->
                     def artifacts = configuration.incoming.artifactView {
                         componentFilter { it instanceof ModuleComponentIdentifier }
                     }.files.files

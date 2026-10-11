@@ -18,6 +18,7 @@ result=0
   -Porg.gradle.java.installations.auto-download=false \
   --init-script "$tools/assert-apple-targets.gradle" \
   --init-script "$tools/resolve-apple-inputs.gradle" cairnResolveAppleInputs \
+  :sdk:transformNativeMainCInteropDependenciesMetadata \
   > "$HOME/fixture-targets.log" 2>&1 || result=$?
 cat "$HOME/fixture-targets.log"
 if [ "$result" -ne 0 ]; then exit "$result"; fi
