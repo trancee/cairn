@@ -6,7 +6,6 @@ from pathlib import Path
 import socket
 import subprocess
 import sys
-import threading
 
 
 def child(address, port):
@@ -52,32 +51,15 @@ def main():
         root_server.listen(8)
         with socket.create_connection(root_server.getsockname(), timeout=2):
             pass
-        stop = threading.Event()
-        root_server.settimeout(0.1)
-
-        def accept_controls():
-            while not stop.is_set():
-                try:
-                    connection, _ = root_server.accept()
-                except TimeoutError:
-                    continue
-                connection.close()
-
-        listener = threading.Thread(target=accept_controls)
-        listener.start()
-        try:
-            print("PASS: root external and cross-UID loopback controls connect", flush=True)
-            return subprocess.call([
-                sys.executable, "-I", str(scripts / "uid-supervisor.py"),
-                "--seconds", "15", str(output), sys.executable, "-I",
-                str(scripts / "probe-pf.py"), "--child", address,
-                str(root_server.getsockname()[1]),
-            ])
-        finally:
-            stop.set()
-            listener.join(timeout=2)
-            if listener.is_alive():
-                raise RuntimeError("FAIL: root TCP fixture did not stop")
+        connection, _ = root_server.accept()
+        connection.close()
+        print("PASS: root external and cross-UID loopback controls connect", flush=True)
+        return subprocess.call([
+            sys.executable, "-I", str(scripts / "uid-supervisor.py"),
+            "--seconds", "15", str(output), sys.executable, "-I",
+            str(scripts / "probe-pf.py"), "--child", address,
+            str(root_server.getsockname()[1]),
+        ])
 
 
 if __name__ == "__main__":

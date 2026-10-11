@@ -343,3 +343,14 @@ the expected cross-UID failure of the unrestricted baseline. Root establishes
 external TCP reachability to GitHub without sending application data, and
 owns a live loopback listener. Dedicated-UID cleanup still applies. This
 experiment is not fixture-build authorization.
+
+Hosted [run 38123483299](https://github.com/trancee/cairn/actions/runs/38123483299)
+failed as intended: same-UID TCP/UDP worked, but cross-UID TCP was allowed.
+Remove the unnecessary listener thread (its Python 3.9 timeout type caused
+unrelated diagnostics); the root socket remains listening throughout the test.
+The candidate anchor tags dedicated-UID loopback traffic, permits only tagged
+inbound traffic to the same UID, and rejects external/cross-UID TCP/UDP.
+Load only a fresh `com.apple/cairn-UUID` anchor after verifying the existing
+Apple wildcard attachment, retain before/after main rules, and release only
+the PF enable reference acquired by the probe. This candidate is not accepted
+until live controls pass.
