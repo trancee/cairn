@@ -37,7 +37,7 @@ finish() {
       result=1
       echo 'DIAGNOSTIC: failed scratch detach; open-file holder PIDs and command names only'
       "$python" -I -c \
-        'import subprocess, sys; subprocess.run(["/usr/sbin/lsof", "-nP", "-Fpc", "+f", "--", sys.argv[1]], timeout=15, check=False)' \
+        'import subprocess, sys; subprocess.run(["/usr/sbin/lsof", "-nP", "-Fpc", "+D", sys.argv[1]], timeout=15, check=True)' \
         "$volume" || echo 'DIAGNOSTIC: open-file holder collection failed'
     fi
   fi
@@ -119,6 +119,12 @@ if [ "$#" -eq 2 ]; then
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=true -f "$work/build.sb" \
     /bin/bash "$work/inputs/probe-toolchains.sh" "$tools"
+  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/fixture-targets.log" \
+    /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+    -D PRIVATE_IPC=true -f "$work/build.sb" \
+    /usr/bin/env JAVA_HOME="$tools/daemon-jdk" GRADLE_USER_HOME="$volume/gradle" \
+    GRADLE_DAEMON_BIND_ADDRESS=127.0.0.2 \
+    /bin/bash "$tools/check-fixture-targets.sh" "$tools"
   "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \

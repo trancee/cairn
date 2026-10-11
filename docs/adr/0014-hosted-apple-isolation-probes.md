@@ -501,3 +501,13 @@ replay resolved plugin inputs but failed creating Gradle's instrumented
 Kotlin-plugin JAR in scratch. Add only the Gradle CLI stacktrace to expose the
 nested cause before changing a budget or transform/cache strategy. No offline
 target green, seed-integrity completion or binding result is claimed.
+
+The diagnostic replay
+[run 38128556994](https://github.com/trancee/cairn/actions/runs/38128556994)
+expired the unchanged 60-second collector deadline after the version/empty/
+selection probes, before target diagnostics completed. Keep each command's
+60-second ceiling and run effective-target configuration as its own supervised
+invocation; the 30-minute whole-job ceiling remains unchanged. Another busy
+detach exposed an invalid `lsof +f` mount-path diagnostic; use bounded `+D`
+directory enumeration and still print only PID/command fields. Neither
+failure is treated as a successful offline target proof.
