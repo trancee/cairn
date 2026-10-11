@@ -6,6 +6,11 @@ fixture="$HOME/fixture-selection"
 mkdir "$fixture"
 cp "$tools/fixture/settings.gradle.kts" "$fixture/settings.gradle.kts"
 mkdir "$fixture/sdk" "$fixture/consumer" "$fixture/androidConsumer"
+for build_file in sdk/build.gradle.kts sdk/apple.gradle.kts \
+  consumer/build.gradle.kts androidConsumer/build.gradle.kts; do
+  test -f "$tools/fixture/$build_file"
+  : > "$fixture/$build_file"
+done
 if "$tools/gradle/bin/gradle" -p "$fixture" --offline --no-daemon --console=plain \
   -Djava.net.preferIPv4Stack=true -PcairnProofPlatform=invalid \
   --init-script "$tools/assert-platform-rejection.gradle" help \

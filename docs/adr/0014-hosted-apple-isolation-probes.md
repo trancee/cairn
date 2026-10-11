@@ -440,3 +440,11 @@ Next assert default, explicit Linux/Android and explicit Apple module/build-file
 selection through Gradle's settings-evaluated hook with empty project shells.
 This characterizes the settings contract, not the declared/effective Kotlin
 targets or Native build behavior.
+
+The positive settings harness failed in
+[run 38126889867](https://github.com/trancee/cairn/actions/runs/38126889867):
+empty module directories lacked the actual fixture's Kotlin build filenames,
+so Gradle chose its default Groovy filename. Create empty project scripts at
+the existing canonical filenames, checking each original exists. This repairs
+the settings-only seam without copying/executing plugin build logic, changing
+the Linux configuration, or weakening the selection assertions.
