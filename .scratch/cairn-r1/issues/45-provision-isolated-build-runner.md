@@ -61,6 +61,14 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Offline effective Apple configuration passed in
+  [run 38130344648](https://github.com/trancee/cairn/actions/runs/38130344648)
+  at `2472082`, with immutable Gradle dependencies and unchanged tool/seed
+  hashes. Expected JVM/device/simulator targets are configured, not compiled.
+  Approved child file ceiling is 128 MiB, with actual boundary rejection;
+  output stays 64 MiB. Instrumented plugin is 67,326,033 bytes. Early no-swap
+  setup and cleanup pass. Native/Cargo input completeness, allocator audit,
+  binding builds/runtime and unexplained earlier busy detaches remain open.
 - 2026-10-11: Shared fixture settings passed in
   [run 38127148746](https://github.com/trancee/cairn/actions/runs/38127148746)
   at `5016e70`. Invalid selection rejects before plugins; default/explicit

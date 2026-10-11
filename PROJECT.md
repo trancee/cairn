@@ -169,6 +169,17 @@ detach `Resource busy` failure remains unexplained, not fixed by later greens.
 No production Apple
 acceptance is implied.
 
+Offline effective Apple plugin configuration passed in
+[run 38130344648](https://github.com/trancee/cairn/actions/runs/38130344648)
+at `2472082` with JVM/iOS-device ARM64/simulator ARM64 targets. Pinned-plugin
+preparation seeds read-only Gradle dependencies; tool/dependency hashes remain
+unchanged after replay. The owner-approved child per-file ceiling is now
+128 MiB (actual boundary/next-byte rejection pass); the separate streamed
+output remains 64 MiB. The instrumented Kotlin plugin is 67,326,033 bytes,
+exceeding the old 64 MiB file limit. No-swap setup now precedes provisioning.
+Kotlin/Native compiler/cinterop caches, Cargo input freezing, allocator review,
+binding generation and generated runtime calls remain unverified.
+
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable
   wire tutorial, contributor validation guide, foundation API reference and

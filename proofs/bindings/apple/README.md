@@ -128,3 +128,15 @@ effective target checks remain pending. An earlier ordinary scratch detach
 failed with `Resource busy`; later cleanup passed, but its cause remains
 unverified. Failed detach retains PID/command-only holder diagnostics and
 still fails the job without retry or force.
+
+Pinned plugin preparation and offline effective target configuration passed in
+[run 38130344648](https://github.com/trancee/cairn/actions/runs/38130344648)
+at `2472082`. Networked preparation runs only `help` with sanitized environment
+and no Cargo compilation output; the copied Gradle `modules-2` seed is
+root-owned/read-only, consumed through `GRADLE_RO_DEP_CACHE`, and hash-checked
+after replay. Generated transforms/coordination metadata stay in scratch.
+The approved child per-file ceiling is now 128 MiB, independently tested at
+the boundary and next byte; output remains capped at 64 MiB. The instrumented
+Kotlin plugin measures 67,326,033 bytes. Pager disable/zero-swap verification
+precedes tool provisioning. Native/Cargo cache completeness, allocator audit,
+binding generation, simulator runtime and physical-device proof remain open.

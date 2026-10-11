@@ -545,3 +545,15 @@ stopped preparation on existing 1 GiB swap after tool provisioning.
 Move the unchanged pager-disable/zero-swap gate immediately after checkout
 before downloads/tool preparation. Never delete existing swap or accept
 nonzero swap; its exact creation source in the failed run is unverified.
+
+Final configuration replay passed in
+[run 38130344648](https://github.com/trancee/cairn/actions/runs/38130344648)
+at `2472082`: actual 128 MiB child file-boundary/next-byte rejection,
+effective offline Apple targets, unchanged tool/dependency seed hashes and
+scratch/UID/PF cleanup. Instrumented Kotlin plugin size is 67,326,033 bytes.
+An intervening artifact-size check failed because child-side `xcrun` could
+not perform its license lookup inside the named read policy; pass the already
+selected trusted Python path from the root supervisor instead of widening
+reads or changing Xcode license state. Native compiler/cinterop and Cargo
+cache freezing/completeness, allocator audit, binding builds and runtime
+proof remain pending. Earlier busy-detach failures remain unexplained.
