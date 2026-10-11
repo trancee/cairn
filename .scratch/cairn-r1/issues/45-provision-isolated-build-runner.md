@@ -61,6 +61,12 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Trusted creation passes `38165989640`; boot probes
+  `38167434234`/`38168165135` expire 60 seconds with failed UID cleanup and
+  busy scratch detach. Diagnostic sees launchd-parented simulator helpers
+  and remaining distnoted. No boot/shutdown completion or generated app.
+  Service lifecycle needs a new controlled boundary, not deadline increases
+  or repeated unchanged probes.
 - 2026-10-11: Three-lookup trusted inventory passed
   [38162040714](https://github.com/trancee/cairn/actions/runs/38162040714)
   at `cd7f2ae`: 12 records, available iOS `26.2`/`26.4.1`/`26.5`. Actual

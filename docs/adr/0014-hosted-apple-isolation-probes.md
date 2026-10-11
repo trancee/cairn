@@ -997,3 +997,15 @@ Do not claim a booted simulator, successful shutdown or cleanup.
 Use the existing one-shot identity-only supervisor diagnostic at ten seconds
 and targeted failed-boot kernel/remaining-UID observations before interpreting
 the cause. Budgets, services and generated-code denial remain unchanged.
+
+Diagnostic replay `38168165135` at `1b03bc6` again expired boot's 60-second
+deadline. At ten seconds it observed launchd-parented simulator services,
+including CoreSimulatorService, SimLaunchHost, SimulatorTrampoline,
+SimRenderServer and SimAudioProcessorService; the audio process was in `U`
+state. Post-failure observation found a launchd-parented `distnoted` process
+still under the dedicated UID. This supports a service-lifecycle containment
+gap, not a confirmed single denied-service cause. No boot/shutdown completion
+or successful cleanup was observed. Repeated unchanged boot probes are not
+a solution: controlling launchd services and their restarts requires a new
+explicitly approved trusted boundary, or independently controlled Apple
+infrastructure. Do not increase deadlines or signal unrelated services.

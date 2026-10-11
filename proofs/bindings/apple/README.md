@@ -245,6 +245,11 @@ at `cd7f2ae`, returning 12 records including available iOS `26.2`, `26.4.1`
 and `26.5`. Actual JVM/Native/framework gates, input hashes and ordinary
 cleanup also passed. Root-owned simdiskimaged remained observable; inventory
 success does not establish helper containment or simulator runtime.
+Trusted device creation passed `38165989640`; boot probes `38167434234`/
+`38168165135` expired 60 seconds without shutdown completion. Dedicated-UID
+cleanup failed and scratch detach was busy. The diagnostic observed
+launchd-parented simulator services and a remaining distnoted process.
+Trusted lifecycle and runtime containment remain incomplete; no app ran.
 
 | Module | Target | Owning proof task | Evidence/limitation |
 | --- | --- | --- | --- |

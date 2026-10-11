@@ -168,6 +168,11 @@ resource/socket controls and ordinary cleanup passed. An earlier scratch
 detach `Resource busy` failure remains unexplained, not fixed by later greens.
 No production Apple
 acceptance is implied.
+Trusted scratch-device creation passed `38165989640`. Boot attempts
+`38167434234`/`38168165135` expired the 60-second limit; shutdown/UID cleanup
+did not complete and scratch detach failed busy. Launchd-parented simulator
+services were observed. Simulator lifecycle/containment remains incomplete;
+no generated app or simulator calls ran.
 
 Offline effective Apple plugin configuration passed in
 [run 38130344648](https://github.com/trancee/cairn/actions/runs/38130344648)
