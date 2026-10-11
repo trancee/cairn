@@ -26,7 +26,7 @@ for runtime in available:
 ' "$HOME/simulator-runtimes.json"
 echo 'PASS: isolated simulator runtime inventory; no device boot or generated calls'
 for operation in create boot bootstatus shutdown delete; do
-  "$simctl" help "$operation"
+  "$simctl" --set "$HOME/simulator-devices" help "$operation"
 done
 "$simctl" --set "$HOME/simulator-devices" list devicetypes --json \
   > "$HOME/simulator-device-types.json"

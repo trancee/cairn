@@ -964,3 +964,9 @@ Trusted helper writes outside scratch remain an explicit diagnostic risk,
 not accepted runtime containment. First collect actual `simctl` lifecycle
 help and iPhone device-type identifiers in the existing inventory seam;
 this prerequisite does not create or boot a device.
+
+Run `38163868922` passed inventory but the first lifecycle help command
+omitted `--set` and attempted the default device set. It failed before
+returning help; do not interpret its allocation diagnostic as proven RAM
+exhaustion. Supply the same explicit scratch device set to every simctl
+invocation, including help. No default host device state is intended.
