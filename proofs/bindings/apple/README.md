@@ -182,3 +182,9 @@ with fingerprinted Cargo scratch reuse. This blocks binding generation;
 changing the build ceiling or introducing an immutable generator seed
 requires an explicit owner decision. Other budgets and network denial remain
 unchanged. Earlier busy-detach failures and full runner acceptance remain open.
+
+The owner approved 300-second actual build/generation cells. Diagnostic
+debug bindgen compilation then passed offline in 3m09s (`38146169370`);
+the plugin's actual optimized `installBindgen` expired its 300-second ceiling.
+No bindings were generated. The debug diagnostic binary is not injected
+into the plugin's source-fingerprinted installation.

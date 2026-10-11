@@ -216,6 +216,13 @@ Both bindgen compilation attempts expired the unchanged 60-second command
 deadline during `uniffi_bindgen`; sharing fingerprinted Cargo scratch did
 not close it. Binding generation/compilation/runtime remain incomplete.
 
+The owner subsequently approved 300-second actual build/generation cells,
+keeping trusted probes at 60 seconds and other budgets unchanged.
+Run `38146169370` compiled the diagnostic debug generator in 3m09s,
+then the owning Gradle optimized `installBindgen` hit its 300-second ceiling.
+Bindings and generated calls remain incomplete; no unsupported prebuilt
+generator injection or validation bypass is used.
+
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable
   wire tutorial, contributor validation guide, foundation API reference and

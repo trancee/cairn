@@ -767,3 +767,12 @@ configuration symlink to the immutable vendor config, explicit offline mode
 and pinned Rust PATH; Native home is the immutable compiler seed.
 Do not bypass the plugin's installation/source-fingerprint contract by
 copying the separately built diagnostic generator into its install directory.
+
+Run `38146169370` compiled the diagnostic debug generator offline in
+3m09s, inside the newly approved ceiling. The actual owning Gradle task
+then expired 300 seconds while `installBindgen` ran Cargo's optimized
+`install --locked --force --path` contract. No binding generation completed.
+UID/scratch/PF cleanup passed. Pinned plugin source offers path/Git/registry
+installation, not a supported prebuilt-binary seam; do not fake its source
+fingerprint or suppress the task. The optimized installation ceiling remains
+a separate unresolved owner choice.

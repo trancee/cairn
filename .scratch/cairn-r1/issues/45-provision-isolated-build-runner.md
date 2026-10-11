@@ -61,6 +61,13 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Owner approved 300-second build/generation cells only.
+  Run `38146169370` compiled diagnostic debug bindgen offline in 3m09s.
+  Owning Gradle optimized `installBindgen` then expired 300 seconds;
+  generation/consumer compilation/runtime remain incomplete. Cleanup passed.
+  No prebuilt injection, task skip, profile weakening or new deadline is
+  authorized implicitly; trusted probes retain 60 seconds and other limits.
+
 - 2026-10-11: Delivered ARM64 runtime allocator forwarding is recorded in
   [Apple audit](../../../proofs/bindings/apple/ALLOCATOR-AUDIT.md).
   Actual shared-fixture Rust compilation passes all three Apple targets
