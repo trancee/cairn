@@ -113,6 +113,18 @@ if [ "$#" -eq 2 ]; then
   test "$tools" = /opt/cairn-apple-tools
   test "$(stat -f %u "$tools")" -eq 0
   sudo -n -u "$user" /bin/test -x "$tools/rust/bin/rustc"
+  simulator_result=0
+  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 \
+    "$work/proof-output/simulator-access.log" \
+    /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+    -D PRIVATE_IPC=false -f "$work/build.sb" \
+    /bin/bash "$tools/check-simulator-access.sh" "$python" || simulator_result=$?
+  if [ "$simulator_result" -ne 0 ]; then
+    "$python" -I -c \
+      'import subprocess; subprocess.run(["/usr/bin/log","show","--last","2m","--style","compact","--predicate","process == \"kernel\" AND eventMessage CONTAINS \"Sandbox\" AND eventMessage CONTAINS \"simctl(\""],timeout=15,check=True)' \
+      || echo 'DIAGNOSTIC: targeted simulator sandbox denial collection failed'
+    exit "$simulator_result"
+  fi
   cp "$scripts/probe-toolchains.sh" "$work/inputs/probe-toolchains.sh"
   chmod 0644 "$work/inputs/probe-toolchains.sh"
   "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/toolchains.log" \
@@ -198,11 +210,6 @@ if [ "$#" -eq 2 ]; then
       -D PRIVATE_IPC=true -f "$work/build.sb" \
       /bin/bash "$tools/check-fixture-bindings.sh" "$tools" "$task"
   done
-  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 \
-    "$work/proof-output/simulator-access.log" \
-    /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
-    -D PRIVATE_IPC=false -f "$work/build.sb" \
-    /bin/bash "$tools/check-simulator-access.sh" "$python"
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
   | tee "$output/dedicated-sandbox.log"

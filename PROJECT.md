@@ -248,6 +248,15 @@ SDK Rust profiles/default Linux behavior remain unchanged.
 Simulator generated-call runtime, physical iPhone proof, earlier busy-detach
 reliability and final runner acceptance remain open.
 
+The trusted scratch-device-set simulator inventory failed under unchanged
+socket/Mach denial in
+[run 38157170214](https://github.com/trancee/cairn/actions/runs/38157170214)
+at `f62938f`: CoreSimulator connection/subscription refused. Earlier JVM
+calls and both framework links passed; UID cleanup and ordinary detach passed.
+Final workflow input-hash checks were not reached. Targeted denial collection
+now runs before expensive fixture work; no service allowance or simulator
+boot/generated call is authorized by this diagnostic.
+
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable
   wire tutorial, contributor validation guide, foundation API reference and

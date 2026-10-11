@@ -61,6 +61,14 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Scratch-device-set simulator inventory failed under unchanged
+  socket/Mach denial in
+  [38157170214](https://github.com/trancee/cairn/actions/runs/38157170214)
+  at `f62938f`: CoreSimulator connection/subscription refused. Earlier JVM
+  calls and both framework links passed; UID cleanup/ordinary detach passed.
+  Final input-hash checks were not reached. Move inventory before expensive
+  fixture work and retain targeted kernel denials; no new service access,
+  boot or generated simulator calls. Simulator/final acceptance remains open.
 - 2026-10-11: Owner-approved generator-only debug profile preserves plugin
   install/fingerprints; bindings pass `38150603530`. Actual immutable JVM
   smoke calls pass `38151849548`; generated device/simulator/common Native

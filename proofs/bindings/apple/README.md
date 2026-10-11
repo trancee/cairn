@@ -216,6 +216,14 @@ simulator execution or physical-device behavior. A trusted runtime-inventory
 probe now tests simctl access under blanket socket/Mach denial with a scratch
 device set; it does not boot a device or execute generated calls.
 
+That inventory failed in
+[run 38157170214](https://github.com/trancee/cairn/actions/runs/38157170214)
+at `f62938f`: CoreSimulator service connection and device-set subscription
+were refused. Earlier JVM/Native/framework gates and ordinary cleanup passed;
+final input-hash checks were not reached. The inventory now runs before
+expensive fixture work and retains targeted `simctl` sandbox-denial diagnostics
+without widening access. Simulator runtime and final acceptance remain open.
+
 | Module | Target | Owning proof task | Evidence/limitation |
 | --- | --- | --- | --- |
 | `sdk` | Darwin JVM | `buildBindings` | Generated bindings; generator debug profile only |

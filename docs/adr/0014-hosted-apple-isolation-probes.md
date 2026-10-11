@@ -866,3 +866,18 @@ Next test a trusted `simctl` runtime-inventory command with a dedicated
 scratch device set under unchanged blanket socket/Mach denial. No device
 is booted; this tests the access prerequisite before approving any service
 allowance or executing generated simulator calls.
+
+The unchanged-denial inventory failed in
+[run 38157170214](https://github.com/trancee/cairn/actions/runs/38157170214)
+at `f62938f`: `CoreSimulatorService` connection invalid, runtime-image service
+unavailable and scratch device-set notification subscription refused. Prior
+JVM calls and both framework links passed; UID cleanup and ordinary scratch
+detach passed. Final workflow input-hash checks were not reached.
+This is an access-prerequisite failure, not evidence that an available
+runtime is absent or that generated calls fail.
+Move the trusted inventory ahead of expensive fixture work and collect only
+recent `simctl` sandbox kernel denials with a 15-second diagnostic deadline.
+Retain unchanged blanket socket/Mach denial, resource limits and no boot.
+Candidate causes are denied service lookup, fresh-UID service availability
+or denied runtime/device-set paths; exact denial evidence is needed before
+any material service-boundary decision.
