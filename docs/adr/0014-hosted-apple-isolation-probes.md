@@ -987,3 +987,13 @@ with explicit nested command deadlines totaling at most 55 seconds.
 Always request exact-device shutdown before returning, including boot errors;
 shutdown failures remain failures. No app installation/generated call or
 additional service allowance is included.
+
+Boot run `38167434234` at `ae21ed6` failed the 60-second collector deadline
+without boot/shutdown completion output. The dedicated-UID cleanup then
+failed its own ten-second deadline, and ordinary scratch detach failed
+`Resource busy`; no holder identity was collected. Nested subprocess
+deadlines did not establish effective completion/cleanup in this run.
+Do not claim a booted simulator, successful shutdown or cleanup.
+Use the existing one-shot identity-only supervisor diagnostic at ten seconds
+and targeted failed-boot kernel/remaining-UID observations before interpreting
+the cause. Budgets, services and generated-code denial remain unchanged.

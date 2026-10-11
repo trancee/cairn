@@ -150,11 +150,21 @@ for line in result.stdout.splitlines():
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=false -f "$work/simulator-inventory.sb" \
     /bin/bash "$tools/check-simulator-lifecycle.sh" "$python" create
-  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 \
+  boot_result=0
+  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 --diagnose-after 10 \
     "$work/proof-output/simulator-boot.log" \
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=false -f "$work/simulator-inventory.sb" \
-    /bin/bash "$tools/check-simulator-lifecycle.sh" "$python" boot
+    /bin/bash "$tools/check-simulator-lifecycle.sh" "$python" boot || boot_result=$?
+  if [ "$boot_result" -ne 0 ]; then
+    "$python" -I -c \
+      'import subprocess; subprocess.run(["/usr/bin/log","show","--last","2m","--style","compact","--predicate","process == \"kernel\" AND eventMessage CONTAINS \"Sandbox\" AND eventMessage CONTAINS \"simctl(\""],timeout=15,check=True)' \
+      || echo 'DIAGNOSTIC: targeted boot sandbox denial collection failed'
+    "$python" -I -c \
+      'import runpy, sys; runpy.run_path(sys.argv[1])["report_account_processes"](59000)' \
+      "$scripts/uid-supervisor.py" || echo 'DIAGNOSTIC: remaining boot process collection failed'
+    exit "$boot_result"
+  fi
   cp "$scripts/probe-toolchains.sh" "$work/inputs/probe-toolchains.sh"
   chmod 0644 "$work/inputs/probe-toolchains.sh"
   "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/toolchains.log" \
