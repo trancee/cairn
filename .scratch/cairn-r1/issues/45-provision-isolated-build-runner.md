@@ -61,6 +61,14 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: After separate PF-probe approval,
+  [run 38124841659](https://github.com/trancee/cairn/actions/runs/38124841659)
+  at `89fbb05` passed private-loopback same-UID TCP/UDP roundtrip and
+  cross-UID/external TCP denial inside/outside the sandbox. Trusted empty
+  Gradle `help` passed offline in 3s; copied tool hashes remained unchanged.
+  Named-anchor/owned-alias cleanup returned zero and main PF rules matched.
+  UDP negative/adversarial cases, fixture/cache freezing and actual binding
+  compilation/runtime remain open; full lane acceptance is not granted.
 - 2026-10-11: Trusted empty Gradle initialization
   [run 38095639900](https://github.com/trancee/cairn/actions/runs/38095639900)
   failed on required wildcard UDP file-lock IPC. Pinned Gradle source confirms

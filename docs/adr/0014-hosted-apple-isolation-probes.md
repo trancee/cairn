@@ -354,3 +354,36 @@ Load only a fresh `com.apple/cairn-UUID` anchor after verifying the existing
 Apple wildcard attachment, retain before/after main rules, and release only
 the PF enable reference acquired by the probe. This candidate is not accepted
 until live controls pass.
+
+## Private-loopback IPC evidence
+
+The tag candidate failed same-UID TCP in runs
+[38123581731](https://github.com/trancee/cairn/actions/runs/38123581731) and
+[38123662243](https://github.com/trancee/cairn/actions/runs/38123662243).
+Counters showed outgoing tag matches but no corresponding incoming tagged
+match. Reversing tag direction also failed
+[38123750172](https://github.com/trancee/cairn/actions/runs/38123750172).
+The current candidate instead uses a fresh `127.0.0.2` loopback alias and
+direct packet sender/receiver UID rules. It removes that specific alias,
+clears only its named anchor rules and releases its own enable reference.
+Main PF rules are compared before/after. PF stays active around the entire
+resource/tool cell, not merely the preliminary socket probe.
+
+The native compiler socket profile permits TCP/UDP socket operations while
+PF supplies the precise address/UID restriction. `PRIVATE_IPC=false` retains
+the original blanket socket denial for the separate benign sandbox probes.
+This profile must not be used alone as a network isolation control.
+Native filters require `local` endpoints for inbound/listening operations;
+the previous `remote` filter caused a reproduced `listen()` EPERM. A local
+CLI regression now covers listener startup.
+
+Hosted [run 38124841659](https://github.com/trancee/cairn/actions/runs/38124841659)
+at `89fbb05` passed unsandboxed and sandboxed private TCP/UDP roundtrip
+controls, live cross-UID TCP denial in both directions, external TCP denial,
+the composed resource/read probes, and trusted offline empty Gradle `help`.
+Gradle reported `BUILD SUCCESSFUL in 3s`; copied tool-file hashes verified
+unchanged and named PF cleanup returned zero. The trusted Gradle probe uses
+`GRADLE_DAEMON_BIND_ADDRESS=127.0.0.2` and IPv4 launcher preference.
+External/cross-UID UDP negative controls, broader socket adversarial cases,
+fixture/Maven/Native cache freezing and actual binding compilation/runtime
+remain unverified. This is not full Apple runner acceptance.

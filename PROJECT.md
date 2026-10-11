@@ -145,6 +145,13 @@ Trusted empty-project initialization in
 failed on Gradle's required wildcard UDP lock-service socket; `--offline`
 does not remove this IPC requirement. A proven external/cross-UID network
 boundary and owner approval are required before permitting those sockets.
+The owner subsequently approved benign PF probes. Private-loopback
+UID isolation and trusted offline empty Gradle `help` pass in
+[run 38124841659](https://github.com/trancee/cairn/actions/runs/38124841659)
+at `89fbb05`, with unchanged copied tool hashes and named PF cleanup.
+TCP cross-UID/external denials and same-UID TCP/UDP roundtrip pass;
+UDP negative/adversarial coverage and frozen fixture/Maven/Native inputs
+remain open before any binding build.
 No production Apple
 acceptance is implied.
 

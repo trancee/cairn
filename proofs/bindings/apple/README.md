@@ -93,5 +93,14 @@ project, still offline. No Ubique/Kotlin plugin or fixture is compiled.
 That probe
 [failed](https://github.com/trancee/cairn/actions/runs/38095639900) on the
 required wildcard UDP lock-service bind. The preparation workflow remains
-failed at this explicit IPC gate; version startup is not initialization
-acceptance. No socket-policy exception or PF change has been authorized.
+failed at that IPC gate until the separately owner-approved PF experiment.
+
+Trusted empty Gradle `help` now passes in
+[run 38124841659](https://github.com/trancee/cairn/actions/runs/38124841659).
+The compiler socket profile is usable only within `run-pf-probes.sh`:
+its fresh named anchor/private `127.0.0.2` alias supplies the precise UID/
+address restriction and is removed afterwards without replacing main rules.
+Live same-UID TCP/UDP roundtrip, external TCP and cross-UID TCP denial in
+both directions pass inside/outside the sandbox. External/cross-UID UDP
+negative coverage, frozen fixture/Maven/Native caches and binding builds
+remain open. Do not run this root/PF setup on a shared local Mac.
