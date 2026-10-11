@@ -13,6 +13,35 @@ from pathlib import Path
     "Dedicated-UID supervision requires the disposable hosted root fixture",
 )
 class DedicatedSupervisorTest(unittest.TestCase):
+    def test_child_file_ceiling_allows_boundary_and_rejects_next_byte(self):
+        program = (
+            "import errno,os,signal,tempfile; "
+            "signal.signal(signal.SIGXFSZ,signal.SIG_IGN); "
+            "\nwith tempfile.TemporaryFile(dir=os.environ['HOME'],buffering=0) as output:\n"
+            " for _ in range(128): output.write(b'x'*(1024**2))\n"
+            " output.flush()\n"
+            " assert os.fstat(output.fileno()).st_size==134217728\n"
+            " try:\n"
+            "  output.write(b'x'); output.flush()\n"
+            " except OSError as error:\n"
+            "  assert error.errno==errno.EFBIG,error\n"
+            " else:\n"
+            "  raise AssertionError('file ceiling allowed excess')\n"
+            " print('PASS: 128 MiB file boundary; next byte rejected')\n"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "proof.log"
+
+            result = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name("uid-supervisor.py")),
+                 str(output), sys.executable, "-I", "-c", program],
+                capture_output=True, timeout=25,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(output.read_text().strip(),
+                             "PASS: 128 MiB file boundary; next byte rejected")
+
     def test_child_receives_approved_limits_and_only_dedicated_identity(self):
         program = (
             "import ctypes,json,os,resource; "

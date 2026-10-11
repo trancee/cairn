@@ -20,4 +20,17 @@ result=0
 cat "$HOME/fixture-targets.log"
 if [ "$result" -ne 0 ]; then exit "$result"; fi
 grep -F 'PASS: effective Apple SDK targets' "$HOME/fixture-targets.log"
+"$(/usr/bin/xcrun --find python3)" -I -c '
+import os
+from pathlib import Path
+artifacts = list((Path(os.environ["GRADLE_USER_HOME"]) / "caches").rglob(
+    "instrumented-kotlin-gradle-plugin-2.4.20-gradle96.jar"))
+if not artifacts:
+    raise SystemExit("FAIL: instrumented Kotlin plugin artifact missing")
+for artifact in artifacts:
+    size = artifact.stat().st_size
+    if not 64 * 1024**2 < size <= 128 * 1024**2:
+        raise SystemExit(f"FAIL: instrumented Kotlin plugin size {size} outside expected budget")
+    print(f"PASS: instrumented Kotlin plugin {size} bytes within 128 MiB file ceiling")
+'
 echo 'PASS: offline Apple plugin configuration; no binding build tasks requested'
