@@ -536,3 +536,12 @@ The new child-limit expectation failed as intended in
 the actual child still observed `[67108864, 67108864]`, not
 `[134217728, 134217728]`. Apply the approved ceiling in trusted child setup
 and require the sandbox composition to observe the same value.
+
+Hosted [run 38129425533](https://github.com/trancee/cairn/actions/runs/38129425533)
+at `ace66ef` passed offline effective-target configuration with the revised
+child ceiling, unchanged dependency/tool hashes and successful cleanup.
+The next run `38129790626` passed actual 128 MiB file-boundary preflight but
+stopped preparation on existing 1 GiB swap after tool provisioning.
+Move the unchanged pager-disable/zero-swap gate immediately after checkout
+before downloads/tool preparation. Never delete existing swap or accept
+nonzero swap; its exact creation source in the failed run is unverified.

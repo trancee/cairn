@@ -32,6 +32,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Establish hosted no-swap envelope
+        run: |
+          sudo -n /usr/bin/env GITHUB_ACTIONS=true \
+            /bin/bash proofs/bindings/apple/disable-hosted-swap.sh
+          "$(xcrun --find python3)" -I proofs/bindings/apple/probe-memory.py
       - name: Download exact pinned daemon JDK
         run: |
           archive="$RUNNER_TEMP/temurin-25.0.4.1.tar.gz"
@@ -61,11 +66,6 @@ jobs:
           sudo -n /usr/bin/env GITHUB_ACTIONS=true \
             /bin/bash proofs/bindings/apple/freeze-toolchains.sh \
             "$RUNNER_TEMP/apple-preparation" "$rust" "$CAIRN_DAEMON_JAVA_HOME" "$JAVA_HOME"
-      - name: Establish hosted no-swap envelope
-        run: |
-          sudo -n /usr/bin/env GITHUB_ACTIONS=true \
-            /bin/bash proofs/bindings/apple/disable-hosted-swap.sh
-          "$(xcrun --find python3)" -I proofs/bindings/apple/probe-memory.py
       - name: Prepare pinned plugin inputs without binding build tasks
         run: |
           "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
