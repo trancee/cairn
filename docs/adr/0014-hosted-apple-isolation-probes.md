@@ -807,3 +807,14 @@ the CLI rejected absent `--diagnose-after`. Implement one-shot root-side
 observation only when requested, before the existing collector's original
 deadline, and retain cleanup/exit semantics. Optimized installation requests
 its snapshot at 540 seconds inside the unchanged 600-second ceiling.
+
+Run `38149099333` passed the supervisor diagnostic/invalid-time regressions
+and exact compile-JDK archive/version checks. At 540 seconds, the real
+installation snapshot showed `rustc` runnable with `6:56.02` accumulated CPU,
+while Cargo/Gradle waited. Installation then expired 600 seconds. This is
+active compiler work, not evidence of a network or lock deadlock; the exact
+compiler crate/phase is not captured by the identity-only diagnostic.
+UID cleanup passed but ordinary scratch detach again failed `Resource busy`;
+bounded holder collection found no retained holder identity.
+Do not change the optimizer/profile or raise the deadline silently.
+Generation, runtime and final isolation/reliability acceptance remain open.

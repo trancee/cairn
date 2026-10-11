@@ -61,6 +61,14 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: After owner-approved 600s optimized installation ceiling,
+  runs `38147417409`/`38149099333` still expired. Supervisor diagnostic
+  regression red `38148973462` then green `38149099333`; actual rustc was
+  runnable with 6m56s CPU at540s. Exact compile JDK21.0.12.1+1 pin passed.
+  UID cleanup passed but scratch detach again failed `Resource busy`;
+  no holder identity retained. Binding generation/runtime and complete
+  reliability/runner acceptance remain open; no optimizer change authorized.
+
 - 2026-10-11: Owner approved 300-second build/generation cells only.
   Run `38146169370` compiled diagnostic debug bindgen offline in 3m09s.
   Owning Gradle optimized `installBindgen` then expired 300 seconds;

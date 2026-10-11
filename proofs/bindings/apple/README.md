@@ -188,3 +188,12 @@ debug bindgen compilation then passed offline in 3m09s (`38146169370`);
 the plugin's actual optimized `installBindgen` expired its 300-second ceiling.
 No bindings were generated. The debug diagnostic binary is not injected
 into the plugin's source-fingerprinted installation.
+
+The approved optimized-install ceiling is now 600 seconds only; other
+build/generation cells retain 300 seconds and trusted probes 60 seconds.
+Runs `38147417409`/`38149099333` still expired installation. The latter
+passed bounded owned-process diagnostic regressions and observed runnable
+`rustc` with 6m56s CPU at 540 seconds. Exact compile-JDK archive/hash/version
+`21.0.12.1+1` also passed. UID cleanup passed; scratch detach again failed
+`Resource busy`, without an identified holder. Bindings/runtime remain
+incomplete; no optimizer weakening or further deadline increase is applied.

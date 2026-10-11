@@ -223,6 +223,17 @@ then the owning Gradle optimized `installBindgen` hit its 300-second ceiling.
 Bindings and generated calls remain incomplete; no unsupported prebuilt
 generator injection or validation bypass is used.
 
+The owner then approved 600 seconds for optimized `installBindgen` only,
+with the redundant diagnostic debug build removed. Runs `38147417409` and
+`38149099333` still expired installation. The latter passed one-shot
+owned-process diagnostic regressions: at 540 seconds `rustc` was runnable
+with 6m56s CPU, not an observed lock/network wait. Exact checksum-verified
+compile JDK is now Temurin `21.0.12.1+1`, matching the actual prior JVM
+rather than its misleading hosted-cache directory name. UID cleanup passed;
+ordinary scratch detach again failed `Resource busy`. No generated bindings
+or FFI calls, optimizer change, complete reliability or runner acceptance
+is claimed.
+
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable
   wire tutorial, contributor validation guide, foundation API reference and
