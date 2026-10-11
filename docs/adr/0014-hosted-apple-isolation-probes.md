@@ -642,3 +642,11 @@ only `/Library/Preferences/com.apple.dt.Xcode.plist` to test whether existing
 license-state visibility fixes SDK lookup. Do not permit all preferences,
 account databases, Mach services or diagnostic devices; do not modify license
 state. The original cinterop command remains the verification boundary.
+
+Run `38135833123` passed SDK/license lookup after that exact input allowance
+and failed on absent LLVM downloads under network denial. Prepare dependencies
+through the trusted header probe in network-enabled preparation, freeze
+extracted directories read-only, and symlink them into scratch's dependency
+layout. Only extraction coordination metadata remains writable. Offline
+replay sets Native `airplaneMode=true`; missing input must fail immediately,
+not attempt network/retries. Hash the frozen dependencies after replay.

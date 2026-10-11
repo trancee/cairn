@@ -82,6 +82,13 @@ jobs:
         run: |
           sudo -n /usr/bin/env GITHUB_ACTIONS=true \
             /bin/bash proofs/bindings/apple/freeze-gradle-inputs.sh "$RUNNER_TEMP/apple-preparation"
+      - name: Prepare and freeze trusted Native compiler inputs
+        run: |
+          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
+            "$RUNNER_TEMP/apple-preparation/native-preparation.log" \
+            /bin/bash proofs/bindings/apple/prepare-native-inputs.sh "$RUNNER_TEMP/apple-preparation"
+          sudo -n /usr/bin/env GITHUB_ACTIONS=true \
+            /bin/bash proofs/bindings/apple/freeze-native-inputs.sh "$RUNNER_TEMP/apple-preparation"
       - name: Probe frozen tool startup inside the bounded cell
         run: |
           sudo -n /usr/bin/env GITHUB_ACTIONS=true \
@@ -97,6 +104,9 @@ jobs:
           (cd /opt/cairn-apple-tools && shasum -a 256 --check \
             "$RUNNER_TEMP/apple-preparation/cargo-inputs.sha256") \
             > "$RUNNER_TEMP/apple-preparation/cargo-integrity.log"
+          (cd /opt/cairn-apple-tools && shasum -a 256 --check \
+            "$RUNNER_TEMP/apple-preparation/native-inputs.sha256") \
+            > "$RUNNER_TEMP/apple-preparation/native-integrity.log"
       - name: Retain preparation diagnostics
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -112,5 +122,7 @@ jobs:
             ${{ runner.temp }}/apple-preparation/gradle-dependencies.sha256
             ${{ runner.temp }}/apple-preparation/cargo*.log
             ${{ runner.temp }}/apple-preparation/cargo-inputs.sha256
+            ${{ runner.temp }}/apple-preparation/native*.log
+            ${{ runner.temp }}/apple-preparation/native-inputs.sha256
           if-no-files-found: error
           retention-days: 7
