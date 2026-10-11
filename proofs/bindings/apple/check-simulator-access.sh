@@ -9,6 +9,13 @@ simctl=$(/usr/bin/xcrun --find simctl)
 import json, sys
 with open(sys.argv[1]) as source:
     runtimes = json.load(source)["runtimes"]
+for runtime in runtimes:
+    if runtime["identifier"].startswith("com.apple.CoreSimulator.SimRuntime.iOS-"):
+        print("IOS-RUNTIME:", json.dumps({
+            key: runtime.get(key) for key in
+            ("identifier", "version", "isAvailable", "availabilityError")
+        }), flush=True)
+print("DIAGNOSTIC: inventory returned", len(runtimes), "runtime records", flush=True)
 available = [runtime for runtime in runtimes
              if runtime["identifier"].startswith("com.apple.CoreSimulator.SimRuntime.iOS-")
              and runtime["isAvailable"]]

@@ -61,6 +61,12 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Two-lookup probe `38159023923` reached JSON inventory but
+  failed available-iOS validation. Root-owned simdiskimaged remained after
+  caller-UID cleanup; sampled RSS 21,840 KiB, parent 1. Scratch capacity/
+  ordinary detach passed. Further SimLaunchHost/Disk Arbitration/IOKit
+  denials do not prove necessity. Add inventory count/availability diagnostics,
+  not new allowances; helper containment and simulator runtime remain open.
 - 2026-10-11: Owner approved a separate trusted inventory-only profile with
   exactly CoreSimulatorService/simdiskimaged lookup. Retain other denials,
   60-second ceiling and scratch device set; observe exact helper identities/

@@ -230,6 +230,11 @@ The owner then approved exactly those two lookups for the trusted inventory
 invocation only, using a separately composed profile. Helper identity and
 sampled memory/CPU observations and scratch capacity are recorded; all other
 services remain denied. No boot or generated-call allowance is included.
+Run `38159023923` reached JSON inventory but found no available iOS runtime.
+It observed root-owned simdiskimaged after caller-UID cleanup and additional
+SimLaunchHost/Disk Arbitration/IOKit denials; necessity is not established.
+Scratch capacity/ordinary detach passed. Structured inventory count and
+availability diagnostics are now retained before the unchanged assertion.
 
 | Module | Target | Owning proof task | Evidence/limitation |
 | --- | --- | --- | --- |

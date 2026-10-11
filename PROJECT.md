@@ -262,6 +262,10 @@ Service-helper containment is unverified; no service allowance was added.
 The owner subsequently approved a separate trusted inventory-only profile
 with exactly those two lookups and helper identity/resource observations.
 Generated/build commands remain unchanged; no boot or runtime is permitted.
+Run `38159023923` reached JSON inventory but failed available-iOS validation;
+root-owned simdiskimaged was observed after caller-UID cleanup. Additional
+service/device denials remain unchanged. Scratch capacity/ordinary detach
+passed; helper containment and simulator runtime remain open.
 
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable

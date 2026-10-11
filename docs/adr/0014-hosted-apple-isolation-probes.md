@@ -905,3 +905,18 @@ UID/PID/parent/RSS/virtual-memory/CPU fields, with a five-second snapshot
 deadline, and rechecks scratch capacity. These observations do not prove
 helper containment or authorize simulator boot. Generated fixture/build
 commands retain the unchanged blanket Mach denial.
+
+The two-lookup probe in
+[38159023923](https://github.com/trancee/cairn/actions/runs/38159023923)
+at `239b8f4` reached JSON inventory but failed the available-iOS assertion.
+No available runtime is established; the returned record count and
+availability reasons were not captured by that version of the script.
+Add those structured inventory diagnostics before the unchanged assertion.
+Kernel diagnostics now include denied `com.apple.CoreSimulator.SimLaunchHost-arm64`
+lookup, Disk Arbitration and IOKit clients; necessity is not established.
+The helper snapshot found root-owned `simdiskimaged` (PID 12346, parent 1,
+RSS 21,840 KiB), after dedicated-UID cleanup. This demonstrates that the
+caller-UID cleanup/resource policy does not cover every simulator helper;
+no root-helper containment is claimed. Whole-VM memory remains bounded.
+Scratch capacity recheck and ordinary detach passed. No further service
+allowance or runtime boot is authorized; retain the inventory failure.
