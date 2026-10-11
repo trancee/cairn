@@ -14,6 +14,17 @@ def child(address, port):
         server.listen(1)
         with socket.create_connection(server.getsockname(), timeout=2):
             pass
+        connection, _ = server.accept()
+        connection.close()
+        print(f"reverse-ready={server.getsockname()[1]}", flush=True)
+        server.settimeout(2)
+        try:
+            connection, _ = server.accept()
+        except socket.timeout:
+            print("PASS: other UID cannot reach dedicated private listener", flush=True)
+        else:
+            connection.close()
+            raise SystemExit("FAIL: other UID reached dedicated private listener")
     with socket.socket(type=socket.SOCK_DGRAM) as receiver:
         receiver.bind(("0.0.0.0", 0))
         receiver.settimeout(2)
@@ -55,12 +66,30 @@ def main():
         connection, _ = root_server.accept()
         connection.close()
         print("PASS: root external and cross-UID loopback controls connect", flush=True)
-        return subprocess.call([
+        with subprocess.Popen([
             sys.executable, "-I", str(scripts / "uid-supervisor.py"),
             "--seconds", "15", str(output), sys.executable, "-I",
             str(scripts / "probe-pf.py"), "--child", address,
             str(root_server.getsockname()[1]),
-        ])
+        ], stdout=subprocess.PIPE, text=True) as process:
+            try:
+                for line in process.stdout:
+                    print(line, end="", flush=True)
+                    if line.startswith("reverse-ready="):
+                        private_port = int(line.strip().split("=")[1])
+                        try:
+                            with socket.create_connection(("127.0.0.2", private_port), timeout=1):
+                                pass
+                        except OSError as error:
+                            print(f"PASS: reverse cross-UID TCP rejected "
+                                  f"({type(error).__name__})", flush=True)
+                        else:
+                            raise RuntimeError("FAIL: root reached dedicated private listener")
+                return process.wait(timeout=5)
+            finally:
+                if process.poll() is None:
+                    process.terminate()
+                    process.wait(timeout=15)
 
 
 if __name__ == "__main__":
