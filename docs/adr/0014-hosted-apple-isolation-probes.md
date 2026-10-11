@@ -727,3 +727,12 @@ warnings rather than thunk bodies. This diagnostic green is not allocator
 evidence. Derive exact disassembly names from objdump's own symbol table and
 do not demangle while selecting symbols; include relocations for archive
 branch-target identity. Require actual thunk bodies before acceptance.
+
+Actual runtime thunk bodies and matching default `__rdl_*` branch/relocation
+targets passed inspection in run `38143105757` at `90a31be` for Darwin,
+device and simulator ARM64; all immutable inputs and cleanup passed.
+The bounded findings/bitcode limitation are recorded in
+[Apple allocator evidence](../../proofs/bindings/apple/ALLOCATOR-AUDIT.md).
+Now compile the actual shared Rust fixture, locked/offline, separately for
+each target under the unchanged 60-second/128 MiB file ceilings. No fixture
+FFI calls are permitted until its resulting allocator thunks are inspected.

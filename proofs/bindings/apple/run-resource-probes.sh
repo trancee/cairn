@@ -162,6 +162,12 @@ if [ "$#" -eq 2 ]; then
     CARGO_HOME="$volume/cargo-offline" CARGO_NET_OFFLINE=true \
     CARGO_TARGET_DIR="$volume/cargo-metadata-target" \
     "$python" -I "$tools/inspect-allocator-inputs.py" "$tools"
+  for target in aarch64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim; do
+    "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/fixture-rust-$target.log" \
+      /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+      -D PRIVATE_IPC=false -f "$work/build.sb" \
+      /bin/bash "$tools/check-fixture-rust.sh" "$tools" "$target"
+  done
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
   | tee "$output/dedicated-sandbox.log"
