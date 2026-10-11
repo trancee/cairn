@@ -172,7 +172,8 @@ if [ "$#" -eq 2 ]; then
       -D PRIVATE_IPC=false -f "$work/build.sb" \
       "$python" -I "$tools/inspect-fixture-artifacts.py" "$target"
   done
-  "$python" -I "$scripts/uid-supervisor.py" --seconds 600 "$work/proof-output/fixture-install-bindgen.log" \
+  "$python" -I "$scripts/uid-supervisor.py" --seconds 600 --diagnose-after 540 \
+    "$work/proof-output/fixture-install-bindgen.log" \
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=true -f "$work/build.sb" \
     /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :sdk:installBindgen

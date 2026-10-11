@@ -2,6 +2,7 @@
 """Supervise a command belonging to the disposable hosted probe account."""
 
 import argparse
+import json
 import os
 import pwd
 import resource
@@ -67,18 +68,36 @@ def interrupted(number, _frame):
     raise InterruptedError(number, "Hosted supervisor interrupted")
 
 
+def report_account_processes(uid):
+    result = subprocess.run(
+        ["/bin/ps", "-axo", "uid=,pid=,ppid=,stat=,time=,comm="],
+        check=True, capture_output=True, text=True, timeout=5,
+    )
+    for line in result.stdout.splitlines():
+        owner, pid, parent, state, cpu_time, command = line.split(maxsplit=5)
+        if int(owner) == uid:
+            print("DIAGNOSTIC: owned-process " + json.dumps({
+                "uid": int(owner), "pid": int(pid), "ppid": int(parent),
+                "state": state, "cpu_time": cpu_time, "command": Path(command).name,
+            }), flush=True)
+
+
 def main():
     if sys.argv[1:2] == ["--child"]:
         launch_child(sys.argv[2:])
         return 1
     parser = argparse.ArgumentParser()
     parser.add_argument("--seconds", type=float, default=30)
+    parser.add_argument("--diagnose-after", type=float)
     parser.add_argument("output")
     parser.add_argument("command", nargs=argparse.REMAINDER)
     arguments = parser.parse_args()
     if (os.geteuid() != 0 or os.environ.get("GITHUB_ACTIONS") != "true"
             or not arguments.command or not 0 < arguments.seconds < float("inf")):
         parser.error("Hosted root supervision requires a positive deadline and command")
+    if (arguments.diagnose_after is not None
+            and not 0 < arguments.diagnose_after < arguments.seconds):
+        parser.error("Process diagnostic time must be positive and before the deadline")
     account = pwd.getpwnam("cairnbenignprobe")
     if account.pw_uid != 59000 or account.pw_gid != 20 or account.pw_shell != "/usr/bin/false":
         parser.error("Dedicated disabled-login probe account identity does not match")
@@ -96,6 +115,11 @@ def main():
         "--child", *arguments.command,
     ], start_new_session=True)
     try:
+        if arguments.diagnose_after is not None:
+            try:
+                return process.wait(timeout=arguments.diagnose_after)
+            except subprocess.TimeoutExpired:
+                report_account_processes(account.pw_uid)
         return process.wait()
     except InterruptedError as error:
         print(f"FAIL: hosted supervisor interrupted by signal {error.errno}", file=sys.stderr)

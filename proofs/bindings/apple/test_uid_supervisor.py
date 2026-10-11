@@ -13,6 +13,22 @@ from pathlib import Path
     "Dedicated-UID supervision requires the disposable hosted root fixture",
 )
 class DedicatedSupervisorTest(unittest.TestCase):
+    def test_diagnostic_time_must_be_positive_and_before_deadline(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for value in ("0", "-1", "1", "nan", "inf"):
+                with self.subTest(value=value):
+                    result = subprocess.run(
+                        [sys.executable, str(Path(__file__).with_name("uid-supervisor.py")),
+                         "--seconds", "1", "--diagnose-after", value,
+                         str(Path(directory) / "proof.log"), "/bin/echo", "unexpected"],
+                        capture_output=True, timeout=10, text=True,
+                    )
+
+                    self.assertEqual(result.returncode, 2, result.stderr)
+                    self.assertIn("Process diagnostic time must be positive and before the deadline",
+                                  result.stderr)
+                    self.assertNotIn("unexpected", result.stdout)
+
     def test_slow_child_reports_only_owned_process_identity_before_deadline(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "proof.log"

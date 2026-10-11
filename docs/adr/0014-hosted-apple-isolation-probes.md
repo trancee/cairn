@@ -801,3 +801,9 @@ with a one-shot, owner-UID-only process snapshot before its unchanged
 deadline; fields are PID/parent/state/CPU time/executable basename, never
 arguments, environment or unrelated UID records. First require a short
 sleeping-child regression to report that snapshot and retain deadline cleanup.
+
+The diagnostic regression failed as intended in run `38148973462`:
+the CLI rejected absent `--diagnose-after`. Implement one-shot root-side
+observation only when requested, before the existing collector's original
+deadline, and retain cleanup/exit semantics. Optimized installation requests
+its snapshot at 540 seconds inside the unchanged 600-second ceiling.
