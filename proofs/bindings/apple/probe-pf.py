@@ -8,7 +8,7 @@ import subprocess
 import sys
 
 
-def child(address, port):
+def child(address, port, host_address, udp_port):
     with socket.socket() as server:
         server.bind(("127.0.0.2", 0))
         server.listen(1)
@@ -38,6 +38,14 @@ def child(address, port):
             receiver.sendto(b"reply", peer)
             if sender.recv(32) != b"reply":
                 raise SystemExit("FAIL: same-UID UDP reply did not match")
+        print(f"reverse-udp-ready={receiver.getsockname()[1]}", flush=True)
+        receiver.settimeout(1)
+        try:
+            receiver.recv(32)
+        except socket.timeout:
+            print("PASS: reverse cross-UID UDP denied", flush=True)
+        else:
+            raise SystemExit("FAIL: root UDP reached dedicated listener")
     print("PASS: same-UID TCP and wildcard-bound UDP loopback work", flush=True)
     for name, endpoint in (
         ("cross-UID loopback", ("127.0.0.1", int(port))),
@@ -60,6 +68,13 @@ def child(address, port):
         print(f"PASS: private-source cross-UID TCP rejected ({type(error).__name__})", flush=True)
     else:
         raise SystemExit("FAIL: private-source cross-UID TCP was allowed")
+    for endpoint in ("127.0.0.1", "127.0.0.2", host_address):
+        with socket.socket(type=socket.SOCK_DGRAM) as sender:
+            sender.sendto(b"denied-probe", (endpoint, int(udp_port)))
+    with socket.socket(type=socket.SOCK_DGRAM) as sender:
+        sender.bind(("127.0.0.2", 0))
+        sender.sendto(b"denied-probe", ("127.0.0.1", int(udp_port)))
+    print("udp-negative-sent", flush=True)
 
 
 def main():
@@ -71,9 +86,15 @@ def main():
     scripts = Path(__file__).parent
     output = Path(sys.argv[1])
     address = socket.getaddrinfo("github.com", 443, socket.AF_INET, socket.SOCK_STREAM)[0][4][0]
-    with socket.create_connection((address, 443), timeout=5):
-        pass
-    with socket.socket() as root_server:
+    with socket.create_connection((address, 443), timeout=5) as control:
+        host_address = control.getsockname()[0]
+    with socket.socket() as root_server, socket.socket(type=socket.SOCK_DGRAM) as root_udp:
+        root_udp.bind(("0.0.0.0", 0))
+        root_udp.settimeout(1)
+        with socket.socket(type=socket.SOCK_DGRAM) as control:
+            control.sendto(b"positive", ("127.0.0.1", root_udp.getsockname()[1]))
+        if root_udp.recv(32) != b"positive":
+            raise RuntimeError("FAIL: root UDP positive control failed")
         root_server.bind(("0.0.0.0", 0))
         root_server.listen(8)
         with socket.create_connection(("127.0.0.1", root_server.getsockname()[1]), timeout=2):
@@ -92,7 +113,8 @@ def main():
         with subprocess.Popen([
             sys.executable, "-I", str(scripts / "uid-supervisor.py"),
             "--seconds", "15", str(output), *command, "--child", address,
-            str(root_server.getsockname()[1]),
+            str(root_server.getsockname()[1]), host_address,
+            str(root_udp.getsockname()[1]),
         ], stdout=subprocess.PIPE, text=True) as process:
             try:
                 for line in process.stdout:
@@ -107,6 +129,20 @@ def main():
                                   f"({type(error).__name__})", flush=True)
                         else:
                             raise RuntimeError("FAIL: root reached dedicated private listener")
+                    if line.startswith("reverse-udp-ready="):
+                        with socket.socket(type=socket.SOCK_DGRAM) as control:
+                            control.sendto(b"reverse", ("127.0.0.2", int(line.strip().split("=")[1])))
+                    if line.strip() == "udp-negative-sent":
+                        try:
+                            root_udp.recv(32)
+                        except socket.timeout:
+                            print("PASS: cross-UID and non-loopback UDP denied", flush=True)
+                        else:
+                            raise RuntimeError("FAIL: dedicated UDP reached root listener")
+                        with socket.socket(type=socket.SOCK_DGRAM) as control:
+                            control.sendto(b"still-live", ("127.0.0.1", root_udp.getsockname()[1]))
+                        if root_udp.recv(32) != b"still-live":
+                            raise RuntimeError("FAIL: UDP listener lost positive-control delivery")
                 return process.wait(timeout=5)
             finally:
                 if process.poll() is None:
