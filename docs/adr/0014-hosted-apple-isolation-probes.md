@@ -511,3 +511,14 @@ invocation; the 30-minute whole-job ceiling remains unchanged. Another busy
 detach exposed an invalid `lsof +f` mount-path diagnostic; use bounded `+D`
 directory enumeration and still print only PID/command fields. Neither
 failure is treated as a successful offline target proof.
+
+Separately bounded offline configuration in
+[run 38128968818](https://github.com/trancee/cairn/actions/runs/38128968818)
+at `3381a4c` confirms the transform's nested cause:
+`java.io.IOException: File too large` while finishing the instrumented
+Kotlin Gradle plugin JAR. The approved 64 MiB child per-file ceiling blocks
+this required scratch artifact. Networked preparation/expected targets still
+pass; offline configuration remains failed, with no binding build.
+Changing the per-file budget or introducing precomputed transform inputs is
+a material owner decision. Keep the limit unchanged pending that decision;
+the shared 64 MiB streamed-output cap is a separate invariant.
