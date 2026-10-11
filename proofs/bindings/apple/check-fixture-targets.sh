@@ -11,7 +11,7 @@ export KONAN_DATA_DIR="$HOME/konan"
 export GRADLE_RO_DEP_CACHE="$tools/gradle-dependencies"
 test -d "$GRADLE_RO_DEP_CACHE/modules-2"
 result=0
-"$tools/gradle/bin/gradle" -p "$fixture" --offline --no-daemon --console=plain \
+"$tools/gradle/bin/gradle" -p "$fixture" --offline --no-daemon --console=plain --stacktrace \
   -Djava.net.preferIPv4Stack=true -PcairnProofPlatform=apple \
   -Porg.gradle.java.installations.paths="$tools/compiler-jdk" \
   -Porg.gradle.java.installations.auto-download=false \

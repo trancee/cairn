@@ -492,3 +492,12 @@ preparation shell omitted the authoritative `gradle.properties`, including
 required Native commonization. Copy that file unchanged into the shell;
 override only the platform-specific JDK path through the existing CLI.
 No plugin version, commonization validation or Linux default is relaxed.
+
+Corrected networked preparation passed in
+[run 38128161002](https://github.com/trancee/cairn/actions/runs/38128161002)
+at `78dc7b7`, reporting the expected effective Apple targets and no Cargo
+compilation-output directory. Read-only Gradle seed copying passed. Offline
+replay resolved plugin inputs but failed creating Gradle's instrumented
+Kotlin-plugin JAR in scratch. Add only the Gradle CLI stacktrace to expose the
+nested cause before changing a budget or transform/cache strategy. No offline
+target green, seed-integrity completion or binding result is claimed.
