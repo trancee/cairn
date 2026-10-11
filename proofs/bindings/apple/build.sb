@@ -21,6 +21,7 @@
   (literal "/dev/random")
   (literal "/dev/urandom"))
 (allow file-read* (literal "/private/etc/ssl/openssl.cnf"))
+(allow file-read* (literal "/Library/Preferences/com.apple.dt.Xcode.plist"))
 (allow file-write* (subpath (param "SCRATCH")) (literal "/dev/null"))
 (if (equal? (param "PRIVATE_IPC") "true")
   (begin

@@ -635,3 +635,10 @@ The same VM's preparation Xcode version command passed outside the profile.
 Collect recent sandbox kernel denials on the failed probe, without accepting
 licenses, widening directories or treating this as a real license-state
 diagnosis until the denied input is identified.
+
+Run `38135181386` identified denied data reads of the exact system Xcode
+preferences file, alongside unrelated denied services/configuration. Permit
+only `/Library/Preferences/com.apple.dt.Xcode.plist` to test whether existing
+license-state visibility fixes SDK lookup. Do not permit all preferences,
+account databases, Mach services or diagnostic devices; do not modify license
+state. The original cinterop command remains the verification boundary.
