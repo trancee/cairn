@@ -28,8 +28,8 @@
       (local udp "*:*")
       (local tcp "*:*"))
     (allow network-inbound
-      (remote tcp "*:*")
-      (remote udp "*:*"))
+      (local tcp "*:*")
+      (local udp "*:*"))
     (allow network-outbound
       (remote tcp "*:*")
       (remote udp "*:*"))))
