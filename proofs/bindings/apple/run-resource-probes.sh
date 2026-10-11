@@ -189,6 +189,14 @@ if [ "$#" -eq 2 ]; then
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=true -f "$work/build.sb" \
     /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :sdk:tasks
+  for task in :sdk:compileKotlinIosArm64 :sdk:compileKotlinIosSimulatorArm64 \
+    :sdk:compileNativeMainKotlinMetadata; do
+    "$python" -I "$scripts/uid-supervisor.py" --seconds 300 \
+      "$work/proof-output/fixture-native-${task##*:}.log" \
+      /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+      -D PRIVATE_IPC=true -f "$work/build.sb" \
+      /bin/bash "$tools/check-fixture-bindings.sh" "$tools" "$task"
+  done
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
   | tee "$output/dedicated-sandbox.log"

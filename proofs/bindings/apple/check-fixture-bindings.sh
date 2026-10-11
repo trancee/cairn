@@ -5,6 +5,7 @@ tools=$1
 task=$2
 case "$task" in
   :sdk:installBindgen|:sdk:buildBindings|:consumer:interopSmoke|:sdk:tasks) ;;
+  :sdk:compileKotlinIosArm64|:sdk:compileKotlinIosSimulatorArm64|:sdk:compileNativeMainKotlinMetadata) ;;
   *) echo "FAIL: unsupported binding proof task: $task" >&2; exit 2 ;;
 esac
 fixture="$HOME/fixture-targets"
@@ -24,6 +25,7 @@ export GRADLE_USER_HOME="$HOME/gradle"
 export GRADLE_RO_DEP_CACHE="$tools/gradle-dependencies"
 export GRADLE_DAEMON_BIND_ADDRESS=127.0.0.2
 export KONAN_DATA_DIR="$HOME/native-cinterop-data"
+export KONAN_HOME="$tools/kotlin-native"
 export IPHONEOS_DEPLOYMENT_TARGET=15.0
 if [ "$task" = :consumer:interopSmoke ]; then
   test ! -e "$fixture/consumer/src"

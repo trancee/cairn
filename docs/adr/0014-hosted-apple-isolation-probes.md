@@ -834,3 +834,11 @@ No FFI calls ran. Next execute the existing immutable shared JVM smoke
 consumer through its owning `interopSmoke` task, then discover effective
 Native compilation tasks rather than assume names. The consumer source is a
 symlink to the frozen canonical source; writable outputs remain scratch.
+
+Run `38151849548` at `38029f6` passed actual generated JVM calls on Apple:
+integer value/boundary, typed overflow, string transfer and deterministic
+object close/post-close rejection. All seed hashes and ordinary cleanup pass.
+This proves JVM generated consumers only. Effective task discovery identifies
+`compileKotlinIosArm64`, `compileKotlinIosSimulatorArm64` and
+`compileNativeMainKotlinMetadata`; run each offline under the approved
+300-second compilation ceiling with the frozen Native home/dependencies.
