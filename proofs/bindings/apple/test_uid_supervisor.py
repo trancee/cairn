@@ -13,6 +13,30 @@ from pathlib import Path
     "Dedicated-UID supervision requires the disposable hosted root fixture",
 )
 class DedicatedSupervisorTest(unittest.TestCase):
+    def test_slow_child_reports_only_owned_process_identity_before_deadline(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "proof.log"
+
+            result = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name("uid-supervisor.py")),
+                 "--seconds", "2", "--diagnose-after", "0.5", str(output),
+                 sys.executable, "-I", "-c", "import time; time.sleep(60)"],
+                capture_output=True, timeout=25, text=True,
+            )
+
+            self.assertEqual(result.returncode, 124, result.stderr)
+            snapshots = [
+                json.loads(line.removeprefix("DIAGNOSTIC: owned-process "))
+                for line in result.stdout.splitlines()
+                if line.startswith("DIAGNOSTIC: owned-process ")
+            ]
+            self.assertTrue(snapshots, result.stdout)
+            self.assertEqual({row["uid"] for row in snapshots}, {59000})
+            self.assertTrue(all(set(row) == {
+                "uid", "pid", "ppid", "state", "cpu_time", "command",
+            } for row in snapshots), snapshots)
+            self.assertIn("PASS: dedicated UID has no remaining processes", result.stdout)
+
     def test_child_file_ceiling_allows_boundary_and_rejects_next_byte(self):
         program = (
             "import errno,os,signal,tempfile; "

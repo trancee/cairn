@@ -783,3 +783,21 @@ remain 300 seconds, trusted probes 60 seconds, whole job 30 minutes, all
 other resource/isolation controls unchanged. Installation and `buildBindings`
 now run separately. The immutable Cargo-config symlink is verified on each
 invocation; no plugin fingerprint fabrication, profile change or task skip.
+
+The compile-JDK cache directory name was not its actual release identity:
+the hosted JVM reports Temurin `21.0.12.1+1`. Official release metadata and
+ARM64 macOS SHA-256 were verified, along with current stable official action
+releases. Replace floating setup-java `"21"` selection with the exact archive
+and published hash `3623232f33a9c3baadf304480b2535f9a3cba8a58d42ecbb438ba267315d9998`,
+using the same verified-download pattern as the daemon JDK. This preserves
+the observed compiler release rather than upgrading it; hosted replay still
+must verify the extraction path and actual version.
+
+Run `38147417409` also expired the explicitly approved 600-second owning
+installation cell. CargoRunner buffers compiler output until return, so no
+live compilation stage or blocked-wait cause was retained. Do not raise the
+deadline again without diagnosis. Extend the approved supervisor CLI seam
+with a one-shot, owner-UID-only process snapshot before its unchanged
+deadline; fields are PID/parent/state/CPU time/executable basename, never
+arguments, environment or unrelated UID records. First require a short
+sleeping-child regression to report that snapshot and retain deadline cleanup.
