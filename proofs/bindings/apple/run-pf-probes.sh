@@ -14,6 +14,8 @@ finish() {
   result=$?
   trap - EXIT
   if [ "$loaded" -eq 1 ]; then
+    if ! /sbin/pfctl -a "$anchor" -vvsr > "$output/pf-counters"; then result=1; fi
+    cat "$output/pf-counters"
     if ! /sbin/pfctl -a "$anchor" -F rules; then result=1; fi
   fi
   if [ -n "$token" ]; then
