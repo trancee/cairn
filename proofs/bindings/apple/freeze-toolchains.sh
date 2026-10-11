@@ -29,6 +29,7 @@ cp "$scripts/resolve-apple-inputs.gradle" "$destination/resolve-apple-inputs.gra
 cp "$scripts/check-cargo-inputs.sh" "$destination/check-cargo-inputs.sh"
 cp "$scripts/check-native-tool.sh" "$destination/check-native-tool.sh"
 cp "$scripts/check-native-compilation.sh" "$destination/check-native-compilation.sh"
+cp "$scripts/check-native-cinterop.sh" "$destination/check-native-cinterop.sh"
 chown -R root:wheel "$destination"
 chmod -R a+rX,a-w "$destination"
 ls -ld "$destination" "$destination/rust" "$destination/rust/bin" "$destination/rust/bin/rustc"

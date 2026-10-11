@@ -619,3 +619,12 @@ at `adc22c5`, for both device and simulator ARM64. Frozen Native/tool,
 Gradle and vendor-source hashes remained unchanged; UID/disk/PF cleanup
 passed. This is a green characterization of compiler KLIB availability,
 not an intended-failure/red claim or SDK cinterop/linker/FFI/runtime proof.
+
+The owner approved the remaining gated phase: trusted C-header cinterop/
+linker probes, participating-source/delivered-runtime allocator inspection,
+then offline shared-fixture generation/compilation and generated-call hosted
+simulator execution only after those gates pass. No signing, publication,
+paid runner, local privileged work or resource-budget increase is included.
+Physical iPhone proof remains unavailable and separate. First exercise Native
+cinterop against a script-owned arithmetic header for device/simulator ARM64
+with unchanged blanket network denial and resource limits.
