@@ -124,7 +124,7 @@ if [ "$#" -eq 2 ]; then
     -D PRIVATE_IPC=true -f "$work/build.sb" \
     /usr/bin/env JAVA_HOME="$tools/daemon-jdk" GRADLE_USER_HOME="$volume/gradle" \
     GRADLE_DAEMON_BIND_ADDRESS=127.0.0.2 \
-    /bin/bash "$tools/check-fixture-targets.sh" "$tools"
+    /bin/bash "$tools/check-fixture-targets.sh" "$tools" "$python"
   "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \

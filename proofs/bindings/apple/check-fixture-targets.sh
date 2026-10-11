@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-test "$#" -eq 1
+test "$#" -eq 2
 tools=$1
+python=$2
 fixture="$HOME/fixture-targets"
 /bin/bash "$tools/create-plugin-project.sh" "$tools" "$fixture"
 export PATH="$tools/rust/bin:$PATH"
@@ -20,7 +21,7 @@ result=0
 cat "$HOME/fixture-targets.log"
 if [ "$result" -ne 0 ]; then exit "$result"; fi
 grep -F 'PASS: effective Apple SDK targets' "$HOME/fixture-targets.log"
-"$(/usr/bin/xcrun --find python3)" -I -c '
+"$python" -I -c '
 import os
 from pathlib import Path
 artifacts = list((Path(os.environ["GRADLE_USER_HOME"]) / "caches").rglob(
