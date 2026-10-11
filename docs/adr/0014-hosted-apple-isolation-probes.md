@@ -979,3 +979,11 @@ create one `iPhone-17`/iOS `26.4.1` device in the private set and assert its
 unique UUID and `Shutdown` state. Keep its metadata in disposable scratch;
 do not boot or install an app in this slice. The unchanged 60-second
 supervisor cleans caller-UID processes after the invocation.
+
+Trusted private creation passed in `38165989640` at `9e405d3`: exactly one
+new device in `Shutdown` state, then all fixture/hash/ordinary cleanup gates.
+Next exercise approved ARM64 boot/bootstatus/shutdown in one 60-second cell,
+with explicit nested command deadlines totaling at most 55 seconds.
+Always request exact-device shutdown before returning, including boot errors;
+shutdown failures remain failures. No app installation/generated call or
+additional service allowance is included.
