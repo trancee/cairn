@@ -35,12 +35,12 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 cat > "$output/pf-rules" <<'RULES'
-pass out quick on lo0 inet proto { tcp, udp } from any to 127.0.0.0/8 user 59000 tag CAIRN_PROBE no state
-pass out quick on lo0 inet6 proto { tcp, udp } from any to ::1 user 59000 tag CAIRN_PROBE no state
-block return out quick proto { tcp, udp } all user 59000 label "cairn-external"
-pass in quick on lo0 proto { tcp, udp } all user 59000 tagged CAIRN_PROBE no state
-block return in quick proto { tcp, udp } all tagged CAIRN_PROBE label "cairn-cross-uid"
+pass in quick on lo0 inet proto { tcp, udp } from any to 127.0.0.0/8 user 59000 tag CAIRN_PROBE no state
+pass in quick on lo0 inet6 proto { tcp, udp } from any to ::1 user 59000 tag CAIRN_PROBE no state
 block return in quick proto { tcp, udp } all user 59000 label "cairn-inbound"
+pass out quick on lo0 proto { tcp, udp } all user 59000 tagged CAIRN_PROBE no state
+block return out quick proto { tcp, udp } all tagged CAIRN_PROBE label "cairn-cross-uid"
+block return out quick proto { tcp, udp } all user 59000 label "cairn-external"
 RULES
 /sbin/pfctl -n -a "$anchor" -f "$output/pf-rules"
 /sbin/pfctl -a "$anchor" -f "$output/pf-rules"
