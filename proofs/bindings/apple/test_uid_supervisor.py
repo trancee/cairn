@@ -43,7 +43,7 @@ class DedicatedSupervisorTest(unittest.TestCase):
             self.assertEqual(json.loads(output.read_text()), {
                 "uid": 59000, "gid": 20, "groups": [20],
                 "cpu": [900, 900], "processes": [128, 128],
-                "file": [67108864, 67108864], "core": [0, 0],
+                "file": [134217728, 134217728], "core": [0, 0],
                 "environment": ["HOME", "LANG", "PATH", "TMPDIR"],
             })
 

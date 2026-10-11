@@ -522,3 +522,11 @@ pass; offline configuration remains failed, with no binding build.
 Changing the per-file budget or introducing precomputed transform inputs is
 a material owner decision. Keep the limit unchanged pending that decision;
 the shared 64 MiB streamed-output cap is a separate invariant.
+
+The owner approved raising only the dedicated child per-file ceiling to
+128 MiB. The collector retains its separate 64 MiB streamed-output cap;
+8 GiB scratch, 7 GiB VM RAM, CPU/process limits and deadlines are unchanged.
+First require the real supervised child to observe the new hard/soft limit,
+then verify actual file-boundary enforcement and instrumented artifact size.
+Precomputed transform inputs were not selected because they add Gradle/cache
+coupling and may not cover later Native compiler files.
