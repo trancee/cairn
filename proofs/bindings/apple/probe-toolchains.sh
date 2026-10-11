@@ -19,3 +19,4 @@ printf "rootProject.name = 'cairn-empty-isolation-probe'\n" > settings.gradle
   -Djava.net.preferIPv4Stack=true help
 echo 'PASS: trusted empty Gradle help under sandbox; no fixture or plugin compilation'
 /bin/bash "$tools/check-fixture-selection.sh" "$tools"
+/bin/bash "$tools/check-fixture-targets.sh" "$tools"

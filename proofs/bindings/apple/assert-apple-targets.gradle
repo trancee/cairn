@@ -1,0 +1,9 @@
+gradle.projectsEvaluated {
+    def sdk = gradle.rootProject.project(":sdk")
+    def targets = sdk.extensions.getByName("kotlin").targets.collect { it.name }.sort()
+    def expected = ["iosArm64", "iosSimulatorArm64", "jvm", "metadata"]
+    if (targets != expected) {
+        throw new GradleException("FAIL: Apple SDK targets ${targets}; expected ${expected}")
+    }
+    println("PASS: effective Apple SDK targets ${targets}; configuration only")
+}

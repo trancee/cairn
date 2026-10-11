@@ -457,3 +457,16 @@ consumer with original build filenames; Apple selects SDK/consumer and
 60-second tool-cell deadline, resource/socket checks, copied-tool integrity
 and ordinary scratch/UID/PF cleanup passed. No fixture plugins, binding
 generation, Native compilation or generated calls ran.
+
+The owner approved extending the separate disposable network-enabled
+preparation phase to execute the pinned Gradle/Kotlin/Ubique plugins against
+a preparation-only project for dependency resolution, then freeze inputs
+before offline replay. No fixture Rust compilation, binding generation,
+signing, publication or local-Mac execution is authorized. Download-only
+reconstruction of Gradle variants/Native caches was considered and rejected
+as substantially more complex. Preparation execution is not build-isolation
+evidence.
+First run the approved actual Gradle CLI target seam offline: load the
+existing root pins and Apple adapter, request only `help`, and require SDK
+targets `metadata`, `jvm`, `iosArm64`, `iosSimulatorArm64`. Missing plugin/
+Native inputs must fail before any accepted target-configuration result.
