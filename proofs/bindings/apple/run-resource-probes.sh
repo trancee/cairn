@@ -152,6 +152,7 @@ for line in result.stdout.splitlines():
     /bin/bash "$tools/check-simulator-lifecycle.sh" "$python" create
   boot_result=0
   "$python" -I "$scripts/uid-supervisor.py" --seconds 60 --diagnose-after 10 \
+    --bootout-user-domain \
     "$work/proof-output/simulator-boot.log" \
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=false -f "$work/simulator-inventory.sb" \

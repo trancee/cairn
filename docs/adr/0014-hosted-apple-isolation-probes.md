@@ -1009,3 +1009,15 @@ or successful cleanup was observed. Repeated unchanged boot probes are not
 a solution: controlling launchd services and their restarts requires a new
 explicitly approved trusted boundary, or independently controlled Apple
 infrastructure. Do not increase deadlines or signal unrelated services.
+
+The owner approved removing only the disposable account's `user/59000`
+launchd domain after the workload. The actual boot/cleanup failures in
+`38167434234`/`38168165135` are the red regression at the supervised lifecycle
+seam. Add opt-in `--bootout-user-domain` to that boot invocation only.
+Validate hosted-root/dedicated UID identity, use exact `launchctl bootout`
+with a five-second deadline inside the existing ten-second cleanup window,
+then verify the UID is empty. Do not touch system/runner/GUI domains, disable
+services persistently, raise limits or accept failed bootout.
+The [launchctl manual](https://keith.github.io/xcode-man-pages/launchctl.1.html)
+documents user-domain removal; its printed domain structure is not a stable
+API and will not be parsed as an enforcement mechanism.
