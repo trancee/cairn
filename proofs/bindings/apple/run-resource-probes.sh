@@ -145,6 +145,11 @@ for line in result.stdout.splitlines():
     exit "$simulator_result"
   fi
   echo 'PASS: trusted inventory-only service probe; generated code retains blanket Mach denial'
+  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 \
+    "$work/proof-output/simulator-lifecycle.log" \
+    /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+    -D PRIVATE_IPC=false -f "$work/simulator-inventory.sb" \
+    /bin/bash "$tools/check-simulator-lifecycle.sh" "$python"
   cp "$scripts/probe-toolchains.sh" "$work/inputs/probe-toolchains.sh"
   chmod 0644 "$work/inputs/probe-toolchains.sh"
   "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/toolchains.log" \

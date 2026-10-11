@@ -970,3 +970,12 @@ omitted `--set` and attempted the default device set. It failed before
 returning help; do not interpret its allocation diagnostic as proven RAM
 exhaustion. Supply the same explicit scratch device set to every simctl
 invocation, including help. No default host device state is intended.
+
+Private-set help and device-type discovery passed in `38164460672` at
+`41ba912`, followed by all fixture/hash/cleanup gates. Actual help confirms
+explicit type/runtime create arguments and boot/bootstatus/shutdown/delete
+commands. First exercise the approved lifecycle creation slice only:
+create one `iPhone-17`/iOS `26.4.1` device in the private set and assert its
+unique UUID and `Shutdown` state. Keep its metadata in disposable scratch;
+do not boot or install an app in this slice. The unchanged 60-second
+supervisor cleans caller-UID processes after the invocation.
