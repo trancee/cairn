@@ -172,14 +172,14 @@ if [ "$#" -eq 2 ]; then
       -D PRIVATE_IPC=false -f "$work/build.sb" \
       "$python" -I "$tools/inspect-fixture-artifacts.py" "$target"
   done
-  "$python" -I "$scripts/uid-supervisor.py" --seconds 300 "$work/proof-output/bindgen-compilation.log" \
+  "$python" -I "$scripts/uid-supervisor.py" --seconds 600 "$work/proof-output/fixture-install-bindgen.log" \
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
-    -D PRIVATE_IPC=false -f "$work/build.sb" \
-    /bin/bash "$tools/check-bindgen-compilation.sh" "$tools"
+    -D PRIVATE_IPC=true -f "$work/build.sb" \
+    /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :sdk:installBindgen
   "$python" -I "$scripts/uid-supervisor.py" --seconds 300 "$work/proof-output/fixture-bindings.log" \
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=true -f "$work/build.sb" \
-    /bin/bash "$tools/check-fixture-bindings.sh" "$tools"
+    /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :sdk:buildBindings
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
   | tee "$output/dedicated-sandbox.log"

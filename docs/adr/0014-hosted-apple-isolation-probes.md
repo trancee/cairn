@@ -776,3 +776,10 @@ UID/scratch/PF cleanup passed. Pinned plugin source offers path/Git/registry
 installation, not a supported prebuilt-binary seam; do not fake its source
 fingerprint or suppress the task. The optimized installation ceiling remains
 a separate unresolved owner choice.
+
+The owner approved 600 seconds for owning `:sdk:installBindgen` only and
+removal of the redundant debug-generator build. Other build/generation cells
+remain 300 seconds, trusted probes 60 seconds, whole job 30 minutes, all
+other resource/isolation controls unchanged. Installation and `buildBindings`
+now run separately. The immutable Cargo-config symlink is verified on each
+invocation; no plugin fingerprint fabrication, profile change or task skip.
