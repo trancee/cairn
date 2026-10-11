@@ -712,3 +712,11 @@ Next extract only those entries to bounded scratch, record their hashes,
 discover actual allocator symbols and collect targeted disassembly using
 Xcode's inspection tools. This is evidence collection, not automatic allocator
 acceptance or source-to-binary provenance.
+
+Run `38141613896` first failed benign scratch detach (`Resource busy`);
+the unchanged replay reached inspection. Xcode `nm` rejects LLVM 22
+compiler-builtins bitcode inside the delivered archive (reader LLVM 21).
+Use its documented `--no-llvm-bc` mode for the scoped machine-code allocator
+thunk diagnostic and state that excluded bitcode is not inspected. Do not
+ignore a tool error or claim complete archive analysis; actual allocator
+symbols must still be found and their machine-code targets inspected.

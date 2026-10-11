@@ -104,7 +104,10 @@ def inspect(tools):
                     destination = native_output / (path.name + "-" + Path(name).name)
                     destination.write_bytes(archive.read(name))
                     print(f"NATIVE-SHA256: {name} {hashlib.sha256(destination.read_bytes()).hexdigest()}")
-                    symbols = subprocess.check_output([nm, "-j", str(destination)], text=True)
+                    print("SCOPE: machine-code allocator thunks only; LLVM bitcode members not inspected")
+                    symbols = subprocess.check_output(
+                        [nm, "--no-llvm-bc", "-j", str(destination)], text=True
+                    )
                     allocators = sorted({
                         symbol for symbol in symbols.splitlines()
                         if any(part in symbol for part in (
