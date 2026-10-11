@@ -266,6 +266,10 @@ Run `38159023923` reached JSON inventory but failed available-iOS validation;
 root-owned simdiskimaged was observed after caller-UID cleanup. Additional
 service/device denials remain unchanged. Scratch capacity/ordinary detach
 passed; helper containment and simulator runtime remain open.
+The owner approved one further inventory-only SimLaunchHost-arm64 lookup
+experiment, with unchanged other denials/deadline and no boot/generated calls.
+Hosted ARM64 nested virtualization is officially unsupported; helper
+containment remains a separate prerequisite.
 
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable

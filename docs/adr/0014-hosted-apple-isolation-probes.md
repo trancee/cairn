@@ -930,3 +930,14 @@ Availability reasons remain unverified; the two-lookups-only profile is
 neither sufficient nor deterministic on this evidence. No implicit retry,
 deadline increase or further service allowance is applied. Simulator runtime
 requires a separately approved service/helper containment design.
+
+The owner selected a further inventory-only experiment: add exactly the
+observed `com.apple.CoreSimulator.SimLaunchHost-arm64` lookup to the separate
+trusted profile. The prediction is that permitting this lookup exposes iOS
+availability records; all other denials, the 60-second deadline, scratch
+device set and no-boot/no-generated-call boundary remain unchanged.
+This does not establish or waive helper containment.
+[GitHub's runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#limitations-for-arm64-macos-runners)
+explicitly excludes nested virtualization on ARM64 macOS runners; a nested
+VM is not a supported replacement boundary here. A separately controlled
+Apple environment remains an alternative external prerequisite.

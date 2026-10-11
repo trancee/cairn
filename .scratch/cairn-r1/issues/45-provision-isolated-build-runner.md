@@ -61,6 +61,11 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Owner approved exactly SimLaunchHost-arm64 lookup for another
+  trusted inventory experiment after `38159746830` timed out before JSON.
+  Other denials/60-second limit remain unchanged; no boot/generated calls.
+  Root-helper containment remains unproven. GitHub documents ARM64 nested
+  virtualization as unsupported, not an available replacement boundary.
 - 2026-10-11: Two-lookup probe `38159023923` reached JSON inventory but
   failed available-iOS validation. Root-owned simdiskimaged remained after
   caller-UID cleanup; sampled RSS 21,840 KiB, parent 1. Scratch capacity/

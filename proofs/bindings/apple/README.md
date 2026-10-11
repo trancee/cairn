@@ -235,6 +235,10 @@ It observed root-owned simdiskimaged after caller-UID cleanup and additional
 SimLaunchHost/Disk Arbitration/IOKit denials; necessity is not established.
 Scratch capacity/ordinary detach passed. Structured inventory count and
 availability diagnostics are now retained before the unchanged assertion.
+After replay `38159746830` timed out before JSON, the owner approved exactly
+the observed SimLaunchHost-arm64 lookup for a further trusted inventory-only
+experiment. All other denials and the 60-second limit remain unchanged.
+No boot/generated calls or helper-containment acceptance is implied.
 
 | Module | Target | Owning proof task | Evidence/limitation |
 | --- | --- | --- | --- |
