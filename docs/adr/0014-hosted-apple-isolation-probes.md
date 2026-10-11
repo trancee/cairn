@@ -758,3 +758,12 @@ compile/default-allocator scans had passed before it; UID/scratch/PF cleanup
 passed after failure. Generator compilation is incomplete. A larger build
 invocation ceiling versus separately preparing an immutable generator is a
 material owner decision; do not raise limits or weaken validation implicitly.
+
+The owner selected 300-second actual build/generation cells, retaining
+60-second trusted probes and all other budgets, including the 30-minute job
+ceiling. Apply it first to generator compilation, then the owning Gradle
+`:sdk:buildBindings` task. Gradle Cargo subprocesses consume a scratch
+configuration symlink to the immutable vendor config, explicit offline mode
+and pinned Rust PATH; Native home is the immutable compiler seed.
+Do not bypass the plugin's installation/source-fingerprint contract by
+copying the separately built diagnostic generator into its install directory.

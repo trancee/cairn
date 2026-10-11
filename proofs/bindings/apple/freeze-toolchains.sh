@@ -35,6 +35,7 @@ cp "$scripts/inspect-allocator-inputs.py" "$destination/inspect-allocator-inputs
 cp "$scripts/check-fixture-rust.sh" "$destination/check-fixture-rust.sh"
 cp "$scripts/inspect-fixture-artifacts.py" "$destination/inspect-fixture-artifacts.py"
 cp "$scripts/check-bindgen-compilation.sh" "$destination/check-bindgen-compilation.sh"
+cp "$scripts/check-fixture-bindings.sh" "$destination/check-fixture-bindings.sh"
 chown -R root:wheel "$destination"
 chmod -R a+rX,a-w "$destination"
 ls -ld "$destination" "$destination/rust" "$destination/rust/bin" "$destination/rust/bin/rustc"
