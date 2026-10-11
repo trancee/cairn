@@ -55,3 +55,14 @@ source provenance, fixture artifact allocators, x86-64 Darwin, future
 dependencies, or runtime memory safety. Repeat source and delivered-artifact
 inspection on input/artifact changes. Fixture compilation is next; generated
 FFI calls stay gated pending its actual artifact inspection.
+
+## Actual fixture artifacts
+
+Shared-fixture compilation passed Darwin/device/simulator ARM64 in run
+`38143726072` at `51525af`. The three actual static archives' four allocator
+thunks forward to matching `__rdl_*` relocation targets, and generated Cargo
+Rust output reported no allocator-pattern candidates in runs `38144367463`
+and `38145166981`. These scans passed before bindgen compilation expired;
+those runs are overall failures, not complete fixture/runtime greens.
+Generated Kotlin FFI calls, packaged consumer linkage and execution remain
+unverified.

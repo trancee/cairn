@@ -206,6 +206,16 @@ at `f7f4eca`, without extra downloads. Frozen hashes and cleanup pass.
 These script-owned frameworks do not establish fixture packaging, allocator
 compatibility, generated calls or device runtime.
 
+[Apple allocator evidence](proofs/bindings/apple/ALLOCATOR-AUDIT.md) records
+bounded source closures and actual default-allocator thunk forwarding in
+delivered Darwin/device/simulator ARM64 runtimes (`38143105757`).
+Actual shared-fixture Rust compilation passed all three targets in run
+`38143726072`; fixture default-allocator thunks/generated-Rust scans then
+passed in runs `38144367463` and `38145166981`. No generated FFI calls ran.
+Both bindgen compilation attempts expired the unchanged 60-second command
+deadline during `uniffi_bindgen`; sharing fingerprinted Cargo scratch did
+not close it. Binding generation/compilation/runtime remain incomplete.
+
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable
   wire tutorial, contributor validation guide, foundation API reference and

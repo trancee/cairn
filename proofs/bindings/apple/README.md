@@ -171,3 +171,14 @@ at `f7f4eca`, with unchanged hashes and cleanup. The source-closure/runtime
 archive diagnostic that follows does not itself accept allocator compatibility:
 candidate classification and delivered allocator-thunk inspection must pass
 before fixture FFI.
+
+[Apple allocator evidence](ALLOCATOR-AUDIT.md) records package-scoped sources
+and actual allocator forwarding in delivered ARM64 runtimes.
+Shared-fixture Rust compilation passes Darwin/device/simulator ARM64
+(`38143726072`), followed by fixture default-allocator/generated-Rust scans
+(`38144367463`, `38145166981`). No generated FFI calls have run.
+Pinned generator compilation expires the 60-second command ceiling even
+with fingerprinted Cargo scratch reuse. This blocks binding generation;
+changing the build ceiling or introducing an immutable generator seed
+requires an explicit owner decision. Other budgets and network denial remain
+unchanged. Earlier busy-detach failures and full runner acceptance remain open.

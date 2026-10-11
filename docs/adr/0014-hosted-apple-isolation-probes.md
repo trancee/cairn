@@ -751,3 +751,10 @@ generated-Rust scans, then expired the 60-second bindgen cell during
 and explicit Darwin target for compatible already-built dependency artifacts;
 Cargo fingerprints still own reuse across the two locked manifests. No
 deadline/budget increase, immutable binary seed or network fallback is added.
+
+Run `38145166981` also expired the unchanged 60-second bindgen deadline
+during `uniffi_bindgen`, despite fingerprinted scratch reuse. All fixture
+compile/default-allocator scans had passed before it; UID/scratch/PF cleanup
+passed after failure. Generator compilation is incomplete. A larger build
+invocation ceiling versus separately preparing an immutable generator is a
+material owner decision; do not raise limits or weaken validation implicitly.

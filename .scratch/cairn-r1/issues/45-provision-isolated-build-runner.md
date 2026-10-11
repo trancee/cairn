@@ -61,6 +61,15 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Delivered ARM64 runtime allocator forwarding is recorded in
+  [Apple audit](../../../proofs/bindings/apple/ALLOCATOR-AUDIT.md).
+  Actual shared-fixture Rust compilation passes all three Apple targets
+  (`38143726072`); fixture allocator/generated-source scans pass
+  (`38144367463`, `38145166981`). Generator compilation expired the
+  unchanged 60-second ceiling twice, including fingerprinted scratch reuse.
+  No binding generation or FFI calls ran. Build-ceiling versus prepared
+  generator choice requires owner decision; full lane acceptance stays open.
+
 - 2026-10-11: Trusted arithmetic framework linkage and actual `IOS`/
   `IOSSIMULATOR` Mach-O deployment floor `15.0` passed offline in
   [run 38137529578](https://github.com/trancee/cairn/actions/runs/38137529578)
