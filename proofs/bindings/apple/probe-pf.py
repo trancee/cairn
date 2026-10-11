@@ -10,7 +10,7 @@ import sys
 
 def child(address, port):
     with socket.socket() as server:
-        server.bind(("127.0.0.1", 0))
+        server.bind(("127.0.0.2", 0))
         server.listen(1)
         with socket.create_connection(server.getsockname(), timeout=2):
             pass
@@ -18,12 +18,13 @@ def child(address, port):
         receiver.bind(("0.0.0.0", 0))
         receiver.settimeout(2)
         with socket.socket(type=socket.SOCK_DGRAM) as sender:
-            sender.sendto(b"same-uid", ("127.0.0.1", receiver.getsockname()[1]))
+            sender.sendto(b"same-uid", ("127.0.0.2", receiver.getsockname()[1]))
         if receiver.recv(32) != b"same-uid":
             raise SystemExit("FAIL: same-UID UDP payload did not match")
     print("PASS: same-UID TCP and wildcard-bound UDP loopback work", flush=True)
     for name, endpoint in (
         ("cross-UID loopback", ("127.0.0.1", int(port))),
+        ("cross-UID private loopback", ("127.0.0.2", int(port))),
         ("external", (address, 443)),
     ):
         try:
@@ -47,9 +48,9 @@ def main():
     with socket.create_connection((address, 443), timeout=5):
         pass
     with socket.socket() as root_server:
-        root_server.bind(("127.0.0.1", 0))
+        root_server.bind(("0.0.0.0", 0))
         root_server.listen(8)
-        with socket.create_connection(root_server.getsockname(), timeout=2):
+        with socket.create_connection(("127.0.0.1", root_server.getsockname()[1]), timeout=2):
             pass
         connection, _ = root_server.accept()
         connection.close()

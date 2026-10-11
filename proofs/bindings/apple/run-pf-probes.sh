@@ -10,6 +10,7 @@ python="$(xcrun --find python3)"
 anchor="com.apple/cairn-$(uuidgen)"
 token=
 loaded=0
+alias_added=0
 finish() {
   result=$?
   trap - EXIT
@@ -20,6 +21,9 @@ finish() {
   fi
   if [ -n "$token" ]; then
     if ! /sbin/pfctl -X "$token"; then result=1; fi
+  fi
+  if [ "$alias_added" -eq 1 ]; then
+    if ! /sbin/ifconfig lo0 -alias 127.0.0.2; then result=1; fi
   fi
   if ! /sbin/pfctl -sr > "$output/pf-main-after"; then result=1; fi
   if ! cmp "$output/pf-main-before" "$output/pf-main-after"; then result=1; fi
@@ -34,12 +38,21 @@ trap finish EXIT
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
+/sbin/ifconfig lo0 > "$output/loopback-before"
+if grep -Eq 'inet 127\.0\.0\.2[[:space:]]' "$output/loopback-before"; then
+  echo 'FAIL: private loopback alias already exists' >&2
+  exit 1
+fi
+/sbin/ifconfig lo0 alias 127.0.0.2 netmask 255.255.255.255
+alias_added=1
 cat > "$output/pf-rules" <<'RULES'
-pass in quick on lo0 inet proto { tcp, udp } from any to 127.0.0.0/8 user 59000 tag CAIRN_PROBE no state
-pass in quick on lo0 inet6 proto { tcp, udp } from any to ::1 user 59000 tag CAIRN_PROBE no state
+block return in quick on lo0 inet proto { tcp, udp } from any to 127.0.0.2 user != 59000 label "cairn-private-destination"
+block return in quick on lo0 inet proto { tcp, udp } from 127.0.0.2 to any user != 59000 label "cairn-private-source"
+pass in quick on lo0 inet proto { tcp, udp } from any to 127.0.0.2 user 59000 no state
+pass in quick on lo0 inet proto { tcp, udp } from 127.0.0.2 to any user 59000 no state
 block return in quick proto { tcp, udp } all user 59000 label "cairn-inbound"
-pass out quick on lo0 proto { tcp, udp } all user 59000 tagged CAIRN_PROBE no state
-block return out quick proto { tcp, udp } all tagged CAIRN_PROBE label "cairn-cross-uid"
+pass out quick on lo0 inet proto { tcp, udp } from any to 127.0.0.2 user 59000 no state
+pass out quick on lo0 inet proto { tcp, udp } from 127.0.0.2 to 127.0.0.0/8 user 59000 no state
 block return out quick proto { tcp, udp } all user 59000 label "cairn-external"
 RULES
 /sbin/pfctl -n -a "$anchor" -f "$output/pf-rules"
