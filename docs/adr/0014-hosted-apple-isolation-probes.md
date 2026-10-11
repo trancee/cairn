@@ -387,3 +387,15 @@ unchanged and named PF cleanup returned zero. The trusted Gradle probe uses
 External/cross-UID UDP negative controls, broader socket adversarial cases,
 fixture/Maven/Native cache freezing and actual binding compilation/runtime
 remain unverified. This is not full Apple runner acceptance.
+
+Live UDP negatives then failed as intended in
+[run 38125155369](https://github.com/trancee/cairn/actions/runs/38125155369):
+a root-origin UDP packet reached the dedicated private listener despite the
+inbound rules. Reject other UID traffic to the private alias at the outbound
+hook before default PF state creation. The original reverse UDP test and
+cross-UID/non-loopback delivery checks passed in
+[run 38125239632](https://github.com/trancee/cairn/actions/runs/38125239632)
+at `c6204b0`, both outside and inside the compiler socket profile.
+Root-owned UDP receivers have before/after delivery controls; dedicated
+same-UID UDP roundtrip remains green. Trusted empty Gradle `help` and copied
+tool integrity also remain green. No fixture build occurred.

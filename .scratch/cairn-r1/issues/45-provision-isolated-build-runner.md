@@ -61,6 +61,13 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: UDP negative controls failed on reverse cross-UID delivery in
+  [run 38125155369](https://github.com/trancee/cairn/actions/runs/38125155369).
+  An outbound other-UID/private-alias block closes the demonstrated state
+  bypass. [Run 38125239632](https://github.com/trancee/cairn/actions/runs/38125239632)
+  at `c6204b0` passes live TCP/UDP cross-UID/non-loopback denials inside/outside
+  the sandbox, same-UID roundtrip, offline empty Gradle and copied tool hashes.
+  Fixture/Maven/Native input freezing and binding build/runtime remain open.
 - 2026-10-11: After separate PF-probe approval,
   [run 38124841659](https://github.com/trancee/cairn/actions/runs/38124841659)
   at `89fbb05` passed private-loopback same-UID TCP/UDP roundtrip and

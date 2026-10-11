@@ -104,3 +104,10 @@ Live same-UID TCP/UDP roundtrip, external TCP and cross-UID TCP denial in
 both directions pass inside/outside the sandbox. External/cross-UID UDP
 negative coverage, frozen fixture/Maven/Native caches and binding builds
 remain open. Do not run this root/PF setup on a shared local Mac.
+The live UDP negative controls subsequently exposed and fixed a reverse
+cross-UID state-creation gap. Corrected
+[run 38125239632](https://github.com/trancee/cairn/actions/runs/38125239632)
+passes same-UID roundtrip, cross-UID TCP/UDP in both directions and non-loopback
+delivery denial with live positive controls. Empty Gradle initialization and
+tool integrity still pass. Frozen fixture/Maven/Native inputs and actual
+binding compile/runtime proof remain incomplete.

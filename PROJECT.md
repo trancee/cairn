@@ -152,6 +152,11 @@ at `89fbb05`, with unchanged copied tool hashes and named PF cleanup.
 TCP cross-UID/external denials and same-UID TCP/UDP roundtrip pass;
 UDP negative/adversarial coverage and frozen fixture/Maven/Native inputs
 remain open before any binding build.
+UDP negatives exposed a reverse cross-UID state gap and passed after an
+outbound private-alias origin rule in
+[run 38125239632](https://github.com/trancee/cairn/actions/runs/38125239632)
+at `c6204b0`. Frozen fixture/Maven/Native inputs and binding compilation/
+runtime remain unverified; no fixture build ran.
 No production Apple
 acceptance is implied.
 
