@@ -956,3 +956,11 @@ device/simulator/common compilation, both framework links/deployment floor
 `15.0`, all workflow input-hash checks and ordinary cleanup passed.
 No simulator was booted and no generated simulator calls ran. Inventory
 access is now characterized; runtime/helper containment is still open.
+
+The owner approved a trusted one-device create/boot/shutdown diagnostic in
+the private scratch set, with unchanged 60-second cells and no generated
+app installation/calls. No automatic service widening is included.
+Trusted helper writes outside scratch remain an explicit diagnostic risk,
+not accepted runtime containment. First collect actual `simctl` lifecycle
+help and iPhone device-type identifiers in the existing inventory seam;
+this prerequisite does not create or boot a device.
