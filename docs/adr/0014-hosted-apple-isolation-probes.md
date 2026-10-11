@@ -1028,3 +1028,11 @@ lifecycle help/device-type discovery from the inventory cell: exact command
 contracts and pinned type identities were already characterized in
 `38164460672`. This narrows the prerequisite without changing its available
 iOS assertion or 60-second ceiling; it is not a reliability fix.
+
+Run `38169654181` at `f209f14` failed ordinary disk detach in benign preflight
+(`Resource busy`), so preparation and the domain-cleanup regression did not
+run. The opt-in implementation remains unverified at its intended seam.
+Two distinct preceding prerequisite failures are retained; do not infer a
+cleanup green from local tests or rerun unchanged jobs until one happens
+to pass. Benign scratch cleanup reliability must be diagnosed alongside
+the simulator domain boundary before final acceptance.
