@@ -80,6 +80,12 @@ def inspect(tools):
                 print(f"SOURCE: {dependency['id']} files={count} candidates={hits}")
             print(f"CLOSURE: {package} {target} packages={len(selected)}")
     artifacts = 0
+    native_output = Path.home() / "allocator-native"
+    native_output.mkdir()
+    nm = subprocess.check_output(["/usr/bin/xcrun", "--find", "nm"], text=True).strip()
+    objdump = subprocess.check_output(
+        ["/usr/bin/xcrun", "--find", "llvm-objdump"], text=True
+    ).strip()
     runtime_root = tools / "gradle-dependencies/modules-2/files-2.1/ch.ubique.uniffi"
     for path in sorted(runtime_root.rglob("*")):
         if not path.is_file() or not path.name.startswith("runtime-"):
@@ -93,6 +99,25 @@ def inspect(tools):
             for name in archive.namelist():
                 if name.endswith((".a", ".dylib")):
                     print(f"NATIVE-ENTRY: {path.name}:{name}")
+                    if name.startswith("darwin-x86-64/"):
+                        continue
+                    destination = native_output / (path.name + "-" + Path(name).name)
+                    destination.write_bytes(archive.read(name))
+                    print(f"NATIVE-SHA256: {name} {hashlib.sha256(destination.read_bytes()).hexdigest()}")
+                    symbols = subprocess.check_output([nm, "-j", str(destination)], text=True)
+                    allocators = sorted({
+                        symbol for symbol in symbols.splitlines()
+                        if any(part in symbol for part in (
+                            "__rust_alloc", "__rust_dealloc", "__rust_realloc",
+                        ))
+                    })
+                    if not allocators:
+                        raise RuntimeError(f"No Rust allocator symbols identified: {name}")
+                    print(f"ALLOCATOR-SYMBOLS: {name} {allocators}", flush=True)
+                    subprocess.run([
+                        objdump, "--demangle", "--disassemble",
+                        "--disassemble-symbols=" + ",".join(allocators), str(destination),
+                    ], check=True)
     if artifacts == 0:
         raise RuntimeError("No delivered Ubique runtime artifacts found")
     print("INSPECTION ONLY: classify candidates and inspect delivered allocator thunks before FFI")

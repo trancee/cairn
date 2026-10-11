@@ -704,3 +704,11 @@ required. Artifact discovery then failed because it assumed `uniffi-runtime-`
 filenames. The frozen manifest instead records `runtime-*` under the exact
 `ch.ubique.uniffi` group. Search that scoped group using its actual filenames,
 not arbitrary runtime-named dependencies.
+
+Collection passed in run `38140965124` at `536f690`, with all input hashes
+and cleanup. It identified device/simulator `libuniffi_runtime.a` inside the
+published cinterop KLIBs and Darwin ARM64 runtime dylib in the JVM JAR.
+Next extract only those entries to bounded scratch, record their hashes,
+discover actual allocator symbols and collect targeted disassembly using
+Xcode's inspection tools. This is evidence collection, not automatic allocator
+acceptance or source-to-binary provenance.
