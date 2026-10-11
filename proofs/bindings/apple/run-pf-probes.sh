@@ -2,11 +2,8 @@
 set -euo pipefail
 test "${GITHUB_ACTIONS:-}" = true
 test "$(id -u)" -eq 0
-test "$#" -eq 1
-output=$1
-test -d "$output"
-scripts="$(cd "$(dirname "$0")" && pwd -P)"
-python="$(xcrun --find python3)"
+test "$#" -ge 1
+output="$(mktemp -d /private/tmp/cairn-pf-XXXXXXXX)"
 anchor="com.apple/cairn-$(uuidgen)"
 token=
 loaded=0
@@ -21,6 +18,9 @@ finish() {
   fi
   if [ -n "$token" ]; then
     if ! /sbin/pfctl -X "$token"; then result=1; fi
+  fi
+  if [ -f "$output/pf-enable" ]; then
+    if ! rm "$output/pf-enable"; then result=1; fi
   fi
   if [ "$alias_added" -eq 1 ]; then
     if ! /sbin/ifconfig lo0 -alias 127.0.0.2; then result=1; fi
@@ -61,7 +61,7 @@ loaded=1
 /sbin/pfctl -E > "$output/pf-enable" 2>&1
 token="$(sed -n 's/^Token : \([0-9][0-9]*\)$/\1/p' "$output/pf-enable")"
 test -n "$token"
-"$python" -I "$scripts/probe-pf.py" "$output/pf.log"
+CAIRN_PF_ACTIVE=true "$@"
 /sbin/pfctl -a "$anchor" -vvsr > "$output/pf-counters"
 cat "$output/pf-counters"
 echo 'PASS: candidate PF socket controls; broader network acceptance remains gated'

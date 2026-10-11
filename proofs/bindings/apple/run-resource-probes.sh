@@ -11,6 +11,9 @@ output=$1
 test -d "$output"
 scripts="$(cd "$(dirname "$0")" && pwd -P)"
 python=$(xcrun --find python3)
+if [ "${CAIRN_PF_ACTIVE:-}" != true ]; then
+  exec /bin/bash "$scripts/run-pf-probes.sh" /bin/bash "$scripts/run-resource-probes.sh" "$@"
+fi
 user=cairnbenignprobe
 uid=59000
 test "$(dscl . -list /Users UniqueID | awk '$2 == 59000 {print $1}' | wc -l)" -eq 0
@@ -58,7 +61,7 @@ chmod 0700 "$volume"
 mkdir "$work/inputs"
 mkdir "$work/proof-output"
 chmod 0700 "$work/proof-output"
-/bin/bash "$scripts/run-pf-probes.sh" "$work/proof-output"
+"$python" -I "$scripts/probe-pf.py" "$work/proof-output/pf.log"
 cp "$scripts/probe.py" "$work/inputs/probe.py"
 cp "$scripts/build.sb" "$work/build.sb"
 printf 'benign sentinel\n' > "$work/host-sentinel"
@@ -70,7 +73,7 @@ cat > "$work/command.sh" <<'COMMAND'
 set -euo pipefail
 exec "$3" -I "$2/uid-supervisor.py" --seconds 30 "$1/proof-output/sandbox.log" \
   /usr/bin/sandbox-exec -D "INPUTS=$1/inputs" -D "SCRATCH=$1/scratch" \
-  -D "SENTINEL=$1/host-sentinel" -f "$1/build.sb" \
+  -D "SENTINEL=$1/host-sentinel" -D PRIVATE_IPC=false -f "$1/build.sb" \
   "$3" -I "$1/inputs/probe.py" "$1/scratch" "$1/inputs" "$1/host-sentinel" "$4" "$5" --build-limits
 COMMAND
 chmod 0644 "$work/command.sh"
@@ -104,7 +107,8 @@ if [ "$#" -eq 2 ]; then
   chmod 0644 "$work/inputs/probe-toolchains.sh"
   "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/toolchains.log" \
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
-    -f "$work/build.sb" /bin/bash "$work/inputs/probe-toolchains.sh" "$tools"
+    -D PRIVATE_IPC=true -f "$work/build.sb" \
+    /bin/bash "$work/inputs/probe-toolchains.sh" "$tools"
   "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \

@@ -22,3 +22,14 @@
   (literal "/dev/urandom"))
 (allow file-read* (literal "/private/etc/ssl/openssl.cnf"))
 (allow file-write* (subpath (param "SCRATCH")) (literal "/dev/null"))
+(if (equal? (param "PRIVATE_IPC") "true")
+  (begin
+    (allow network-bind
+      (local udp "*:*")
+      (local tcp "127.0.0.2:*"))
+    (allow network-inbound
+      (remote tcp "127.0.0.2:*")
+      (remote udp "127.0.0.2:*"))
+    (allow network-outbound
+      (remote tcp "127.0.0.2:*")
+      (remote udp "127.0.0.2:*"))))

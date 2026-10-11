@@ -12,6 +12,7 @@ class ReadPolicyTest(unittest.TestCase):
             result = subprocess.run([
                 "/usr/bin/env", "-i", "PATH=/usr/bin:/bin", "/usr/bin/sandbox-exec",
                 "-D", f"INPUTS={directory}/inputs", "-D", f"SCRATCH={directory}/scratch",
+                "-D", "PRIVATE_IPC=false",
                 "-f", str(Path(__file__).with_name("build.sb")),
                 "/bin/echo", "startup",
             ], capture_output=True, timeout=5)
@@ -27,6 +28,7 @@ class ReadPolicyTest(unittest.TestCase):
             result = subprocess.run([
                 "/usr/bin/env", "-i", "PATH=/usr/bin:/bin", "/usr/bin/sandbox-exec",
                 "-D", f"INPUTS={directory}/inputs", "-D", f"SCRATCH={directory}/scratch",
+                "-D", "PRIVATE_IPC=false",
                 "-f", str(Path(__file__).with_name("build.sb")), "/bin/cat", str(sentinel),
             ], capture_output=True, timeout=5)
 
