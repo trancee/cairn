@@ -628,3 +628,10 @@ paid runner, local privileged work or resource-budget increase is included.
 Physical iPhone proof remains unavailable and separate. First exercise Native
 cinterop against a script-owned arithmetic header for device/simulator ARM64
 with unchanged blanket network denial and resource limits.
+
+Trusted cinterop run `38134505206` failed inside the named read profile:
+`xcrun --sdk iphoneos --show-sdk-path` reports license acceptance unavailable.
+The same VM's preparation Xcode version command passed outside the profile.
+Collect recent sandbox kernel denials on the failed probe, without accepting
+licenses, widening directories or treating this as a real license-state
+diagnosis until the denied input is identified.

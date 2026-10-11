@@ -138,10 +138,17 @@ if [ "$#" -eq 2 ]; then
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=false -f "$work/build.sb" \
     /bin/bash "$tools/check-native-compilation.sh" "$tools"
+  cinterop_result=0
   "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/native-cinterop.log" \
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=false -f "$work/build.sb" \
-    /bin/bash "$tools/check-native-cinterop.sh" "$tools"
+    /bin/bash "$tools/check-native-cinterop.sh" "$tools" || cinterop_result=$?
+  if [ "$cinterop_result" -ne 0 ]; then
+    "$python" -I -c \
+      'import subprocess; subprocess.run(["/usr/bin/log","show","--last","2m","--style","compact","--predicate","process == \"kernel\" AND eventMessage CONTAINS \"Sandbox\""],timeout=15,check=True)' \
+      || echo 'DIAGNOSTIC: targeted sandbox denial collection failed'
+    exit "$cinterop_result"
+  fi
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
   | tee "$output/dedicated-sandbox.log"
