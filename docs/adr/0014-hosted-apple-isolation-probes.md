@@ -684,3 +684,7 @@ Initial collection in run `38138281856` failed before source inspection:
 the explicit diagnostic environment omitted the pinned Rust `bin` from PATH,
 so Cargo could not execute `rustc -vV`. Supply that existing immutable tool
 directory, matching the earlier metadata gate; do not add Rustup or downloads.
+
+Run `38138817213` reached Cargo tree output but rejected a package identity
+before inspection. Retain the exact non-sensitive feature-tree row in the
+failure diagnostic before adjusting the parser; do not skip unmatched rows.

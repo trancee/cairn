@@ -55,7 +55,7 @@ def inspect(tools):
             for row in tree.splitlines():
                 match = re.match(r"^(\S+ v\S+)", row)
                 if match is None or len(identities.get(match[1], [])) != 1:
-                    raise RuntimeError("Ambiguous or unknown Cargo tree package identity")
+                    raise RuntimeError(f"Ambiguous or unknown Cargo tree package identity: {row!r}")
                 dependency = identities[match[1]][0]
                 selected.add(dependency["id"])
                 print(f"FEATURE: {package} {target} {row}")
