@@ -604,3 +604,11 @@ verified against release SHA-256
 `b70d4fd2855fdb054fc9604beaa7de83c18d786454ae948de72a226e81f07dc8`,
 and freeze it with the tools. Probe only `konanc -version`; SDK/linker/
 platform-library completeness and fixture compilation remain unverified.
+
+Official Native startup passed in run `38133286890` at `20fb718`, along
+with Gradle external/cinterop inputs and all nine vendored Cargo metadata
+combinations; input hashes and cleanup passed. The owner approved a trusted
+CLI compile seam: a script-owned arithmetic function compiled as a KLIB for
+iOS device/simulator ARM64 inside the existing isolated cell. This tests
+compiler input availability, not fixture bindings, FFI or runtime. First
+run offline; missing inputs must fail before networked preparation changes.
