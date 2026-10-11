@@ -61,6 +61,12 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Three-lookup trusted inventory passed
+  [38162040714](https://github.com/trancee/cairn/actions/runs/38162040714)
+  at `cd7f2ae`: 12 records, available iOS `26.2`/`26.4.1`/`26.5`. Actual
+  JVM/Native/framework gates, all hashes and ordinary cleanup passed.
+  Root simdiskimaged still observed; no boot/generated simulator calls,
+  helper containment or final acceptance is implied.
 - 2026-10-11: Owner approved exactly SimLaunchHost-arm64 lookup for another
   trusted inventory experiment after `38159746830` timed out before JSON.
   Other denials/60-second limit remain unchanged; no boot/generated calls.

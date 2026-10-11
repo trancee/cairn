@@ -270,6 +270,11 @@ The owner approved one further inventory-only SimLaunchHost-arm64 lookup
 experiment, with unchanged other denials/deadline and no boot/generated calls.
 Hosted ARM64 nested virtualization is officially unsupported; helper
 containment remains a separate prerequisite.
+The three-lookup trusted inventory passed in run `38162040714` at `cd7f2ae`:
+12 records, available iOS `26.2`/`26.4.1`/`26.5`. Actual JVM/Native/framework
+gates, all input hashes and ordinary cleanup passed again. Root simdiskimaged
+remained observable; no simulator boot/generated calls or containment
+acceptance is implied.
 
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable

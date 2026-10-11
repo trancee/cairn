@@ -945,3 +945,14 @@ The preparation push filter now includes all Apple `.sb` profiles so changing
 the separate inventory policy schedules its owning hosted proof; previously
 only `build.sb` changes matched. Official checkout/upload release identities
 were reverified as `v7.0.1`/`v7.0.2`; their existing immutable pins remain.
+
+The three-lookup inventory passed in
+[38162040714](https://github.com/trancee/cairn/actions/runs/38162040714)
+at `cd7f2ae`: 12 runtime records, with available iOS `26.2`, `26.4.1` and
+`26.5`. This supports the narrow SimLaunchHost access prediction, not
+necessity of any other denied service. Root-owned simdiskimaged remained
+observable (RSS 21,904 KiB, parent 1). Subsequent actual JVM calls,
+device/simulator/common compilation, both framework links/deployment floor
+`15.0`, all workflow input-hash checks and ordinary cleanup passed.
+No simulator was booted and no generated simulator calls ran. Inventory
+access is now characterized; runtime/helper containment is still open.

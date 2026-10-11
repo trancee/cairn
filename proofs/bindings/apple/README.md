@@ -239,6 +239,12 @@ After replay `38159746830` timed out before JSON, the owner approved exactly
 the observed SimLaunchHost-arm64 lookup for a further trusted inventory-only
 experiment. All other denials and the 60-second limit remain unchanged.
 No boot/generated calls or helper-containment acceptance is implied.
+The three-lookup inventory passed in
+[38162040714](https://github.com/trancee/cairn/actions/runs/38162040714)
+at `cd7f2ae`, returning 12 records including available iOS `26.2`, `26.4.1`
+and `26.5`. Actual JVM/Native/framework gates, input hashes and ordinary
+cleanup also passed. Root-owned simdiskimaged remained observable; inventory
+success does not establish helper containment or simulator runtime.
 
 | Module | Target | Owning proof task | Evidence/limitation |
 | --- | --- | --- | --- |
