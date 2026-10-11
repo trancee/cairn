@@ -61,6 +61,13 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Run
+  [38133904604](https://github.com/trancee/cairn/actions/runs/38133904604)
+  at `adc22c5` passes offline external artifacts/cinterop metadata, immutable
+  Cargo vendor metadata for all nine combinations, pinned Native startup and
+  trusted arithmetic KLIB device/simulator ARM64 probes. Frozen hashes and
+  cleanup pass. SDK cinterop/linker access, allocator audit, fixture
+  generation/compilation/runtime and earlier detach reliability remain open.
 - 2026-10-11: Offline effective Apple configuration passed in
   [run 38130344648](https://github.com/trancee/cairn/actions/runs/38130344648)
   at `2472082`, with immutable Gradle dependencies and unchanged tool/seed

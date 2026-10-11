@@ -612,3 +612,10 @@ CLI compile seam: a script-owned arithmetic function compiled as a KLIB for
 iOS device/simulator ARM64 inside the existing isolated cell. This tests
 compiler input availability, not fixture bindings, FFI or runtime. First
 run offline; missing inputs must fail before networked preparation changes.
+
+The trusted minimal KLIB probes passed offline without extra downloads in
+[run 38133904604](https://github.com/trancee/cairn/actions/runs/38133904604)
+at `adc22c5`, for both device and simulator ARM64. Frozen Native/tool,
+Gradle and vendor-source hashes remained unchanged; UID/disk/PF cleanup
+passed. This is a green characterization of compiler KLIB availability,
+not an intended-failure/red claim or SDK cinterop/linker/FFI/runtime proof.

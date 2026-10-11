@@ -140,3 +140,16 @@ the boundary and next byte; output remains capped at 64 MiB. The instrumented
 Kotlin plugin measures 67,326,033 bytes. Pager disable/zero-swap verification
 precedes tool provisioning. Native/Cargo cache completeness, allocator audit,
 binding generation, simulator runtime and physical-device proof remain open.
+
+Further preparation now seeds external configuration artifacts and uses
+`transformNativeMainCInteropDependenciesMetadata` for the synthetic commonizer
+path, rather than directly resolving an unpublished Maven variant. Locked
+Cargo inputs are vendored from fixture/bindgen/runtime manifests, frozen
+read-only and tested by metadata for all three Apple Rust targets with blanket
+socket denial. The official Kotlin/Native `2.4.20` ARM64 distribution is
+checksum-verified and frozen with the tools.
+[Run 38133904604](https://github.com/trancee/cairn/actions/runs/38133904604)
+at `adc22c5` passed these inputs, tool startup and isolated script-owned
+arithmetic KLIB compilation for device/simulator ARM64, with unchanged hashes.
+SDK cinterop/linker access, allocator audit, fixture compilation and generated
+runtime calls remain unverified. KLIB output alone is not ABI/runtime evidence.

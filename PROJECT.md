@@ -180,6 +180,18 @@ exceeding the old 64 MiB file limit. No-swap setup now precedes provisioning.
 Kotlin/Native compiler/cinterop caches, Cargo input freezing, allocator review,
 binding generation and generated runtime calls remain unverified.
 
+External Apple configuration artifacts and native cinterop metadata extraction
+passed offline in run `38131639643`. Immutable Cargo vendor metadata passed
+fixture/bindgen/runtime across Darwin/device/simulator ARM64 in run
+`38132518944`. The official checksum-verified Kotlin/Native distribution
+starts offline, and script-owned arithmetic KLIBs compile for device and
+simulator ARM64 in
+[run 38133904604](https://github.com/trancee/cairn/actions/runs/38133904604)
+at `adc22c5`. All seed/tool hashes and cleanup passed. These are input and
+trusted compiler probes, not FFI, native linkage, fixture or runtime proof.
+Native SDK/cinterop/linker access, Apple allocator evidence and binding
+generation/generated calls remain open.
+
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable
   wire tutorial, contributor validation guide, foundation API reference and
