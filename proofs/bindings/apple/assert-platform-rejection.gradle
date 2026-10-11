@@ -1,0 +1,3 @@
+gradle.settingsEvaluated {
+    throw new GradleException("FAIL: fixture accepted unsupported cairnProofPlatform")
+}

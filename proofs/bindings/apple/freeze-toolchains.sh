@@ -8,6 +8,7 @@ rust=$2
 daemon=$3
 compiler=$4
 destination=/opt/cairn-apple-tools
+scripts="$(cd "$(dirname "$0")" && pwd -P)"
 test ! -e "$destination"
 umask 022
 mkdir "$destination"
@@ -15,6 +16,9 @@ ditto "$prepared/gradle-9.7.0" "$destination/gradle"
 ditto "$rust" "$destination/rust"
 ditto "$daemon" "$destination/daemon-jdk"
 ditto "$compiler" "$destination/compiler-jdk"
+ditto "$scripts/../linux-android" "$destination/fixture"
+cp "$scripts/assert-platform-rejection.gradle" "$destination/assert-platform-rejection.gradle"
+cp "$scripts/check-fixture-selection.sh" "$destination/check-fixture-selection.sh"
 chown -R root:wheel "$destination"
 chmod -R a+rX,a-w "$destination"
 ls -ld "$destination" "$destination/rust" "$destination/rust/bin" "$destination/rust/bin/rustc"

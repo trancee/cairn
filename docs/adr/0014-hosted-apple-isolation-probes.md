@@ -399,3 +399,12 @@ at `c6204b0`, both outside and inside the compiler socket profile.
 Root-owned UDP receivers have before/after delivery controls; dedicated
 same-UID UDP roundtrip remains green. Trusted empty Gradle `help` and copied
 tool integrity also remain green. No fixture build occurred.
+
+The owner approved extending the existing fixture with an explicit Apple
+selection, preserving its default Linux/Android behavior and source/version
+owners. The approved test seam is the Gradle CLI using
+`-PcairnProofPlatform=apple`, with visible invalid-selection rejection.
+First test only the actual fixture settings file and empty project shells:
+an init-script assertion detects unsupported selection accepted by settings
+before any project plugin/build logic executes. This is not binding generation
+or permission to run unfrozen target builds.
