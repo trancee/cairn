@@ -557,3 +557,11 @@ selected trusted Python path from the root supervisor instead of widening
 reads or changing Xcode license state. Native compiler/cinterop and Cargo
 cache freezing/completeness, allocator audit, binding builds and runtime
 proof remain pending. Earlier busy-detach failures remain unexplained.
+
+Next extend the approved Gradle CLI preparation seam to resolve external
+artifacts of all resolvable Apple project configurations, filtering project
+components out of artifact views. Request only this dependency-resolution
+task, not compilation/generation or project-output tasks. First run offline
+against the existing seed to expose missing inputs, then seed those artifacts
+through the separately approved networked preparation. This still does not
+prove Native compiler distribution or Cargo source completeness.

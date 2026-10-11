@@ -1,0 +1,22 @@
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+
+gradle.projectsEvaluated {
+    gradle.rootProject.tasks.register("cairnResolveAppleInputs") {
+        doLast {
+            def resolvedCount = 0
+            gradle.rootProject.allprojects.each { project ->
+                project.configurations.findAll { it.canBeResolved }.each { configuration ->
+                    def artifacts = configuration.incoming.artifactView {
+                        componentFilter { it instanceof ModuleComponentIdentifier }
+                    }.files.files
+                    resolvedCount += artifacts.size()
+                    println("INPUTS: ${project.path}:${configuration.name} external artifacts ${artifacts.size()}")
+                }
+            }
+            if (resolvedCount == 0) {
+                throw new GradleException("FAIL: no external Apple dependency artifacts resolved")
+            }
+            println("PASS: Apple external dependency artifacts resolved without project compilation")
+        }
+    }
+}

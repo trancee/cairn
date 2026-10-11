@@ -24,6 +24,7 @@ cp "$scripts/check-fixture-selection.sh" "$destination/check-fixture-selection.s
 cp "$scripts/assert-apple-targets.gradle" "$destination/assert-apple-targets.gradle"
 cp "$scripts/check-fixture-targets.sh" "$destination/check-fixture-targets.sh"
 cp "$scripts/create-plugin-project.sh" "$destination/create-plugin-project.sh"
+cp "$scripts/resolve-apple-inputs.gradle" "$destination/resolve-apple-inputs.gradle"
 chown -R root:wheel "$destination"
 chmod -R a+rX,a-w "$destination"
 ls -ld "$destination" "$destination/rust" "$destination/rust/bin" "$destination/rust/bin/rustc"

@@ -16,7 +16,8 @@ result=0
   -Djava.net.preferIPv4Stack=true -PcairnProofPlatform=apple \
   -Porg.gradle.java.installations.paths="$tools/compiler-jdk" \
   -Porg.gradle.java.installations.auto-download=false \
-  --init-script "$tools/assert-apple-targets.gradle" help \
+  --init-script "$tools/assert-apple-targets.gradle" \
+  --init-script "$tools/resolve-apple-inputs.gradle" cairnResolveAppleInputs \
   > "$HOME/fixture-targets.log" 2>&1 || result=$?
 cat "$HOME/fixture-targets.log"
 if [ "$result" -ne 0 ]; then exit "$result"; fi
