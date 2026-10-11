@@ -818,3 +818,12 @@ UID cleanup passed but ordinary scratch detach again failed `Resource busy`;
 bounded holder collection found no retained holder identity.
 Do not change the optimizer/profile or raise the deadline silently.
 Generation, runtime and final isolation/reliability acceptance remain open.
+
+The owner selected debug profile for the generator only, retaining the
+600-second installation ceiling. The pinned plugin lacks a profile DSL;
+an immutable PATH Cargo adapter adds `--debug` only to installation from the
+exact pinned generator path and rejects competing profile arguments/other
+installation sources. All other Cargo calls forward unchanged to pinned
+Cargo. The plugin still performs its owning install, fingerprint and ready
+record checks; no prebuilt injection or task suppression. SDK profiles,
+300-second generation, 60-second probes and all other limits are unchanged.

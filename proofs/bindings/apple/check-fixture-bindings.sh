@@ -10,7 +10,7 @@ esac
 fixture="$HOME/fixture-targets"
 test -d "$fixture"
 export JAVA_HOME="$tools/daemon-jdk"
-export PATH="$tools/rust/bin:$JAVA_HOME/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+export PATH="$tools/generator-tools:$tools/rust/bin:$JAVA_HOME/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 export CARGO_HOME="$HOME/cargo-offline"
 export CARGO_TARGET_DIR="$HOME/fixture-cargo-target"
 export CARGO_NET_OFFLINE=true
