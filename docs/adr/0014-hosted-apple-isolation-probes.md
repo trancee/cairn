@@ -920,3 +920,13 @@ caller-UID cleanup/resource policy does not cover every simulator helper;
 no root-helper containment is claimed. Whole-VM memory remains bounded.
 Scratch capacity recheck and ordinary detach passed. No further service
 allowance or runtime boot is authorized; retain the inventory failure.
+
+The unchanged two-lookup diagnostic replay
+[38159746830](https://github.com/trancee/cairn/actions/runs/38159746830)
+at `2624f0c` expired its 60-second inventory deadline before JSON diagnostics.
+Dedicated UID cleanup, scratch capacity and ordinary detach passed.
+Root-owned simdiskimaged remained observable (RSS 25,344 KiB, CPU 30.24s).
+Availability reasons remain unverified; the two-lookups-only profile is
+neither sufficient nor deterministic on this evidence. No implicit retry,
+deadline increase or further service allowance is applied. Simulator runtime
+requires a separately approved service/helper containment design.
