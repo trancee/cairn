@@ -530,3 +530,9 @@ First require the real supervised child to observe the new hard/soft limit,
 then verify actual file-boundary enforcement and instrumented artifact size.
 Precomputed transform inputs were not selected because they add Gradle/cache
 coupling and may not cover later Native compiler files.
+
+The new child-limit expectation failed as intended in
+[run 38129355841](https://github.com/trancee/cairn/actions/runs/38129355841):
+the actual child still observed `[67108864, 67108864]`, not
+`[134217728, 134217728]`. Apply the approved ceiling in trusted child setup
+and require the sandbox composition to observe the same value.

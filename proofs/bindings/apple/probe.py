@@ -25,7 +25,7 @@ def main():
     if sys.argv[6:] == ["--build-limits"]:
         for limit, expected in (
             (resource.RLIMIT_CPU, 900), (resource.RLIMIT_NPROC, 128),
-            (resource.RLIMIT_FSIZE, 64 * 1024**2), (resource.RLIMIT_CORE, 0),
+            (resource.RLIMIT_FSIZE, 128 * 1024**2), (resource.RLIMIT_CORE, 0),
         ):
             observed = resource.getrlimit(limit)
             if observed != (expected, expected):
