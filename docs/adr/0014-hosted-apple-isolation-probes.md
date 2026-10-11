@@ -336,3 +336,10 @@ socket-owner UID matching and enable-reference release, but the complete
 composition is unproven. Require live positive controls and external/cross-UID
 negative controls before any fixture work. Do not replace global PF rules,
 flush global states, weaken isolation or modify local Mac networking.
+
+The owner approved hosted-only PF isolation probes. First run live owned
+TCP/UDP controls without PF to demonstrate same-UID local communication and
+the expected cross-UID failure of the unrestricted baseline. Root establishes
+external TCP reachability to GitHub without sending application data, and
+owns a live loopback listener. Dedicated-UID cleanup still applies. This
+experiment is not fixture-build authorization.
