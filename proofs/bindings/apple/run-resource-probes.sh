@@ -98,6 +98,10 @@ diskutil enableOwnership "$volume"
 chown "$uid:20" "$volume"
 chmod 0700 "$volume"
 "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
+cp "$scripts/probe-pf.py" "$work/inputs/probe-pf.py"
+chmod 0644 "$work/inputs/probe-pf.py"
+"$python" -I "$scripts/probe-pf.py" "$work/proof-output/sandbox-pf.log" \
+  "$volume" "$work/inputs" "$work/build.sb"
 if [ "$#" -eq 2 ]; then
   tools=$2
   test "$tools" = /opt/cairn-apple-tools

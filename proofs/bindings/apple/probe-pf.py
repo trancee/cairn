@@ -51,6 +51,15 @@ def child(address, port):
             print(f"PASS: {name} TCP rejected ({type(error).__name__})", flush=True)
         else:
             raise SystemExit(f"FAIL: {name} TCP was allowed")
+    try:
+        with socket.create_connection(
+            ("127.0.0.1", int(port)), timeout=2, source_address=("127.0.0.2", 0),
+        ):
+            pass
+    except OSError as error:
+        print(f"PASS: private-source cross-UID TCP rejected ({type(error).__name__})", flush=True)
+    else:
+        raise SystemExit("FAIL: private-source cross-UID TCP was allowed")
 
 
 def main():
@@ -72,10 +81,17 @@ def main():
         connection, _ = root_server.accept()
         connection.close()
         print("PASS: root external and cross-UID loopback controls connect", flush=True)
+        command = [sys.executable, "-I", str(scripts / "probe-pf.py")]
+        if len(sys.argv) == 5:
+            scratch, inputs, profile = sys.argv[2:]
+            command = [
+                "/usr/bin/sandbox-exec", "-D", f"INPUTS={inputs}",
+                "-D", f"SCRATCH={scratch}", "-D", "PRIVATE_IPC=true", "-f", profile,
+                sys.executable, "-I", str(Path(inputs) / "probe-pf.py"),
+            ]
         with subprocess.Popen([
             sys.executable, "-I", str(scripts / "uid-supervisor.py"),
-            "--seconds", "15", str(output), sys.executable, "-I",
-            str(scripts / "probe-pf.py"), "--child", address,
+            "--seconds", "15", str(output), *command, "--child", address,
             str(root_server.getsockname()[1]),
         ], stdout=subprocess.PIPE, text=True) as process:
             try:

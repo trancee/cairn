@@ -26,10 +26,10 @@
   (begin
     (allow network-bind
       (local udp "*:*")
-      (local tcp "localhost:*"))
+      (local tcp "*:*"))
     (allow network-inbound
-      (remote tcp "localhost:*")
-      (remote udp "localhost:*"))
+      (remote tcp "*:*")
+      (remote udp "*:*"))
     (allow network-outbound
-      (remote tcp "localhost:*")
-      (remote udp "localhost:*"))))
+      (remote tcp "*:*")
+      (remote udp "*:*"))))
