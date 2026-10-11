@@ -29,9 +29,15 @@ def child(address, port):
         receiver.bind(("0.0.0.0", 0))
         receiver.settimeout(2)
         with socket.socket(type=socket.SOCK_DGRAM) as sender:
+            sender.settimeout(2)
             sender.sendto(b"same-uid", ("127.0.0.2", receiver.getsockname()[1]))
-        if receiver.recv(32) != b"same-uid":
-            raise SystemExit("FAIL: same-UID UDP payload did not match")
+            payload, peer = receiver.recvfrom(32)
+            if payload != b"same-uid":
+                raise SystemExit("FAIL: same-UID UDP payload did not match")
+            print(f"DIAGNOSTIC: private UDP sender address {peer[0]}", flush=True)
+            receiver.sendto(b"reply", peer)
+            if sender.recv(32) != b"reply":
+                raise SystemExit("FAIL: same-UID UDP reply did not match")
     print("PASS: same-UID TCP and wildcard-bound UDP loopback work", flush=True)
     for name, endpoint in (
         ("cross-UID loopback", ("127.0.0.1", int(port))),
