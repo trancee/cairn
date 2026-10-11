@@ -130,6 +130,10 @@ if [ "$#" -eq 2 ]; then
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=false -f "$work/build.sb" \
     /bin/bash "$tools/check-cargo-inputs.sh" "$tools"
+  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/native-tool.log" \
+    /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+    -D PRIVATE_IPC=false -f "$work/build.sb" \
+    /bin/bash "$tools/check-native-tool.sh" "$tools"
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
   | tee "$output/dedicated-sandbox.log"
