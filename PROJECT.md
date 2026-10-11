@@ -157,6 +157,15 @@ outbound private-alias origin rule in
 [run 38125239632](https://github.com/trancee/cairn/actions/runs/38125239632)
 at `c6204b0`. Frozen fixture/Maven/Native inputs and binding compilation/
 runtime remain unverified; no fixture build ran.
+Shared fixture settings are verified in
+[run 38127148746](https://github.com/trancee/cairn/actions/runs/38127148746)
+at `5016e70`: unsupported selections fail before project plugins; default
+and explicit Linux/Android retain all three module/build-file selections,
+and explicit Apple selects SDK/consumer with `sdk/apple.gradle.kts`.
+These are actual Gradle settings checks with empty project scripts, not
+effective Kotlin target configuration or binding compilation. Tool hashes,
+resource/socket controls and ordinary cleanup passed. An earlier scratch
+detach `Resource busy` failure remains unexplained, not fixed by later greens.
 No production Apple
 acceptance is implied.
 

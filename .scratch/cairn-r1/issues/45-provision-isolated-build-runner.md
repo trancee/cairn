@@ -61,6 +61,15 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Shared fixture settings passed in
+  [run 38127148746](https://github.com/trancee/cairn/actions/runs/38127148746)
+  at `5016e70`. Invalid selection rejects before plugins; default/explicit
+  Linux retain module/build-file choices and Apple selects SDK/consumer
+  with the scoped SDK adapter. Empty canonical project scripts prevent
+  fixture-plugin execution. Frozen tool hashes, bounded-cell controls and
+  ordinary cleanup passed; Maven/Native preparation, effective targets and
+  binding builds remain gated. Earlier run `38126082975` failed ordinary
+  scratch detach with `Resource busy`; its cause remains unverified.
 - 2026-10-11: UDP negative controls failed on reverse cross-UID delivery in
   [run 38125155369](https://github.com/trancee/cairn/actions/runs/38125155369).
   An outbound other-UID/private-alias block closes the demonstrated state

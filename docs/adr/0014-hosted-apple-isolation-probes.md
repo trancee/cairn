@@ -448,3 +448,12 @@ so Gradle chose its default Groovy filename. Create empty project scripts at
 the existing canonical filenames, checking each original exists. This repairs
 the settings-only seam without copying/executing plugin build logic, changing
 the Linux configuration, or weakening the selection assertions.
+
+Corrected settings checks passed in
+[run 38127148746](https://github.com/trancee/cairn/actions/runs/38127148746)
+at `5016e70`: default and explicit Linux/Android select SDK/consumer/Android
+consumer with original build filenames; Apple selects SDK/consumer and
+`apple.gradle.kts`. Invalid selection still fails before plugins. The unchanged
+60-second tool-cell deadline, resource/socket checks, copied-tool integrity
+and ordinary scratch/UID/PF cleanup passed. No fixture plugins, binding
+generation, Native compilation or generated calls ran.

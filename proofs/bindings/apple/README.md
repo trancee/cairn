@@ -119,5 +119,12 @@ settings before project plugins. Apple selects `sdk/apple.gradle.kts` with
 JVM/iOS device/simulator ARM64, the same Rust source/lock and root version
 owners. Its Cargo outputs require assigned `CARGO_TARGET_DIR`; JDK 21 paths
 must be supplied by the hosted supervisor rather than the Linux-only default.
-The selection is not yet an accepted build command: Maven/Native dependency
-preparation and effective target checks remain pending.
+Settings selection passed in
+[run 38127148746](https://github.com/trancee/cairn/actions/runs/38127148746)
+at `5016e70` using actual settings and empty scripts at canonical build
+filenames, without loading fixture plugins. The selection is not yet an
+accepted binding-build command: Maven/Native dependency preparation and
+effective target checks remain pending. An earlier ordinary scratch detach
+failed with `Resource busy`; later cleanup passed, but its cause remains
+unverified. Failed detach retains PID/command-only holder diagnostics and
+still fails the job without retry or force.
