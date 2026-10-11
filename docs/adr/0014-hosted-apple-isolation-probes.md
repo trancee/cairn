@@ -470,3 +470,17 @@ First run the approved actual Gradle CLI target seam offline: load the
 existing root pins and Apple adapter, request only `help`, and require SDK
 targets `metadata`, `jvm`, `iosArm64`, `iosSimulatorArm64`. Missing plugin/
 Native inputs must fail before any accepted target-configuration result.
+
+The offline target gate failed as intended in
+[run 38127554356](https://github.com/trancee/cairn/actions/runs/38127554356)
+at `0905dfa`: the unchanged root AGP `apply false` request could not resolve
+from an empty offline plugin cache. The approved networked preparation now
+requests only `help` with the same root/SDK/consumer scripts and pinned tools;
+it checks that no Cargo compilation-output directory appears. Copy the
+resolved `modules-2` cache without lock/gc files into a root-owned read-only
+seed and recheck its hashes after offline execution.
+Use Gradle 9.7.0's documented incubating `GRADLE_RO_DEP_CACHE` interface:
+the seed supplies immutable dependency files/metadata while transforms,
+Kotlin DSL output and lock coordination remain disposable scratch.
+Missing inputs still fail offline under PF; Native compiler/cache completeness
+and binding builds are not established by this initial plugin seed.

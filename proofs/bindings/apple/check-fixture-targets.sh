@@ -3,15 +3,13 @@ set -euo pipefail
 test "$#" -eq 1
 tools=$1
 fixture="$HOME/fixture-targets"
-mkdir "$fixture" "$fixture/sdk" "$fixture/consumer"
-cp "$tools/fixture/settings.gradle.kts" "$tools/fixture/build.gradle.kts" "$fixture/"
-cp "$tools/fixture/sdk/apple.gradle.kts" "$fixture/sdk/"
-cp "$tools/fixture/consumer/build.gradle.kts" "$fixture/consumer/"
-ln -s "$tools/fixture/sdk/rust" "$fixture/sdk/rust"
+/bin/bash "$tools/create-plugin-project.sh" "$tools" "$fixture"
 export PATH="$tools/rust/bin:$PATH"
 export CARGO_HOME="$HOME/cargo"
 export CARGO_TARGET_DIR="$HOME/cargo-target"
 export KONAN_DATA_DIR="$HOME/konan"
+export GRADLE_RO_DEP_CACHE="$tools/gradle-dependencies"
+test -d "$GRADLE_RO_DEP_CACHE/modules-2"
 result=0
 "$tools/gradle/bin/gradle" -p "$fixture" --offline --no-daemon --console=plain \
   -Djava.net.preferIPv4Stack=true -PcairnProofPlatform=apple \

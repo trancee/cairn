@@ -23,6 +23,7 @@ cp "$scripts/assert-platform-selection.gradle" "$destination/assert-platform-sel
 cp "$scripts/check-fixture-selection.sh" "$destination/check-fixture-selection.sh"
 cp "$scripts/assert-apple-targets.gradle" "$destination/assert-apple-targets.gradle"
 cp "$scripts/check-fixture-targets.sh" "$destination/check-fixture-targets.sh"
+cp "$scripts/create-plugin-project.sh" "$destination/create-plugin-project.sh"
 chown -R root:wheel "$destination"
 chmod -R a+rX,a-w "$destination"
 ls -ld "$destination" "$destination/rust" "$destination/rust/bin" "$destination/rust/bin/rustc"
