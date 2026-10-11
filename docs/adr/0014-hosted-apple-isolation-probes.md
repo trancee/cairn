@@ -850,3 +850,9 @@ under `<nativeHome>/klib/commonized/<version>`. Provide a scratch distribution
 shell whose compiler/platform inputs are symlinks to the immutable seed and
 only `klib/commonized` is writable generated/coordination state. Do not make
 the original compiler writable, disable commonization or fabricate its cache.
+
+Run `38154100996` at `f0c1d44` passed generated device/simulator/common
+Native compilation, actual JVM calls, all seed hashes and ordinary cleanup.
+Next link actual fixture frameworks for each target through the Apple-only
+adapter and inspect real Mach-O platform/minimum OS `15.0`; default Linux
+configuration is unchanged. Framework linkage is not simulator/device runtime.

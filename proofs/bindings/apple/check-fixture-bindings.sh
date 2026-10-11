@@ -6,6 +6,7 @@ task=$2
 case "$task" in
   :sdk:installBindgen|:sdk:buildBindings|:consumer:interopSmoke|:sdk:tasks) ;;
   :sdk:compileKotlinIosArm64|:sdk:compileKotlinIosSimulatorArm64|:sdk:compileNativeMainKotlinMetadata) ;;
+  :sdk:linkDebugFrameworkIosArm64|:sdk:linkDebugFrameworkIosSimulatorArm64) ;;
   *) echo "FAIL: unsupported binding proof task: $task" >&2; exit 2 ;;
 esac
 fixture="$HOME/fixture-targets"
@@ -55,3 +56,24 @@ if [ "$task" = :sdk:tasks ]; then set -- --all; fi
   -Porg.gradle.java.installations.auto-download=false \
   "$task" "$@"
 echo "PASS: isolated offline shared-fixture owning Gradle task $task"
+case "$task" in
+  :sdk:linkDebugFrameworkIosArm64)
+    binary="$fixture/sdk/build/bin/iosArm64/debugFramework/CairnBindingSmoke.framework/CairnBindingSmoke"
+    platform=IOS ;;
+  :sdk:linkDebugFrameworkIosSimulatorArm64)
+    binary="$fixture/sdk/build/bin/iosSimulatorArm64/debugFramework/CairnBindingSmoke.framework/CairnBindingSmoke"
+    platform=IOSSIMULATOR ;;
+  *) exit 0 ;;
+esac
+vtool=$(/usr/bin/xcrun --find vtool)
+"$vtool" -show-build "$binary" > "$HOME/fixture-build-version.txt"
+cat "$HOME/fixture-build-version.txt"
+if ! awk -v platform="$platform" '
+  $1 == "platform" && $2 == platform { platform_matches++ }
+  $1 == "minos" && $2 == "15.0" { floor_matches++ }
+  END { exit !(platform_matches == 1 && floor_matches == 1) }
+' "$HOME/fixture-build-version.txt"; then
+  echo 'FAIL: fixture framework platform/deployment floor mismatch' >&2
+  exit 1
+fi
+echo "PASS: generated fixture linked framework $platform deployment floor 15.0"

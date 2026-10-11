@@ -190,7 +190,8 @@ if [ "$#" -eq 2 ]; then
     -D PRIVATE_IPC=true -f "$work/build.sb" \
     /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :sdk:tasks
   for task in :sdk:compileKotlinIosArm64 :sdk:compileKotlinIosSimulatorArm64 \
-    :sdk:compileNativeMainKotlinMetadata; do
+    :sdk:compileNativeMainKotlinMetadata :sdk:linkDebugFrameworkIosArm64 \
+    :sdk:linkDebugFrameworkIosSimulatorArm64; do
     "$python" -I "$scripts/uid-supervisor.py" --seconds 300 \
       "$work/proof-output/fixture-native-${task##*:}.log" \
       /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
