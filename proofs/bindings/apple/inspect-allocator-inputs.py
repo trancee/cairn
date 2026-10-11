@@ -53,7 +53,7 @@ def inspect(tools):
                 identities.setdefault(key, []).append(dependency)
             selected = set()
             for row in tree.splitlines():
-                match = re.match(r"^(\S+ v\S+)", row)
+                match = re.match(r"^([^|\s]+ v[^|\s]+)", row)
                 if match is None or len(identities.get(match[1], [])) != 1:
                     raise RuntimeError(f"Ambiguous or unknown Cargo tree package identity: {row!r}")
                 dependency = identities[match[1]][0]

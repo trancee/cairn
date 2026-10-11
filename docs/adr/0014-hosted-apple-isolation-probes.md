@@ -688,3 +688,10 @@ directory, matching the earlier metadata gate; do not add Rustup or downloads.
 Run `38138817213` reached Cargo tree output but rejected a package identity
 before inspection. Retain the exact non-sensitive feature-tree row in the
 failure diagnostic before adjusting the parser; do not skip unmatched rows.
+
+Run `38139304928` first expired an earlier tool cell and did not reach the
+diagnostic. Its unchanged failed-job replay reached the exact rejection:
+`thiserror v2.0.20|default,std`. The parser consumed the feature delimiter as
+part of the version when no source-path suffix separated it. Stop identity
+matching at `|`; keep unique metadata-identity validation and every feature
+row. No source candidate was accepted by the failed collection.
