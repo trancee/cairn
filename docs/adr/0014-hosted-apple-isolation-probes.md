@@ -941,3 +941,7 @@ This does not establish or waive helper containment.
 explicitly excludes nested virtualization on ARM64 macOS runners; a nested
 VM is not a supported replacement boundary here. A separately controlled
 Apple environment remains an alternative external prerequisite.
+The preparation push filter now includes all Apple `.sb` profiles so changing
+the separate inventory policy schedules its owning hosted proof; previously
+only `build.sb` changes matched. Official checkout/upload release identities
+were reverified as `v7.0.1`/`v7.0.2`; their existing immutable pins remain.

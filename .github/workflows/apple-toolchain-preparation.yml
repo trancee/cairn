@@ -8,7 +8,7 @@ on:
       - .github/workflows/apple-toolchain-preparation.yml
       - proofs/bindings/apple/*.sh
       - proofs/bindings/apple/*.py
-      - proofs/bindings/apple/build.sb
+      - proofs/bindings/apple/*.sb
       - proofs/bindings/linux-android/bounded-proof.py
       - proofs/bindings/linux-android/**.gradle.kts
       - proofs/bindings/linux-android/gradle.properties
