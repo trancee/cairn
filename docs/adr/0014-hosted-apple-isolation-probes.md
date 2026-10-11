@@ -695,3 +695,12 @@ diagnostic. Its unchanged failed-job replay reached the exact rejection:
 part of the version when no source-path suffix separated it. Stop identity
 matching at `|`; keep unique metadata-identity validation and every feature
 row. No source candidate was accepted by the failed collection.
+
+Run `38140398174` collected all nine feature closures: fixture/runtime each
+50 packages and bindgen 81 on each target. Candidate hits are bytes test-only
+allocator fixtures and autocfg/hashbrown example/documentation references,
+matching earlier Linux source observations; delivered Apple evidence is still
+required. Artifact discovery then failed because it assumed `uniffi-runtime-`
+filenames. The frozen manifest instead records `runtime-*` under the exact
+`ch.ubique.uniffi` group. Search that scoped group using its actual filenames,
+not arbitrary runtime-named dependencies.

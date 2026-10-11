@@ -80,8 +80,9 @@ def inspect(tools):
                 print(f"SOURCE: {dependency['id']} files={count} candidates={hits}")
             print(f"CLOSURE: {package} {target} packages={len(selected)}")
     artifacts = 0
-    for path in sorted((tools / "gradle-dependencies").rglob("*")):
-        if not path.is_file() or not path.name.startswith("uniffi-runtime-"):
+    runtime_root = tools / "gradle-dependencies/modules-2/files-2.1/ch.ubique.uniffi"
+    for path in sorted(runtime_root.rglob("*")):
+        if not path.is_file() or not path.name.startswith("runtime-"):
             continue
         if path.suffix not in (".jar", ".klib"):
             continue
