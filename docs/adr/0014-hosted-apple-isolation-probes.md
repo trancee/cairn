@@ -484,3 +484,11 @@ the seed supplies immutable dependency files/metadata while transforms,
 Kotlin DSL output and lock coordination remain disposable scratch.
 Missing inputs still fail offline under PF; Native compiler/cache completeness
 and binding builds are not established by this initial plugin seed.
+
+First networked configuration in
+[run 38127894684](https://github.com/trancee/cairn/actions/runs/38127894684)
+resolved the pinned plugins but failed SDK configuration because the
+preparation shell omitted the authoritative `gradle.properties`, including
+required Native commonization. Copy that file unchanged into the shell;
+override only the platform-specific JDK path through the existing CLI.
+No plugin version, commonization validation or Linux default is relaxed.
