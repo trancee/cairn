@@ -25,7 +25,22 @@ export GRADLE_USER_HOME="$HOME/gradle"
 export GRADLE_RO_DEP_CACHE="$tools/gradle-dependencies"
 export GRADLE_DAEMON_BIND_ADDRESS=127.0.0.2
 export KONAN_DATA_DIR="$HOME/native-cinterop-data"
-export KONAN_HOME="$tools/kotlin-native"
+native_home="$HOME/native-distribution"
+if [ ! -d "$native_home" ]; then
+  mkdir "$native_home" "$native_home/klib"
+  for input in "$tools/kotlin-native/"*; do
+    if [ "$(basename "$input")" != klib ]; then
+      ln -s "$input" "$native_home/$(basename "$input")"
+    fi
+  done
+  for input in "$tools/kotlin-native/klib/"*; do
+    if [ "$(basename "$input")" != commonized ]; then
+      ln -s "$input" "$native_home/klib/$(basename "$input")"
+    fi
+  done
+  mkdir "$native_home/klib/commonized"
+fi
+export KONAN_HOME="$native_home"
 export IPHONEOS_DEPLOYMENT_TARGET=15.0
 if [ "$task" = :consumer:interopSmoke ]; then
   test ! -e "$fixture/consumer/src"
@@ -35,7 +50,7 @@ set --
 if [ "$task" = :sdk:tasks ]; then set -- --all; fi
 "$tools/gradle/bin/gradle" -p "$fixture" --offline --no-daemon --console=plain --stacktrace \
   -Djava.net.preferIPv4Stack=true -PcairnProofPlatform=apple \
-  -Pkotlin.native.home="$tools/kotlin-native" \
+  -Pkotlin.native.home="$native_home" \
   -Porg.gradle.java.installations.paths="$tools/compiler-jdk" \
   -Porg.gradle.java.installations.auto-download=false \
   "$task" "$@"

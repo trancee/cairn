@@ -842,3 +842,11 @@ This proves JVM generated consumers only. Effective task discovery identifies
 `compileKotlinIosArm64`, `compileKotlinIosSimulatorArm64` and
 `compileNativeMainKotlinMetadata`; run each offline under the approved
 300-second compilation ceiling with the frozen Native home/dependencies.
+
+Run `38152967600` passed generated device/simulator target compilation and
+JVM calls, then common metadata failed creating the commonizer `.lock` under
+the immutable Native distribution. Pinned KGP source fixes commonizer output
+under `<nativeHome>/klib/commonized/<version>`. Provide a scratch distribution
+shell whose compiler/platform inputs are symlinks to the immutable seed and
+only `klib/commonized` is writable generated/coordination state. Do not make
+the original compiler writable, disable commonization or fabricate its cache.
