@@ -10,6 +10,8 @@ on:
       - proofs/bindings/apple/*.py
       - proofs/bindings/apple/build.sb
       - proofs/bindings/linux-android/bounded-proof.py
+      - proofs/bindings/linux-android/**.gradle.kts
+      - proofs/bindings/linux-android/gradle.properties
 
 permissions:
   contents: read

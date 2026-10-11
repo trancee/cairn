@@ -111,3 +111,13 @@ passes same-UID roundtrip, cross-UID TCP/UDP in both directions and non-loopback
 delivery denial with live positive controls. Empty Gradle initialization and
 tool integrity still pass. Frozen fixture/Maven/Native inputs and actual
 binding compile/runtime proof remain incomplete.
+
+The owner-approved shared fixture selection uses
+`-PcairnProofPlatform=apple` on macOS; default `linux-android` keeps the existing
+Linux SDK/consumer/Android consumer configuration. Unknown values fail in
+settings before project plugins. Apple selects `sdk/apple.gradle.kts` with
+JVM/iOS device/simulator ARM64, the same Rust source/lock and root version
+owners. Its Cargo outputs require assigned `CARGO_TARGET_DIR`; JDK 21 paths
+must be supplied by the hosted supervisor rather than the Linux-only default.
+The selection is not yet an accepted build command: Maven/Native dependency
+preparation and effective target checks remain pending.

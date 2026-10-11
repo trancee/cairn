@@ -408,3 +408,15 @@ First test only the actual fixture settings file and empty project shells:
 an init-script assertion detects unsupported selection accepted by settings
 before any project plugin/build logic executes. This is not binding generation
 or permission to run unfrozen target builds.
+
+The invalid-selection CLI regression failed for the intended reason in
+[run 38125792934](https://github.com/trancee/cairn/actions/runs/38125792934):
+actual settings accepted the unsupported property. Settings now validate the
+closed `linux-android|apple` choice before project plugins. Default selection
+keeps existing modules/build scripts; explicit Apple requires macOS, omits
+Android consumer and selects the SDK's scoped Apple adapter. Kotlin/Ubique
+versions remain owned by the existing root build, and Rust source/lock/package
+are unchanged. The Apple adapter declares JVM/iOS device/simulator ARM64,
+uses the frozen Ubique source path and requires assigned CARGO_TARGET_DIR.
+Native commonization is enabled. Effective target configuration and binding
+generation remain unverified until their separate hosted CLI gates run.
