@@ -827,3 +827,10 @@ installation sources. All other Cargo calls forward unchanged to pinned
 Cargo. The plugin still performs its owning install, fingerprint and ready
 record checks; no prebuilt injection or task suppression. SDK profiles,
 300-second generation, 60-second probes and all other limits are unchanged.
+
+Owning debug-profile installation and actual `buildBindings` passed offline
+in run `38150603530` at `3e52471`, with all input hashes and cleanup.
+No FFI calls ran. Next execute the existing immutable shared JVM smoke
+consumer through its owning `interopSmoke` task, then discover effective
+Native compilation tasks rather than assume names. The consumer source is a
+symlink to the frozen canonical source; writable outputs remain scratch.

@@ -4,7 +4,7 @@ test "$#" -eq 2
 tools=$1
 task=$2
 case "$task" in
-  :sdk:installBindgen|:sdk:buildBindings) ;;
+  :sdk:installBindgen|:sdk:buildBindings|:consumer:interopSmoke|:sdk:tasks) ;;
   *) echo "FAIL: unsupported binding proof task: $task" >&2; exit 2 ;;
 esac
 fixture="$HOME/fixture-targets"
@@ -25,10 +25,16 @@ export GRADLE_RO_DEP_CACHE="$tools/gradle-dependencies"
 export GRADLE_DAEMON_BIND_ADDRESS=127.0.0.2
 export KONAN_DATA_DIR="$HOME/native-cinterop-data"
 export IPHONEOS_DEPLOYMENT_TARGET=15.0
+if [ "$task" = :consumer:interopSmoke ]; then
+  test ! -e "$fixture/consumer/src"
+  ln -s "$tools/fixture/consumer/src" "$fixture/consumer/src"
+fi
+set --
+if [ "$task" = :sdk:tasks ]; then set -- --all; fi
 "$tools/gradle/bin/gradle" -p "$fixture" --offline --no-daemon --console=plain --stacktrace \
   -Djava.net.preferIPv4Stack=true -PcairnProofPlatform=apple \
   -Pkotlin.native.home="$tools/kotlin-native" \
   -Porg.gradle.java.installations.paths="$tools/compiler-jdk" \
   -Porg.gradle.java.installations.auto-download=false \
-  "$task"
+  "$task" "$@"
 echo "PASS: isolated offline shared-fixture owning Gradle task $task"
