@@ -46,6 +46,7 @@ fi
 /sbin/ifconfig lo0 alias 127.0.0.2 netmask 255.255.255.255
 alias_added=1
 cat > "$output/pf-rules" <<'RULES'
+block return out quick on lo0 inet proto { tcp, udp } from any to 127.0.0.2 user != 59000 label "cairn-private-origin"
 block return in quick on lo0 inet proto { tcp, udp } from any to 127.0.0.2 user != 59000 label "cairn-private-destination"
 block return in quick on lo0 inet proto { tcp, udp } from 127.0.0.2 to any user != 59000 label "cairn-private-source"
 pass in quick on lo0 inet proto { tcp, udp } from any to 127.0.0.2 user 59000 no state
