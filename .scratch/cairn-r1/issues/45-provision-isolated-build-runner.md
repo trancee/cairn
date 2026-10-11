@@ -61,6 +61,11 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Narrowed replay `38158407544` at `98e52e6` explicitly reports
+  denied Mach lookup of CoreSimulatorService and simdiskimaged before fixture
+  work. UID cleanup/ordinary detach passed. No allowance was added; service
+  helpers are not proven to inherit caller resource/filesystem/network limits.
+  A new service-boundary diagnostic requires owner selection.
 - 2026-10-11: Scratch-device-set simulator inventory failed under unchanged
   socket/Mach denial in
   [38157170214](https://github.com/trancee/cairn/actions/runs/38157170214)

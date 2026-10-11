@@ -223,6 +223,9 @@ were refused. Earlier JVM/Native/framework gates and ordinary cleanup passed;
 final input-hash checks were not reached. The inventory now runs before
 expensive fixture work and retains targeted `simctl` sandbox-denial diagnostics
 without widening access. Simulator runtime and final acceptance remain open.
+The narrowed replay `38158407544` explicitly identifies denied Mach lookup
+of CoreSimulatorService and simdiskimaged; UID cleanup/ordinary detach passed.
+No service allowance was added, and helper containment remains unverified.
 
 | Module | Target | Owning proof task | Evidence/limitation |
 | --- | --- | --- | --- |

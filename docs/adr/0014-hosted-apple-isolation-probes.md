@@ -881,3 +881,16 @@ Retain unchanged blanket socket/Mach denial, resource limits and no boot.
 Candidate causes are denied service lookup, fresh-UID service availability
 or denied runtime/device-set paths; exact denial evidence is needed before
 any material service-boundary decision.
+
+The narrowed replay
+[38158407544](https://github.com/trancee/cairn/actions/runs/38158407544)
+at `98e52e6` reproduced the access failure before fixture work. Kernel
+diagnostics explicitly report denied Mach lookup of
+`com.apple.CoreSimulator.CoreSimulatorService` and
+`com.apple.CoreSimulator.simdiskimaged`. Other denied services include
+Open Directory, Core Services and Disk Arbitration; their necessity is not
+established. UID cleanup and ordinary scratch detach passed.
+No allowance has been added. Granting service lookup is a material boundary
+change: service helpers are not proven to inherit the caller's UID limits,
+sandbox, disk or network policy. A trusted inventory-only diagnostic profile
+versus an alternative simulator runtime boundary requires owner selection.

@@ -256,6 +256,9 @@ calls and both framework links passed; UID cleanup and ordinary detach passed.
 Final workflow input-hash checks were not reached. Targeted denial collection
 now runs before expensive fixture work; no service allowance or simulator
 boot/generated call is authorized by this diagnostic.
+Narrowed replay `38158407544` at `98e52e6` confirms denied Mach lookup of
+CoreSimulatorService and simdiskimaged, with UID cleanup/ordinary detach.
+Service-helper containment is unverified; no service allowance was added.
 
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable
