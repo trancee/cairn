@@ -167,7 +167,15 @@ if [ "$#" -eq 2 ]; then
       /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
       -D PRIVATE_IPC=false -f "$work/build.sb" \
       /bin/bash "$tools/check-fixture-rust.sh" "$tools" "$target"
+    "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/fixture-allocator-$target.log" \
+      /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+      -D PRIVATE_IPC=false -f "$work/build.sb" \
+      "$python" -I "$tools/inspect-fixture-artifacts.py" "$target"
   done
+  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/bindgen-compilation.log" \
+    /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+    -D PRIVATE_IPC=false -f "$work/build.sb" \
+    /bin/bash "$tools/check-bindgen-compilation.sh" "$tools"
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
   | tee "$output/dedicated-sandbox.log"

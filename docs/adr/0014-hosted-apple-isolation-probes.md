@@ -736,3 +736,11 @@ The bounded findings/bitcode limitation are recorded in
 Now compile the actual shared Rust fixture, locked/offline, separately for
 each target under the unchanged 60-second/128 MiB file ceilings. No fixture
 FFI calls are permitted until its resulting allocator thunks are inspected.
+
+Actual fixture Rust compilation passed offline on all three Apple targets
+in run `38143726072` at `51525af`, within existing per-command/resource
+ceilings. All immutable hashes and cleanup passed. No FFI calls ran.
+Next require each actual fixture allocator thunk to forward to its matching
+default allocator and scan generated Rust output, then compile the pinned
+Ubique bindgen offline in its own unchanged bounded cell. Missing/thunk
+mismatches and compilation failures retain diagnostics and gate progression.
