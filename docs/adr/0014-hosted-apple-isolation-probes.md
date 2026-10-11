@@ -588,3 +588,10 @@ Next test the Cargo CLI seam with locked offline metadata for fixture,
 bindgen and runtime across Darwin/iOS-device/iOS-simulator ARM64 using a
 dedicated immutable vendor seed. The initial seed is absent and must fail
 before any compilation. No fixture compiler task is requested.
+
+Run `38132020833` passed Gradle artifact replay then failed the absent Cargo
+seed check. Prepare with locked `cargo vendor` across fixture/bindgen/runtime
+manifests, copy root-owned read-only source/configuration into the trusted
+tool subtree and verify hashes after metadata replay. Missing vendor config
+now has an explicit fail-closed diagnostic. No compilation or Rustup fallback
+is introduced.

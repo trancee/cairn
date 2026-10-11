@@ -7,7 +7,10 @@ export CARGO_HOME="$HOME/cargo-offline"
 export CARGO_NET_OFFLINE=true
 export CARGO_TARGET_DIR="$HOME/cargo-metadata-target"
 config="$tools/cargo-inputs/vendor.toml"
-test -f "$config"
+if [ ! -f "$config" ]; then
+  echo 'FAIL: immutable Cargo vendor configuration is missing' >&2
+  exit 1
+fi
 for manifest in "$tools/fixture/sdk/rust/Cargo.toml" \
   "$tools/ubique/bindgen/Cargo.toml" "$tools/ubique/runtime/Cargo.toml"; do
   for target in aarch64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim; do
