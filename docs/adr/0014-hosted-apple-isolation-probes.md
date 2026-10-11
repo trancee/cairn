@@ -429,3 +429,14 @@ UID cleanup. This is not a fixture-selection result. On detach failure,
 collect only open-file holder PIDs and command names with a 15-second deadline;
 retain the original failure. No retry, forced detach, unrelated process kill
 or budget change is authorized by this diagnostic.
+
+The invalid-selection gate passed in
+[run 38126287911](https://github.com/trancee/cairn/actions/runs/38126287911)
+at `41446e7`: actual Gradle settings report
+`Unsupported cairnProofPlatform: invalid` before project plugins. Tool hashes
+remained unchanged and ordinary detach/UID/PF cleanup passed. The earlier
+busy mount did not recur; its holder/cause remains unverified.
+Next assert default, explicit Linux/Android and explicit Apple module/build-file
+selection through Gradle's settings-evaluated hook with empty project shells.
+This characterizes the settings contract, not the declared/effective Kotlin
+targets or Native build behavior.

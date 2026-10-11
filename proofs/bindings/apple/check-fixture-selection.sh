@@ -17,3 +17,18 @@ fi
 cat "$HOME/fixture-invalid.log"
 grep -F 'Unsupported cairnProofPlatform: invalid' "$HOME/fixture-invalid.log"
 echo 'PASS: fixture rejects invalid selection before project plugins or build logic'
+for selection in default linux-android apple; do
+  set --
+  if [ "$selection" != default ]; then
+    set -- "-PcairnProofPlatform=$selection"
+  fi
+  "$tools/gradle/bin/gradle" -p "$fixture" --offline --no-daemon --console=plain \
+    -Djava.net.preferIPv4Stack=true "$@" \
+    --init-script "$tools/assert-platform-selection.gradle" help \
+    > "$HOME/fixture-$selection.log" 2>&1
+  cat "$HOME/fixture-$selection.log"
+  expected=$selection
+  if [ "$selection" = default ]; then expected=linux-android; fi
+  grep -F "PASS: $expected settings select" "$HOME/fixture-$selection.log"
+done
+echo 'PASS: default and explicit platform settings with empty project shells; no fixture plugins loaded'

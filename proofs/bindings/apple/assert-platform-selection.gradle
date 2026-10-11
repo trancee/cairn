@@ -1,0 +1,17 @@
+gradle.settingsEvaluated { settings ->
+    def platform = gradle.startParameter.projectProperties.get("cairnProofPlatform") ?: "linux-android"
+    def expectedModules = platform == "apple" ?
+        ["consumer", "sdk"] : ["androidConsumer", "consumer", "sdk"]
+    def actualModules = settings.rootProject.children.collect { it.name }.sort()
+    if (actualModules != expectedModules) {
+        throw new GradleException("FAIL: ${platform} modules ${actualModules}; expected ${expectedModules}")
+    }
+    def expectedSdkBuild = platform == "apple" ? "apple.gradle.kts" : "build.gradle.kts"
+    if (settings.project(":sdk").buildFileName != expectedSdkBuild ||
+        settings.project(":consumer").buildFileName != "build.gradle.kts" ||
+        (platform == "linux-android" &&
+            settings.project(":androidConsumer").buildFileName != "build.gradle.kts")) {
+        throw new GradleException("FAIL: ${platform} selected unexpected project build files")
+    }
+    println("PASS: ${platform} settings select ${actualModules} with SDK ${expectedSdkBuild}")
+}
