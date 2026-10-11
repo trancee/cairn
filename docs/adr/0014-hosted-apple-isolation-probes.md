@@ -667,3 +667,15 @@ Next exercise the already-approved trusted linker seam: link script-owned
 arithmetic frameworks for each target in separate unchanged 60-second cells
 and inspect actual Mach-O build-version platform and minimum OS `15.0`.
 Missing dependencies fail offline before changing preparation.
+
+Trusted arithmetic framework linkage passed offline in
+[run 38137529578](https://github.com/trancee/cairn/actions/runs/38137529578)
+at `f7f4eca`. Actual Mach-O build versions identify `IOS`/`IOSSIMULATOR`,
+minimum OS `15.0` and SDK `26.4`. No extra downloads were required.
+All seed/tool hashes and ordinary cleanup passed. This is a characterization
+green, not a red/green or fixture ABI/runtime claim.
+Next collect package-scoped normal/build feature trees and allocator-pattern
+source candidates for fixture/runtime/bindgen across the three Apple targets,
+plus delivered runtime archive identities/native entry names. This read-only
+diagnostic is not an allocator-acceptance test: candidate classification,
+generated-source limits and delivered allocator thunks remain separate gates.

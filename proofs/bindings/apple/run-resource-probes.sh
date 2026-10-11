@@ -155,6 +155,12 @@ if [ "$#" -eq 2 ]; then
       -D PRIVATE_IPC=false -f "$work/build.sb" \
       /bin/bash "$tools/check-native-linkage.sh" "$tools" "$target"
   done
+  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/allocator-inputs.log" \
+    /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+    -D PRIVATE_IPC=false -f "$work/build.sb" \
+    /usr/bin/env CARGO_HOME="$volume/cargo-offline" CARGO_NET_OFFLINE=true \
+    CARGO_TARGET_DIR="$volume/cargo-metadata-target" \
+    "$python" -I "$tools/inspect-allocator-inputs.py" "$tools"
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
   | tee "$output/dedicated-sandbox.log"

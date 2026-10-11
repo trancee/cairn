@@ -163,3 +163,11 @@ file, without accepting/modifying licenses or opening Mach services.
 The next trusted CLI probe links arithmetic frameworks and checks their
 actual Mach-O platform and deployment floor `15.0`. Fixture bindings,
 allocator audit and generated runtime calls remain gated.
+
+Trusted arithmetic framework linkage and actual device/simulator Mach-O
+deployment-floor `15.0` checks pass offline in
+[run 38137529578](https://github.com/trancee/cairn/actions/runs/38137529578)
+at `f7f4eca`, with unchanged hashes and cleanup. The source-closure/runtime
+archive diagnostic that follows does not itself accept allocator compatibility:
+candidate classification and delivered allocator-thunk inspection must pass
+before fixture FFI.

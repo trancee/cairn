@@ -61,6 +61,13 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Trusted arithmetic framework linkage and actual `IOS`/
+  `IOSSIMULATOR` Mach-O deployment floor `15.0` passed offline in
+  [run 38137529578](https://github.com/trancee/cairn/actions/runs/38137529578)
+  at `f7f4eca`. Hashes/cleanup pass; no new Native downloads. Apple allocator,
+  fixture generation/compilation/generated calls and final acceptance remain
+  open; script-owned framework linkage is not fixture or runtime evidence.
+
 - 2026-10-11: Trusted header cinterop passed offline in
   [run 38136851477](https://github.com/trancee/cairn/actions/runs/38136851477)
   at `74673d1`, both Apple ARM64 targets, airplane mode and blanket socket

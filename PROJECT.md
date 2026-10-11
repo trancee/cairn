@@ -199,6 +199,13 @@ blanket socket denial remain active. All tool/Gradle/Cargo/Native hash checks
 and cleanup pass. Linkage/deployment-floor inspection, allocator evidence,
 fixture generation/compilation and runtime remain open.
 
+Trusted arithmetic framework linkage and actual `IOS`/`IOSSIMULATOR`
+Mach-O minimum OS `15.0` inspection passed offline in
+[run 38137529578](https://github.com/trancee/cairn/actions/runs/38137529578)
+at `f7f4eca`, without extra downloads. Frozen hashes and cleanup pass.
+These script-owned frameworks do not establish fixture packaging, allocator
+compatibility, generated calls or device runtime.
+
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable
   wire tutorial, contributor validation guide, foundation API reference and
