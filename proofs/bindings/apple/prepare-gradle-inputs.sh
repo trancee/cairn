@@ -23,6 +23,7 @@ mkdir "$prepared/plugin-home"
   -PcairnProofPlatform=apple \
   -Porg.gradle.java.installations.paths="$tools/compiler-jdk" \
   -Porg.gradle.java.installations.auto-download=false \
-  --init-script "$tools/assert-apple-targets.gradle" help
+  --init-script "$tools/assert-apple-targets.gradle" \
+  --init-script "$tools/resolve-apple-inputs.gradle" cairnResolveAppleInputs
 test ! -e "$CARGO_TARGET_DIR"
 echo 'PASS: network-enabled pinned-plugin preparation; no Cargo compilation output'

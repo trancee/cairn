@@ -565,3 +565,8 @@ task, not compilation/generation or project-output tasks. First run offline
 against the existing seed to expose missing inputs, then seed those artifacts
 through the separately approved networked preparation. This still does not
 prove Native compiler distribution or Cargo source completeness.
+
+Offline [run 38130908209](https://github.com/trancee/cairn/actions/runs/38130908209)
+failed as intended on uncached stdlib, Ubique runtime, Okio, atomicfu and
+coroutines dependencies. Use the same external-artifact resolver during
+approved networked preparation before freezing the dependency seed.
