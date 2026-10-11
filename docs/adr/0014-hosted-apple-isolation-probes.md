@@ -650,3 +650,10 @@ extracted directories read-only, and symlink them into scratch's dependency
 layout. Only extraction coordination metadata remains writable. Offline
 replay sets Native `airplaneMode=true`; missing input must fail immediately,
 not attempt network/retries. Hash the frozen dependencies after replay.
+
+Preparation header probes and dependency freezing passed in run `38136413700`.
+Offline replay rejected compiler-style `-Xoverride-konan-properties=value`
+syntax; cinterop's actual help requires separate option/value arguments.
+Correct that invocation without disabling airplane mode. Narrow kernel
+diagnostics to named compiler/SDK processes rather than unrelated system
+sandbox events.

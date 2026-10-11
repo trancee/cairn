@@ -145,7 +145,7 @@ if [ "$#" -eq 2 ]; then
     /bin/bash "$tools/check-native-cinterop.sh" "$tools" || cinterop_result=$?
   if [ "$cinterop_result" -ne 0 ]; then
     "$python" -I -c \
-      'import subprocess; subprocess.run(["/usr/bin/log","show","--last","2m","--style","compact","--predicate","process == \"kernel\" AND eventMessage CONTAINS \"Sandbox\""],timeout=15,check=True)' \
+      'import subprocess; subprocess.run(["/usr/bin/log","show","--last","2m","--style","compact","--predicate","process == \"kernel\" AND eventMessage CONTAINS \"Sandbox\" AND (eventMessage CONTAINS \"xcrun(\" OR eventMessage CONTAINS \"xcodebuild(\" OR eventMessage CONTAINS \"java(\" OR eventMessage CONTAINS \"clang(\")"],timeout=15,check=True)' \
       || echo 'DIAGNOSTIC: targeted sandbox denial collection failed'
     exit "$cinterop_result"
   fi

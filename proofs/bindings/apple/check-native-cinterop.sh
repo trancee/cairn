@@ -15,7 +15,7 @@ if [ -d "$tools/native-dependencies" ]; then
   if [ -f "$tools/native-dependencies/.extracted" ]; then
     cp "$tools/native-dependencies/.extracted" "$KONAN_DATA_DIR/dependencies/.extracted"
   fi
-  set -- -Xoverride-konan-properties=airplaneMode=true
+  set -- -Xoverride-konan-properties airplaneMode=true
 fi
 mkdir "$HOME/native-cinterop"
 cd "$HOME/native-cinterop"
