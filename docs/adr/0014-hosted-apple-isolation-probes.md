@@ -744,3 +744,10 @@ Next require each actual fixture allocator thunk to forward to its matching
 default allocator and scan generated Rust output, then compile the pinned
 Ubique bindgen offline in its own unchanged bounded cell. Missing/thunk
 mismatches and compilation failures retain diagnostics and gate progression.
+
+Run `38144367463` passed all three fixture default-allocator forwarding and
+generated-Rust scans, then expired the 60-second bindgen cell during
+`uniffi_bindgen` compilation. Reuse the existing scratch Cargo target directory
+and explicit Darwin target for compatible already-built dependency artifacts;
+Cargo fingerprints still own reuse across the two locked manifests. No
+deadline/budget increase, immutable binary seed or network fallback is added.
