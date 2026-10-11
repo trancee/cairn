@@ -25,16 +25,3 @@ for runtime in available:
     print("RUNTIME:", runtime["identifier"], runtime["version"])
 ' "$HOME/simulator-runtimes.json"
 echo 'PASS: isolated simulator runtime inventory; no device boot or generated calls'
-for operation in create boot bootstatus shutdown delete; do
-  "$simctl" --set "$HOME/simulator-devices" help "$operation"
-done
-"$simctl" --set "$HOME/simulator-devices" list devicetypes --json \
-  > "$HOME/simulator-device-types.json"
-"$python" -I -c '
-import json, sys
-with open(sys.argv[1]) as source:
-    types = json.load(source)["devicetypes"]
-for device in types:
-    if device["name"].startswith("iPhone"):
-        print("DEVICE-TYPE:", device["identifier"], device["name"])
-' "$HOME/simulator-device-types.json"

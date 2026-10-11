@@ -1021,3 +1021,10 @@ services persistently, raise limits or accept failed bootout.
 The [launchctl manual](https://keith.github.io/xcode-man-pages/launchctl.1.html)
 documents user-domain removal; its printed domain structure is not a stable
 API and will not be parsed as an enforcement mechanism.
+
+Run `38168984924` failed the earlier inventory deadline before reaching
+the domain-cleanup regression; ordinary detach passed. Remove now-completed
+lifecycle help/device-type discovery from the inventory cell: exact command
+contracts and pinned type identities were already characterized in
+`38164460672`. This narrows the prerequisite without changing its available
+iOS assertion or 60-second ceiling; it is not a reliability fix.
