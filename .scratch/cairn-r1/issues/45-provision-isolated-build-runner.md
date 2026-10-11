@@ -61,6 +61,15 @@ are complete.
 
 ## Comments
 
+- 2026-10-11: Owner-approved generator-only debug profile preserves plugin
+  install/fingerprints; bindings pass `38150603530`. Actual immutable JVM
+  smoke calls pass `38151849548`; generated device/simulator/common Native
+  compile passes `38154100996` with scratch commonizer state and immutable
+  inputs. Actual fixture framework Mach-O deployment `15.0` passes
+  [38155697269](https://github.com/trancee/cairn/actions/runs/38155697269)
+  at `ef2302e`; all seed hashes and ordinary cleanup pass. Simulator/device
+  runtime and earlier busy-detach reliability/final acceptance remain open.
+
 - 2026-10-11: After owner-approved 600s optimized installation ceiling,
   runs `38147417409`/`38149099333` still expired. Supervisor diagnostic
   regression red `38148973462` then green `38149099333`; actual rustc was

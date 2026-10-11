@@ -197,3 +197,29 @@ passed bounded owned-process diagnostic regressions and observed runnable
 `21.0.12.1+1` also passed. UID cleanup passed; scratch detach again failed
 `Resource busy`, without an identified holder. Bindings/runtime remain
 incomplete; no optimizer weakening or further deadline increase is applied.
+
+The owner subsequently approved debug profile for the generator only.
+Its immutable Cargo adapter scopes that change to installation of the exact
+pinned generator source; other Cargo calls/SDK profiles pass through unchanged.
+Owning installation/fingerprints and binding generation pass (`38150603530`).
+Actual immutable JVM smoke calls pass (`38151849548`), including values,
+integer boundary, typed error, string transfer and deterministic close.
+Generated device/simulator/common Native compilation passes (`38154100996`);
+only commonizer generated output/locks are writable in the scratch Native
+distribution shell, whose inputs point to the immutable seed.
+
+Actual fixture framework linkage and Mach-O device/simulator deployment floor
+`15.0` pass in
+[run 38155697269](https://github.com/trancee/cairn/actions/runs/38155697269)
+at `ef2302e`, with unchanged hashes and ordinary cleanup. These do not prove
+simulator execution or physical-device behavior. A trusted runtime-inventory
+probe now tests simctl access under blanket socket/Mach denial with a scratch
+device set; it does not boot a device or execute generated calls.
+
+| Module | Target | Owning proof task | Evidence/limitation |
+| --- | --- | --- | --- |
+| `sdk` | Darwin JVM | `buildBindings` | Generated bindings; generator debug profile only |
+| `consumer` | Darwin JVM, JDK `21.0.12.1+1` | `interopSmoke` | Actual values/errors/string/close; not iOS runtime |
+| `sdk` | iOS device ARM64 | `compileKotlinIosArm64`, `linkDebugFrameworkIosArm64` | Generated compile/link and deployment `15.0`; no physical device |
+| `sdk` | iOS simulator ARM64 | `compileKotlinIosSimulatorArm64`, `linkDebugFrameworkIosSimulatorArm64` | Generated compile/link and deployment `15.0`; no simulator calls |
+| `sdk` | Shared Native metadata | `compileNativeMainKotlinMetadata` | Commonization/compile; not runtime |

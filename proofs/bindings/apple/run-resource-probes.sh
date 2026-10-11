@@ -198,6 +198,11 @@ if [ "$#" -eq 2 ]; then
       -D PRIVATE_IPC=true -f "$work/build.sb" \
       /bin/bash "$tools/check-fixture-bindings.sh" "$tools" "$task"
   done
+  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 \
+    "$work/proof-output/simulator-access.log" \
+    /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+    -D PRIVATE_IPC=false -f "$work/build.sb" \
+    /bin/bash "$tools/check-simulator-access.sh" "$python"
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
   | tee "$output/dedicated-sandbox.log"

@@ -856,3 +856,13 @@ Native compilation, actual JVM calls, all seed hashes and ordinary cleanup.
 Next link actual fixture frameworks for each target through the Apple-only
 adapter and inspect real Mach-O platform/minimum OS `15.0`; default Linux
 configuration is unchanged. Framework linkage is not simulator/device runtime.
+
+Actual generated fixture frameworks linked offline for device/simulator
+ARM64 and passed Mach-O platform/minimum OS `15.0` inspection in
+[run 38155697269](https://github.com/trancee/cairn/actions/runs/38155697269)
+at `ef2302e`. JVM calls, Native/common compilation, all seed hashes and
+ordinary cleanup passed. No simulator or physical-device runtime is implied.
+Next test a trusted `simctl` runtime-inventory command with a dedicated
+scratch device set under unchanged blanket socket/Mach denial. No device
+is booted; this tests the access prerequisite before approving any service
+allowance or executing generated simulator calls.

@@ -234,6 +234,20 @@ ordinary scratch detach again failed `Resource busy`. No generated bindings
 or FFI calls, optimizer change, complete reliability or runner acceptance
 is claimed.
 
+Subsequent owner-approved generator-only debug installation passed the
+plugin's owning install/fingerprint path; binding generation passed in
+`38150603530`. Actual immutable JVM consumer calls passed in `38151849548`,
+and generated device/simulator/common Native compilation in `38154100996`
+after moving commonizer outputs/locks to a scratch distribution shell whose
+inputs still point to the immutable seed. Actual fixture frameworks passed
+device/simulator Mach-O minimum OS `15.0` checks in
+[run 38155697269](https://github.com/trancee/cairn/actions/runs/38155697269)
+at `ef2302e`. All seed hashes and ordinary cleanup passed in those green runs.
+Generator-only debug is an explicitly approved build-tool profile difference;
+SDK Rust profiles/default Linux behavior remain unchanged.
+Simulator generated-call runtime, physical iPhone proof, earlier busy-detach
+reliability and final runner acceptance remain open.
+
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable
   wire tutorial, contributor validation guide, foundation API reference and
