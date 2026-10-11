@@ -126,6 +126,10 @@ if [ "$#" -eq 2 ]; then
     GRADLE_DAEMON_BIND_ADDRESS=127.0.0.2 \
     /bin/bash "$tools/check-fixture-targets.sh" "$tools" "$python"
   "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
+  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/cargo-inputs.log" \
+    /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+    -D PRIVATE_IPC=false -f "$work/build.sb" \
+    /bin/bash "$tools/check-cargo-inputs.sh" "$tools"
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
   | tee "$output/dedicated-sandbox.log"

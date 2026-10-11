@@ -579,3 +579,12 @@ Exclude that synthetic usage from direct artifact resolution and invoke the
 owning metadata extraction task explicitly in preparation/offline replay.
 No compiler/commonizer validation is disabled; this changes the preparation
 seam to match the plugin's actual consumer path.
+
+The external-artifact/metadata path passed networked preparation and offline
+replay in [run 38131639643](https://github.com/trancee/cairn/actions/runs/38131639643)
+at `455ad8f`, with unchanged seed/tool hashes. This is dependency/metadata
+extraction, not Kotlin/Native compiler or binding runtime evidence.
+Next test the Cargo CLI seam with locked offline metadata for fixture,
+bindgen and runtime across Darwin/iOS-device/iOS-simulator ARM64 using a
+dedicated immutable vendor seed. The initial seed is absent and must fail
+before any compilation. No fixture compiler task is requested.
