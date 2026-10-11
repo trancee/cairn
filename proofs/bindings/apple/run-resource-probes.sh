@@ -33,7 +33,13 @@ finish() {
     if ! dscl . -delete "/Users/$user"; then result=1; fi
   fi
   if [ "$mounted" -eq 1 ]; then
-    if ! hdiutil detach "$volume"; then result=1; fi
+    if ! hdiutil detach "$volume"; then
+      result=1
+      echo 'DIAGNOSTIC: failed scratch detach; open-file holder PIDs and command names only'
+      "$python" -I -c \
+        'import subprocess, sys; subprocess.run(["/usr/sbin/lsof", "-nP", "-Fpc", "+f", "--", sys.argv[1]], timeout=15, check=False)' \
+        "$volume" || echo 'DIAGNOSTIC: open-file holder collection failed'
+    fi
   fi
   echo "DIAGNOSTIC: hosted-only resource fixture retained at $work"
   exit "$result"

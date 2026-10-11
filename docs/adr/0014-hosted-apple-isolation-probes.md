@@ -420,3 +420,12 @@ are unchanged. The Apple adapter declares JVM/iOS device/simulator ARM64,
 uses the frozen Ubique source path and requires assigned CARGO_TARGET_DIR.
 Native commonization is enabled. Effective target configuration and binding
 generation remain unverified until their separate hosted CLI gates run.
+
+Selection verification at `9004764` in
+[run 38126082975](https://github.com/trancee/cairn/actions/runs/38126082975)
+never reached preparation: every benign boundary/resource assertion passed,
+but final HFS+ scratch detachment failed with `Resource busy` after dedicated
+UID cleanup. This is not a fixture-selection result. On detach failure,
+collect only open-file holder PIDs and command names with a 15-second deadline;
+retain the original failure. No retry, forced detach, unrelated process kill
+or budget change is authorized by this diagnostic.
