@@ -720,3 +720,10 @@ Use its documented `--no-llvm-bc` mode for the scoped machine-code allocator
 thunk diagnostic and state that excluded bitcode is not inspected. Do not
 ignore a tool error or claim complete archive analysis; actual allocator
 symbols must still be found and their machine-code targets inspected.
+
+Run `38142418613` collected all three delivered ARM64 hashes/symbol sets
+with unchanged inputs and cleanup, but disassembly emitted missing-symbol
+warnings rather than thunk bodies. This diagnostic green is not allocator
+evidence. Derive exact disassembly names from objdump's own symbol table and
+do not demangle while selecting symbols; include relocations for archive
+branch-target identity. Require actual thunk bodies before acceptance.

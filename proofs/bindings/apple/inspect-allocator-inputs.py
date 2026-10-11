@@ -117,10 +117,26 @@ def inspect(tools):
                     if not allocators:
                         raise RuntimeError(f"No Rust allocator symbols identified: {name}")
                     print(f"ALLOCATOR-SYMBOLS: {name} {allocators}", flush=True)
-                    subprocess.run([
-                        objdump, "--demangle", "--disassemble",
-                        "--disassemble-symbols=" + ",".join(allocators), str(destination),
-                    ], check=True)
+                    table = subprocess.check_output(
+                        [objdump, "--syms", str(destination)], text=True
+                    )
+                    disassembly_names = sorted({
+                        row.split()[-1] for row in table.splitlines()
+                        if row.split() and any(part in row.split()[-1] for part in (
+                            "__rust_alloc", "__rust_dealloc", "__rust_realloc",
+                        ))
+                    })
+                    if not disassembly_names:
+                        raise RuntimeError(f"No allocator disassembly names identified: {name}")
+                    disassembly = subprocess.check_output([
+                        objdump, "--disassemble", "--reloc",
+                        "--disassemble-symbols=" + ",".join(disassembly_names),
+                        str(destination),
+                    ], text=True)
+                    print(disassembly)
+                    for symbol in disassembly_names:
+                        if "<" + symbol + ">:" not in disassembly:
+                            raise RuntimeError(f"Allocator thunk body missing: {symbol}")
     if artifacts == 0:
         raise RuntimeError("No delivered Ubique runtime artifacts found")
     print("INSPECTION ONLY: classify candidates and inspect delivered allocator thunks before FFI")
