@@ -595,3 +595,12 @@ manifests, copy root-owned read-only source/configuration into the trusted
 tool subtree and verify hashes after metadata replay. Missing vendor config
 now has an explicit fail-closed diagnostic. No compilation or Rustup fallback
 is introduced.
+
+Vendored Cargo metadata passed all nine manifest/target combinations in
+run `38132518944`, with unchanged vendor/tool/Gradle hashes. Native startup
+then failed as intended on a missing compiler in run `38132887676`.
+Prepare official `kotlin-native-prebuilt-macos-aarch64-2.4.20.tar.gz`,
+verified against release SHA-256
+`b70d4fd2855fdb054fc9604beaa7de83c18d786454ae948de72a226e81f07dc8`,
+and freeze it with the tools. Probe only `konanc -version`; SDK/linker/
+platform-library completeness and fixture compilation remain unverified.

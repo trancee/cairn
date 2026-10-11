@@ -21,6 +21,13 @@ curl --fail --silent --show-error --location \
   -o "$output/gradle.zip"
 printf '%s  %s\n' "$gradle_hash" "$output/gradle.zip" | shasum -a 256 --check
 unzip -q "$output/gradle.zip" -d "$output"
+curl --fail --silent --show-error --location \
+  https://github.com/JetBrains/kotlin/releases/download/v2.4.20/kotlin-native-prebuilt-macos-aarch64-2.4.20.tar.gz \
+  -o "$output/kotlin-native.tar.gz"
+printf '%s  %s\n' b70d4fd2855fdb054fc9604beaa7de83c18d786454ae948de72a226e81f07dc8 \
+  "$output/kotlin-native.tar.gz" | shasum -a 256 --check
+mkdir "$output/kotlin-native"
+tar -xzf "$output/kotlin-native.tar.gz" --strip-components=1 -C "$output/kotlin-native"
 export JAVA_HOME="$CAIRN_DAEMON_JAVA_HOME"
 {
   rustup run "$rust" rustc --version --verbose
@@ -40,6 +47,7 @@ git -C "$output/ubique" checkout --quiet b819fb4ea33d0ddeb3f1970e5b0d7367c3c7d30
 test "$(git -C "$output/ubique" rev-parse HEAD)" = b819fb4ea33d0ddeb3f1970e5b0d7367c3c7d300
 rustup run "$rust" cargo fetch --locked --manifest-path "$output/ubique/bindgen/Cargo.toml"
 shasum -a 256 "$output/gradle.zip" \
+  "$output/kotlin-native.tar.gz" \
   "$scripts/../linux-android/sdk/rust/Cargo.lock" \
   "$output/ubique/Cargo.lock" > "$output/inputs.sha256"
 echo 'PASS: pinned Apple toolchain and Cargo downloads prepared; no fixture build or isolation acceptance'
