@@ -679,3 +679,8 @@ source candidates for fixture/runtime/bindgen across the three Apple targets,
 plus delivered runtime archive identities/native entry names. This read-only
 diagnostic is not an allocator-acceptance test: candidate classification,
 generated-source limits and delivered allocator thunks remain separate gates.
+
+Initial collection in run `38138281856` failed before source inspection:
+the explicit diagnostic environment omitted the pinned Rust `bin` from PATH,
+so Cargo could not execute `rustc -vV`. Supply that existing immutable tool
+directory, matching the earlier metadata gate; do not add Rustup or downloads.
