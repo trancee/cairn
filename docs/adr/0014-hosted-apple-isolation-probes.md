@@ -1101,3 +1101,14 @@ graph was returned. Domain removal and UID cleanup passed; no stack cause
 is established. The owner separately approved 20 seconds for profiler
 setup/symbolication only, retaining the one-second sample window, 1 MiB
 file ceiling, stack-only output and unchanged outer lifecycle deadline.
+
+Run `38219474925` also timed out profiling before a stack was returned;
+do not increase that ceiling again or infer a stack cause.
+The owner approved a separate trusted lifecycle-context experiment:
+`launchctl asuser 59000` before the existing child privilege drop.
+The launchctl manual documents adopting Mach bootstrap/audit context without
+changing credentials/environment. Current `setuid`/`setgid`/HOME setup does
+not explicitly select that context. First require the supervised child to
+observe `manageruid` 59000, with exact-domain cleanup; missing CLI support
+must fail the test before implementation. Generated/build commands remain
+unchanged and launchd-helper resource inheritance is still unproven.

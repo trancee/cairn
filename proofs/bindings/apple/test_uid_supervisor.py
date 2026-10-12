@@ -13,6 +13,21 @@ from pathlib import Path
     "Dedicated-UID supervision requires the disposable hosted root fixture",
 )
 class DedicatedSupervisorTest(unittest.TestCase):
+    def test_child_can_select_only_the_dedicated_user_bootstrap_context(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "proof.log"
+
+            result = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name("uid-supervisor.py")),
+                 "--user-bootstrap", "--bootout-user-domain", str(output),
+                 "/bin/launchctl", "manageruid"],
+                capture_output=True, timeout=25, text=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(output.read_text().strip(), "59000")
+            self.assertIn("PASS: dedicated UID has no remaining processes", result.stdout)
+
     def test_stack_sampling_requires_a_scheduled_process_diagnostic(self):
         with tempfile.TemporaryDirectory() as directory:
             result = subprocess.run(
