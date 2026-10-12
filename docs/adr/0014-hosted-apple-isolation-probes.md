@@ -1036,3 +1036,11 @@ Two distinct preceding prerequisite failures are retained; do not infer a
 cleanup green from local tests or rerun unchanged jobs until one happens
 to pass. Benign scratch cleanup reliability must be diagnosed alongside
 the simulator domain boundary before final acceptance.
+
+The benign preflight failure `38169654181` reports "couldn't eject" after
+all UID/workload checks pass; recursive scratch lsof returned no retained
+holder identity. Distinguish volume unmount from whole-image eject before
+assuming a caller holder. Make ordinary detach verbose and collect only
+device/mount/ejectability fields from exact-volume `diskutil info` after
+failure, with a five-second diagnostic deadline. No retry, force, service
+mutation or relaxed success check is added.
