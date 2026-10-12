@@ -1141,3 +1141,17 @@ Do not repeat unchanged hosted boot probes, relax the acceptance contract,
 or provision/build on the excluded shared local Mac. Preserve compilation/
 JVM/linkage/inventory evidence separately from incomplete simulator/hardware
 execution and whole-runtime containment.
+
+## Separate hosted functional runtime lane
+
+The owner subsequently selected a separate fresh hosted functional-runtime
+job using the normal runner user and CoreSimulator context. Strict offline
+build controls stay unchanged; strict issue-45 acceptance and physical-device
+proof remain blocked. Runtime helper filesystem/resource/network guarantees
+are weaker and must not be relabeled as strict containment.
+Remove the failed custom-account inventory/boot path from the owning build
+sequence. Compile the canonical Kotlin smoke consumer as an iOS-simulator
+ARM64 executable, transfer only checksum-verified fixture bytes to the fresh
+job, and run bounded generated calls with exact-device cleanup. No signing
+or project secrets. First request the owning executable-link task before
+declaring that binary: it must fail for the absent task, not setup.

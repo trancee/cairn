@@ -7,6 +7,7 @@ case "$task" in
   :sdk:installBindgen|:sdk:buildBindings|:consumer:interopSmoke|:sdk:tasks) ;;
   :sdk:compileKotlinIosArm64|:sdk:compileKotlinIosSimulatorArm64|:sdk:compileNativeMainKotlinMetadata) ;;
   :sdk:linkDebugFrameworkIosArm64|:sdk:linkDebugFrameworkIosSimulatorArm64) ;;
+  :sdk:linkDebugExecutableIosSimulatorArm64) ;;
   *) echo "FAIL: unsupported binding proof task: $task" >&2; exit 2 ;;
 esac
 fixture="$HOME/fixture-targets"
@@ -46,6 +47,10 @@ export IPHONEOS_DEPLOYMENT_TARGET=15.0
 if [ "$task" = :consumer:interopSmoke ]; then
   test ! -e "$fixture/consumer/src"
   ln -s "$tools/fixture/consumer/src" "$fixture/consumer/src"
+fi
+if [ "$task" = :sdk:linkDebugExecutableIosSimulatorArm64 ]; then
+  test ! -e "$fixture/sdk/simulator-smoke"
+  ln -s "$tools/fixture/consumer/src/jvmMain/kotlin" "$fixture/sdk/simulator-smoke"
 fi
 set --
 if [ "$task" = :sdk:tasks ]; then set -- --all; fi

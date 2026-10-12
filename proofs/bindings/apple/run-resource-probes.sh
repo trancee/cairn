@@ -125,59 +125,6 @@ if [ "$#" -eq 2 ]; then
   test "$tools" = /opt/cairn-apple-tools
   test "$(stat -f %u "$tools")" -eq 0
   sudo -n -u "$user" /bin/test -x "$tools/rust/bin/rustc"
-  cp "$work/build.sb" "$work/simulator-inventory.sb"
-  cat "$scripts/simulator-inventory.sb" >> "$work/simulator-inventory.sb"
-  chmod 0644 "$work/simulator-inventory.sb"
-  simulator_result=0
-  "$python" -I "$scripts/uid-supervisor.py" --seconds 300 --diagnose-after 10 \
-    "$work/proof-output/simulator-access.log" \
-    /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
-    -D PRIVATE_IPC=false -f "$work/simulator-inventory.sb" \
-    /bin/bash "$tools/check-simulator-access.sh" "$python" || simulator_result=$?
-  "$python" -I -c '
-import json, subprocess
-from pathlib import Path
-result = subprocess.run(
-    ["/bin/ps", "-axo", "uid=,pid=,ppid=,rss=,vsz=,time=,comm="],
-    check=True, capture_output=True, text=True, timeout=5)
-for line in result.stdout.splitlines():
-    uid, pid, parent, rss, virtual, cpu, command = line.split(maxsplit=6)
-    name = Path(command).name
-    if name in {"CoreSimulatorService", "simdiskimaged"}:
-        print("DIAGNOSTIC: simulator-helper " + json.dumps({
-            "uid": int(uid), "pid": int(pid), "ppid": int(parent),
-            "resident_kib": int(rss), "virtual_kib": int(virtual),
-            "cpu_time": cpu, "command": name}))
-' || echo 'DIAGNOSTIC: simulator helper identity/resource collection failed'
-  "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
-  if [ "$simulator_result" -ne 0 ]; then
-    "$python" -I -c \
-      'import subprocess; subprocess.run(["/usr/bin/log","show","--last","2m","--style","compact","--predicate","process == \"kernel\" AND eventMessage CONTAINS \"Sandbox\" AND eventMessage CONTAINS \"simctl(\""],timeout=15,check=True)' \
-      || echo 'DIAGNOSTIC: targeted simulator sandbox denial collection failed'
-    exit "$simulator_result"
-  fi
-  echo 'PASS: trusted inventory-only service probe; generated code retains blanket Mach denial'
-  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 \
-    "$work/proof-output/simulator-lifecycle.log" \
-    /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
-    -D PRIVATE_IPC=false -f "$work/simulator-inventory.sb" \
-    /bin/bash "$tools/check-simulator-lifecycle.sh" "$python" create
-  boot_result=0
-  "$python" -I "$scripts/uid-supervisor.py" --seconds 300 --diagnose-after 120 \
-    --bootout-user-domain --user-bootstrap \
-    "$work/proof-output/simulator-boot.log" \
-    /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
-    -D PRIVATE_IPC=false -f "$work/simulator-inventory.sb" \
-    /bin/bash "$tools/check-simulator-lifecycle.sh" "$python" boot || boot_result=$?
-  if [ "$boot_result" -ne 0 ]; then
-    "$python" -I -c \
-      'import subprocess; subprocess.run(["/usr/bin/log","show","--last","2m","--style","compact","--predicate","process == \"kernel\" AND eventMessage CONTAINS \"Sandbox\" AND eventMessage CONTAINS \"simctl(\""],timeout=15,check=True)' \
-      || echo 'DIAGNOSTIC: targeted boot sandbox denial collection failed'
-    "$python" -I -c \
-      'import runpy, sys; runpy.run_path(sys.argv[1])["report_account_processes"](59000)' \
-      "$scripts/uid-supervisor.py" || echo 'DIAGNOSTIC: remaining boot process collection failed'
-    exit "$boot_result"
-  fi
   cp "$scripts/probe-toolchains.sh" "$work/inputs/probe-toolchains.sh"
   chmod 0644 "$work/inputs/probe-toolchains.sh"
   "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/toolchains.log" \
@@ -263,6 +210,11 @@ for line in result.stdout.splitlines():
       -D PRIVATE_IPC=true -f "$work/build.sb" \
       /bin/bash "$tools/check-fixture-bindings.sh" "$tools" "$task"
   done
+  "$python" -I "$scripts/uid-supervisor.py" --seconds 300 \
+      "$work/proof-output/fixture-simulator-executable.log" \
+      /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+      -D PRIVATE_IPC=true -f "$work/build.sb" \
+      /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :sdk:linkDebugExecutableIosSimulatorArm64
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
   | tee "$output/dedicated-sandbox.log"
