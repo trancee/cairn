@@ -129,7 +129,7 @@ if [ "$#" -eq 2 ]; then
   cat "$scripts/simulator-inventory.sb" >> "$work/simulator-inventory.sb"
   chmod 0644 "$work/simulator-inventory.sb"
   simulator_result=0
-  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 \
+  "$python" -I "$scripts/uid-supervisor.py" --seconds 300 --diagnose-after 10 \
     "$work/proof-output/simulator-access.log" \
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=false -f "$work/simulator-inventory.sb" \

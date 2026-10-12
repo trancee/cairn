@@ -1056,3 +1056,10 @@ Nested command ceilings total at most 290 seconds. Replace recursive-directory
 lsof selection with exact-filesystem selection (`+f -- <scratch>`) so deleted
 or unenumerated open files on the volume are eligible for identity-only
 diagnostics. This does not force/retry detach or claim a holder was found.
+
+Run `38212924042` at `c03d07d` expired the earlier cold inventory's unchanged
+60-second ceiling, never reaching boot. UID cleanup/ordinary detach passed.
+The owner separately approved 300 seconds for trusted inventory startup,
+with a ten-second identity-only process snapshot and all other controls
+unchanged. This is a measured cold-start diagnostic budget change, not proof
+of reliability or permission for generated runtime calls.
