@@ -35,8 +35,6 @@ cp "$scripts/inspect-allocator-inputs.py" "$destination/inspect-allocator-inputs
 cp "$scripts/check-fixture-rust.sh" "$destination/check-fixture-rust.sh"
 cp "$scripts/inspect-fixture-artifacts.py" "$destination/inspect-fixture-artifacts.py"
 cp "$scripts/check-fixture-bindings.sh" "$destination/check-fixture-bindings.sh"
-cp "$scripts/check-simulator-access.sh" "$destination/check-simulator-access.sh"
-cp "$scripts/check-simulator-lifecycle.sh" "$destination/check-simulator-lifecycle.sh"
 mkdir "$destination/generator-tools"
 cp "$scripts/generator-cargo.sh" "$destination/generator-tools/cargo"
 chmod 0755 "$destination/generator-tools/cargo"

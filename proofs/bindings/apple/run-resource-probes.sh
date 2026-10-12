@@ -221,6 +221,17 @@ if [ "$#" -eq 2 ]; then
       /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
       -D PRIVATE_IPC=true -f "$work/build.sb" \
       /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :sdk:linkDebugExecutableIosSimulatorArm64
+  binary="$volume/fixture-targets/sdk/build/bin/iosSimulatorArm64/debugExecutable/CairnSimulatorSmoke.kexe"
+  test -f "$binary"
+  test ! -L "$binary"
+  test "$(stat -f %z "$binary")" -le 134217728
+  mkdir -m 0755 "$output/simulator-payload"
+  cp "$binary" "$output/simulator-payload/CairnSimulatorSmoke.kexe"
+  cmp "$binary" "$output/simulator-payload/CairnSimulatorSmoke.kexe"
+  chmod 0444 "$output/simulator-payload/CairnSimulatorSmoke.kexe"
+  (cd "$output/simulator-payload" && shasum -a 256 CairnSimulatorSmoke.kexe > payload.sha256)
+  chmod 0444 "$output/simulator-payload/payload.sha256"
+  echo 'PASS: verified simulator executable exported before scratch teardown'
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
   | tee "$output/dedicated-sandbox.log"

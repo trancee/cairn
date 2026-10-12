@@ -1155,3 +1155,23 @@ ARM64 executable, transfer only checksum-verified fixture bytes to the fresh
 job, and run bounded generated calls with exact-device cleanup. No signing
 or project secrets. First request the owning executable-link task before
 declaring that binary: it must fail for the absent task, not setup.
+
+The owning-task red is observed in
+[run 38224421218](https://github.com/trancee/cairn/actions/runs/38224421218)
+at `f45780f`: prior JVM/Native/framework tasks pass and Gradle rejects absent
+`linkDebugExecutableIosSimulatorArm64`. An earlier run `38224109195` failed
+benign scratch eject, not the intended seam; exact whole-disk identity is now
+retained before detach so post-unmount failures remain diagnosable.
+
+Declare the executable and map only `iosSimulatorArm64Main` to the immutable
+canonical smoke source. Root exports compared bytes after supervised linkage;
+the fresh functional job validates the closed three-file payload, SHA-256,
+same-run source revision, ARM64/Mach-O simulator identity and minimum OS
+`15.0`. Real payload-validation tests go red on the absent validator, then
+green for valid input and corrupt/missing/symlink/oversized/extra/path-traversal/
+revision-mismatched input. Runtime uses a private device set and recorded UUID,
+with 300-second bootstatus, 60-second calls and separate bounded cleanup.
+The obsolete disabled-account simulator scripts/profile and freeze consumers
+are removed; historical evidence remains in this ADR and Git history.
+This is an explicit functional lane, not a fallback inside the strict cell.
+No API/version/SDK/signing change or whole-helper containment claim is made.

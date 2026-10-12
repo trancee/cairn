@@ -31,6 +31,13 @@ kotlin {
         binaries.framework {
             baseName = "CairnBindingSmoke"
         }
+        binaries.executable {
+            baseName = "CairnSimulatorSmoke"
+            entryPoint = "main"
+        }
+    }
+    sourceSets.named("iosSimulatorArm64Main") {
+        kotlin.srcDir("simulator-smoke")
     }
     jvmToolchain(21)
 }

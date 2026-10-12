@@ -61,6 +61,13 @@ are complete.
 
 ## Comments
 
+- 2026-10-12: Owner subsequently approved a separate fresh GitHub macOS
+  functional-runtime job with normal-user CoreSimulator services. Strict
+  offline build controls remain unchanged; canonical Kotlin generated calls
+  will run from the checksum/revision-verified simulator executable. This is
+  not a strict-runtime acceptance waiver: helper filesystem/resource/network
+  containment and physical-device proof remain blocked. The failed disabled-
+  login simulator path is removed from the owning build sequence.
 - 2026-10-12: Final replay `38222383057` at `f2c73ed` repeats boot timeout
   with verified domain/UID/detach cleanup. Owner selected strict infrastructure,
   rejecting a weaker functional-only hosted lane. No dedicated Apple host/VM,

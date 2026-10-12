@@ -1,8 +1,41 @@
 # Apple isolation probes
 
-Internal benign probes for [issue 45](../../../.scratch/cairn-r1/issues/45-provision-isolated-build-runner.md),
-not a binding build or accepted Apple runner. See
+Hosted binding-build probes and a separately approved functional simulator lane
+for [issue 45](../../../.scratch/cairn-r1/issues/45-provision-isolated-build-runner.md),
+not an accepted strict Apple runtime runner. See
 [ADR 0014](../../../docs/adr/0014-hosted-apple-isolation-probes.md).
+
+## Current owning lanes
+
+`apple-toolchain-preparation.yml` retains the dedicated-UID, frozen-input,
+offline build cell and its existing resource/network controls. It no longer
+boots CoreSimulator under the disabled-login account. Its final owning task
+is `:sdk:linkDebugExecutableIosSimulatorArm64`, using the same canonical
+`consumer/src/jvmMain/kotlin/Smoke.kt` as the JVM proof through an Apple-only
+source mapping. The executable must have simulator ARM64 architecture and
+Mach-O minimum OS `15.0`; root exports verified bytes before scratch detach.
+Only successful build, cleanup and immutable-input checks permit upload.
+
+The dependent `functional-runtime` job receives that same-run executable,
+its SHA-256 manifest and exact source revision on a fresh `macos-26` VM.
+It rejects extra files, symlinks, malformed manifests, oversized or changed
+binaries and revision mismatches before execution. It uses the normal runner
+user's CoreSimulator services and a new private device set, creates one
+`iPhone-17` with iOS `26.4.1`, boots ARM64 and executes the canonical Kotlin
+consumer through `simctl spawn`. Success requires its arithmetic/boundary,
+typed-error, string and deterministic object-lifetime assertions, followed
+by exact recorded-device shutdown/deletion. The job has a ten-minute ceiling,
+a 480-second/64 MiB execution collector, 300-second bootstatus ceiling,
+60-second generated-call ceiling and a separate 75-second cleanup collector.
+
+This runtime lane is **functional-only**: simulator helper process/disk/network
+limits and access outside the private set are not strictly contained. No
+project secrets or signing are supplied, but this is not a credential-free
+host boundary. Strict issue-45 acceptance, intermittent scratch-eject
+reliability, physical iPhone execution and production PQC/BLE remain open.
+Hosted boot/generated-call success must be observed before claiming it.
+
+## Earlier probe evidence
 
 On macOS with Xcode Python available:
 

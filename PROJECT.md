@@ -108,6 +108,14 @@ not earlier emulator instability or full Linux runner acceptance.
 
 ## Verified profile
 
+The owner now permits a separate normal-user functional CoreSimulator job on
+the supplied fresh GitHub `macos-26` VM. The owning workflow retains strict
+offline build controls and transfers only the canonical simulator smoke
+executable, checksum and source revision to that fresh runtime VM. Functional
+success must be observed; it will not close strict helper containment,
+issue-45 acceptance or physical-device proof. See the current lane contract
+in the [Apple proof README](proofs/bindings/apple/README.md).
+
 Apple isolation assessment has resumed using benign
 [hosted probes](proofs/bindings/apple/README.md) under
 [ADR 0014](docs/adr/0014-hosted-apple-isolation-probes.md). The unprotected

@@ -68,6 +68,9 @@ case "$task" in
   :sdk:linkDebugFrameworkIosSimulatorArm64)
     binary="$fixture/sdk/build/bin/iosSimulatorArm64/debugFramework/CairnBindingSmoke.framework/CairnBindingSmoke"
     platform=IOSSIMULATOR ;;
+  :sdk:linkDebugExecutableIosSimulatorArm64)
+    binary="$fixture/sdk/build/bin/iosSimulatorArm64/debugExecutable/CairnSimulatorSmoke.kexe"
+    platform=IOSSIMULATOR ;;
   *) exit 0 ;;
 esac
 vtool=$(/usr/bin/xcrun --find vtool)
@@ -78,7 +81,7 @@ if ! awk -v platform="$platform" '
   $1 == "minos" && $2 == "15.0" { floor_matches++ }
   END { exit !(platform_matches == 1 && floor_matches == 1) }
 ' "$HOME/fixture-build-version.txt"; then
-  echo 'FAIL: fixture framework platform/deployment floor mismatch' >&2
+  echo 'FAIL: fixture binary platform/deployment floor mismatch' >&2
   exit 1
 fi
-echo "PASS: generated fixture linked framework $platform deployment floor 15.0"
+echo "PASS: generated fixture linked binary $platform deployment floor 15.0"
