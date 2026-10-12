@@ -1063,3 +1063,15 @@ The owner separately approved 300 seconds for trusted inventory startup,
 with a ten-second identity-only process snapshot and all other controls
 unchanged. This is a measured cold-start diagnostic budget change, not proof
 of reliability or permission for generated runtime calls.
+
+Run `38215350684` at `8d5071e` passed cold inventory and private creation,
+then expired the approved 300-second boot cell. Bootstatus remained on
+`00LaunchServicesMigrator` for over four minutes. Exact-domain removal,
+empty UID verification and ordinary scratch detach passed; no holder was
+needed in this run. This closes the observed domain cleanup integration,
+not intermittent detach reliability or successful boot.
+Move the boot's existing one-shot process snapshot from ten to 120 seconds
+to observe the stalled migration phase rather than early simulator launch.
+No second snapshot, new permission, timeout increase or migration bypass is
+added. Earlier nested command timeouts did not stop bootstatus before the
+outer deadline; outer supervision remains the observed hard boundary.
