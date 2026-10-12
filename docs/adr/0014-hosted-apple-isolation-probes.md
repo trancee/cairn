@@ -1175,3 +1175,16 @@ The obsolete disabled-account simulator scripts/profile and freeze consumers
 are removed; historical evidence remains in this ADR and Git history.
 This is an explicit functional lane, not a fallback inside the strict cell.
 No API/version/SDK/signing change or whole-helper containment claim is made.
+
+Run `38226464134` at `4346431` passes strict owning executable linkage,
+simulator ARM64/minimum OS `15.0`, all frozen-input checks, scratch cleanup
+and same-run delivery. Fresh normal-user bootstatus reports Finished in
+two minutes; the redundant post-boot whole-set list command exceeds its
+15-second ceiling before generated calls. Exact recorded-device shutdown/
+deletion passes. Remove that redundant inventory operation: successful
+bootstatus is already tied to the recorded UUID, and actual generated calls
+are the runtime acceptance seam. Keep creation, boot, call and cleanup bounds.
+Use the documented standalone executable launch contract from Kotlin's
+[XcodeSimulatorExecutor](https://github.com/JetBrains/kotlin/blob/master/native/executors/src/main/kotlin/org/jetbrains/kotlin/native/executors/XcodeSimulatorExecutor.kt):
+`simctl spawn --standalone <UUID> <executable>`. No changed runtime limit,
+default-set mutation or successful generated-call claim is implied yet.

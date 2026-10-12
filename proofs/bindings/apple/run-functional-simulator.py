@@ -108,11 +108,8 @@ def main():
                    check=True, timeout=30, env=environment)
     subprocess.run([*command, "bootstatus", device_id],
                    check=True, timeout=300, env=environment)
-    selected = [device for device in devices() if device["udid"].lower() == device_id]
-    if len(selected) != 1 or selected[0]["state"] != "Booted":
-        raise SystemExit("FAIL: functional simulator is not uniquely booted")
-    print("PASS: normal-user functional ARM64 simulator booted", flush=True)
-    subprocess.run([*command, "spawn", device_id, str(binary)],
+    print("PASS: exact normal-user functional ARM64 bootstatus completed", flush=True)
+    subprocess.run([*command, "spawn", "--standalone", device_id, str(binary)],
                    check=True, timeout=60, env=environment)
     verify_payload(arguments.payload, os.environ.get("GITHUB_SHA", ""))
     print("PASS: delivered generated simulator consumer exited successfully", flush=True)
