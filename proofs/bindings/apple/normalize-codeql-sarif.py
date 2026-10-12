@@ -42,6 +42,8 @@ def normalize_sarif(document, project):
             if base_id is not None and not isinstance(base_id, str):
                 raise MappingError("invalid-uri-base")
             base = bases.get(base_id, {})
+            if base_id == "%SRCROOT%" and base_id not in bases:
+                base = {"uri": "file://" + roots[0]}
             if "uriBaseId" in location and (
                 not isinstance(base, dict) or not isinstance(base.get("uri"), str)
             ):

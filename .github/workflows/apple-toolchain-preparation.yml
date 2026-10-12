@@ -135,6 +135,7 @@ jobs:
             "$RUNNER_TEMP/apple-preparation/native-inputs.sha256") \
             > "$RUNNER_TEMP/apple-preparation/native-integrity.log"
       - name: Record same-run simulator payload provenance
+        if: ${{ !inputs.codeql }}
         run: |
           printf '%s\n' "$GITHUB_SHA" | sudo -n tee \
             "$RUNNER_TEMP/apple-preparation/simulator-payload/revision.txt"
@@ -168,6 +169,7 @@ jobs:
           ' > "$RUNNER_TEMP/apple-preparation/codeql-denials.log"
           cat "$RUNNER_TEMP/apple-preparation/codeql-denials.log"
       - name: Deliver strictly built simulator executable
+        if: ${{ !inputs.codeql }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: apple-simulator-payload
@@ -191,6 +193,7 @@ jobs:
             ${{ runner.temp }}/apple-preparation/cargo-inputs.sha256
             ${{ runner.temp }}/apple-preparation/codeql*.log
             ${{ runner.temp }}/apple-preparation/codeql-startup-logs
+            ${{ runner.temp }}/apple-preparation/codeql-failed-analysis
             ${{ runner.temp }}/apple-preparation/native*.log
             ${{ runner.temp }}/apple-preparation/native-inputs.sha256
           if-no-files-found: error

@@ -111,19 +111,20 @@ not earlier emulator instability or full Linux runner acceptance.
 Post-merge CodeQL's automatic Kotlin trial failed `none`-mode extraction in
 run `38249821951`; default Actions/Python/Rust scanning remains configured.
 The owner approved a build-backed advanced-setup migration preserving strict
-offline build controls. Opt-in direct tracing in the Apple cell is the first
-diagnostic. Run `38263225443` at `799d758` verifies actual Kotlin database
-finalization inside that cell with the approved exact CodeQL-only `/opt`
-parent read; downloaded metadata and source archive agree. Mandatory
-compiled-AST coverage and bundled offline security-suite gates are now wired
-but their hosted execution, SARIF mapping and completed setting migration
-remain unverified. The staged advanced workflow preserves Actions/Python/Rust,
-calls strict Kotlin analysis and supports upload-free validation. CodeQL mode
-omits unrelated functional simulator runtime; ordinary binding proof is
-unchanged. Run `38267253216` failed during query-pack preparation before target
-work; the published-pack lookup is corrected for the next hosted replay.
-Default scanning stays enabled; no deployment approval or migration success
-is implied.
+offline build controls. Run `38263225443` at `799d758` verifies actual Kotlin
+database finalization inside the Apple cell with the approved exact
+CodeQL-only `/opt` parent read; downloaded metadata and archive agree.
+Run `38268914707` verifies Actions/Python/Rust analyses and actual Kotlin
+compilation-unit coverage for all three tracked and both generated binding
+sources, plus bundled query execution. Kotlin SARIF mapping subsequently
+fails on an implicit URI base; the standard `%SRCROOT%` interpretation is
+corrected and failed-report retention added. Mapping/export/cutover remain
+unverified. The staged advanced workflow preserves all existing languages
+and supports upload-free feature-branch/dispatch validation. CodeQL mode
+omits native-only framework/executable proof, payload export and unrelated
+functional simulator runtime; ordinary binding mode retains them with
+unchanged controls. Default scanning stays enabled; no deployment approval
+or migration success is implied.
 See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md).
 
 The owner now permits a separate normal-user functional CoreSimulator job on

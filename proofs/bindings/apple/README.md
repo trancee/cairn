@@ -71,8 +71,9 @@ requires every tracked `.kt` source plus generated binding evidence, and runs
 the unchanged bundled Java/Kotlin security suite offline. Analysis has its
 own existing 300-second command ceiling, two threads and 2 GiB requested
 evaluator RAM; all caches/results remain in bounded scratch. Coverage and
-SARIF export require success. These new hosted gates and repository-path
-mapping remain unverified. This is not yet a verified replacement scan or Android packaging
+SARIF export require success. Compiled coverage and suite execution pass in
+run `38268914707`; mapped export and processed GitHub results remain
+unverified. This is not yet a verified replacement scan or Android packaging
 proof; default Actions/Python/Rust scanning stays enabled. See
 [ADR 0015](../../../docs/adr/0015-build-backed-kotlin-codeql.md).
 
@@ -84,9 +85,21 @@ PR and weekly runs upload after the separately approved setting
 cutover. Only mapped `java-kotlin.sarif` is uploaded; raw SARIF and compiled
 source inventory remain diagnostic artifacts. Generated paths retain their
 owning untracked build location, not a fabricated handwritten annotation.
-CodeQL mode skips only the unrelated functional simulator runtime; ordinary
-binding-proof dispatch still requires it. No new scan or cutover success is
-claimed until its hosted execution and processed results are observed.
+CodeQL mode skips the unrelated functional simulator runtime; ordinary
+binding-proof dispatch still requires it. No deployment/cutover success is
+claimed until processed replacement results are observed.
+
+Run `38268914707` passes the three existing language analyses and actual
+Kotlin compilation-unit coverage (three tracked files and both generated
+common/JVM files), then executes the bundled suite. Mapping fails on an
+implicit URI base before successful export. The mapper now handles CodeQL's
+standard undeclared `%SRCROOT%` using the known frozen database source root;
+other unknown bases remain errors. Failed reports are retained separately
+with a failed status. The built-in `3 out of 9` diagnostic is not substituted
+for the explicit compiled-source gate.
+CodeQL mode also omits native-only framework/executable tasks and simulator
+payload export after its JVM/analysis gates; ordinary mode retains them.
+No resource, filesystem, network, integrity or cleanup boundary is relaxed.
 
 On macOS with Xcode Python available:
 

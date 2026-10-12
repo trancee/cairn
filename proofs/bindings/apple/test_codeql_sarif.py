@@ -1,6 +1,9 @@
 import copy
 import importlib.util
 from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 
 
@@ -45,6 +48,17 @@ class CodeQLSarifTest(unittest.TestCase):
         self.assertEqual(
             result["runs"][0]["artifacts"][0]["location"],
             {"uri": PREFIX + "sdk/build/uniffi/Binding.kt"},
+        )
+
+    def test_codeql_implicit_srcroot_uses_the_database_source_root(self):
+        document = self.document({"uri": "consumer/Smoke.kt", "uriBaseId": "%SRCROOT%"})
+        document["runs"][0].pop("originalUriBaseIds")
+
+        result = sarif.normalize_sarif(document, PROJECT)
+
+        self.assertEqual(
+            result["runs"][0]["artifacts"][0]["location"],
+            {"uri": PREFIX + "consumer/Smoke.kt"},
         )
 
     def test_file_uri_escaping_is_preserved(self):
@@ -94,3 +108,19 @@ class CodeQLSarifTest(unittest.TestCase):
             with self.subTest(document=document):
                 with self.assertRaises(sarif.MappingError):
                     sarif.normalize_sarif(document, PROJECT)
+
+    def test_truncated_cli_report_does_not_create_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            report = Path(directory) / "report.sarif"
+            report.write_text('{"version":')
+            output = Path(directory) / "mapped.sarif"
+
+            result = subprocess.run([
+                sys.executable, "-I", str(Path(__file__).with_name("normalize-codeql-sarif.py")),
+                str(report), str(output), str(PROJECT),
+            ], capture_output=True, text=True, timeout=5)
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+            self.assertEqual(result.stderr, "FAIL: Kotlin CodeQL SARIF mapping: JSONDecodeError\n")
+            self.assertFalse(output.exists())

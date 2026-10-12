@@ -1,5 +1,8 @@
 import importlib.util
 from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 
 
@@ -72,3 +75,17 @@ class CodeQLSourcesTest(unittest.TestCase):
             with self.subTest(expected=expected):
                 with self.assertRaises(sources.CoverageError):
                     sources.verify_sources(self.report(), expected, PROJECT)
+
+    def test_truncated_cli_report_has_redacted_typed_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            report = Path(directory) / "report.json"
+            report.write_text('{"#select":')
+
+            result = subprocess.run([
+                sys.executable, "-I", str(Path(__file__).with_name("verify-codeql-sources.py")),
+                str(report), str(Path(directory) / "manifest.json"), str(PROJECT),
+            ], capture_output=True, text=True, timeout=5)
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+            self.assertEqual(result.stderr, "FAIL: Kotlin CodeQL coverage: JSONDecodeError\n")

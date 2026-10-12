@@ -1,6 +1,6 @@
 # ADR 0015: Build-backed Kotlin CodeQL extraction
 
-Status: accepted direction; hosted extraction verified, analysis and migration unverified
+Status: accepted direction; extraction, compiled coverage and queries verified; mapping and migration unverified
 
 ## Context
 
@@ -164,3 +164,31 @@ and deploy the replacement to `main` without an intervening unscanned source
 change. Verify actual processed results for all four languages; revert the
 setting if deployment fails. No SDK API, cryptography, runtime dependency or
 release-version change is introduced.
+
+## Four-language observation
+
+Upload-free [run 38268914707](https://github.com/trancee/cairn/actions/runs/38268914707)
+at `1ecd7659079542961c99520ae572cd98e92b3edf` passes Actions, Python and Rust
+analysis. The Kotlin cell passes actual extraction and the inventory query:
+all three tracked Kotlin compilation units and both generated common/JVM
+units have positive compiled LOC. The bundled Java/Kotlin suite evaluates
+and produces SARIF inside the unchanged analysis ceiling.
+Its built-in summary reports `3 out of 9` Java/Kotlin files; this is not a
+claim that every archived or generated file has a GitHub source annotation.
+The explicit compilation-unit gate supplies the tracked-source evidence.
+
+Mapping then fails `unknown-uri-base`; no successful Kotlin analysis artifact
+or replacement deployment is claimed. CodeQL's official valid-SARIF fixture
+uses `%SRCROOT%` without an `originalUriBaseIds` definition. Interpret only
+that standard implicit ID as the explicitly frozen database source root;
+unknown IDs and malformed explicit definitions still fail. A focused test
+reproduces the exact failure before the fix. Preserve failed analysis files
+with an explicit failed status for subsequent diagnostics, never under the
+successful-analysis artifact name.
+
+CodeQL mode now stops target work after the forced JVM consumer and required
+analysis gates: native-only framework/executable proof and simulator payload
+export belong to the ordinary binding-proof lane, not security analysis.
+Ordinary mode retains all those gates. Frozen inputs, Rust/allocator checks,
+PF controls, private UID, command/file/memory/scratch ceilings, integrity
+verification and cleanup remain required in both modes.
