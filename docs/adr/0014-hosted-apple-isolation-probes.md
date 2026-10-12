@@ -1085,3 +1085,12 @@ The owner approved one bounded stack-only sample of host-side `lsd` owned
 by UID 59000, excluding unrelated processes/arguments/environment/file
 contents. First require the supervisor CLI to reject sampling without a
 scheduled diagnostic; unknown-option rejection is not the expected contract.
+
+The intended red passed its setup and failed the expected contract in
+`38218142377`: `--sample-host-lsd` was unknown rather than rejecting missing
+diagnostic scheduling. Implement opt-in sampling only for the first observed
+host `lsd` with dedicated UID and parent 1, rechecking identity immediately
+before sampling. One-second sample, five-second command deadline, 1 MiB
+sample-file ceiling and zero core; emit at most 180 call-graph lines only,
+not headers, binary paths or arguments. Temporary sample bytes are removed.
+The original outer lifecycle deadline and domain cleanup remain unchanged.

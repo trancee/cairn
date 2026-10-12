@@ -9,6 +9,7 @@ import resource
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -76,7 +77,36 @@ def interrupted(number, _frame):
     raise InterruptedError(number, "Hosted supervisor interrupted")
 
 
-def report_account_processes(uid):
+def sample_host_launch_services(process_id, uid):
+    identity = subprocess.run(
+        ["/bin/ps", "-p", str(process_id), "-o", "uid=,ppid=,comm="],
+        check=True, capture_output=True, text=True, timeout=5,
+    ).stdout.split(maxsplit=2)
+    if (len(identity) != 3 or int(identity[0]) != uid or identity[1] != "1"
+            or Path(identity[2].strip()).name != "lsd"):
+        raise RuntimeError("FAIL: stack target no longer matches dedicated host lsd")
+
+    def limit_sample():
+        resource.setrlimit(resource.RLIMIT_FSIZE, (1024**2, 1024**2))
+        resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+
+    with tempfile.TemporaryDirectory(prefix="cairn-owned-stack-") as directory:
+        output = Path(directory) / "stack.txt"
+        subprocess.run(
+            ["/usr/bin/sample", str(process_id), "1", "10", "-mayDie", "-file", str(output)],
+            check=True, timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            preexec_fn=limit_sample,
+        )
+        text = output.read_text()
+        if "Call graph:" not in text or "Total number in stack" not in text:
+            raise RuntimeError("FAIL: owned stack sample has no bounded call graph")
+        graph = text.split("Call graph:", 1)[1].split("Total number in stack", 1)[0]
+        print(f"DIAGNOSTIC: host-lsd stack pid={process_id}", flush=True)
+        for line in graph.splitlines()[:180]:
+            print("STACK: " + line, flush=True)
+
+
+def report_account_processes(uid, sample_host_lsd=False):
     result = subprocess.run(
         ["/bin/ps", "-axo", "uid=,pid=,ppid=,stat=,time=,comm="],
         check=True, capture_output=True, text=True, timeout=5,
@@ -88,6 +118,9 @@ def report_account_processes(uid):
                 "uid": int(owner), "pid": int(pid), "ppid": int(parent),
                 "state": state, "cpu_time": cpu_time, "command": Path(command).name,
             }), flush=True)
+            if sample_host_lsd and parent == "1" and Path(command).name == "lsd":
+                sample_host_launch_services(int(pid), uid)
+                sample_host_lsd = False
 
 
 def main():
@@ -98,6 +131,7 @@ def main():
     parser.add_argument("--seconds", type=float, default=30)
     parser.add_argument("--diagnose-after", type=float)
     parser.add_argument("--bootout-user-domain", action="store_true")
+    parser.add_argument("--sample-host-lsd", action="store_true")
     parser.add_argument("output")
     parser.add_argument("command", nargs=argparse.REMAINDER)
     arguments = parser.parse_args()
@@ -107,6 +141,8 @@ def main():
     if (arguments.diagnose_after is not None
             and not 0 < arguments.diagnose_after < arguments.seconds):
         parser.error("Process diagnostic time must be positive and before the deadline")
+    if arguments.sample_host_lsd and arguments.diagnose_after is None:
+        parser.error("Stack sampling requires a scheduled process diagnostic")
     account = pwd.getpwnam("cairnbenignprobe")
     if account.pw_uid != 59000 or account.pw_gid != 20 or account.pw_shell != "/usr/bin/false":
         parser.error("Dedicated disabled-login probe account identity does not match")
@@ -128,7 +164,7 @@ def main():
             try:
                 return process.wait(timeout=arguments.diagnose_after)
             except subprocess.TimeoutExpired:
-                report_account_processes(account.pw_uid)
+                report_account_processes(account.pw_uid, arguments.sample_host_lsd)
         return process.wait()
     except InterruptedError as error:
         print(f"FAIL: hosted supervisor interrupted by signal {error.errno}", file=sys.stderr)
