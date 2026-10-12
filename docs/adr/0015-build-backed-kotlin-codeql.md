@@ -128,3 +128,35 @@ caches and output stay inside the existing bounded scratch. No permission,
 network, whole-VM memory, scratch, file or job limit is increased. Export
 coverage and SARIF only after successful execution. Repository-path mapping
 and persistent advanced-setup replacement remain unverified.
+
+Run `38267253216` fails during trusted query-pack preparation before freezing
+or target work; no coverage/query evidence is produced. Select the sole
+bundled Java query-pack version directory and verify its actual standard suite
+instead of assuming a source-checkout metadata filename in a published pack.
+Missing or ambiguous pack inputs fail with an explicit diagnostic.
+
+The SARIF boundary maps frozen fixture and disposable generated-source
+locations to `proofs/bindings/linux-android/`, preserving URI escaping and
+regions. Generated findings retain their real `sdk/build/uniffi/` paths; these
+are untracked build files, not falsely attributed to handwritten source.
+They therefore do not establish GitHub source annotations for generated code.
+Malformed, unknown-base or out-of-scope locations fail before upload.
+
+The staged `codeql.yml` replacement retains Actions/Python/Rust `none`-mode
+analysis, default query suites and the remote threat model, and calls the
+owning strict Kotlin lane. Only mapped Kotlin SARIF is eligible for upload.
+The official `v4.38.3` annotated release tag resolves to commit
+`24c54180a607b1449ed407dd24f251e4e9147c8d`; use that immutable commit, not
+the annotated tag object. Dispatch with `upload=false` for validation while
+default setup remains enabled. No database publication is requested.
+The unrelated functional simulator runtime is skipped only in CodeQL mode;
+ordinary binding-proof dispatch retains it. Strict build gates are unchanged.
+
+Cutover requires all four analyses and mapping to pass, then explicit
+deployment approval for the repair PR and setting transition. GitHub rejects
+advanced CodeQL uploads while default setup is enabled. Keep existing scanning
+until replacement validation, verify the approved uploaded branch analyses,
+and deploy the replacement to `main` without an intervening unscanned source
+change. Verify actual processed results for all four languages; revert the
+setting if deployment fails. No SDK API, cryptography, runtime dependency or
+release-version change is introduced.

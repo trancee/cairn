@@ -22,7 +22,10 @@ mkdir "$HOME/codeql-analysis"
   "$HOME/codeql-analysis/kotlin-sources.json" "$tools/kotlin-sources.json" \
   "$HOME/fixture-targets"
 "$codeql" database analyze "${options[@]}" --no-download \
-  --format=sarifv2.1.0 --output="$HOME/codeql-analysis/java-kotlin.sarif" \
+  --format=sarifv2.1.0 --output="$HOME/codeql-analysis/java-kotlin-raw.sarif" \
   --sarif-category=cairn/java-kotlin --sublanguage-file-coverage \
   "$database" codeql/java-queries:codeql-suites/java-code-scanning.qls
+"$python" -I "$tools/normalize-codeql-sarif.py" \
+  "$HOME/codeql-analysis/java-kotlin-raw.sarif" "$HOME/codeql-analysis/java-kotlin.sarif" \
+  "$HOME/fixture-targets"
 echo 'PASS: bundled Java/Kotlin CodeQL security suite completed offline'

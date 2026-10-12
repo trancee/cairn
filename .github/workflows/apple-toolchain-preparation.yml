@@ -1,6 +1,12 @@
 name: Apple toolchain preparation
 
 on:
+  workflow_call:
+    inputs:
+      codeql:
+        description: Require strict-cell Kotlin extraction and security analysis
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       codeql:
@@ -191,6 +197,7 @@ jobs:
           retention-days: 7
   functional-runtime:
     name: Functional simulator runtime (not strict isolation)
+    if: ${{ !inputs.codeql }}
     needs: prepare
     runs-on: macos-26
     timeout-minutes: 10

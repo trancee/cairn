@@ -76,6 +76,17 @@ mapping remain unverified. This is not yet a verified replacement scan or Androi
 proof; default Actions/Python/Rust scanning stays enabled. See
 [ADR 0015](../../../docs/adr/0015-build-backed-kotlin-codeql.md).
 
+The staged `.github/workflows/codeql.yml` runs existing Actions/Python/Rust
+default suites and calls this strict Kotlin lane. A manual `upload=false`
+dispatch validates without publishing scans while default setup stays enabled.
+Automatic push/PR/weekly runs upload after the separately approved setting
+cutover. Only mapped `java-kotlin.sarif` is uploaded; raw SARIF and compiled
+source inventory remain diagnostic artifacts. Generated paths retain their
+owning untracked build location, not a fabricated handwritten annotation.
+CodeQL mode skips only the unrelated functional simulator runtime; ordinary
+binding-proof dispatch still requires it. No new scan or cutover success is
+claimed until its hosted execution and processed results are observed.
+
 On macOS with Xcode Python available:
 
 ```bash

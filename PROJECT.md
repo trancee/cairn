@@ -117,7 +117,13 @@ finalization inside that cell with the approved exact CodeQL-only `/opt`
 parent read; downloaded metadata and source archive agree. Mandatory
 compiled-AST coverage and bundled offline security-suite gates are now wired
 but their hosted execution, SARIF mapping and completed setting migration
-remain unverified. Default scanning stays enabled.
+remain unverified. The staged advanced workflow preserves Actions/Python/Rust,
+calls strict Kotlin analysis and supports upload-free validation. CodeQL mode
+omits unrelated functional simulator runtime; ordinary binding proof is
+unchanged. Run `38267253216` failed during query-pack preparation before target
+work; the published-pack lookup is corrected for the next hosted replay.
+Default scanning stays enabled; no deployment approval or migration success
+is implied.
 See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md).
 
 The owner now permits a separate normal-user functional CoreSimulator job on

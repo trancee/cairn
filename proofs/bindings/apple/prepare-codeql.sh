@@ -15,9 +15,12 @@ tar -xzf "$prepared/codeql.tar.gz" -C "$prepared"
 test -x "$prepared/codeql/codeql"
 # Use the pinned bundled pack's real dependency context without altering its lock.
 query_pack=$(/usr/bin/find "$prepared/codeql/qlpacks/codeql/java-queries" \
-  -name qlpack.yml -type f)
-test -f "$query_pack"
-cp "$scripts/kotlin-source-inventory.ql" "$(dirname "$query_pack")/CairnSourceInventory.ql"
+  -mindepth 1 -maxdepth 1 -type d)
+if [ ! -f "$query_pack/codeql-suites/java-code-scanning.qls" ]; then
+  echo 'FAIL: pinned Java query pack is missing or ambiguous' >&2
+  exit 1
+fi
+cp "$scripts/kotlin-source-inventory.ql" "$query_pack/CairnSourceInventory.ql"
 git ls-files -z -- '*.kt' | "$(xcrun --find python3)" -I -c \
   'import json, sys; json.dump(sys.stdin.buffer.read().decode("utf-8").split("\0")[:-1], sys.stdout)' \
   > "$prepared/kotlin-sources.json"
