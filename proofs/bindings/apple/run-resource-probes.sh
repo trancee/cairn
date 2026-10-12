@@ -227,6 +227,14 @@ if [ "$#" -eq 2 ]; then
     -D PRIVATE_IPC=true -f "$jvm_profile" \
     /bin/bash "${jvm_command[@]}"
   if [ -d "$tools/codeql" ]; then
+    "$python" -I "$scripts/uid-supervisor.py" --seconds 300 \
+      "$work/proof-output/codeql-analysis.log" \
+      /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+      -D PRIVATE_IPC=false -f "$work/codeql.sb" \
+      /bin/bash "$tools/check-codeql-analysis.sh" "$tools" "$python"
+    ditto "$volume/codeql-analysis" "$output/codeql-analysis"
+    chown -R root:wheel "$output/codeql-analysis"
+    chmod -R a+rX,a-w "$output/codeql-analysis"
     ditto "$volume/codeql-java" "$output/codeql-java"
     chown -R root:wheel "$output/codeql-java"
     chmod -R a+rX,a-w "$output/codeql-java"

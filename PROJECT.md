@@ -112,7 +112,12 @@ Post-merge CodeQL's automatic Kotlin trial failed `none`-mode extraction in
 run `38249821951`; default Actions/Python/Rust scanning remains configured.
 The owner approved a build-backed advanced-setup migration preserving strict
 offline build controls. Opt-in direct tracing in the Apple cell is the first
-diagnostic, not yet verified Kotlin analysis or a completed setting migration.
+diagnostic. Run `38263225443` at `799d758` verifies actual Kotlin database
+finalization inside that cell with the approved exact CodeQL-only `/opt`
+parent read; downloaded metadata and source archive agree. Mandatory
+compiled-AST coverage and bundled offline security-suite gates are now wired
+but their hosted execution, SARIF mapping and completed setting migration
+remain unverified. Default scanning stays enabled.
 See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md).
 
 The owner now permits a separate normal-user functional CoreSimulator job on

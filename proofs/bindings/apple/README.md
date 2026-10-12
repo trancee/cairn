@@ -64,7 +64,15 @@ writes stay denied. Real native sandbox parent-read red/green and negative
 child-read/input-write/ordinary-profile tests pass locally.
 Initialization, actual compilation/tracing and finalization share the existing
 300-second JVM command ceiling and bounded scratch. Export requires successful
-finalization. This is not yet a verified replacement scan or Android packaging
+finalization. Hosted run `38263225443` at `799d758` passes actual Kotlin
+database finalization; downloaded metadata and source archive agree.
+The mandatory analysis gate queries compiled Kotlin compilation units,
+requires every tracked `.kt` source plus generated binding evidence, and runs
+the unchanged bundled Java/Kotlin security suite offline. Analysis has its
+own existing 300-second command ceiling, two threads and 2 GiB requested
+evaluator RAM; all caches/results remain in bounded scratch. Coverage and
+SARIF export require success. These new hosted gates and repository-path
+mapping remain unverified. This is not yet a verified replacement scan or Android packaging
 proof; default Actions/Python/Rust scanning stays enabled. See
 [ADR 0015](../../../docs/adr/0015-build-backed-kotlin-codeql.md).
 

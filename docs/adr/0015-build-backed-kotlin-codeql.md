@@ -1,6 +1,6 @@
 # ADR 0015: Build-backed Kotlin CodeQL extraction
 
-Status: accepted direction; extraction and scan migration unverified
+Status: accepted direction; hosted extraction verified, analysis and migration unverified
 
 ## Context
 
@@ -99,3 +99,32 @@ scratch and resource controls are unchanged; ordinary build commands retain
 the original profile. A real native sandbox test fails on the intended
 parent-read denial before the allowance, then must pass with negative child
 read/input-write and ordinary-profile assertions.
+
+## Extraction and analysis gates
+
+[Run 38263225443](https://github.com/trancee/cairn/actions/runs/38263225443)
+at `799d758523ea6834560cf4cb8b889439ae6f8c63` passes the minimal importer,
+forced real Kotlin compilation, canonical JVM calls, native TRAP import and
+database finalization under unchanged limits. The downloaded database records
+CodeQL `2.27.2`, manual mode and `finalised: true`; its archive contains all
+three tracked Kotlin files and both generated common/JVM binding files.
+Archive presence is not compiled-source coverage or successful security
+analysis. Existing default scanning is still enabled.
+
+The next mandatory gate queries actual `CompilationUnit` values satisfying
+`fromSource()` and `isKotlinSourceFile()`. It compares positive compiled LOC
+against a frozen manifest of every tracked `.kt` file and requires generated
+binding evidence. Missing or malformed evidence fails explicitly. The owned
+inventory query is copied into the checksum-verified bundled Java query pack
+before freezing, reusing its real dependency context without changing package
+metadata, locks or libraries. Its non-summary metric metadata keeps it separate
+from the unchanged standard security suite; it is explicitly executed as a
+required coverage gate, not omitted from analysis.
+
+Execute the bundled `java-code-scanning.qls` suite offline inside the same
+dedicated-UID sandbox, with a separate existing 300-second command ceiling,
+two evaluator threads and 2 GiB requested evaluator RAM. Compilation/evaluator
+caches and output stay inside the existing bounded scratch. No permission,
+network, whole-VM memory, scratch, file or job limit is increased. Export
+coverage and SARIF only after successful execution. Repository-path mapping
+and persistent advanced-setup replacement remain unverified.

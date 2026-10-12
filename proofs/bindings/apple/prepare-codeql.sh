@@ -3,6 +3,7 @@ set -euo pipefail
 test "${GITHUB_ACTIONS:-}" = true
 test "$#" -eq 1
 prepared=$1
+scripts="$(cd "$(dirname "$0")" && pwd -P)"
 test -d "$prepared"
 test ! -e "$prepared/codeql"
 curl --fail --silent --show-error --location \
@@ -12,6 +13,14 @@ printf '%s  %s\n' bdd42bab471ed16277048b35b9be7264d07bd19b7391c37d30c74e9555e61e
   "$prepared/codeql.tar.gz" | shasum -a 256 --check
 tar -xzf "$prepared/codeql.tar.gz" -C "$prepared"
 test -x "$prepared/codeql/codeql"
+# Use the pinned bundled pack's real dependency context without altering its lock.
+query_pack=$(/usr/bin/find "$prepared/codeql/qlpacks/codeql/java-queries" \
+  -name qlpack.yml -type f)
+test -f "$query_pack"
+cp "$scripts/kotlin-source-inventory.ql" "$(dirname "$query_pack")/CairnSourceInventory.ql"
+git ls-files -z -- '*.kt' | "$(xcrun --find python3)" -I -c \
+  'import json, sys; json.dump(sys.stdin.buffer.read().decode("utf-8").split("\0")[:-1], sys.stdout)' \
+  > "$prepared/kotlin-sources.json"
 curl --fail --silent --show-error --location \
   https://dl.google.com/android/repository/platform-37.0_r02.zip \
   -o "$prepared/android-api.zip"

@@ -38,8 +38,11 @@ cp "$scripts/check-fixture-bindings.sh" "$destination/check-fixture-bindings.sh"
 if [ -d "$prepared/codeql" ]; then
   ditto "$prepared/codeql" "$destination/codeql"
   cp "$prepared/android-api.jar" "$destination/android-api.jar"
+  cp "$prepared/kotlin-sources.json" "$destination/kotlin-sources.json"
   cp "$scripts/codeql-consumer.gradle" "$destination/codeql-consumer.gradle"
   cp "$scripts/check-codeql-bindings.sh" "$destination/check-codeql-bindings.sh"
+  cp "$scripts/check-codeql-analysis.sh" "$destination/check-codeql-analysis.sh"
+  cp "$scripts/verify-codeql-sources.py" "$destination/verify-codeql-sources.py"
   cp "$scripts/check-codeql-startup.sh" "$destination/check-codeql-startup.sh"
 fi
 mkdir "$destination/generator-tools"
