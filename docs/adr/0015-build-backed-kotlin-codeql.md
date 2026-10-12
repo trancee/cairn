@@ -52,3 +52,16 @@ Before disabling default setup, verify actual Kotlin extraction for every
 tracked `.kt` source, successful queries and repository-path mapping, and
 preserve Actions/Python/Rust lanes in the replacement workflow. No alert
 dismissal, merge, publication or issue-44/45 acceptance waiver is authorized.
+
+## First strict-cell observation
+
+[Run 38252012714](https://github.com/trancee/cairn/actions/runs/38252012714)
+passes checksum-verified preparation, CodeQL startup, database initialization,
+forced owning JVM compilation with the Android analysis source mapping and
+both canonical generated-call assertions. Finalization fails in native TRAP
+import: `Could not create real path`, caused by
+`FileSystemException "/opt: Operation not permitted"`. UID cleanup and ordinary
+scratch teardown pass. No Kotlin database/query/coverage success is established.
+Next capture only kernel sandbox denials for `/opt`, bounded to 15 seconds
+and the last two minutes; determine the actual denied operation before changing
+any permission. Existing limits and default scanning remain unchanged.

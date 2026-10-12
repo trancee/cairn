@@ -141,6 +141,17 @@ jobs:
           path: ${{ runner.temp }}/apple-preparation/codeql-java
           if-no-files-found: error
           retention-days: 7
+      - name: Diagnose failed opt-in CodeQL sandbox path operation
+        if: ${{ failure() && inputs.codeql }}
+        run: |
+          "$(xcrun --find python3)" -I -c '
+          import subprocess
+          subprocess.run([
+              "/usr/bin/log", "show", "--last", "2m", "--style", "compact",
+              "--predicate", "process == \"kernel\" AND eventMessage CONTAINS \"Sandbox\" AND eventMessage CONTAINS \"/opt\"",
+          ], check=True, timeout=15)
+          ' > "$RUNNER_TEMP/apple-preparation/codeql-denials.log"
+          cat "$RUNNER_TEMP/apple-preparation/codeql-denials.log"
       - name: Deliver strictly built simulator executable
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
