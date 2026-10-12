@@ -1094,3 +1094,10 @@ before sampling. One-second sample, five-second command deadline, 1 MiB
 sample-file ceiling and zero core; emit at most 180 call-graph lines only,
 not headers, binary paths or arguments. Temporary sample bytes are removed.
 The original outer lifecycle deadline and domain cleanup remain unchanged.
+
+Run `38218295326` at `acea57d` passed the scheduling regression but the
+actual sample exceeded its five-second diagnostic deadline before a call
+graph was returned. Domain removal and UID cleanup passed; no stack cause
+is established. The owner separately approved 20 seconds for profiler
+setup/symbolication only, retaining the one-second sample window, 1 MiB
+file ceiling, stack-only output and unchanged outer lifecycle deadline.

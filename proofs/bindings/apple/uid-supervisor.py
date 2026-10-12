@@ -94,7 +94,7 @@ def sample_host_launch_services(process_id, uid):
         output = Path(directory) / "stack.txt"
         subprocess.run(
             ["/usr/bin/sample", str(process_id), "1", "10", "-mayDie", "-file", str(output)],
-            check=True, timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            check=True, timeout=20, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             preexec_fn=limit_sample,
         )
         text = output.read_text()
