@@ -182,7 +182,10 @@ def main() -> int:
         help="check the opt-in disclosure source-refinement profile, not the full theory",
     )
     parser.add_argument(
-        "--target", choices=("lost_data_recovery", "kem_ciphertext_origin", *USES),
+        "--target", choices=(
+            "lost_data_recovery", "kem_ciphertext_origin",
+            "encrypted_ct_tail_encapsulated", *USES,
+        ),
         default="lost_data_recovery", help="certificate to replay (default: lost_data_recovery)",
     )
     arguments = parser.parse_args()

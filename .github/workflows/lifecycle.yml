@@ -45,6 +45,8 @@ jobs:
             replay: '--disclosure-sources --target initial_ck_secret'
           - name: replay-fresh_ss_origin
             replay: '--disclosure-sources --target fresh_ss_origin'
+          - name: replay-encrypted_ct_tail_encapsulated
+            replay: '--disclosure-sources --target encrypted_ct_tail_encapsulated'
           - name: mutation-classic-fallback
             replay: ''
             mutation: CLASSIC_FALLBACK

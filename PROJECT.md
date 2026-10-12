@@ -2,7 +2,306 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation; SDK/application=not implemented.
 
+## Standalone binding proof
+
+The [Linux/Android fixture](proofs/bindings/linux-android/README.md) preserves
+the exact owner-tested standalone Ubique source and Cargo lockfile. It is
+separate from `core/`, exports only arithmetic/Greeter test APIs and does not
+implement protocol or SDK behavior. Its README records the
+`{module,target,host,prerequisites,task,proof,limitations}` matrix and the
+interop-specific Rust 1.97.1/Kotlin 2.4.20/Gradle 9.7.0/AGP 9.3.1 tuple.
+Owner-reported offline JVM calls and Android debug APK execution on an API 26
+x86_64 emulator passed. Repository scripts from commit `8deda79` also passed
+an owner-authorized SSH replay: 69 actionable tasks executed, followed by
+Android instrumentation, with matching AAR/APK/transcript hashes. Retained
+dependency/Cargo caches were used; this is not a fresh disposable image. No default CI
+gate, accepted final sandbox, Compose, ARM64 hardware,
+release/R8 or iOS binding proof is implied. The foundation-specific platform
+claims below are unchanged.
+The [bounded allocator evidence](proofs/bindings/linux-android/ALLOCATOR-AUDIT.md)
+covers the fixture and delivered Linux/Android runtime ELFs, not Apple or
+future dependency graphs.
+The standalone build script now self-checks read-only actual source,
+configuration and downloaded dependency mounts; its forced 69-task build
+passed with unchanged artifacts. Writable Gradle project shells/metadata and
+retained outputs remain explicit limitations, not final runner acceptance.
+Android instrumentation also passes in a private runtime network namespace
+with explicit route-denial assertions and verified emulator cleanup. A
+disposable 16 GiB loop-backed runtime volume bounds fresh AVD/artifact/temp writes;
+over-capacity allocation fails with `ENOSPC`, and cleanup is verified.
+The unbooted root-owned AVD seed passes checksum checks before/after runtime;
+the smoke package is absent before installation. Owner-supplied console output
+also records a cold networkless clone replay: all 69 build tasks executed,
+JVM assertions and fresh Android instrumentation passed, and the AAR hash
+matched. The APK hash differed from the historical artifact; byte-identical
+APK reproduction is not established. Owner-supplied host checks verify unchanged
+base bytes and a sole overlay disk backed by the independent base, with no
+NIC/shares/passthrough/guest-agent channel in live XML. A base-specific DAC
+override passed live QEMU-account write denial and start/stop ownership/hash
+checks. Read-only journal extraction and explicitly authorized proof-domain/
+overlay disposal passed, retaining base and evidence. Full namespace
+immutability and final runner acceptance remain open.
+The separated canonical-input layout also passed a new networkless clone:
+69 forced tasks, read-only/same-object source and dependency mapping assertions,
+unchanged canonical manifest and fresh Android instrumentation. Its base
+write denial, shutdown, read-only journal preservation and explicitly
+authorized overlay disposal passed. Canonical inputs are immutable in the
+build namespace; project shells and cache coordination metadata remain
+writable disposable state. This does not close full runner or Apple acceptance.
+The bounded supervisor also passed cold and resumed replay with live cgroup/
+rlimit assertions and checksum-verified captured output below 64 MiB. The
+resumed run's live base write denial and shutdown/extraction metadata checks
+passed. Direct-backend extraction avoids the reproduced libvirt appliance
+ownership change. The stopped bounded overlay is retained by owner choice.
+Emulator diagnostics and instrumentation now stream into the shared 64 MiB
+collector. A real preparation-guest red/green routing proof passed, with
+7,307 bytes captured after the change; saved current script/manifest are
+updated. No new cold-clone routing proof is claimed. Earlier emulator
+timeout/segfault and aggregate journal/evidence retention remain limitations;
+successful replay is not a deterministic reliability claim.
+New host extraction now uses the owner-approved 1 GiB ext4 evidence-image
+boundary with explicit failure and preserved incomplete output.
+Real synthetic CLI tests pass on the preparation guest and Fedora direct
+guestfish synthetic integration passes. Owner-run stopped bounded-VM journal
+extraction in the new format also passes, preserving image bytes/ownership
+and both boot logs with complete status and unmount cleanup.
+Existing evidence stays unchanged. See
+[ADR 0013](docs/adr/0013-bounded-host-proof-evidence.md) for access-format
+migration and the excluded guest/appliance/aggregate storage surfaces.
+The owner subsequently approved 8 GiB NEW host aggregate storage, 4 GiB
+appliance scratch and 1 GiB guest logging, without eviction, plus a separate
+new clone. Host scripts now reserve full images inside the aggregate store;
+profile/composition tests pass on Ubuntu and Fedora. Fedora direct guestfish
+synthetic extraction with bounded scratch also passes with unchanged source
+bytes/ownership. V4 subsequently verified new-clone extraction and guest
+logging controls as recorded below. Apple stays paused. The retention clone has a separate 1 GiB
+raw log disk; its supervisor reserves replay output before execution and
+disables duplicate persistent logging only inside that networkless clone.
+Linux collector reservation and no-command-on-ENOSPC tests pass.
+Supervisors are installed on preparation; its boot condition correctly skips.
+Earlier retention boots failed before target work as recorded below.
+The first retention boot failed before target work because kernel disk
+enumeration reversed proof/root devices. It is stopped and preserved.
+The corrected supervisor resolves the unique `CAIRN_PROOF_LOGS` ext4 label,
+validating 1 GiB capacity; real Linux identity/failure tests pass.
+The `retention-v2` boot resolved the log disk but failed before target work:
+active `syslog.socket` reactivated rsyslog during cutover. Both failed clones
+are preserved. Trigger-first stopping/masking and runtime-mask identity
+checks pass a shared-helper real synthetic systemd test.
+V3 failed before replay on retained `logrotate.timer` failed state after
+masking; disks/evidence are preserved. Explicit prior-failure reporting and
+post-disable state normalization pass real synthetic failed-unit tests.
+The timer's original boot failure remains unverified.
+The owner approved a separate V4 clone, preserving V1/V2/V3. Startup cutover
+now uses the existing reserved 64 MiB collector on the 1 GiB proof disk,
+before journald changes; replay retains its separate unchanged 64 MiB limit.
+Real synthetic systemd output-capture red/green passed, including retained
+failure diagnostics and child exit. Owner-run V4 passed all 69 cold-build tasks,
+JVM assertions and fresh Android instrumentation (20.565s, 4.6G peak, zero swap).
+Live topology/base write denial and graceful shutdown passed. Read-only
+extraction verified matching startup/replay records for boot
+`67e02a91-1f25-4721-b9a9-31cae6343de2`, resource/logging markers and unchanged
+base/overlay/log-disk bytes and metadata. Complete root-only 1 GiB evidence is
+`bounded-store/retention-v4-replay-volume.ext4`; bounded appliance scratch was
+removed and all clones retained. This closes the retention-control integration,
+not earlier emulator instability or full Linux runner acceptance.
+
 ## Verified profile
+
+The owner now permits a separate normal-user functional CoreSimulator job on
+the supplied fresh GitHub `macos-26` VM. The owning workflow retains strict
+offline build controls and transfers only the canonical simulator smoke
+executable, checksum and source revision to that fresh runtime VM.
+[Run 38228998011, attempt 2](https://github.com/trancee/cairn/actions/runs/38228998011/attempts/2)
+at `19c35ba` passed delivered ARM64 simulator generated calls, typed overflow,
+string/object-lifetime assertions and exact-device cleanup. Preflight and strict
+build passed in attempt 1; only its failed runtime job was replayed with the
+same checksum/revision-verified payload and unchanged limits on a fresh VM.
+Attempt 1 timed out during simulator creation/cleanup inventory, so reliable
+first-attempt execution is not established. Functional success does not close
+strict helper containment, issue-45 acceptance or physical-device proof.
+See the current lane contract
+in the [Apple proof README](proofs/bindings/apple/README.md).
+
+Apple isolation assessment has resumed using benign
+[hosted probes](proofs/bindings/apple/README.md) under
+[ADR 0014](docs/adr/0014-hosted-apple-isolation-probes.md). The unprotected
+local CLI failed intended input denial; sandboxed probes passed locally.
+Hosted [run 38088954525](https://github.com/trancee/cairn/actions/runs/38088954525)
+at `608dee0` passed the same benign probes on ARM64 macOS 26.6.2/Xcode 26.6;
+downloaded log/environment checksums passed. Full isolation/resource
+enforcement and binding builds remain unverified. Subsequent
+[run 38090454490](https://github.com/trancee/cairn/actions/runs/38090454490)
+at `3db7ee7` verified unprivileged sandbox/fixed-scratch composition,
+real disk/process/CPU enforcement, and a 7 GiB whole-VM RAM envelope
+with dynamic pager disabled/unloaded and zero swap. Shared collector
+deadline regressions passed; downloaded artifact checksums passed.
+Build-tool compatibility and whole-process-tree containment remain open.
+Trusted preparation subsequently passed in
+[run 38090961772](https://github.com/trancee/cairn/actions/runs/38090961772)
+at `3ffd8cf`: pinned Rust/iOS targets, checksum-verified Gradle and exact
+Temurin 25.0.4.1+1, plus locked fixture/Ubique Cargo downloads. No fixture
+compiled; frozen inputs, offline completeness and build-scale controls
+remain unverified.
+The dedicated hosted supervisor subsequently passed
+[run 38093375336](https://github.com/trancee/cairn/actions/runs/38093375336)
+at `3e19313`: deadline cleanup removes a deliberately detached descendant,
+retains partial output and confirms the UID is empty. A child observed hard/
+soft CPU 900s, NPROC 128, per-file 64 MiB, zero core limits, only primary GID
+20 and an explicit environment. Subsequent
+[run 38095349642](https://github.com/trancee/cairn/actions/runs/38095349642)
+at `cee5a9d` composed the sandbox, fully backed 8 GiB scratch and trusted
+Rust/Cargo/JDK/Gradle version commands; frozen tool hashes remained unchanged.
+The named read policy also rejected accessible unrelated host data.
+Fixture/Maven/Native input freezing, Gradle initialization/IPC, actual
+compilation and generated runtime calls remain unverified.
+Trusted empty-project initialization in
+[run 38095639900](https://github.com/trancee/cairn/actions/runs/38095639900)
+failed on Gradle's required wildcard UDP lock-service socket; `--offline`
+does not remove this IPC requirement. A proven external/cross-UID network
+boundary and owner approval are required before permitting those sockets.
+The owner subsequently approved benign PF probes. Private-loopback
+UID isolation and trusted offline empty Gradle `help` pass in
+[run 38124841659](https://github.com/trancee/cairn/actions/runs/38124841659)
+at `89fbb05`, with unchanged copied tool hashes and named PF cleanup.
+TCP cross-UID/external denials and same-UID TCP/UDP roundtrip pass;
+UDP negative/adversarial coverage and frozen fixture/Maven/Native inputs
+remain open before any binding build.
+UDP negatives exposed a reverse cross-UID state gap and passed after an
+outbound private-alias origin rule in
+[run 38125239632](https://github.com/trancee/cairn/actions/runs/38125239632)
+at `c6204b0`. Frozen fixture/Maven/Native inputs and binding compilation/
+runtime remain unverified; no fixture build ran.
+Shared fixture settings are verified in
+[run 38127148746](https://github.com/trancee/cairn/actions/runs/38127148746)
+at `5016e70`: unsupported selections fail before project plugins; default
+and explicit Linux/Android retain all three module/build-file selections,
+and explicit Apple selects SDK/consumer with `sdk/apple.gradle.kts`.
+These are actual Gradle settings checks with empty project scripts, not
+effective Kotlin target configuration or binding compilation. Tool hashes,
+resource/socket controls and ordinary cleanup passed. An earlier scratch
+detach `Resource busy` failure remains unexplained, not fixed by later greens.
+No production Apple
+acceptance is implied.
+Trusted scratch-device creation passed `38165989640`. Boot attempts
+`38167434234`/`38168165135` expired the 60-second limit; shutdown/UID cleanup
+did not complete and scratch detach failed busy. Launchd-parented simulator
+services were observed. Simulator lifecycle/containment remains incomplete;
+no generated app or simulator calls ran.
+Exact user-domain teardown/empty UID are now verified, including
+`38220908711`; ordinary detach passed in that run. Actual selected bootstrap
+UID 59000 passes its supervisor regression, but boot still times out at the
+separately approved 300-second ceiling in LaunchServices migration.
+A prior 120-second snapshot showed 166 dedicated-UID processes, so caller
+128-process limits do not bound launchd helpers. Failed profiler code was
+removed; no runtime acceptance or generated simulator calls are implied.
+
+Offline effective Apple plugin configuration passed in
+[run 38130344648](https://github.com/trancee/cairn/actions/runs/38130344648)
+at `2472082` with JVM/iOS-device ARM64/simulator ARM64 targets. Pinned-plugin
+preparation seeds read-only Gradle dependencies; tool/dependency hashes remain
+unchanged after replay. The owner-approved child per-file ceiling is now
+128 MiB (actual boundary/next-byte rejection pass); the separate streamed
+output remains 64 MiB. The instrumented Kotlin plugin is 67,326,033 bytes,
+exceeding the old 64 MiB file limit. No-swap setup now precedes provisioning.
+Kotlin/Native compiler/cinterop caches, Cargo input freezing, allocator review,
+binding generation and generated runtime calls remain unverified.
+
+External Apple configuration artifacts and native cinterop metadata extraction
+passed offline in run `38131639643`. Immutable Cargo vendor metadata passed
+fixture/bindgen/runtime across Darwin/device/simulator ARM64 in run
+`38132518944`. The official checksum-verified Kotlin/Native distribution
+starts offline, and script-owned arithmetic KLIBs compile for device and
+simulator ARM64 in
+[run 38133904604](https://github.com/trancee/cairn/actions/runs/38133904604)
+at `adc22c5`. All seed/tool hashes and cleanup passed. These are input and
+trusted compiler probes, not FFI, native linkage, fixture or runtime proof.
+Native SDK/cinterop/linker access, Apple allocator evidence and binding
+generation/generated calls remain open.
+
+Trusted header cinterop subsequently passed offline for both ARM64 targets
+in [run 38136851477](https://github.com/trancee/cairn/actions/runs/38136851477)
+at `74673d1`. LLVM/libffi inputs are frozen read-only; airplane mode and
+blanket socket denial remain active. All tool/Gradle/Cargo/Native hash checks
+and cleanup pass. Linkage/deployment-floor inspection, allocator evidence,
+fixture generation/compilation and runtime remain open.
+
+Trusted arithmetic framework linkage and actual `IOS`/`IOSSIMULATOR`
+Mach-O minimum OS `15.0` inspection passed offline in
+[run 38137529578](https://github.com/trancee/cairn/actions/runs/38137529578)
+at `f7f4eca`, without extra downloads. Frozen hashes and cleanup pass.
+These script-owned frameworks do not establish fixture packaging, allocator
+compatibility, generated calls or device runtime.
+
+[Apple allocator evidence](proofs/bindings/apple/ALLOCATOR-AUDIT.md) records
+bounded source closures and actual default-allocator thunk forwarding in
+delivered Darwin/device/simulator ARM64 runtimes (`38143105757`).
+Actual shared-fixture Rust compilation passed all three targets in run
+`38143726072`; fixture default-allocator thunks/generated-Rust scans then
+passed in runs `38144367463` and `38145166981`. No generated FFI calls ran.
+Both bindgen compilation attempts expired the unchanged 60-second command
+deadline during `uniffi_bindgen`; sharing fingerprinted Cargo scratch did
+not close it. Binding generation/compilation/runtime remain incomplete.
+
+The owner subsequently approved 300-second actual build/generation cells,
+keeping trusted probes at 60 seconds and other budgets unchanged.
+Run `38146169370` compiled the diagnostic debug generator in 3m09s,
+then the owning Gradle optimized `installBindgen` hit its 300-second ceiling.
+Bindings and generated calls remain incomplete; no unsupported prebuilt
+generator injection or validation bypass is used.
+
+The owner then approved 600 seconds for optimized `installBindgen` only,
+with the redundant diagnostic debug build removed. Runs `38147417409` and
+`38149099333` still expired installation. The latter passed one-shot
+owned-process diagnostic regressions: at 540 seconds `rustc` was runnable
+with 6m56s CPU, not an observed lock/network wait. Exact checksum-verified
+compile JDK is now Temurin `21.0.12.1+1`, matching the actual prior JVM
+rather than its misleading hosted-cache directory name. UID cleanup passed;
+ordinary scratch detach again failed `Resource busy`. No generated bindings
+or FFI calls, optimizer change, complete reliability or runner acceptance
+is claimed.
+
+Subsequent owner-approved generator-only debug installation passed the
+plugin's owning install/fingerprint path; binding generation passed in
+`38150603530`. Actual immutable JVM consumer calls passed in `38151849548`,
+and generated device/simulator/common Native compilation in `38154100996`
+after moving commonizer outputs/locks to a scratch distribution shell whose
+inputs still point to the immutable seed. Actual fixture frameworks passed
+device/simulator Mach-O minimum OS `15.0` checks in
+[run 38155697269](https://github.com/trancee/cairn/actions/runs/38155697269)
+at `ef2302e`. All seed hashes and ordinary cleanup passed in those green runs.
+Generator-only debug is an explicitly approved build-tool profile difference;
+SDK Rust profiles/default Linux behavior remain unchanged.
+Simulator generated-call runtime, physical iPhone proof, earlier busy-detach
+reliability and final runner acceptance remain open.
+
+The trusted scratch-device-set simulator inventory failed under unchanged
+socket/Mach denial in
+[run 38157170214](https://github.com/trancee/cairn/actions/runs/38157170214)
+at `f62938f`: CoreSimulator connection/subscription refused. Earlier JVM
+calls and both framework links passed; UID cleanup and ordinary detach passed.
+Final workflow input-hash checks were not reached. Targeted denial collection
+now runs before expensive fixture work; no service allowance or simulator
+boot/generated call is authorized by this diagnostic.
+Narrowed replay `38158407544` at `98e52e6` confirms denied Mach lookup of
+CoreSimulatorService and simdiskimaged, with UID cleanup/ordinary detach.
+Service-helper containment is unverified; no service allowance was added.
+The owner subsequently approved a separate trusted inventory-only profile
+with exactly those two lookups and helper identity/resource observations.
+Generated/build commands remain unchanged; no boot or runtime is permitted.
+Run `38159023923` reached JSON inventory but failed available-iOS validation;
+root-owned simdiskimaged was observed after caller-UID cleanup. Additional
+service/device denials remain unchanged. Scratch capacity/ordinary detach
+passed; helper containment and simulator runtime remain open.
+The owner approved one further inventory-only SimLaunchHost-arm64 lookup
+experiment, with unchanged other denials/deadline and no boot/generated calls.
+Hosted ARM64 nested virtualization is officially unsupported; helper
+containment remains a separate prerequisite.
+The three-lookup trusted inventory passed in run `38162040714` at `cd7f2ae`:
+12 records, available iOS `26.2`/`26.4.1`/`26.5`. Actual JVM/Native/framework
+gates, all input hashes and ordinary cleanup passed again. Root simdiskimaged
+remained observable; no simulator boot/generated calls or containment
+acceptance is implied.
 
 - **Public documentation:** [README.md](README.md) introduces the current
   scope; [the documentation entry point](docs/README.md) links the runnable
@@ -84,16 +383,23 @@ state=protocol research/specification/formal models + host-only Rust foundation;
   searches with `--prove`. Full-context certificate-only replay still timed
   out at 300 seconds; assembled completion remains unverified (re-run: both profiles exhaust the 5 GiB heap, no lemma result).
   The [source inventory](docs/spec/models/ratchet-source-evidence.md)
-  accounts for 43 goal groups/179 branches; all 30 residual chains belong
-  to CK/SS disclosure branches. The
+  accounts for 43 goal groups/179 branches; the raw inventory has 30
+  residual CK/SS disclosure chains, while the current refined profile has
+  16 `Reveal_SS` residual chains. The
   [equation review](docs/spec/models/ratchet-equation-evidence.md) supplies
-  an internal termination/confluence/FVP rationale, not independent
-  acceptance of the mixed message/natural theory. Both gates remain open.
+  an internal termination/confluence/FVP rationale. Separate
+  [checker research](docs/research/2026-10-09-tamarin-equational-theory-independent-checkers.md)
+  records Tamarin's subterm-convergence check and an external CRC
+  local-confluence check on the reduced message equations; CRC assumes
+  termination. Neither closes independent combined-theory/FVP acceptance.
+  Both gates remain open.
   The opt-in proof-only `DISCLOSURE_SOURCES` profile proves CK/SS
-  disclosure origins in 12/8 steps and reduces refined chains to 15
-  (all SS). Run `python3 docs/spec/models/replay.py --disclosure-sources`.
-  It replays the unchanged lost-data certificate in 802 steps and all
-  three source certificates. Default proof contexts are unchanged:
+  disclosure origins in 12/8 steps. Before the KEM-origin `[sources]`
+  promotion it had 15 refined residual chains; the current profile has 16,
+  all `Reveal_SS`. Run
+  `python3 docs/spec/models/replay.py --disclosure-sources`. It replays the
+  unchanged lost-data certificate in 802 steps and all three source
+  certificates. Default proof contexts are unchanged:
   all eight existing safety certificates are migrated in the refined profile.
   No application or SDK build/compatibility gate is available.
 - **CI gates/code generation:** no application pipeline or generated SDK
@@ -107,7 +413,7 @@ state=protocol research/specification/formal models + host-only Rust foundation;
   and actions have immutable revisions. Local actionlint validation and the
   macOS lifecycle runner pass. The first hosted run passed the lifecycle
   gate, both witnesses, KEM origin and fresh-DK origin, then hit the shared
-  15-minute job timeout. Each of the ten replays now has its own 15-minute
+  15-minute job timeout. Each of the eleven replays now has its own 15-minute
   matrix job, separate from the lifecycle gate, with fail-fast disabled.
   The merged matrix run
   [37952930237](https://github.com/trancee/cairn/actions/runs/37952930237)
@@ -115,15 +421,25 @@ state=protocol research/specification/formal models + host-only Rust foundation;
   workflow also runs default and opt-in disclosure-profile exact-source
   witness replay, refined-certificate replays and its 42 regressions.
   `python3 docs/spec/models/replay.py --disclosure-sources --target kem_ciphertext_origin`
-  verifies the migrated KEM origin certificate in 18 steps with all
+  verifies the KEM origin `[sources]` certificate in 31 steps with all
   three source certificates. Default KEM replay remains 31 steps.
   All eight refined certificates are migrated (`--target`
   `kem_ciphertext_origin`, `fresh_dk_origin`, `encrypted_origin`,
-  `extract_origin`, `ratchet_key_origin`, `session_key_origin`,
-  `initial_ck_secret`, `fresh_ss_origin`). The exact-prefix safety-only
-  profile replay verifies 54/54 complete certificates (38.7 s); the three
-  incomplete serialization lemmas and four existential witnesses are
-  excluded, so this is not assembled/full-profile completion.
+  `extract_origin`,   `ratchet_key_origin`, `session_key_origin`,
+  `initial_ck_secret`, `fresh_ss_origin`). After the KEM-origin `[sources]`
+  promotion, the exact-prefix safety-only context built from the current
+  native export verified 55/55 complete all-traces certificates. It excludes
+  the three incomplete serialization lemmas and four existential witnesses;
+  it does not establish assembled/full-profile completion. Exact commands,
+  hashes, and exclusions are recorded in the
+  [source evidence](docs/spec/models/ratchet-source-evidence.md#combined-safety-only-context).
+  The focused `encrypted_ct_tail_encapsulated` certificate also verifies in
+  four steps in default and disclosure-source contexts. It ties an honest
+  outgoing CT tail to an earlier encapsulation; it does not establish the
+  origin of arbitrary incoming ciphertext or close the 16 residual refined
+  SS chains. Promoting the KEM origin lemma to `[sources]` preserved all
+  43 rules and 13 restrictions but increased refined precomputation residuals
+  from 15 to 16; source closure remains open.
   A local `gh act` 0.2.89 Linux/amd64 run on Colima/Rosetta passed
   checksum installation, lifecycle proofs and replay regressions, but
   default witness replay hit guest OOM; a bounded-runtime retry timed

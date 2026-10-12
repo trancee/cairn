@@ -77,3 +77,20 @@ next
     by contradiction
   qed
 qed
+
+lemma encrypted_ct_tail_encapsulated [reuse]:
+  all-traces
+  "∀ %e ct key #i.
+    (EncryptedOutput( <'CT', %e, 'half', ct>, key ) @ #i) ==>
+    (∃ pid r ek ss other #j.
+       ((EpEnc( pid, r, %e, ek, ct, ss ) @ #j) ∧
+        (SessionUse( pid, r, key, other ) @ #i)) ∧
+       (#j < #i))"
+simplify
+solve( EncryptedOutput( <'CT', %e, 'half', ct>, key ) @ #i )
+  case Send_CT_tail
+  solve( !EncWait( pid, r, %e, ct, pq )[no_precomp] ▶₀ #i )
+    case Encapsulate
+    by contradiction
+  qed
+qed

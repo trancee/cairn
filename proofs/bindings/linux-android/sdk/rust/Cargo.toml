@@ -1,0 +1,14 @@
+[package]
+name = "cairn-binding-smoke"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.97"
+publish = false
+
+[lib]
+name = "cairn_binding_smoke"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[dependencies]
+uniffi = "=0.32.0"
+thiserror = "2"

@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="Cairn binding smoke" />
+    <instrumentation
+        android:name="ch.trancee.cairn.consumer.SmokeInstrumentation"
+        android:targetPackage="ch.trancee.cairn.consumer"
+        android:label="Cairn FFI runtime checks" />
+</manifest>

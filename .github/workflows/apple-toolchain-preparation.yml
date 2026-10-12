@@ -1,0 +1,199 @@
+name: Apple toolchain preparation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [docs/split-runner-proof-lanes]
+    paths:
+      - .github/workflows/apple-toolchain-preparation.yml
+      - proofs/bindings/apple/*.sh
+      - proofs/bindings/apple/*.py
+      - proofs/bindings/apple/*.sb
+      - proofs/bindings/linux-android/bounded-proof.py
+      - proofs/bindings/linux-android/**.gradle.kts
+      - proofs/bindings/linux-android/gradle.properties
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  benign-preflight:
+    uses: ./.github/workflows/apple-isolation-probe.yml
+  prepare:
+    needs: benign-preflight
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - name: Check out trusted preparation scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Establish hosted no-swap envelope
+        run: |
+          sudo -n /usr/bin/env GITHUB_ACTIONS=true \
+            /bin/bash proofs/bindings/apple/disable-hosted-swap.sh
+          "$(xcrun --find python3)" -I proofs/bindings/apple/probe-memory.py
+      - name: Download exact pinned daemon JDK
+        run: |
+          archive="$RUNNER_TEMP/temurin-25.0.4.1.tar.gz"
+          curl --fail --silent --show-error --location \
+            'https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jdk_aarch64_mac_hotspot_25.0.4.1_1.tar.gz' \
+            -o "$archive"
+          printf '%s  %s\n' \
+            61979887f7506a24a57439ff99adb8b3a7fc89977d9cfe3b8984f58a981b7b9d "$archive" \
+            | shasum -a 256 --check
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          printf 'CAIRN_DAEMON_JAVA_HOME=%s/jdk-25.0.4.1+1/Contents/Home\n' \
+            "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Download exact pinned compile JDK
+        run: |
+          archive="$RUNNER_TEMP/temurin-21.0.12.1.tar.gz"
+          curl --fail --silent --show-error --location \
+            'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.12.1_1.tar.gz' \
+            -o "$archive"
+          printf '%s  %s\n' \
+            3623232f33a9c3baadf304480b2535f9a3cba8a58d42ecbb438ba267315d9998 "$archive" \
+            | shasum -a 256 --check
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          printf 'JAVA_HOME=%s/jdk-21.0.12.1+1/Contents/Home\n' \
+            "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Prepare pinned downloads without a fixture build
+        run: |
+          python="$(xcrun --find python3)"
+          "$python" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
+            "$RUNNER_TEMP/apple-preparation.log" \
+            /bin/bash proofs/bindings/apple/prepare-toolchains.sh "$RUNNER_TEMP/apple-preparation"
+      - name: Freeze trusted tool copies
+        run: |
+          rust="$(dirname "$(dirname "$(rustup which --toolchain 1.97.1 rustc)")")"
+          sudo -n /usr/bin/env GITHUB_ACTIONS=true \
+            /bin/bash proofs/bindings/apple/freeze-toolchains.sh \
+            "$RUNNER_TEMP/apple-preparation" "$rust" "$CAIRN_DAEMON_JAVA_HOME" "$JAVA_HOME"
+      - name: Prepare pinned plugin inputs without binding build tasks
+        run: |
+          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
+            "$RUNNER_TEMP/apple-preparation/gradle-preparation.log" \
+            /bin/bash proofs/bindings/apple/prepare-gradle-inputs.sh "$RUNNER_TEMP/apple-preparation"
+      - name: Prepare locked Cargo vendor inputs
+        run: |
+          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
+            "$RUNNER_TEMP/apple-preparation/cargo-preparation.log" \
+            /bin/bash proofs/bindings/apple/prepare-cargo-inputs.sh "$RUNNER_TEMP/apple-preparation"
+          sudo -n /usr/bin/env GITHUB_ACTIONS=true \
+            /bin/bash proofs/bindings/apple/freeze-cargo-inputs.sh "$RUNNER_TEMP/apple-preparation"
+      - name: Freeze Gradle dependency inputs
+        run: |
+          sudo -n /usr/bin/env GITHUB_ACTIONS=true \
+            /bin/bash proofs/bindings/apple/freeze-gradle-inputs.sh "$RUNNER_TEMP/apple-preparation"
+      - name: Prepare and freeze trusted Native compiler inputs
+        run: |
+          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
+            "$RUNNER_TEMP/apple-preparation/native-preparation.log" \
+            /bin/bash proofs/bindings/apple/prepare-native-inputs.sh "$RUNNER_TEMP/apple-preparation"
+          sudo -n /usr/bin/env GITHUB_ACTIONS=true \
+            /bin/bash proofs/bindings/apple/freeze-native-inputs.sh "$RUNNER_TEMP/apple-preparation"
+      - name: Probe frozen tool startup inside the bounded cell
+        run: |
+          sudo -n /usr/bin/env GITHUB_ACTIONS=true \
+            /bin/bash proofs/bindings/apple/run-resource-probes.sh \
+            "$RUNNER_TEMP/apple-preparation" /opt/cairn-apple-tools \
+            2>&1 | tee "$RUNNER_TEMP/apple-preparation/toolchain-cell.log"
+          (cd /opt/cairn-apple-tools && shasum -a 256 --check \
+            "$RUNNER_TEMP/apple-preparation/toolchains.sha256") \
+            > "$RUNNER_TEMP/apple-preparation/toolchain-integrity.log"
+          (cd /opt/cairn-apple-tools && shasum -a 256 --check \
+            "$RUNNER_TEMP/apple-preparation/gradle-dependencies.sha256") \
+            > "$RUNNER_TEMP/apple-preparation/gradle-integrity.log"
+          (cd /opt/cairn-apple-tools && shasum -a 256 --check \
+            "$RUNNER_TEMP/apple-preparation/cargo-inputs.sha256") \
+            > "$RUNNER_TEMP/apple-preparation/cargo-integrity.log"
+          (cd /opt/cairn-apple-tools && shasum -a 256 --check \
+            "$RUNNER_TEMP/apple-preparation/native-inputs.sha256") \
+            > "$RUNNER_TEMP/apple-preparation/native-integrity.log"
+      - name: Record same-run simulator payload provenance
+        run: |
+          printf '%s\n' "$GITHUB_SHA" | sudo -n tee \
+            "$RUNNER_TEMP/apple-preparation/simulator-payload/revision.txt"
+          sudo -n chmod 0444 "$RUNNER_TEMP/apple-preparation/simulator-payload/revision.txt"
+      - name: Deliver strictly built simulator executable
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apple-simulator-payload
+          path: ${{ runner.temp }}/apple-preparation/simulator-payload
+          if-no-files-found: error
+          retention-days: 7
+      - name: Retain preparation diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apple-toolchain-preparation
+          path: |
+            ${{ runner.temp }}/apple-preparation.log
+            ${{ runner.temp }}/apple-preparation/versions.txt
+            ${{ runner.temp }}/apple-preparation/inputs.sha256
+            ${{ runner.temp }}/apple-preparation/toolchain*.log
+            ${{ runner.temp }}/apple-preparation/toolchains.sha256
+            ${{ runner.temp }}/apple-preparation/gradle*.log
+            ${{ runner.temp }}/apple-preparation/gradle-dependencies.sha256
+            ${{ runner.temp }}/apple-preparation/cargo*.log
+            ${{ runner.temp }}/apple-preparation/cargo-inputs.sha256
+            ${{ runner.temp }}/apple-preparation/native*.log
+            ${{ runner.temp }}/apple-preparation/native-inputs.sha256
+          if-no-files-found: error
+          retention-days: 7
+  functional-runtime:
+    name: Functional simulator runtime (not strict isolation)
+    needs: prepare
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - name: Check out same-revision runtime harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download same-run simulator payload
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: apple-simulator-payload
+          path: ${{ runner.temp }}/simulator-payload
+      - name: Verify delivered Mach-O platform and architecture
+        run: |
+          binary="$RUNNER_TEMP/simulator-payload/CairnSimulatorSmoke.kexe"
+          test "$(xcrun lipo -archs "$binary")" = arm64
+          xcrun vtool -show-build "$binary" | tee "$RUNNER_TEMP/simulator-build-version.log"
+          awk '
+            $1 == "platform" && $2 == "IOSSIMULATOR" { platform_matches++ }
+            $1 == "minos" && $2 == "15.0" { floor_matches++ }
+            END { exit !(platform_matches == 1 && floor_matches == 1) }
+          ' "$RUNNER_TEMP/simulator-build-version.log"
+      - name: Execute canonical generated consumer on fresh simulator
+        run: |
+          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 480 \
+            "$RUNNER_TEMP/functional-runtime.log" \
+            "$(xcrun --find python3)" -I proofs/bindings/apple/run-functional-simulator.py \
+            "$RUNNER_TEMP/simulator-payload" "$RUNNER_TEMP/cairn-functional"
+          grep -Fx 'PASS: typed overflow crossed FFI' "$RUNNER_TEMP/functional-runtime.log"
+          grep -Fx 'PASS: value, boundary, typed error and object lifetime' "$RUNNER_TEMP/functional-runtime.log"
+          grep -Fx 'PASS: delivered generated simulator consumer exited successfully' \
+            "$RUNNER_TEMP/functional-runtime.log"
+      - name: Shut down and delete only the recorded functional device
+        if: always()
+        run: |
+          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 75 \
+            "$RUNNER_TEMP/functional-cleanup.log" \
+            "$(xcrun --find python3)" -I proofs/bindings/apple/run-functional-simulator.py --cleanup \
+            "$RUNNER_TEMP/simulator-payload" "$RUNNER_TEMP/cairn-functional"
+      - name: Retain explicitly functional-only evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apple-functional-runtime
+          path: |
+            ${{ runner.temp }}/functional-*.log
+            ${{ runner.temp }}/simulator-build-version.log
+          if-no-files-found: error
+          retention-days: 7
