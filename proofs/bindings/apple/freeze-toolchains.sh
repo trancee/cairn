@@ -35,6 +35,12 @@ cp "$scripts/inspect-allocator-inputs.py" "$destination/inspect-allocator-inputs
 cp "$scripts/check-fixture-rust.sh" "$destination/check-fixture-rust.sh"
 cp "$scripts/inspect-fixture-artifacts.py" "$destination/inspect-fixture-artifacts.py"
 cp "$scripts/check-fixture-bindings.sh" "$destination/check-fixture-bindings.sh"
+if [ -d "$prepared/codeql" ]; then
+  ditto "$prepared/codeql" "$destination/codeql"
+  cp "$prepared/android-api.jar" "$destination/android-api.jar"
+  cp "$scripts/codeql-consumer.gradle" "$destination/codeql-consumer.gradle"
+  cp "$scripts/check-codeql-bindings.sh" "$destination/check-codeql-bindings.sh"
+fi
 mkdir "$destination/generator-tools"
 cp "$scripts/generator-cargo.sh" "$destination/generator-tools/cargo"
 chmod 0755 "$destination/generator-tools/cargo"

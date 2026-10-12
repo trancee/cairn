@@ -2,6 +2,11 @@ name: Apple toolchain preparation
 
 on:
   workflow_dispatch:
+    inputs:
+      codeql:
+        description: Trace Kotlin compilation in the strict offline build cell
+        type: boolean
+        default: false
   push:
     branches: [docs/split-runner-proof-lanes]
     paths:
@@ -67,12 +72,21 @@ jobs:
           "$python" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
             "$RUNNER_TEMP/apple-preparation.log" \
             /bin/bash proofs/bindings/apple/prepare-toolchains.sh "$RUNNER_TEMP/apple-preparation"
+      - name: Prepare opt-in CodeQL inputs
+        if: ${{ inputs.codeql }}
+        run: |
+          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
+            "$RUNNER_TEMP/apple-preparation/codeql-preparation.log" \
+            /bin/bash proofs/bindings/apple/prepare-codeql.sh "$RUNNER_TEMP/apple-preparation"
       - name: Freeze trusted tool copies
         run: |
           rust="$(dirname "$(dirname "$(rustup which --toolchain 1.97.1 rustc)")")"
           sudo -n /usr/bin/env GITHUB_ACTIONS=true \
             /bin/bash proofs/bindings/apple/freeze-toolchains.sh \
             "$RUNNER_TEMP/apple-preparation" "$rust" "$CAIRN_DAEMON_JAVA_HOME" "$JAVA_HOME"
+      - name: Verify opt-in CodeQL tool architecture
+        if: ${{ inputs.codeql }}
+        run: /opt/cairn-apple-tools/codeql/codeql version
       - name: Prepare pinned plugin inputs without binding build tasks
         run: |
           "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
@@ -119,6 +133,14 @@ jobs:
           printf '%s\n' "$GITHUB_SHA" | sudo -n tee \
             "$RUNNER_TEMP/apple-preparation/simulator-payload/revision.txt"
           sudo -n chmod 0444 "$RUNNER_TEMP/apple-preparation/simulator-payload/revision.txt"
+      - name: Retain strict-cell Kotlin extraction database
+        if: ${{ inputs.codeql }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apple-codeql-java
+          path: ${{ runner.temp }}/apple-preparation/codeql-java
+          if-no-files-found: error
+          retention-days: 7
       - name: Deliver strictly built simulator executable
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -141,6 +163,7 @@ jobs:
             ${{ runner.temp }}/apple-preparation/gradle-dependencies.sha256
             ${{ runner.temp }}/apple-preparation/cargo*.log
             ${{ runner.temp }}/apple-preparation/cargo-inputs.sha256
+            ${{ runner.temp }}/apple-preparation/codeql*.log
             ${{ runner.temp }}/apple-preparation/native*.log
             ${{ runner.temp }}/apple-preparation/native-inputs.sha256
           if-no-files-found: error

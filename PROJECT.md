@@ -108,6 +108,13 @@ not earlier emulator instability or full Linux runner acceptance.
 
 ## Verified profile
 
+Post-merge CodeQL's automatic Kotlin trial failed `none`-mode extraction in
+run `38249821951`; default Actions/Python/Rust scanning remains configured.
+The owner approved a build-backed advanced-setup migration preserving strict
+offline build controls. Opt-in direct tracing in the Apple cell is the first
+diagnostic, not yet verified Kotlin analysis or a completed setting migration.
+See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md).
+
 The owner now permits a separate normal-user functional CoreSimulator job on
 the supplied fresh GitHub `macos-26` VM. The owning workflow retains strict
 offline build controls and transfers only the canonical simulator smoke

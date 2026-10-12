@@ -199,10 +199,18 @@ if [ "$#" -eq 2 ]; then
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=true -f "$work/build.sb" \
     /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :sdk:buildBindings
+  jvm_command=("$tools/check-fixture-bindings.sh" "$tools" :consumer:interopSmoke)
+  if [ -d "$tools/codeql" ]; then
+    jvm_command=("$tools/check-codeql-bindings.sh" "$tools")
+  fi
   "$python" -I "$scripts/uid-supervisor.py" --seconds 300 "$work/proof-output/fixture-jvm.log" \
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=true -f "$work/build.sb" \
-    /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :consumer:interopSmoke
+    /bin/bash "${jvm_command[@]}"
+  if [ -d "$tools/codeql" ]; then
+    ditto "$volume/codeql-java" "$output/codeql-java"
+    echo 'PASS: finalized Kotlin CodeQL database exported before scratch teardown'
+  fi
   "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/fixture-tasks.log" \
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=true -f "$work/build.sb" \

@@ -51,6 +51,19 @@ simulator execution, not strict runtime containment or hardware evidence.
 
 ## Earlier probe evidence
 
+### Opt-in Kotlin CodeQL diagnostic
+
+Dispatch `apple-toolchain-preparation.yml` with `codeql=true` to test direct
+manual tracing inside the same strict build cell. CodeQL `2.27.2` and the
+Android API `37.0` platform JAR are checksum-verified and frozen tool inputs.
+The analysis-only init script includes Android consumer Kotlin in the JVM
+compilation against that compile-only API; ordinary builds remain unchanged.
+Initialization, actual compilation/tracing and finalization share the existing
+300-second JVM command ceiling and bounded scratch. Export requires successful
+finalization. This is not yet a verified replacement scan or Android packaging
+proof; default Actions/Python/Rust scanning stays enabled. See
+[ADR 0015](../../../docs/adr/0015-build-backed-kotlin-codeql.md).
+
 On macOS with Xcode Python available:
 
 ```bash
