@@ -51,6 +51,73 @@ simulator execution, not strict runtime containment or hardware evidence.
 
 ## Earlier probe evidence
 
+### Opt-in Kotlin CodeQL diagnostic
+
+Dispatch `apple-toolchain-preparation.yml` with `codeql=true` to test direct
+manual tracing inside the same strict build cell. CodeQL `2.27.2` and the
+Android API `37.0` platform JAR are checksum-verified and frozen tool inputs.
+The analysis-only init script includes Android consumer Kotlin in the JVM
+compilation against that compile-only API; ordinary builds remain unchanged.
+Only CodeQL commands add the owner-approved read of the literal `/opt` parent
+directory for importer canonicalization; unrelated child contents and input
+writes stay denied. Real native sandbox parent-read red/green and negative
+child-read/input-write/ordinary-profile tests pass locally.
+Initialization, actual compilation/tracing and finalization share the existing
+300-second JVM command ceiling and bounded scratch. Export requires successful
+finalization. Hosted run `38263225443` at `799d758` passes actual Kotlin
+database finalization; downloaded metadata and source archive agree.
+The mandatory analysis gate queries compiled Kotlin compilation units,
+requires every tracked `.kt` source plus generated binding evidence, and runs
+the unchanged bundled Java/Kotlin security suite offline. Analysis has its
+own existing 300-second command ceiling, two threads and 2 GiB requested
+evaluator RAM; all caches/results remain in bounded scratch. Coverage and
+SARIF export require success. Compiled coverage and suite execution pass in
+run `38268914707`; mapped export passes in run `38274027100`, attempt 2.
+Processed GitHub results remain unverified. This is not yet a deployed
+replacement scan or Android packaging
+proof; default Actions/Python/Rust scanning stays enabled. See
+[ADR 0015](../../../docs/adr/0015-build-backed-kotlin-codeql.md).
+
+The staged `.github/workflows/codeql.yml` runs existing Actions/Python/Rust
+default suites and calls this strict Kotlin lane. A manual `upload=false`
+dispatch validates without publishing scans while default setup stays enabled.
+Feature-branch pushes likewise validate without publishing. Default-branch,
+PR and weekly runs upload after the separately approved setting
+cutover. Only mapped `java-kotlin.sarif` is uploaded; raw SARIF and compiled
+source inventory remain diagnostic artifacts. Generated paths retain their
+owning untracked build location, not a fabricated handwritten annotation.
+CodeQL mode skips the unrelated functional simulator runtime; ordinary
+binding-proof dispatch still requires it. No deployment/cutover success is
+claimed until processed replacement results are observed.
+
+Run `38268914707` passes the three existing language analyses and actual
+Kotlin compilation-unit coverage (three tracked files and both generated
+common/JVM files), then executes the bundled suite. Mapping fails on an
+implicit URI base before successful export. The mapper now handles CodeQL's
+standard undeclared `%SRCROOT%` using the known frozen database source root;
+other unknown bases remain errors. Failed reports are retained separately
+with a failed status. The built-in `3 out of 9` diagnostic is not substituted
+for the explicit compiled-source gate.
+CodeQL mode also omits native-only framework/executable tasks and simulator
+payload export after its JVM/analysis gates; ordinary mode retains them.
+No resource, filesystem, network, integrity or cleanup boundary is relaxed.
+
+The complete upload-free replacement passes in
+[run 38274027100, attempt 2](https://github.com/trancee/cairn/actions/runs/38274027100/attempts/2)
+at `6618ecb`: existing-language analyses, Kotlin compilation-unit coverage,
+bundled queries, mapped export, frozen-input integrity and cleanup.
+Downloaded Kotlin SARIF records a successful CodeQL `2.27.2` invocation,
+76 rule metadata entries and zero results. Actual raw-to-mapped replay and
+the tracked-source guard agree. Attempt 1 fails preflight scratch-device lookup
+(`diskutil info -plist`, five-second deadline) before target work; only
+failed/skipped jobs are replayed with the same
+revision and unchanged limits. Scratch-eject reliability remains open.
+The owner subsequently approved PR #6 merge and coordinated scanning cutover.
+Default setup is disabled; PR run `38279234281` passed and GitHub processed
+all four language analyses. Concurrent branch run `38279051559` completed
+Kotlin analysis but failed scratch teardown; only failed jobs are replayed
+with unchanged controls. Deployment and processed scans on `main` remain pending.
+
 On macOS with Xcode Python available:
 
 ```bash

@@ -1,7 +1,18 @@
 name: Apple toolchain preparation
 
 on:
+  workflow_call:
+    inputs:
+      codeql:
+        description: Require strict-cell Kotlin extraction and security analysis
+        type: boolean
+        default: false
   workflow_dispatch:
+    inputs:
+      codeql:
+        description: Trace Kotlin compilation in the strict offline build cell
+        type: boolean
+        default: false
   push:
     branches: [docs/split-runner-proof-lanes]
     paths:
@@ -67,12 +78,21 @@ jobs:
           "$python" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
             "$RUNNER_TEMP/apple-preparation.log" \
             /bin/bash proofs/bindings/apple/prepare-toolchains.sh "$RUNNER_TEMP/apple-preparation"
+      - name: Prepare opt-in CodeQL inputs
+        if: ${{ inputs.codeql }}
+        run: |
+          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
+            "$RUNNER_TEMP/apple-preparation/codeql-preparation.log" \
+            /bin/bash proofs/bindings/apple/prepare-codeql.sh "$RUNNER_TEMP/apple-preparation"
       - name: Freeze trusted tool copies
         run: |
           rust="$(dirname "$(dirname "$(rustup which --toolchain 1.97.1 rustc)")")"
           sudo -n /usr/bin/env GITHUB_ACTIONS=true \
             /bin/bash proofs/bindings/apple/freeze-toolchains.sh \
             "$RUNNER_TEMP/apple-preparation" "$rust" "$CAIRN_DAEMON_JAVA_HOME" "$JAVA_HOME"
+      - name: Verify opt-in CodeQL tool architecture
+        if: ${{ inputs.codeql }}
+        run: /opt/cairn-apple-tools/codeql/codeql version
       - name: Prepare pinned plugin inputs without binding build tasks
         run: |
           "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
@@ -115,11 +135,41 @@ jobs:
             "$RUNNER_TEMP/apple-preparation/native-inputs.sha256") \
             > "$RUNNER_TEMP/apple-preparation/native-integrity.log"
       - name: Record same-run simulator payload provenance
+        if: ${{ !inputs.codeql }}
         run: |
           printf '%s\n' "$GITHUB_SHA" | sudo -n tee \
             "$RUNNER_TEMP/apple-preparation/simulator-payload/revision.txt"
           sudo -n chmod 0444 "$RUNNER_TEMP/apple-preparation/simulator-payload/revision.txt"
+      - name: Retain strict-cell Kotlin extraction database
+        if: ${{ inputs.codeql }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apple-codeql-java
+          path: ${{ runner.temp }}/apple-preparation/codeql-java
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+      - name: Retain strict-cell Kotlin coverage and security analysis
+        if: ${{ inputs.codeql }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apple-codeql-analysis
+          path: ${{ runner.temp }}/apple-preparation/codeql-analysis
+          if-no-files-found: error
+          retention-days: 7
+      - name: Diagnose failed opt-in CodeQL sandbox path operation
+        if: ${{ failure() && inputs.codeql }}
+        run: |
+          "$(xcrun --find python3)" -I -c '
+          import subprocess
+          subprocess.run([
+              "/usr/bin/log", "show", "--last", "2m", "--style", "compact",
+              "--predicate", "process == \"kernel\" AND eventMessage CONTAINS \"Sandbox\" AND eventMessage CONTAINS \"java(\" AND eventMessage CONTAINS \"/opt\"",
+          ], check=True, timeout=15)
+          ' > "$RUNNER_TEMP/apple-preparation/codeql-denials.log"
+          cat "$RUNNER_TEMP/apple-preparation/codeql-denials.log"
       - name: Deliver strictly built simulator executable
+        if: ${{ !inputs.codeql }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: apple-simulator-payload
@@ -141,12 +191,16 @@ jobs:
             ${{ runner.temp }}/apple-preparation/gradle-dependencies.sha256
             ${{ runner.temp }}/apple-preparation/cargo*.log
             ${{ runner.temp }}/apple-preparation/cargo-inputs.sha256
+            ${{ runner.temp }}/apple-preparation/codeql*.log
+            ${{ runner.temp }}/apple-preparation/codeql-startup-logs
+            ${{ runner.temp }}/apple-preparation/codeql-failed-analysis
             ${{ runner.temp }}/apple-preparation/native*.log
             ${{ runner.temp }}/apple-preparation/native-inputs.sha256
           if-no-files-found: error
           retention-days: 7
   functional-runtime:
     name: Functional simulator runtime (not strict isolation)
+    if: ${{ !inputs.codeql }}
     needs: prepare
     runs-on: macos-26
     timeout-minutes: 10

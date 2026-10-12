@@ -108,6 +108,36 @@ not earlier emulator instability or full Linux runner acceptance.
 
 ## Verified profile
 
+Post-merge CodeQL's automatic Kotlin trial failed `none`-mode extraction in
+run `38249821951`; default Actions/Python/Rust scanning initially remained configured.
+The owner approved a build-backed advanced-setup migration preserving strict
+offline build controls. Run `38263225443` at `799d758` verifies actual Kotlin
+database finalization inside the Apple cell with the approved exact
+CodeQL-only `/opt` parent read; downloaded metadata and archive agree.
+Run `38268914707` verifies Actions/Python/Rust analyses and actual Kotlin
+compilation-unit coverage for all three tracked and both generated binding
+sources, plus bundled query execution. Kotlin SARIF mapping subsequently
+fails on an implicit URI base; the standard `%SRCROOT%` interpretation is
+corrected and failed-report retention added.
+Run `38274027100`, attempt 2, at `6618ecb` verifies the complete four-language
+upload-free replacement, including mapped Kotlin export, input integrity,
+UID cleanup and scratch teardown. Downloaded actual raw/mapped SARIF replay
+and compiled-source manifest checks agree; Kotlin reports zero results.
+Attempt 1 fails preflight scratch-device lookup before target work; unchanged failed
+jobs are replayed, not automatically retried or given larger limits.
+The staged advanced workflow preserves all existing languages
+and supports upload-free feature-branch/dispatch validation. CodeQL mode
+omits native-only framework/executable proof, payload export and unrelated
+functional simulator runtime; ordinary binding mode retains them with
+unchanged controls. The owner subsequently approved PR #6 merge and the
+coordinated setting transition. Default setup is now disabled; PR
+run `38279234281` passed and GitHub processed all four language analyses
+at merge revision `f36da6130053e89070c3ec6ec785daf2bfacfb5c`.
+Branch run `38279051559` completed Kotlin analysis but failed scratch
+teardown; its failed jobs are replayed with unchanged controls.
+Deployment and processed scans on `main` remain pending.
+See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md).
+
 The owner now permits a separate normal-user functional CoreSimulator job on
 the supplied fresh GitHub `macos-26` VM. The owning workflow retains strict
 offline build controls and transfers only the canonical simulator smoke

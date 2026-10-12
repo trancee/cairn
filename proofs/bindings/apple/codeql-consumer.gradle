@@ -1,0 +1,10 @@
+// Analysis-only compilation of the unchanged Android adapter against its platform API.
+gradle.projectsEvaluated {
+    def consumer = gradle.rootProject.project(":consumer")
+    consumer.extensions.getByName("kotlin").sourceSets.named("jvmMain").configure {
+        kotlin.srcDir("/opt/cairn-apple-tools/fixture/androidConsumer/src/main/kotlin")
+        dependencies {
+            compileOnly(consumer.files("/opt/cairn-apple-tools/android-api.jar"))
+        }
+    }
+}

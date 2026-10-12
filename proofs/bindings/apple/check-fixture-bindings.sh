@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
-test "$#" -eq 2
+test "$#" -ge 2
+test "$#" -le 3
 tools=$1
 task=$2
+codeql=false
+if [ "$#" -eq 3 ]; then
+  test "$3" = --codeql
+  test "$task" = :consumer:interopSmoke
+  codeql=true
+fi
 case "$task" in
   :sdk:installBindgen|:sdk:buildBindings|:consumer:interopSmoke|:sdk:tasks) ;;
   :sdk:compileKotlinIosArm64|:sdk:compileKotlinIosSimulatorArm64|:sdk:compileNativeMainKotlinMetadata) ;;
@@ -54,6 +61,9 @@ if [ "$task" = :sdk:linkDebugExecutableIosSimulatorArm64 ]; then
 fi
 set --
 if [ "$task" = :sdk:tasks ]; then set -- --all; fi
+if [ "$codeql" = true ]; then
+  set -- --init-script "$tools/codeql-consumer.gradle" --rerun-tasks
+fi
 "$tools/gradle/bin/gradle" -p "$fixture" --offline --no-daemon --console=plain --stacktrace \
   -Djava.net.preferIPv4Stack=true -PcairnProofPlatform=apple \
   -Pkotlin.native.home="$native_home" \

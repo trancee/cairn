@@ -131,6 +131,23 @@ if [ "$#" -eq 2 ]; then
   test "$tools" = /opt/cairn-apple-tools
   test "$(stat -f %u "$tools")" -eq 0
   sudo -n -u "$user" /bin/test -x "$tools/rust/bin/rustc"
+  if [ -d "$tools/codeql" ]; then
+    cat "$work/build.sb" "$scripts/codeql-parent.sb" > "$work/codeql.sb"
+    chmod 0644 "$work/codeql.sb"
+    codeql_result=0
+    "$python" -I "$scripts/uid-supervisor.py" --seconds 300 "$work/proof-output/codeql-startup.log" \
+      /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+      -D PRIVATE_IPC=true -f "$work/codeql.sb" \
+      /bin/bash "$tools/check-codeql-startup.sh" "$tools" || codeql_result=$?
+    if [ "$codeql_result" -ne 0 ]; then
+      if [ -d "$volume/codeql-startup/database/log" ]; then
+        ditto "$volume/codeql-startup/database/log" "$output/codeql-startup-logs"
+        chown -R root:wheel "$output/codeql-startup-logs"
+        chmod -R a+rX,a-w "$output/codeql-startup-logs"
+      fi
+      exit "$codeql_result"
+    fi
+  fi
   cp "$scripts/probe-toolchains.sh" "$work/inputs/probe-toolchains.sh"
   chmod 0644 "$work/inputs/probe-toolchains.sh"
   "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/toolchains.log" \
@@ -199,39 +216,72 @@ if [ "$#" -eq 2 ]; then
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=true -f "$work/build.sb" \
     /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :sdk:buildBindings
+  jvm_command=("$tools/check-fixture-bindings.sh" "$tools" :consumer:interopSmoke)
+  jvm_profile="$work/build.sb"
+  if [ -d "$tools/codeql" ]; then
+    jvm_command=("$tools/check-codeql-bindings.sh" "$tools")
+    jvm_profile="$work/codeql.sb"
+  fi
   "$python" -I "$scripts/uid-supervisor.py" --seconds 300 "$work/proof-output/fixture-jvm.log" \
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
-    -D PRIVATE_IPC=true -f "$work/build.sb" \
-    /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :consumer:interopSmoke
-  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/fixture-tasks.log" \
-    /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
-    -D PRIVATE_IPC=true -f "$work/build.sb" \
-    /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :sdk:tasks
-  for task in :sdk:compileKotlinIosArm64 :sdk:compileKotlinIosSimulatorArm64 \
-    :sdk:compileNativeMainKotlinMetadata :sdk:linkDebugFrameworkIosArm64 \
-    :sdk:linkDebugFrameworkIosSimulatorArm64; do
+    -D PRIVATE_IPC=true -f "$jvm_profile" \
+    /bin/bash "${jvm_command[@]}"
+  if [ -d "$tools/codeql" ]; then
+    analysis_result=0
     "$python" -I "$scripts/uid-supervisor.py" --seconds 300 \
-      "$work/proof-output/fixture-native-${task##*:}.log" \
+      "$work/proof-output/codeql-analysis.log" \
+      /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+      -D PRIVATE_IPC=false -f "$work/codeql.sb" \
+      /bin/bash "$tools/check-codeql-analysis.sh" "$tools" "$python" || analysis_result=$?
+    if [ "$analysis_result" -ne 0 ]; then
+      if [ -d "$volume/codeql-analysis" ]; then
+        ditto "$volume/codeql-analysis" "$output/codeql-failed-analysis"
+        printf 'FAILED: strict CodeQL analysis exit %s\n' "$analysis_result" \
+          > "$output/codeql-failed-analysis/status.txt"
+        chown -R root:wheel "$output/codeql-failed-analysis"
+        chmod -R a+rX,a-w "$output/codeql-failed-analysis"
+      fi
+      exit "$analysis_result"
+    fi
+    ditto "$volume/codeql-analysis" "$output/codeql-analysis"
+    chown -R root:wheel "$output/codeql-analysis"
+    chmod -R a+rX,a-w "$output/codeql-analysis"
+    ditto "$volume/codeql-java" "$output/codeql-java"
+    chown -R root:wheel "$output/codeql-java"
+    chmod -R a+rX,a-w "$output/codeql-java"
+    echo 'PASS: finalized Kotlin CodeQL database exported before scratch teardown'
+  fi
+  if [ ! -d "$tools/codeql" ]; then
+    "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/fixture-tasks.log" \
       /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
       -D PRIVATE_IPC=true -f "$work/build.sb" \
-      /bin/bash "$tools/check-fixture-bindings.sh" "$tools" "$task"
-  done
-  "$python" -I "$scripts/uid-supervisor.py" --seconds 300 \
+      /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :sdk:tasks
+    for task in :sdk:compileKotlinIosArm64 :sdk:compileKotlinIosSimulatorArm64 \
+      :sdk:compileNativeMainKotlinMetadata :sdk:linkDebugFrameworkIosArm64 \
+      :sdk:linkDebugFrameworkIosSimulatorArm64; do
+      "$python" -I "$scripts/uid-supervisor.py" --seconds 300 \
+        "$work/proof-output/fixture-native-${task##*:}.log" \
+        /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+        -D PRIVATE_IPC=true -f "$work/build.sb" \
+        /bin/bash "$tools/check-fixture-bindings.sh" "$tools" "$task"
+    done
+    "$python" -I "$scripts/uid-supervisor.py" --seconds 300 \
       "$work/proof-output/fixture-simulator-executable.log" \
       /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
       -D PRIVATE_IPC=true -f "$work/build.sb" \
       /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :sdk:linkDebugExecutableIosSimulatorArm64
-  binary="$volume/fixture-targets/sdk/build/bin/iosSimulatorArm64/debugExecutable/CairnSimulatorSmoke.kexe"
-  test -f "$binary"
-  test ! -L "$binary"
-  test "$(stat -f %z "$binary")" -le 134217728
-  mkdir -m 0755 "$output/simulator-payload"
-  cp "$binary" "$output/simulator-payload/CairnSimulatorSmoke.kexe"
-  cmp "$binary" "$output/simulator-payload/CairnSimulatorSmoke.kexe"
-  chmod 0444 "$output/simulator-payload/CairnSimulatorSmoke.kexe"
-  (cd "$output/simulator-payload" && shasum -a 256 CairnSimulatorSmoke.kexe > payload.sha256)
-  chmod 0444 "$output/simulator-payload/payload.sha256"
-  echo 'PASS: verified simulator executable exported before scratch teardown'
+    binary="$volume/fixture-targets/sdk/build/bin/iosSimulatorArm64/debugExecutable/CairnSimulatorSmoke.kexe"
+    test -f "$binary"
+    test ! -L "$binary"
+    test "$(stat -f %z "$binary")" -le 134217728
+    mkdir -m 0755 "$output/simulator-payload"
+    cp "$binary" "$output/simulator-payload/CairnSimulatorSmoke.kexe"
+    cmp "$binary" "$output/simulator-payload/CairnSimulatorSmoke.kexe"
+    chmod 0444 "$output/simulator-payload/CairnSimulatorSmoke.kexe"
+    (cd "$output/simulator-payload" && shasum -a 256 CairnSimulatorSmoke.kexe > payload.sha256)
+    chmod 0444 "$output/simulator-payload/payload.sha256"
+    echo 'PASS: verified simulator executable exported before scratch teardown'
+  fi
 fi
 "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
   | tee "$output/dedicated-sandbox.log"
