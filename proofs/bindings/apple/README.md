@@ -58,6 +58,10 @@ manual tracing inside the same strict build cell. CodeQL `2.27.2` and the
 Android API `37.0` platform JAR are checksum-verified and frozen tool inputs.
 The analysis-only init script includes Android consumer Kotlin in the JVM
 compilation against that compile-only API; ordinary builds remain unchanged.
+Only CodeQL commands add the owner-approved read of the literal `/opt` parent
+directory for importer canonicalization; unrelated child contents and input
+writes stay denied. Real native sandbox parent-read red/green and negative
+child-read/input-write/ordinary-profile tests pass locally.
 Initialization, actual compilation/tracing and finalization share the existing
 300-second JVM command ceiling and bounded scratch. Export requires successful
 finalization. This is not yet a verified replacement scan or Android packaging

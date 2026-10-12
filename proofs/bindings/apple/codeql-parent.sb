@@ -1,0 +1,2 @@
+; CodeQL importer canonicalization requires the frozen tool parent directory.
+(allow file-read-data (literal "/opt"))

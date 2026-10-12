@@ -148,7 +148,7 @@ jobs:
           import subprocess
           subprocess.run([
               "/usr/bin/log", "show", "--last", "2m", "--style", "compact",
-              "--predicate", "process == \"kernel\" AND eventMessage CONTAINS \"Sandbox\" AND eventMessage CONTAINS \"/opt\"",
+              "--predicate", "process == \"kernel\" AND eventMessage CONTAINS \"Sandbox\" AND eventMessage CONTAINS \"java(\" AND eventMessage CONTAINS \"/opt\"",
           ], check=True, timeout=15)
           ' > "$RUNNER_TEMP/apple-preparation/codeql-denials.log"
           cat "$RUNNER_TEMP/apple-preparation/codeql-denials.log"

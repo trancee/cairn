@@ -132,14 +132,18 @@ if [ "$#" -eq 2 ]; then
   test "$(stat -f %u "$tools")" -eq 0
   sudo -n -u "$user" /bin/test -x "$tools/rust/bin/rustc"
   if [ -d "$tools/codeql" ]; then
+    cat "$work/build.sb" "$scripts/codeql-parent.sb" > "$work/codeql.sb"
+    chmod 0644 "$work/codeql.sb"
     codeql_result=0
     "$python" -I "$scripts/uid-supervisor.py" --seconds 300 "$work/proof-output/codeql-startup.log" \
       /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
-      -D PRIVATE_IPC=true -f "$work/build.sb" \
+      -D PRIVATE_IPC=true -f "$work/codeql.sb" \
       /bin/bash "$tools/check-codeql-startup.sh" "$tools" || codeql_result=$?
     if [ "$codeql_result" -ne 0 ]; then
       if [ -d "$volume/codeql-startup/database/log" ]; then
         ditto "$volume/codeql-startup/database/log" "$output/codeql-startup-logs"
+        chown -R root:wheel "$output/codeql-startup-logs"
+        chmod -R a+rX,a-w "$output/codeql-startup-logs"
       fi
       exit "$codeql_result"
     fi
@@ -213,15 +217,19 @@ if [ "$#" -eq 2 ]; then
     -D PRIVATE_IPC=true -f "$work/build.sb" \
     /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :sdk:buildBindings
   jvm_command=("$tools/check-fixture-bindings.sh" "$tools" :consumer:interopSmoke)
+  jvm_profile="$work/build.sb"
   if [ -d "$tools/codeql" ]; then
     jvm_command=("$tools/check-codeql-bindings.sh" "$tools")
+    jvm_profile="$work/codeql.sb"
   fi
   "$python" -I "$scripts/uid-supervisor.py" --seconds 300 "$work/proof-output/fixture-jvm.log" \
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
-    -D PRIVATE_IPC=true -f "$work/build.sb" \
+    -D PRIVATE_IPC=true -f "$jvm_profile" \
     /bin/bash "${jvm_command[@]}"
   if [ -d "$tools/codeql" ]; then
     ditto "$volume/codeql-java" "$output/codeql-java"
+    chown -R root:wheel "$output/codeql-java"
+    chmod -R a+rX,a-w "$output/codeql-java"
     echo 'PASS: finalized Kotlin CodeQL database exported before scratch teardown'
   fi
   "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/fixture-tasks.log" \

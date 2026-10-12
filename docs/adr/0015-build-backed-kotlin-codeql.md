@@ -78,3 +78,24 @@ configuration before the minimal probe. Its captured `/opt` denials are Gradle
 attempts to write frozen cache metadata, not the CodeQL importer operation.
 Move the independent minimal probe before fixture configuration; do not relax
 that deadline or permit cache writes to make the diagnostic reachable.
+
+The early minimal probe in run `38259872217` reproduces the same importer
+failure within 20 seconds. Kernel evidence identifies `java` denied
+`file-read-data /opt`; it is not an attempted out-of-scratch write.
+The original profile still denies this parent-directory read. Any allowance
+must be separately approved and exact-directory-only, retaining child-content,
+write, network and resource denials.
+Diagnostic artifact upload also failed because copied UID-owned logs remained
+private to that UID. Normalize exported diagnostic/database ownership to root
+and read-only runner-readable permissions, like the existing payload export;
+do not claim the failed artifact was preserved. Narrow kernel output further
+to `java` so unrelated hosted-agent denials are excluded.
+
+The owner approved an exact parent-directory read only for CodeQL cells.
+Append `file-read-data (literal "/opt")` to the unchanged build policy only
+for the minimal importer and traced Kotlin command. This exposes directory
+entry names at `/opt`, not unrelated child contents. Network, input-write,
+scratch and resource controls are unchanged; ordinary build commands retain
+the original profile. A real native sandbox test fails on the intended
+parent-read denial before the allowance, then must pass with negative child
+read/input-write and ordinary-profile assertions.
