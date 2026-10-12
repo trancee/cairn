@@ -112,8 +112,11 @@ the tracked-source guard agree. Attempt 1 fails preflight scratch-device lookup
 (`diskutil info -plist`, five-second deadline) before target work; only
 failed/skipped jobs are replayed with the same
 revision and unchanged limits. Scratch-eject reliability remains open.
-Default scanning is still enabled; PR/deployment approval and actual uploaded
-four-language processing remain pending.
+The owner subsequently approved PR #6 merge and coordinated scanning cutover.
+Default setup is disabled; PR run `38279234281` passed and GitHub processed
+all four language analyses. Concurrent branch run `38279051559` completed
+Kotlin analysis but failed scratch teardown; only failed jobs are replayed
+with unchanged controls. Deployment and processed scans on `main` remain pending.
 
 On macOS with Xcode Python available:
 

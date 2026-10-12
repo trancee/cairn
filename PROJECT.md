@@ -109,7 +109,7 @@ not earlier emulator instability or full Linux runner acceptance.
 ## Verified profile
 
 Post-merge CodeQL's automatic Kotlin trial failed `none`-mode extraction in
-run `38249821951`; default Actions/Python/Rust scanning remains configured.
+run `38249821951`; default Actions/Python/Rust scanning initially remained configured.
 The owner approved a build-backed advanced-setup migration preserving strict
 offline build controls. Run `38263225443` at `799d758` verifies actual Kotlin
 database finalization inside the Apple cell with the approved exact
@@ -129,8 +129,13 @@ The staged advanced workflow preserves all existing languages
 and supports upload-free feature-branch/dispatch validation. CodeQL mode
 omits native-only framework/executable proof, payload export and unrelated
 functional simulator runtime; ordinary binding mode retains them with
-unchanged controls. Default scanning stays enabled; repair PR/deployment
-approval and actual four-language upload/processing remain pending.
+unchanged controls. The owner subsequently approved PR #6 merge and the
+coordinated setting transition. Default setup is now disabled; PR
+run `38279234281` passed and GitHub processed all four language analyses
+at merge revision `f36da6130053e89070c3ec6ec785daf2bfacfb5c`.
+Branch run `38279051559` completed Kotlin analysis but failed scratch
+teardown; its failed jobs are replayed with unchanged controls.
+Deployment and processed scans on `main` remain pending.
 See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md).
 
 The owner now permits a separate normal-user functional CoreSimulator job on

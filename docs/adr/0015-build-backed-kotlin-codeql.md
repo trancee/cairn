@@ -1,6 +1,6 @@
 # ADR 0015: Build-backed Kotlin CodeQL extraction
 
-Status: accepted; four-language upload-free validation verified; deployment and upload pending
+Status: accepted; four-language PR processing verified; main deployment pending
 
 ## Context
 
@@ -8,7 +8,7 @@ After PR #5 merged, GitHub's automatic language trial in
 [run 38249821951](https://github.com/trancee/cairn/actions/runs/38249821951)
 selected Java/Kotlin `build-mode: none` and failed database finalization with
 no extracted source. Kotlin requires compilation under CodeQL tracing.
-Existing default setup remains configured for Actions, Python and Rust.
+Existing default setup was configured for Actions, Python and Rust.
 The pinned CodeQL `2.27.2` supports the fixture's Kotlin `2.4.20` and JDKs;
 no toolchain downgrade is justified.
 
@@ -50,8 +50,10 @@ prove complete source coverage or successful queries/upload.
 
 Before disabling default setup, verify actual Kotlin extraction for every
 tracked `.kt` source, successful queries and repository-path mapping, and
-preserve Actions/Python/Rust lanes in the replacement workflow. No alert
-dismissal, merge, publication or issue-44/45 acceptance waiver is authorized.
+preserve Actions/Python/Rust lanes in the replacement workflow. The initial
+diagnostic approval did not authorize merge or publication; the subsequent
+cutover approval is recorded below. No alert dismissal or issue-44/45
+acceptance waiver is authorized.
 
 ## First strict-cell observation
 
@@ -218,6 +220,20 @@ with the same revision and unchanged controls; successful existing-language
 results are retained. No retry implementation, timeout increase or reliability
 claim is introduced. The known scratch-eject limitation remains open.
 
-Default setup is still configured for Actions/Python/Rust. Repair PR approval,
-the setting transition, actual four-language upload/processing and deployment
-to `main` remain required before declaring the persistent scanning fix complete.
+## Approved cutover and PR processing
+
+The owner subsequently approved coordinated scanning cutover, verified merge
+of PR #6 and branch cleanup. Default setup was disabled after replacement
+validation. [PR run 38279234281](https://github.com/trancee/cairn/actions/runs/38279234281)
+passed, including strict Kotlin analysis, cleanup and uploaded-result
+processing. GitHub records successful Actions, Python, Rust and Kotlin
+analyses at PR merge revision `f36da6130053e89070c3ec6ec785daf2bfacfb5c`.
+Kotlin analysis `1937876304` has no processing error and zero results.
+
+The concurrent upload-free branch run `38279051559` completed extraction,
+coverage, queries and mapping, but failed scratch teardown. Its failed jobs
+are replayed on fresh hosted VMs with unchanged revision and controls.
+This does not establish teardown reliability or permit a failed-gate bypass.
+Deployment and successful processed scans on `main` remain required before
+declaring the persistent scanning fix complete. Restore default setup if
+deployment fails; no existing alert is dismissed.
