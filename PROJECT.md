@@ -111,9 +111,16 @@ not earlier emulator instability or full Linux runner acceptance.
 The owner now permits a separate normal-user functional CoreSimulator job on
 the supplied fresh GitHub `macos-26` VM. The owning workflow retains strict
 offline build controls and transfers only the canonical simulator smoke
-executable, checksum and source revision to that fresh runtime VM. Functional
-success must be observed; it will not close strict helper containment,
-issue-45 acceptance or physical-device proof. See the current lane contract
+executable, checksum and source revision to that fresh runtime VM.
+[Run 38228998011, attempt 2](https://github.com/trancee/cairn/actions/runs/38228998011/attempts/2)
+at `19c35ba` passed delivered ARM64 simulator generated calls, typed overflow,
+string/object-lifetime assertions and exact-device cleanup. Preflight and strict
+build passed in attempt 1; only its failed runtime job was replayed with the
+same checksum/revision-verified payload and unchanged limits on a fresh VM.
+Attempt 1 timed out during simulator creation/cleanup inventory, so reliable
+first-attempt execution is not established. Functional success does not close
+strict helper containment, issue-45 acceptance or physical-device proof.
+See the current lane contract
 in the [Apple proof README](proofs/bindings/apple/README.md).
 
 Apple isolation assessment has resumed using benign

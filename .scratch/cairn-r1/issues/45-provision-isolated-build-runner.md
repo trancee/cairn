@@ -23,7 +23,7 @@ caches read-only and disable network access during target-controlled work.
 | Lane | Required scope | Current state |
 |---|---|---|
 | Linux/Android | Disposable Linux environment; Rust host tests, Kotlin/JVM integration, Android builds and generated-call execution | V4 cold build/runtime, canonical inputs, resource/logging controls, streamed output, live base denial and bounded metadata-preserving extraction pass; intermittent emulator reliability and final acceptance remain open |
-| macOS/iOS | Isolated environment on Apple hardware; Xcode, iOS-device and simulator-arm64 builds, generated-call execution and packaged deployment-floor inspection | No compliant runner established |
+| macOS/iOS | Isolated environment on Apple hardware; Xcode, iOS-device and simulator-arm64 builds, generated-call execution and packaged deployment-floor inspection | Offline build controls and separately approved functional simulator calls pass; no compliant whole-runtime boundary established |
 
 The owner approved splitting the work on 2026-10-10. Each lane must satisfy
 every isolation acceptance condition below independently. Linux success
@@ -60,6 +60,18 @@ gate remain blocked until both lanes and all binding acceptance conditions
 are complete.
 
 ## Comments
+
+- 2026-10-12: Separate functional-runtime implementation completed in
+  [run 38228998011, attempt 2](https://github.com/trancee/cairn/actions/runs/38228998011/attempts/2)
+  at `19c35ba`. Attempt 1 passed preflight/strict offline build, immutable-input
+  checks, scratch teardown and payload delivery, but simulator creation and
+  cleanup inventory timed out. A fresh-VM replay of only the failed runtime job,
+  using the same verified payload and unchanged limits, passed ARM64 boot,
+  actual generated value/error/object-lifetime calls and exact-device cleanup.
+  The creation-timeout cause and first-attempt reliability remain unproven.
+  Functional success does not resolve this ticket: normal-user simulator
+  helpers still lack the required filesystem/network/resource boundary.
+  Physical-device and full binding acceptance remain open.
 
 - 2026-10-12: Owner subsequently approved a separate fresh GitHub macOS
   functional-runtime job with normal-user CoreSimulator services. Strict

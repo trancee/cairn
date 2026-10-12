@@ -1188,3 +1188,26 @@ Use the documented standalone executable launch contract from Kotlin's
 [XcodeSimulatorExecutor](https://github.com/JetBrains/kotlin/blob/master/native/executors/src/main/kotlin/org/jetbrains/kotlin/native/executors/XcodeSimulatorExecutor.kt):
 `simctl spawn --standalone <UUID> <executable>`. No changed runtime limit,
 default-set mutation or successful generated-call claim is implied yet.
+
+### Observed functional execution
+
+[Run 38228998011, attempt 2](https://github.com/trancee/cairn/actions/runs/38228998011/attempts/2)
+at `19c35ba000a17f734ce04b1685d28d0c40d64e74` passes actual delivered
+simulator execution. Attempt 1 passed benign preflight and strict offline
+build, executable platform/floor inspection, immutable-input hashes, scratch
+teardown and payload delivery, then exceeded the 30-second create deadline
+and 15-second cleanup inventory deadline. Replay only the failed functional
+job on a fresh supplied VM; retain the same source/payload and every limit.
+No retry, additional service permission or deadline expansion is implemented.
+
+The replay reports completed exact ARM64 bootstatus, typed overflow across
+FFI, value/boundary/string/object-lifetime assertions, successful delivered
+consumer exit and verified exact-device shutdown/deletion. Downloaded payload
+checksum and revision match: executable SHA-256
+`1c1f429e9c7bb47814070f871ff24e6a896dfdeac7ff9a84c8a175cce8cdb229`,
+ARM64 `IOSSIMULATOR`, minimum OS `15.0`. The source-backed standalone launch
+contract now has real generated-call evidence. The initial creation-timeout
+cause is not established or fixed, and first-attempt reliability is not proven.
+This closes the approved functional-runtime implementation only: strict
+helper containment, final issue-45 acceptance, Compose/app integration,
+release behavior and physical iPhone execution remain open.

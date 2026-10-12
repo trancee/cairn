@@ -35,7 +35,7 @@ replace the interop pin.
 | Lane | Binding evidence required | Current state |
 |---|---|---|
 | Linux/Android | Generated call, typed error and Rust-object lifetime through the planned KMP/app boundary; JVM tests, Android API 26+ build, packaged native/runtime inspection and Android execution | Standalone JVM and Android debug/emulator proof passed; Compose, allocator, release/hardware and final runner acceptance remain open |
-| macOS/iOS | Generated call, typed error and Rust-object lifetime through the planned KMP/app boundary; device/simulator-arm64 builds, packaged native/runtime inspection, iOS 15 deployment floor and corresponding execution evidence | Blocked on issue 45's macOS lane |
+| macOS/iOS | Generated call, typed error and Rust-object lifetime through the planned KMP/app boundary; device/simulator-arm64 builds, packaged native/runtime inspection, iOS 15 deployment floor and corresponding execution evidence | Standalone offline JVM/Native/framework/executable builds and separately approved hosted simulator calls pass; strict runtime acceptance, Compose/app, release and physical-device proof remain open |
 
 An accepted runner lane in issue 45 permits only its matching proof here,
 even while the other lane remains blocked. Record commands, tool versions,
@@ -46,6 +46,20 @@ acceptance conditions are met across both lanes. S0 remains blocked until
 then; no protocol implementation is authorized by this split.
 
 ## Comments
+
+- 2026-10-12: Owner-approved separate hosted functional-runtime lane passed
+  [run 38228998011, attempt 2](https://github.com/trancee/cairn/actions/runs/38228998011/attempts/2)
+  at `19c35ba`. Attempt 1 passed strict offline JVM/Native/framework/simulator
+  executable gates, iOS `15.0` deployment floor, frozen-input checks and
+  scratch teardown; its fresh runtime timed out creating a device. Only that
+  failed job was replayed with unchanged limits and the same delivered
+  checksum/revision-verified executable. Actual ARM64 simulator calls passed
+  typed overflow, values/boundary/string and deterministic Rust-object lifetime,
+  with exact-device shutdown/deletion verified. See the
+  [Apple proof README](../../../proofs/bindings/apple/README.md) for payload
+  identity and runtime boundary. This is standalone functional simulator
+  evidence, not strict runtime isolation, deterministic reliability, Compose,
+  release or physical iPhone proof. This ticket and S0 remain unresolved.
 
 - 2026-10-10: Owner's cold networkless clone replay executed all 69 build
   tasks and passed generated JVM value/boundary/typed-error/object-lifetime

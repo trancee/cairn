@@ -22,7 +22,7 @@ It rejects extra files, symlinks, malformed manifests, oversized or changed
 binaries and revision mismatches before execution. It uses the normal runner
 user's CoreSimulator services and a new private device set, creates one
 `iPhone-17` with iOS `26.4.1`, boots ARM64 and executes the canonical Kotlin
-consumer through `simctl spawn`. Success requires its arithmetic/boundary,
+consumer through `simctl spawn --standalone`. Success requires its arithmetic/boundary,
 typed-error, string and deterministic object-lifetime assertions, followed
 by exact recorded-device shutdown/deletion. The job has a ten-minute ceiling,
 a 480-second/64 MiB execution collector, 300-second bootstatus ceiling,
@@ -33,7 +33,21 @@ limits and access outside the private set are not strictly contained. No
 project secrets or signing are supplied, but this is not a credential-free
 host boundary. Strict issue-45 acceptance, intermittent scratch-eject
 reliability, physical iPhone execution and production PQC/BLE remain open.
-Hosted boot/generated-call success must be observed before claiming it.
+Hosted functional execution passed in
+[run 38228998011, attempt 2](https://github.com/trancee/cairn/actions/runs/38228998011/attempts/2)
+at `19c35ba000a17f734ce04b1685d28d0c40d64e74`. The initial attempt passed
+preflight, strict offline build, immutable-input checks, scratch teardown and
+payload delivery, but timed out during 30-second simulator creation and
+15-second cleanup inventory. Only the failed runtime job was replayed on a
+fresh VM, using the same delivered payload and unchanged limits; no automatic
+retry or timeout increase was added. ARM64 boot, both canonical smoke `PASS`
+markers, successful delivered-consumer exit and exact-device shutdown/deletion
+passed. Downloaded payload SHA-256 verification passed:
+`1c1f429e9c7bb47814070f871ff24e6a896dfdeac7ff9a84c8a175cce8cdb229`.
+Its recorded revision matches the run and Mach-O inspection reports
+`IOSSIMULATOR`, ARM64 and minimum OS `15.0`. The creation-timeout cause and
+deterministic first-attempt reliability remain unproven; this is real generated
+simulator execution, not strict runtime containment or hardware evidence.
 
 ## Earlier probe evidence
 
