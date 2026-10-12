@@ -8,7 +8,6 @@ on:
         type: boolean
         default: false
   push:
-    branches: [main]
   pull_request:
     branches: [main]
   schedule:
@@ -16,6 +15,9 @@ on:
 
 permissions:
   contents: read
+
+env:
+  CODEQL_UPLOAD: ${{ ((github.event_name != 'workflow_dispatch' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')) || (github.event_name == 'workflow_dispatch' && inputs.upload)) && 'always' || 'never' }}
 
 jobs:
   existing-languages:
@@ -50,7 +52,7 @@ jobs:
         with:
           category: /language:${{ matrix.language }}
           output: ${{ runner.temp }}/codeql-results
-          upload: ${{ (github.event_name != 'workflow_dispatch' || inputs.upload) && 'always' || 'never' }}
+          upload: ${{ env.CODEQL_UPLOAD }}
           upload-database: false
           wait-for-processing: true
       - name: Retain analysis for cutover verification
@@ -84,7 +86,7 @@ jobs:
           name: apple-codeql-analysis
           path: ${{ runner.temp }}/kotlin-results
       - name: Upload only mapped Kotlin SARIF
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.upload }}
+        if: ${{ env.CODEQL_UPLOAD == 'always' }}
         uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           sarif_file: ${{ runner.temp }}/kotlin-results/java-kotlin.sarif

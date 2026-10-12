@@ -79,7 +79,8 @@ proof; default Actions/Python/Rust scanning stays enabled. See
 The staged `.github/workflows/codeql.yml` runs existing Actions/Python/Rust
 default suites and calls this strict Kotlin lane. A manual `upload=false`
 dispatch validates without publishing scans while default setup stays enabled.
-Automatic push/PR/weekly runs upload after the separately approved setting
+Feature-branch pushes likewise validate without publishing. Default-branch,
+PR and weekly runs upload after the separately approved setting
 cutover. Only mapped `java-kotlin.sarif` is uploaded; raw SARIF and compiled
 source inventory remain diagnostic artifacts. Generated paths retain their
 owning untracked build location, not a fabricated handwritten annotation.

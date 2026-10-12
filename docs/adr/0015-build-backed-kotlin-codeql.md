@@ -149,6 +149,10 @@ The official `v4.38.3` annotated release tag resolves to commit
 `24c54180a607b1449ed407dd24f251e4e9147c8d`; use that immutable commit, not
 the annotated tag object. Dispatch with `upload=false` for validation while
 default setup remains enabled. No database publication is requested.
+Feature-branch pushes also perform upload-free validation, allowing the new
+workflow to register and run before deployment to the default branch.
+Only default-branch/PR/scheduled runs and explicit `upload=true` dispatches
+publish after cutover; branch validation does not change scanning settings.
 The unrelated functional simulator runtime is skipped only in CodeQL mode;
 ordinary binding-proof dispatch retains it. Strict build gates are unchanged.
 
