@@ -61,6 +61,13 @@ are complete.
 
 ## Comments
 
+- 2026-10-12: Exact user/59000 teardown and empty UID pass, with ordinary
+  detach in `38220908711`. Actual bootstrap UID59000 regression passes;
+  boot still stalls in LaunchServices migration at approved 300 seconds.
+  `38216685239` snapshot shows 166 UID processes, exceeding caller128:
+  launchd helpers lack inherited limits. Bounded stack sampling failed and
+  its implementation was removed. Full runtime containment/boot remain open;
+  no generated app/calls or deadline/service expansion is implied.
 - 2026-10-11: Trusted creation passes `38165989640`; boot probes
   `38167434234`/`38168165135` expire 60 seconds with failed UID cleanup and
   busy scratch detach. Diagnostic sees launchd-parented simulator helpers

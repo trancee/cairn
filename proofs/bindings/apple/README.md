@@ -250,6 +250,14 @@ Trusted device creation passed `38165989640`; boot probes `38167434234`/
 cleanup failed and scratch detach was busy. The diagnostic observed
 launchd-parented simulator services and a remaining distnoted process.
 Trusted lifecycle and runtime containment remain incomplete; no app ran.
+Exact disposable-domain removal and empty-UID verification now pass
+`38204550881`, `38215350684`, `38216685239` and `38220908711`.
+Owner-approved trusted inventory and boot ceilings are separately 300 seconds.
+The actual bootstrap-context regression passes `38220908711`, but boot still
+stalls in LaunchServices migration. A 120-second snapshot contained 166 UID
+processes: the 128-process caller limit is not inherited by launchd services.
+Failed stack sampling was removed after bounded attempts. Root-helper and
+full runtime resource/filesystem/network containment remain unproven.
 
 | Module | Target | Owning proof task | Evidence/limitation |
 | --- | --- | --- | --- |

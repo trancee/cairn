@@ -173,6 +173,13 @@ Trusted scratch-device creation passed `38165989640`. Boot attempts
 did not complete and scratch detach failed busy. Launchd-parented simulator
 services were observed. Simulator lifecycle/containment remains incomplete;
 no generated app or simulator calls ran.
+Exact user-domain teardown/empty UID are now verified, including
+`38220908711`; ordinary detach passed in that run. Actual selected bootstrap
+UID 59000 passes its supervisor regression, but boot still times out at the
+separately approved 300-second ceiling in LaunchServices migration.
+A prior 120-second snapshot showed 166 dedicated-UID processes, so caller
+128-process limits do not bound launchd helpers. Failed profiler code was
+removed; no runtime acceptance or generated simulator calls are implied.
 
 Offline effective Apple plugin configuration passed in
 [run 38130344648](https://github.com/trancee/cairn/actions/runs/38130344648)

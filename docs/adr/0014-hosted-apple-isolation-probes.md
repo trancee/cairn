@@ -1119,3 +1119,14 @@ the existing root child launcher, before its limits/credential/environment
 setup, inside the same bounded collector. Use it only for the trusted boot
 experiment; stop requesting the unsupported stack sample there. Original
 build/fixture commands and service permissions remain unchanged.
+
+Run `38220908711` at `aab5640` passed all seven hosted supervisor regressions,
+including actual child bootstrap UID 59000. Trusted boot still stalled in
+the same LaunchServices migration and expired 300 seconds. Domain removal,
+empty UID and ordinary scratch detach passed. This falsifies bootstrap
+selection alone as a fix; it does not prove the cause or complete boot.
+Remove the failed bounded stack-sampling experiment and its scheduling-only
+test rather than retain an unverified profiler path; preserve its failed
+evidence above. Keep the verified bootstrap/domain controls and their real
+CLI regression. No further deadline increase, migration bypass or generated
+simulator execution is justified by these results.
