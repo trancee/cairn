@@ -61,6 +61,12 @@ are complete.
 
 ## Comments
 
+- 2026-10-12: Final replay `38222383057` at `f2c73ed` repeats boot timeout
+  with verified domain/UID/detach cleanup. Owner selected strict infrastructure,
+  rejecting a weaker functional-only hosted lane. No dedicated Apple host/VM,
+  capacity or provisioning/access route was supplied. External infrastructure
+  now blocks strict runtime acceptance; no unchanged boot reruns or shared-local
+  provisioning. Existing compile/JVM/link/inventory evidence remains valid.
 - 2026-10-12: Exact user/59000 teardown and empty UID pass, with ordinary
   detach in `38220908711`. Actual bootstrap UID59000 regression passes;
   boot still stalls in LaunchServices migration at approved 300 seconds.

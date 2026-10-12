@@ -1130,3 +1130,14 @@ test rather than retain an unverified profiler path; preserve its failed
 evidence above. Keep the verified bootstrap/domain controls and their real
 CLI regression. No further deadline increase, migration bypass or generated
 simulator execution is justified by these results.
+
+Final source replay `38222383057` at `f2c73ed` again expired trusted boot
+at 300 seconds; exact-domain teardown, empty UID and ordinary detach passed.
+The owner selected strict infrastructure rather than a weaker functional-only
+hosted simulator lane. No independently controlled Apple host/VM, capacity
+or access/provisioning route was supplied in the infrastructure elicitation.
+Strict runtime acceptance therefore has an external infrastructure blocker.
+Do not repeat unchanged hosted boot probes, relax the acceptance contract,
+or provision/build on the excluded shared local Mac. Preserve compilation/
+JVM/linkage/inventory evidence separately from incomplete simulator/hardware
+execution and whole-runtime containment.
