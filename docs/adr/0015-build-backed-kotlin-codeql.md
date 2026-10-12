@@ -73,3 +73,8 @@ to tighten this diagnostic loop, using the same frozen JDK/CodeQL paths,
 database source root, sandbox and 300-second cell limit. Its constant source
 is created only inside disposable scratch. It cannot satisfy Kotlin extraction
 or coverage acceptance; the full forced Kotlin consumer remains mandatory.
+Run `38258239184` instead expires the pre-existing 60-second fixture-target
+configuration before the minimal probe. Its captured `/opt` denials are Gradle
+attempts to write frozen cache metadata, not the CodeQL importer operation.
+Move the independent minimal probe before fixture configuration; do not relax
+that deadline or permit cache writes to make the diagnostic reachable.

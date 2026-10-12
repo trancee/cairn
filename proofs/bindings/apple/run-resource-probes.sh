@@ -131,6 +131,19 @@ if [ "$#" -eq 2 ]; then
   test "$tools" = /opt/cairn-apple-tools
   test "$(stat -f %u "$tools")" -eq 0
   sudo -n -u "$user" /bin/test -x "$tools/rust/bin/rustc"
+  if [ -d "$tools/codeql" ]; then
+    codeql_result=0
+    "$python" -I "$scripts/uid-supervisor.py" --seconds 300 "$work/proof-output/codeql-startup.log" \
+      /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+      -D PRIVATE_IPC=true -f "$work/build.sb" \
+      /bin/bash "$tools/check-codeql-startup.sh" "$tools" || codeql_result=$?
+    if [ "$codeql_result" -ne 0 ]; then
+      if [ -d "$volume/codeql-startup/database/log" ]; then
+        ditto "$volume/codeql-startup/database/log" "$output/codeql-startup-logs"
+      fi
+      exit "$codeql_result"
+    fi
+  fi
   cp "$scripts/probe-toolchains.sh" "$work/inputs/probe-toolchains.sh"
   chmod 0644 "$work/inputs/probe-toolchains.sh"
   "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/toolchains.log" \
@@ -144,12 +157,6 @@ if [ "$#" -eq 2 ]; then
     GRADLE_DAEMON_BIND_ADDRESS=127.0.0.2 \
     /bin/bash "$tools/check-fixture-targets.sh" "$tools" "$python"
   "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
-  if [ -d "$tools/codeql" ]; then
-    "$python" -I "$scripts/uid-supervisor.py" --seconds 300 "$work/proof-output/codeql-startup.log" \
-      /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
-      -D PRIVATE_IPC=true -f "$work/build.sb" \
-      /bin/bash "$tools/check-codeql-startup.sh" "$tools"
-  fi
   "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/cargo-inputs.log" \
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
     -D PRIVATE_IPC=false -f "$work/build.sb" \
