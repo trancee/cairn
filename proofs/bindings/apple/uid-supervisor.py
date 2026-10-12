@@ -132,6 +132,7 @@ def main():
     parser.add_argument("--diagnose-after", type=float)
     parser.add_argument("--bootout-user-domain", action="store_true")
     parser.add_argument("--sample-host-lsd", action="store_true")
+    parser.add_argument("--user-bootstrap", action="store_true")
     parser.add_argument("output")
     parser.add_argument("command", nargs=argparse.REMAINDER)
     arguments = parser.parse_args()
@@ -154,10 +155,15 @@ def main():
     for number in (signal.SIGHUP, signal.SIGINT, signal.SIGTERM):
         signal.signal(number, interrupted)
     collector = Path(__file__).parent.parent / "linux-android" / "bounded-proof.py"
+    child_command = [
+        sys.executable, "-I", str(Path(__file__).resolve()),
+        "--child", *arguments.command,
+    ]
+    if arguments.user_bootstrap:
+        child_command = ["/bin/launchctl", "asuser", "59000", *child_command]
     process = subprocess.Popen([
         sys.executable, str(collector), "--seconds", str(arguments.seconds),
-        arguments.output, sys.executable, "-I", str(Path(__file__).resolve()),
-        "--child", *arguments.command,
+        arguments.output, *child_command,
     ], start_new_session=True)
     try:
         if arguments.diagnose_after is not None:

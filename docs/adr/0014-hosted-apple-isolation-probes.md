@@ -1112,3 +1112,10 @@ not explicitly select that context. First require the supervised child to
 observe `manageruid` 59000, with exact-domain cleanup; missing CLI support
 must fail the test before implementation. Generated/build commands remain
 unchanged and launchd-helper resource inheritance is still unproven.
+
+The bootstrap observation test failed as intended in `38220750953` because
+`--user-bootstrap` was unknown. Implement exact-UID `launchctl asuser` around
+the existing root child launcher, before its limits/credential/environment
+setup, inside the same bounded collector. Use it only for the trusted boot
+experiment; stop requesting the unsupported stack sample there. Original
+build/fixture commands and service permissions remain unchanged.
