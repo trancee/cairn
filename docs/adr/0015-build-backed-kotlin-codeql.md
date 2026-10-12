@@ -65,3 +65,11 @@ scratch teardown pass. No Kotlin database/query/coverage success is established.
 Next capture only kernel sandbox denials for `/opt`, bounded to 15 seconds
 and the last two minutes; determine the actual denied operation before changing
 any permission. Existing limits and default scanning remain unchanged.
+
+Run `38254923786` instead expires the existing 600-second generator-install
+deadline before reaching CodeQL; it adds no importer-operation evidence.
+Move a trusted, minimal Java compiler/import probe ahead of generator work
+to tighten this diagnostic loop, using the same frozen JDK/CodeQL paths,
+database source root, sandbox and 300-second cell limit. Its constant source
+is created only inside disposable scratch. It cannot satisfy Kotlin extraction
+or coverage acceptance; the full forced Kotlin consumer remains mandatory.

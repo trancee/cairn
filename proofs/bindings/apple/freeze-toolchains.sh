@@ -40,6 +40,7 @@ if [ -d "$prepared/codeql" ]; then
   cp "$prepared/android-api.jar" "$destination/android-api.jar"
   cp "$scripts/codeql-consumer.gradle" "$destination/codeql-consumer.gradle"
   cp "$scripts/check-codeql-bindings.sh" "$destination/check-codeql-bindings.sh"
+  cp "$scripts/check-codeql-startup.sh" "$destination/check-codeql-startup.sh"
 fi
 mkdir "$destination/generator-tools"
 cp "$scripts/generator-cargo.sh" "$destination/generator-tools/cargo"
