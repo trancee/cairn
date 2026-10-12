@@ -10,8 +10,8 @@ simctl, home = sys.argv[1:]
 device = str(uuid.UUID(pathlib.Path(home, "simulator-lifecycle-device").read_text().strip()))
 command = [simctl, "--set", str(pathlib.Path(home, "simulator-devices"))]
 try:
-    subprocess.run([*command, "boot", device, "--arch=arm64"], check=True, timeout=15)
-    subprocess.run([*command, "bootstatus", device], check=True, timeout=25)
+    subprocess.run([*command, "boot", device, "--arch=arm64"], check=True, timeout=60)
+    subprocess.run([*command, "bootstatus", device], check=True, timeout=200)
     result = subprocess.run([*command, "list", "devices", "--json"],
                             check=True, capture_output=True, text=True, timeout=5)
     matches = [item for group in json.loads(result.stdout)["devices"].values()
@@ -20,7 +20,7 @@ try:
         raise SystemExit("FAIL: trusted simulator did not reach Booted state")
     print("PASS: trusted ARM64 simulator booted; no app installed or generated calls", flush=True)
 finally:
-    subprocess.run([*command, "shutdown", device], check=True, timeout=10)
+    subprocess.run([*command, "shutdown", device], check=True, timeout=25)
     print("PASS: trusted simulator shutdown command completed", flush=True)
 ' "$simctl" "$HOME"
   exit 0

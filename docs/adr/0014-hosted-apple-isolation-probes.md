@@ -1044,3 +1044,15 @@ assuming a caller holder. Make ordinary detach verbose and collect only
 device/mount/ejectability fields from exact-volume `diskutil info` after
 failure, with a five-second diagnostic deadline. No retry, force, service
 mutation or relaxed success check is added.
+
+Run `38204550881` at `638c278` reached boot data migration but expired
+60 seconds. The approved `user/59000` domain removal then passed and the UID
+became empty: the observed lifecycle cleanup regression is green.
+Scratch unmount still failed busy, with its mountpoint retained; caller
+cleanup is not complete storage/helper cleanup.
+The owner approved 300 seconds for this trusted boot/migration/shutdown cell
+only, retaining other limits, service permissions and no generated app.
+Nested command ceilings total at most 290 seconds. Replace recursive-directory
+lsof selection with exact-filesystem selection (`+f -- <scratch>`) so deleted
+or unenumerated open files on the volume are eligible for identity-only
+diagnostics. This does not force/retry detach or claim a holder was found.

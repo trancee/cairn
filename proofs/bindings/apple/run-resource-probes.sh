@@ -49,7 +49,7 @@ print("DIAGNOSTIC: scratch detach state " + json.dumps({
 ' "$volume" || echo 'DIAGNOSTIC: scratch detach state collection failed'
       echo 'DIAGNOSTIC: failed scratch detach; open-file holder PIDs and command names only'
       "$python" -I -c \
-        'import subprocess, sys; subprocess.run(["/usr/sbin/lsof", "-nP", "-Fpc", "+D", sys.argv[1]], timeout=15, check=True)' \
+        'import subprocess, sys; subprocess.run(["/usr/sbin/lsof", "-nP", "-Fpc", "+f", "--", sys.argv[1]], timeout=15, check=True)' \
         "$volume" || echo 'DIAGNOSTIC: open-file holder collection failed'
     fi
   fi
@@ -163,7 +163,7 @@ for line in result.stdout.splitlines():
     -D PRIVATE_IPC=false -f "$work/simulator-inventory.sb" \
     /bin/bash "$tools/check-simulator-lifecycle.sh" "$python" create
   boot_result=0
-  "$python" -I "$scripts/uid-supervisor.py" --seconds 60 --diagnose-after 10 \
+  "$python" -I "$scripts/uid-supervisor.py" --seconds 300 --diagnose-after 10 \
     --bootout-user-domain \
     "$work/proof-output/simulator-boot.log" \
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
