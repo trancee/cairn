@@ -118,13 +118,19 @@ Run `38268914707` verifies Actions/Python/Rust analyses and actual Kotlin
 compilation-unit coverage for all three tracked and both generated binding
 sources, plus bundled query execution. Kotlin SARIF mapping subsequently
 fails on an implicit URI base; the standard `%SRCROOT%` interpretation is
-corrected and failed-report retention added. Mapping/export/cutover remain
-unverified. The staged advanced workflow preserves all existing languages
+corrected and failed-report retention added.
+Run `38274027100`, attempt 2, at `6618ecb` verifies the complete four-language
+upload-free replacement, including mapped Kotlin export, input integrity,
+UID cleanup and scratch teardown. Downloaded actual raw/mapped SARIF replay
+and compiled-source manifest checks agree; Kotlin reports zero results.
+Attempt 1 fails preflight scratch-device lookup before target work; unchanged failed
+jobs are replayed, not automatically retried or given larger limits.
+The staged advanced workflow preserves all existing languages
 and supports upload-free feature-branch/dispatch validation. CodeQL mode
 omits native-only framework/executable proof, payload export and unrelated
 functional simulator runtime; ordinary binding mode retains them with
-unchanged controls. Default scanning stays enabled; no deployment approval
-or migration success is implied.
+unchanged controls. Default scanning stays enabled; repair PR/deployment
+approval and actual four-language upload/processing remain pending.
 See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md).
 
 The owner now permits a separate normal-user functional CoreSimulator job on

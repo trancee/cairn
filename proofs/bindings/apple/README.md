@@ -72,8 +72,9 @@ the unchanged bundled Java/Kotlin security suite offline. Analysis has its
 own existing 300-second command ceiling, two threads and 2 GiB requested
 evaluator RAM; all caches/results remain in bounded scratch. Coverage and
 SARIF export require success. Compiled coverage and suite execution pass in
-run `38268914707`; mapped export and processed GitHub results remain
-unverified. This is not yet a verified replacement scan or Android packaging
+run `38268914707`; mapped export passes in run `38274027100`, attempt 2.
+Processed GitHub results remain unverified. This is not yet a deployed
+replacement scan or Android packaging
 proof; default Actions/Python/Rust scanning stays enabled. See
 [ADR 0015](../../../docs/adr/0015-build-backed-kotlin-codeql.md).
 
@@ -100,6 +101,19 @@ for the explicit compiled-source gate.
 CodeQL mode also omits native-only framework/executable tasks and simulator
 payload export after its JVM/analysis gates; ordinary mode retains them.
 No resource, filesystem, network, integrity or cleanup boundary is relaxed.
+
+The complete upload-free replacement passes in
+[run 38274027100, attempt 2](https://github.com/trancee/cairn/actions/runs/38274027100/attempts/2)
+at `6618ecb`: existing-language analyses, Kotlin compilation-unit coverage,
+bundled queries, mapped export, frozen-input integrity and cleanup.
+Downloaded Kotlin SARIF records a successful CodeQL `2.27.2` invocation,
+76 rule metadata entries and zero results. Actual raw-to-mapped replay and
+the tracked-source guard agree. Attempt 1 fails preflight scratch-device lookup
+(`diskutil info -plist`, five-second deadline) before target work; only
+failed/skipped jobs are replayed with the same
+revision and unchanged limits. Scratch-eject reliability remains open.
+Default scanning is still enabled; PR/deployment approval and actual uploaded
+four-language processing remain pending.
 
 On macOS with Xcode Python available:
 

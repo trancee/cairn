@@ -1,6 +1,6 @@
 # ADR 0015: Build-backed Kotlin CodeQL extraction
 
-Status: accepted direction; extraction, compiled coverage and queries verified; mapping and migration unverified
+Status: accepted; four-language upload-free validation verified; deployment and upload pending
 
 ## Context
 
@@ -192,3 +192,32 @@ export belong to the ordinary binding-proof lane, not security analysis.
 Ordinary mode retains all those gates. Frozen inputs, Rust/allocator checks,
 PF controls, private UID, command/file/memory/scratch ceilings, integrity
 verification and cleanup remain required in both modes.
+
+## Verified replacement before cutover
+
+[Run 38274027100, attempt 2](https://github.com/trancee/cairn/actions/runs/38274027100/attempts/2)
+at `6618ecb9f60426a3064bb03d716ec43323c13e2a` passes the complete upload-free
+replacement. Existing Actions/Python/Rust analyses pass, along with strict
+Kotlin extraction, all three tracked and both generated compilation units,
+the unchanged bundled suite, mapped SARIF export, immutable-input checks,
+empty-UID cleanup and scratch teardown. The result-delivery job downloads
+the same-run artifact; publication is intentionally skipped.
+
+Downloaded Kotlin artifacts verify CLI `2.27.2`, a successful query invocation,
+76 rule metadata entries and zero Kotlin results. Replaying the owning mapper
+on the actual raw SARIF reproduces the exported mapped document exactly;
+the raw artifact uses the standard implicit `%SRCROOT%`. Replaying the source
+guard against the current tracked manifest confirms all five compilation
+units. These are observed extraction/analysis/mapping results, not processed
+GitHub code-scanning evidence or an absence-of-vulnerabilities guarantee.
+
+Attempt 1 fails preflight scratch-device lookup: `diskutil info -plist`
+expires its existing five-second deadline before target work, leaving teardown
+incomplete. Only failed/skipped jobs are replayed on fresh hosted VMs
+with the same revision and unchanged controls; successful existing-language
+results are retained. No retry implementation, timeout increase or reliability
+claim is introduced. The known scratch-eject limitation remains open.
+
+Default setup is still configured for Actions/Python/Rust. Repair PR approval,
+the setting transition, actual four-language upload/processing and deployment
+to `main` remain required before declaring the persistent scanning fix complete.
