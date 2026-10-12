@@ -13,6 +13,19 @@ from pathlib import Path
     "Dedicated-UID supervision requires the disposable hosted root fixture",
 )
 class DedicatedSupervisorTest(unittest.TestCase):
+    def test_stack_sampling_requires_a_scheduled_process_diagnostic(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name("uid-supervisor.py")),
+                 "--sample-host-lsd", str(Path(directory) / "proof.log"),
+                 "/bin/echo", "unexpected"],
+                capture_output=True, timeout=10, text=True,
+            )
+
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertIn("Stack sampling requires a scheduled process diagnostic", result.stderr)
+            self.assertNotIn("unexpected", result.stdout)
+
     def test_diagnostic_time_must_be_positive_and_before_deadline(self):
         with tempfile.TemporaryDirectory() as directory:
             for value in ("0", "-1", "1", "nan", "inf"):

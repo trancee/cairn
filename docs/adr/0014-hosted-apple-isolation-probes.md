@@ -1075,3 +1075,13 @@ to observe the stalled migration phase rather than early simulator launch.
 No second snapshot, new permission, timeout increase or migration bypass is
 added. Earlier nested command timeouts did not stop bootstatus before the
 outer deadline; outer supervision remains the observed hard boundary.
+
+Run `38216685239` at `8108bb8` again stalled in LaunchServices migration.
+The 120-second snapshot contained 166 UID-59000 processes, exceeding the
+caller's 128-process ceiling: launchd services do not inherit that proven
+caller limit. Domain removal, empty UID and ordinary detach passed again;
+full runtime resource containment remains unverified.
+The owner approved one bounded stack-only sample of host-side `lsd` owned
+by UID 59000, excluding unrelated processes/arguments/environment/file
+contents. First require the supervisor CLI to reject sampling without a
+scheduled diagnostic; unknown-option rejection is not the expected contract.
