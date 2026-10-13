@@ -96,6 +96,7 @@ jobs:
       - name: Compare full frozen-tree manifest generation
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
+          git fetch --no-tags --depth=1 origin a6b076793ceb33a20bf518ff7edf5c6857c2c3a2
           "$(xcrun --find python3)" -I proofs/bindings/apple/benchmark-tool-manifest.py \
             /opt/cairn-apple-tools \
             | tee "$RUNNER_TEMP/apple-preparation/toolchain-manifest-benchmark.log"
