@@ -11,6 +11,7 @@ destination=/opt/cairn-apple-tools
 scripts="$(cd "$(dirname "$0")" && pwd -P)"
 test ! -e "$destination"
 umask 022
+started=$SECONDS
 mkdir "$destination"
 ditto "$prepared/gradle-9.7.0" "$destination/gradle"
 ditto "$rust" "$destination/rust"
@@ -49,9 +50,14 @@ fi
 mkdir "$destination/generator-tools"
 cp "$scripts/generator-cargo.sh" "$destination/generator-tools/cargo"
 chmod 0755 "$destination/generator-tools/cargo"
+echo "[DEBUG-ci-manifest] copy_seconds=$((SECONDS - started))"
+started=$SECONDS
 chown -R root:wheel "$destination"
 chmod -R a+rX,a-w "$destination"
+echo "[DEBUG-ci-manifest] ownership_permissions_seconds=$((SECONDS - started))"
 ls -ld "$destination" "$destination/rust" "$destination/rust/bin" "$destination/rust/bin/rustc"
+started=$SECONDS
 "$(xcrun --find python3)" -I "$scripts/tool-input-manifest.py" "$destination" \
   > "$prepared/toolchains.sha256"
+echo "[DEBUG-ci-manifest] manifest_seconds=$((SECONDS - started))"
 echo 'PASS: trusted tool copies are root-owned read-only; fixture/cache freezing is not implied'

@@ -584,6 +584,11 @@ against the committed `a6b0767` pipeline with identical manifests, source/
 environment/workload hashes and a 10% improvement threshold. On the local
 1.21 GB Rust `1.99.0` tool tree, the median changed from `3.79s` to `0.68s`;
 full hosted preparation/CodeQL improvement remains unverified.
+Initial hosted freeze steps took `162s`/`242s` versus `139s`; both strict cells
+failed before final acceptance (unexpected UID processes or startup deadline).
+The same-path manifests are retained, but neither faster hosted CI nor a
+reliability fix is established. Bounded same-VM phase/A/B diagnostics preserve
+all controls; unexpected processes are reported, never trusted or pre-cleaned.
 Commands and scope are in the
 [Apple reference](proofs/bindings/apple/README.md#frozen-input-manifest-generation).
 No protocol, public API, compiler profile or constant-time claim changes.

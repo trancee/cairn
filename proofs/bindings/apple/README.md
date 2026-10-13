@@ -92,6 +92,28 @@ This is not a measurement of the full pinned Apple preparation tree, the
 GitHub `macos-26` runner or end-to-end CodeQL latency. Those require hosted
 comparison. See [ADR 0014](../../../docs/adr/0014-hosted-apple-isolation-probes.md#manifest-generation-optimization).
 
+Initial hosted validation at `d17aded` does not establish a speedup:
+the whole freeze step took `162s` in PR run `38450721754` and `242s` in
+branch run `38450715255`, against the earlier `139s` baseline. Every one
+of the baseline's 80,635 paths remains in both tool manifests; five digest
+differences are confined to Rust component metadata and Ubique Git metadata.
+Both strict cells failed before actual Kotlin extraction/post-cell integrity
+acceptance: the PR supervisor rejected unexpected dedicated-UID processes
+before Native cinterop; the branch exhausted the unchanged 60-second
+tool/startup/selection command ceiling. Causes remain unestablished.
+
+Temporary `[DEBUG-ci-manifest]` phase timings separate copying, ownership/
+permissions and manifest generation. A manual `workflow_dispatch` of the
+owning preparation workflow also compares the full frozen tree against the
+baseline pipeline before target work, retaining the benchmark log in the
+existing artifact. It uses the same three alternating comparisons and
+120-second per-command ceiling within the unchanged 30-minute job.
+The supervisor's existing-UID rejection now reports only owned PID/parent,
+state, CPU time and command basename before refusing; it neither launches
+nor cleans those pre-existing processes. No retry or boundary/budget change
+is introduced. The temporary phase/dispatch instrumentation must be removed
+after evidence collection.
+
 ## Earlier probe evidence
 
 ### Opt-in Kotlin CodeQL diagnostic

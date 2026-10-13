@@ -93,6 +93,12 @@ jobs:
       - name: Verify opt-in CodeQL tool architecture
         if: ${{ inputs.codeql }}
         run: /opt/cairn-apple-tools/codeql/codeql version
+      - name: Compare full frozen-tree manifest generation
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          "$(xcrun --find python3)" -I proofs/bindings/apple/benchmark-tool-manifest.py \
+            /opt/cairn-apple-tools \
+            | tee "$RUNNER_TEMP/apple-preparation/toolchain-manifest-benchmark.log"
       - name: Prepare pinned plugin inputs without binding build tasks
         run: |
           "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \

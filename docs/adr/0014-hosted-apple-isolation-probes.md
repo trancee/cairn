@@ -1245,3 +1245,24 @@ Migration changes only the four manifest producers. Existing manifest names,
 consumers, copies, compiler tasks, all security/resource controls and immutable
 pins remain unchanged. Hosted comparison requires separate publication/
 execution approval; no issue-45 or scratch-reliability acceptance is implied.
+
+### Initial hosted acceptance and bounded diagnosis
+
+At `d17aded`, both generated tool manifests preserve the same 80,635 input
+paths as the verified baseline. The five digest differences are confined to
+Rust component metadata/Ubique Git metadata. However, whole-step freezing
+takes `162s`/`242s` rather than the earlier `139s`; the observed comparison
+does not pass the performance gate or isolate the cause. The PR cell then
+rejects unexpected dedicated-UID processes before Native cinterop; the branch
+cell expires the existing 60-second startup/selection deadline. No final
+Kotlin extraction/query/integrity acceptance or failure fix is established.
+
+Use temporary tagged copy/ownership/manifest phase timing and a manual-only
+full pinned-tree A/B measurement in the existing fresh preparation VM.
+Each existing benchmark command stays capped at 120 seconds; the job remains
+30 minutes. Remove this temporary workflow/timing instrumentation after
+collection. Add the already-existing redacted process-identity report before
+the unchanged existing-UID rejection: diagnostics only, never preflight
+cleanup, delayed trust acceptance or a resource/permission increase.
+This diagnostic regression was observed red before that report and green
+after it; local simulation does not prove the hosted helper's identity/cause.
