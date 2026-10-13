@@ -91,6 +91,19 @@ def select_certificate(
     uses: tuple[str, ...] = (),
 ) -> tuple[str, tuple[str, ...]]:
     prefix, blocks = export_parts(export)
+    if target == "complete_safety":
+        compositional = {"lock_stage_order", "initial_resume_serialized", "resume_serialized"}
+        retained = tuple(
+            name for name, block in blocks.items()
+            if lemma_header(block)[1] == "all-traces" and name not in compositional
+        )
+        if not retained:
+            raise ReplayError("missing safety certificates")
+        for name in retained:
+            proof = lemma_header(blocks[name])[2]
+            if re.search(r"\bsorry\b", proof) or not proof.strip():
+                raise ReplayError(f"{name}: incomplete safety certificate")
+        return prefix + "".join(blocks[name] for name in retained) + "end\n", retained
     if target not in blocks:
         raise ReplayError(f"missing target: {target}")
     for name in uses:
@@ -162,6 +175,14 @@ def check_result(output: str, retained: tuple[str, ...]) -> None:
             raise ReplayError(f"{name}: missing verified replay result")
 
 
+def check_source_completion(output: str) -> None:
+    results = re.findall(r"^Refined sources: (.*)$", output, re.M)
+    if len(results) != 1 or not re.fullmatch(
+        r"[1-9]\d* cases, deconstructions complete", results[0].strip(),
+    ):
+        raise ReplayError("refined source deconstructions: missing or incomplete result")
+
+
 # Reuse lemmas whose certificates a target proof consumes.
 USES = {
     "fresh_dk_origin": ("kem_ciphertext_origin",),
@@ -173,6 +194,11 @@ USES = {
     "fresh_ss_origin": ("kem_ciphertext_origin",),
 }
 
+EXISTENTIAL_TARGETS = (
+    "executable", "initiator_candidate_recovery", "lost_data_recovery",
+    "fresh_epoch_after_compromise",
+)
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -183,7 +209,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--target", choices=(
-            "lost_data_recovery", "kem_ciphertext_origin",
+            *EXISTENTIAL_TARGETS, "complete_safety", "kem_ciphertext_origin", "kem_and_ct_tail_origin",
             "encrypted_ct_tail_encapsulated", *USES,
         ),
         default="lost_data_recovery", help="certificate to replay (default: lost_data_recovery)",
@@ -195,7 +221,7 @@ def main() -> int:
     target = arguments.target
     uses = USES.get(target, ())
     trace_kind: Literal["exists-trace", "all-traces"] = (
-        "exists-trace" if target == "lost_data_recovery" else "all-traces"
+        "exists-trace" if target in EXISTENTIAL_TARGETS else "all-traces"
     )
     try:
         version = run(["tamarin-prover", "--version"], 30)
@@ -223,6 +249,13 @@ def main() -> int:
             ], 120)
             canonical = roundtrip.read_text()
             compare_replay(source, canonical, target, trace_kind, uses)
+            if arguments.disclosure_sources:
+                precomputation = run([
+                    "tamarin-prover", str(theory), "--quit-on-warning",
+                    "--derivcheck-timeout=60", "--precompute-only",
+                ], arguments.timeout)
+                check_source_completion(precomputation)
+                print("Refined source deconstructions: complete", flush=True)
             prefix, _ = export_parts(canonical)
             declarations = lexical_views(prefix)[0]
             rules = len(re.findall(r"^rule\b", declarations, re.M))

@@ -5,7 +5,7 @@ Symbolic models of `cairn-r1` ([spec](../cairn-r1.md)). Under the strict formal-
 | Model | Spec | Status |
 |---|---|---|
 | [`resume.spthy`](resume.spthy) | §6 Resume | All four profiles verified with public `pairID` |
-| [`ratchet.spthy`](ratchet.spthy) | §9 | Last completed replay: 55/59; current strict replay timed out at 360 s; full gate closed |
+| [`ratchet.spthy`](ratchet.spthy) | §9 | Opt-in refined sources complete; 56 safety certificates and four witnesses replay separately; full assembled/equation acceptance incomplete |
 | [`sas.spthy`](sas.spthy) | §5 Pairing (QR, SAS, TOFU, Verify) | Verified (draft 0.4) |
 
 ## Evidence index
@@ -17,7 +17,7 @@ Run commands from the repository root; setup and limits are in [`ENVIRONMENT.md`
 | Lifecycle invariants hold for the projected 43 rules | [`lifecycle/`](lifecycle/README.md) | `python3 docs/spec/models/lifecycle/check.py --lean <lean>` |
 | Lost-data witness and KEM origin replay exactly against the source | `replay.py`, [`ratchet-source-evidence.md`](ratchet-source-evidence.md) | `python3 docs/spec/models/replay.py [--disclosure-sources [--target <certificate>]]` |
 | CT-tail ciphertext outputs follow an earlier encapsulation of the same KEM ciphertext | `encrypted_ct_tail_encapsulated` in [`ratchet-transfer-origins.inc`](ratchet-transfer-origins.inc) | `python3 docs/spec/models/replay.py [--disclosure-sources] --target encrypted_ct_tail_encapsulated` |
-| Open `Reveal_SS` source chains and local proof experiments | [Review brief](../../research/2026-10-10-tamarin-reveal-ss-source-review-brief.md), [`ratchet-source-evidence.md`](ratchet-source-evidence.md) | KEM origin is now a proved `[sources]` lemma; 16 refined SS chains remain |
+| Disclosure source closure | [`ratchet-ct-tail-sources.inc`](ratchet-ct-tail-sources.inc), [`ratchet-source-evidence.md`](ratchet-source-evidence.md#current-result-2026-10-13) | Joint KEM/CT-tail origin verifies against raw sources; refined deconstructions complete |
 | Replay tooling selects and compares certificates correctly | `test_replay.py` | `python3 -m unittest discover -s docs/spec/models -p 'test_replay.py'` |
 | Certificates are finished and every include file is wired in | `check_certificates.py`, `test_check_certificates.py` | `python3 docs/spec/models/check_certificates.py` |
 | Branch driver parses methods and picks the closing priority | `test_branch.py` | `python3 -m unittest discover -s docs/spec/models -p 'test_branch.py'` |
@@ -99,6 +99,17 @@ For property 8, `I_key_secrecy` excludes one combination: a reveal of the confir
 - With `DESYNC`, R keeps the unused candidate when the other one advances. This over-approximation gives the attacker more power than the spec does.
 
 ## PQ ratchet (`ratchet.spthy`)
+
+**Current evidence (2026-10-13):** the opt-in `DISCLOSURE_SOURCES` profile
+has zero refined residual chains. Its new joint KEM/CT-tail source certificate
+verifies in 60 steps against raw sources without a replay search bound.
+All 56 completed safety certificates replay together; four honest/recovery
+witnesses replay independently. The three serialization claims retain their
+separate Lean compositional proof. Full assembled invocation remains
+resource-inconclusive (exit 137), and independent combined-equation/FVP
+acceptance is outstanding. The implementation gate remains closed; default
+proof contexts are unchanged. Historical counts below predate this result.
+See the [current source evidence](ratchet-source-evidence.md#current-result-2026-10-13).
 
 This is a draft, not an implementation-gate proof. The expanded model
 includes symbolic monotonic epochs, role-bound generator positions,
@@ -256,10 +267,13 @@ assembled model, rather than relying on a saved session theory:
 python3 -m unittest discover -s docs/spec/models -p 'test_replay.py'
 python3 docs/spec/models/replay.py --timeout 180
 python3 docs/spec/models/replay.py --disclosure-sources --timeout 180
-for target in kem_ciphertext_origin fresh_dk_origin encrypted_origin extract_origin \
+for target in complete_safety kem_and_ct_tail_origin kem_ciphertext_origin fresh_dk_origin encrypted_origin extract_origin \
     ratchet_key_origin session_key_origin initial_ck_secret fresh_ss_origin \
     encrypted_ct_tail_encapsulated; do
   python3 docs/spec/models/replay.py --disclosure-sources --target "$target" --timeout 180
+done
+for target in executable initiator_candidate_recovery fresh_epoch_after_compromise; do
+  python3 docs/spec/models/replay.py --disclosure-sources --target "$target" --timeout 240
 done
 ```
 
@@ -269,10 +283,14 @@ wellformedness checks. `--parse-only` is not used to generate the replay
 input: its current printer also emits typed source annotations that do not
 reparse as MSR syntax.
 
-Only the selected target and **all** `[sources]` lemmas are retained;
-the default's sole source lemma is `dk_reveal_owner`.
+For a named target, only that target, declared dependencies and **all**
+`[sources]` lemmas are retained. `--target complete_safety` retains every
+all-traces certificate except the exact three Lean-checked serialization
+claims; any other incomplete safety certificate fails explicitly.
+The default's sole source lemma is `dk_reveal_owner`.
 `--disclosure-sources` explicitly enables the proof-only
-`DISCLOSURE_SOURCES` profile, adding two verified source lemmas.
+`DISCLOSURE_SOURCES` profile, adding the CK/SS and joint KEM/CT-tail
+source certificates and selecting the refined KEM source certificate.
 Its transition-system/signature/restriction prefix is identical to the
 default; only the lemma context changes. The prefix containing
 the signature, equations, tactics, all 43 default rules and all 13 default
@@ -286,8 +304,11 @@ The proof command is `tamarin-prover GENERATED_THEORY --quit-on-warning
 retained certificates rather than starting automation on unfinished sibling
 branches of an existential proof. Success requires a unique `verified`
 result for the witness and every retained source lemma; exit status alone
-is insufficient. Missing/incomplete results fail. Temporary theories are
-cleaned automatically; timeout terminates the command's process group.
+is insufficient. Missing/incomplete results fail.
+For disclosure-profile replays, strict precomputation must also report one
+positive source-group count with complete refined deconstructions.
+Missing, malformed, duplicate or partial source results fail.
+Temporary theories are cleaned automatically; timeout terminates the command's process group.
 `--timeout` defaults to 300 seconds for the proof invocation; export commands
 each have a separate 120-second limit.
 
@@ -395,6 +416,8 @@ expanding unrelated collision/previous-Resume histories. This annotation
 changes search strategy, not protocol transitions, restrictions or
 attacker capabilities.
 
+The following source counts are historical, before the joint CT-tail lemma.
+Current refined source closure and replay results are recorded above.
 Default precomputation still reports 43 source cases and 30 partial
 deconstructions. The proved origin/source helpers are progress, not a
 claim that this source-coverage gate is closed.

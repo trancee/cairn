@@ -23,6 +23,12 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   mutation only adds the two tail rules without stored-prefix premises;
   the mandatory-mix guard remains present. It also has its own lifecycle job.
 - Enable the hook once per clone: `git config core.hooksPath .githooks`.
+- Disclosure-profile replay requires complete refined deconstructions.
+  `--target complete_safety` replays all completed safety claims except the
+  three Lean-checked serialization claims. The four existential targets are
+  `executable`, `initiator_candidate_recovery`, `lost_data_recovery` and
+  `fresh_epoch_after_compromise`; each preserves the full transition system.
+  Individual contexts do not establish full assembled-invocation completion.
 - Native export needs `--derivcheck-timeout=60`. Without it, `--quit-on-warning` fails on derivation-check timeouts.
 - Mutation replay uses standard export settings with that 60-second budget,
   then replays guided certificates with `--open-chains=0 --saturation=0`

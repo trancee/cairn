@@ -29,8 +29,18 @@ jobs:
             replay: '--target lost_data_recovery'
           - name: replay-refined-witness
             replay: '--disclosure-sources --target lost_data_recovery'
+          - name: replay-executable
+            replay: '--disclosure-sources --target executable'
+          - name: replay-candidate-recovery-witness
+            replay: '--disclosure-sources --target initiator_candidate_recovery'
+          - name: replay-fresh-epoch-witness
+            replay: '--disclosure-sources --target fresh_epoch_after_compromise'
           - name: replay-kem_ciphertext_origin
             replay: '--disclosure-sources --target kem_ciphertext_origin'
+          - name: replay-kem_and_ct_tail_origin
+            replay: '--disclosure-sources --target kem_and_ct_tail_origin'
+          - name: replay-complete-safety
+            replay: '--disclosure-sources --target complete_safety'
           - name: replay-fresh_dk_origin
             replay: '--disclosure-sources --target fresh_dk_origin'
           - name: replay-encrypted_origin

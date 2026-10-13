@@ -15,6 +15,20 @@ Put the model under `docs/spec/models/`. A failing lemma reopens the relevant AD
 
 ## Comments
 
+2026-10-13: joint raw-source induction of KEM and encrypted CT-tail origins
+verifies in 60 steps and closes refined deconstructions (43 groups, zero
+residual chains). All 56 completed safety certificates replay together;
+all four existential witnesses replay independently with unchanged
+43-rule/13-restriction transitions. The stale fresh-SS proof is regenerated
+without formula changes. Repository replay fails on missing/partial source
+completion and unexpected incomplete safety claims. Workflow/local gates
+include the joint source, safety suite and all witnesses.
+Full assembled invocation was system-killed with exit 137 before a summary.
+Independent combined-equation/FVP acceptance and hosted proof for this
+increment remain open. Ticket stays claimed; implementation gate stays closed.
+See [current evidence](../../../docs/spec/models/ratchet-source-evidence.md#current-result-2026-10-13).
+Earlier comments below are historical and do not state current source counts.
+
 2026-10-05: Initial [`ratchet.spthy`](../../../docs/spec/models/ratchet.spthy)
 is a draft, not an implementation-gate proof. It composes an abstract
 authenticated epoch transfer with Resume in a quantum-attacker view.

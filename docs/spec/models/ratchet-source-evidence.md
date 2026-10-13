@@ -1,5 +1,78 @@
 # Ratchet source-precomputation evidence
 
+## Current result (2026-10-13)
+
+The opt-in `DISCLOSURE_SOURCES` profile now has **complete refined
+deconstructions**: 43 source groups, zero residual chains. Raw sources still
+have 30 chains. Historical counts and unsuccessful experiments below describe
+earlier revisions, not the current profile.
+
+The generated [`ratchet-ct-tail-sources.inc`](ratchet-ct-tail-sources.inc)
+proves `kem_and_ct_tail_origin [sources, use_induction]` against raw sources:
+
+```text
+KU(kem(ss,ek)) or KU(senc(<'CT',e,'half',kem(ss,ek)>,key))
+  => earlier FreshSS(pid,ss,ek) or earlier KU(ss)
+```
+
+The actual formula is a conjunction of two universally quantified claims.
+Joint induction connects the previously recursive KEM and encrypted-tail
+origins. It includes the fresh-encapsulation alternative, so a public KEM
+ciphertext need not disclose its payload. Arbitrary ciphertexts, nested
+decapsulation, all reveals, 43 protocol rules and 13 restrictions are
+unchanged. No source claim is assumed as a restriction.
+
+Search with `--heuristic=I --bound=45` generated a 60-step certificate;
+strict certificate-only replay without either search option verifies all
+60 steps. Source precomputation with that certificate reports complete
+refined deconstructions. A separate joint encrypted-secret disclosure lemma
+verified but left 16 chains; it was not integrated. Broader disclosure-origin
+attempts timed out and were also discarded.
+
+Reproduce the integrated gates:
+
+```sh
+python3 docs/spec/models/replay.py --disclosure-sources \
+  --target kem_and_ct_tail_origin --timeout 180
+python3 docs/spec/models/replay.py --disclosure-sources \
+  --target complete_safety --timeout 180
+for target in executable initiator_candidate_recovery lost_data_recovery fresh_epoch_after_compromise; do
+  python3 docs/spec/models/replay.py --disclosure-sources --target "$target" --timeout 240
+done
+```
+
+All **56 completed all-traces certificates** replay in the safety context.
+The only excluded all-traces claims are `lock_stage_order`,
+`initial_resume_serialized` and `resume_serialized`, checked separately by
+the accepted Lean lifecycle gate; they are not native Tamarin proofs.
+Unexpected incomplete safety certificates fail the selector. All four
+existential witnesses replay independently against the same transition
+system: executable 571, initiator candidate recovery 447, lost-data recovery
+778 and fresh epoch after compromise 579 steps. `fresh_ss_origin` was
+regenerated through Tamarin's UI and now verifies in 85 steps; its formula
+and attributes are unchanged.
+
+Native assembled source SHA-256:
+`482e0125112302c2e1068a13054e503fc55627513ac3a4b1dd86e0c5324b5e80`.
+Witness replay SHA-256 values in the order above:
+`d3a4460e704888e42782aaac919f50a8ed087b42eb86fe90f35b3e11dd72c635`,
+`71bc98e5184bebdc4ba2f779d87d5df8faa186f9f31879664a50f903bc7ba905`,
+`d2a3d8871938aa5d6e75cc9de05559ad08b077587dcaafbb25d75401004d984d`,
+`cdc1be07e0e1aa4d38ab873ac1e53df9790705d928699b0d18601cd467fe953e`.
+
+The runner now fails on missing, malformed, duplicate or incomplete refined
+source output before replaying a disclosure-profile certificate. The workflow
+and opt-in local gate include the joint source, all four witnesses and complete
+safety suite. Hosted verification of these changes is not yet established.
+
+**Remaining limits:** one full assembled invocation was system-killed with
+exit 137 before a summary; independent certificate contexts do not establish
+that invocation's completion. Default activation is not performed.
+Independent mixed-equation/FVP acceptance remains open. This evidence is
+symbolic, not computational, constant-time, parser, persistence or BLE proof.
+
+## Historical inventory and experiments
+
 Reference snapshot for the default, unrestricted
 [`ratchet.spthy`](ratchet.spthy), observed on 2026-10-09.
 This inventories unresolved sources; it does not prove their closure.
