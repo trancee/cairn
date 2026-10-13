@@ -63,11 +63,19 @@ Witness replay SHA-256 values in the order above:
 The runner now fails on missing, malformed, duplicate or incomplete refined
 source output before replaying a disclosure-profile certificate. The workflow
 and opt-in local gate include the joint source, all four witnesses and complete
-safety suite. Hosted verification of these changes is not yet established.
+safety suite. All 19 formal jobs passed on revision `85aa105` in
+[hosted run 38442377893](https://github.com/trancee/cairn/actions/runs/38442377893),
+including the clean Lean source projection, complete safety suite, all
+witnesses, refined-origin replays and both guard-mutation regressions.
 
 **Remaining limits:** one full assembled invocation was system-killed with
 exit 137 before a summary; independent certificate contexts do not establish
 that invocation's completion. Default activation is not performed.
+An ephemeral full-context variant hiding all 36 ordinary non-source reuse
+hints from the four existential witnesses timed out at 240 seconds with
+a 5 GiB heap ceiling. All lemmas, rules and restrictions were retained;
+the variant was not adopted. This distinct attempt remains inconclusive,
+not a counterexample or evidence of full-context completion.
 Independent mixed-equation/FVP acceptance remains open. This evidence is
 symbolic, not computational, constant-time, parser, persistence or BLE proof.
 

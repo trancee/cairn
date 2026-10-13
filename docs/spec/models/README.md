@@ -110,6 +110,9 @@ resource-inconclusive (exit 137), and independent combined-equation/FVP
 acceptance is outstanding. The implementation gate remains closed; default
 proof contexts are unchanged. Historical counts below predate this result.
 See the [current source evidence](ratchet-source-evidence.md#current-result-2026-10-13).
+All 19 formal jobs passed on `85aa105` in
+[hosted run 38442377893](https://github.com/trancee/cairn/actions/runs/38442377893);
+this verifies the configured separate contexts, not the full assembled run.
 
 This is a draft, not an implementation-gate proof. The expanded model
 includes symbolic monotonic epochs, role-bound generator positions,

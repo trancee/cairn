@@ -78,8 +78,12 @@ safety and missing witness targets to existing local/CI gates.
 
 This replaces the earlier 16-chain limitation, not the acceptance policy.
 The full assembled invocation was system-killed with exit 137 before a
-summary. Independent combined-equation/FVP acceptance and hosted execution
-of this increment remain unverified. Keep the profile opt-in and the ratchet
+summary. A full-context variant hiding ordinary reuse hints only from the
+existential witnesses also timed out at 240 seconds and was not adopted.
+All 19 formal jobs passed at `85aa105` in
+[run 38442377893](https://github.com/trancee/cairn/actions/runs/38442377893).
+Independent combined-equation/FVP acceptance remains unverified.
+Keep the profile opt-in and the ratchet
 implementation gate closed. Independent contexts are not a claimed full
 assembled Tamarin result. The three serialization claims still use the
 accepted Lean compositional route. See the

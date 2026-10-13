@@ -24,8 +24,10 @@ without formula changes. Repository replay fails on missing/partial source
 completion and unexpected incomplete safety claims. Workflow/local gates
 include the joint source, safety suite and all witnesses.
 Full assembled invocation was system-killed with exit 137 before a summary.
-Independent combined-equation/FVP acceptance and hosted proof for this
-increment remain open. Ticket stays claimed; implementation gate stays closed.
+All 19 formal jobs passed at `85aa105` in
+[run 38442377893](https://github.com/trancee/cairn/actions/runs/38442377893).
+Independent combined-equation/FVP acceptance remains open.
+Ticket stays claimed; implementation gate stays closed.
 See [current evidence](../../../docs/spec/models/ratchet-source-evidence.md#current-result-2026-10-13).
 Earlier comments below are historical and do not state current source counts.
 

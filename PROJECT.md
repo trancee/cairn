@@ -15,8 +15,11 @@ local/CI gate definitions cover the joint source, complete safety and witnesses.
 
 The three serialization claims use the accepted Lean compositional gate.
 Full assembled replay was system-killed with exit 137 before a summary.
-Independent mixed-equation/FVP acceptance and hosted verification of this
-increment remain outstanding. Default activation and ratchet implementation
+All 19 formal jobs passed at `85aa105` in
+[run 38442377893](https://github.com/trancee/cairn/actions/runs/38442377893).
+A separate full-context hint-hiding experiment timed out and was discarded.
+Independent mixed-equation/FVP acceptance remains outstanding.
+Default activation and ratchet implementation
 are not authorized by these partial-context results. Earlier source counts
 and replay results elsewhere in this profile are historical; the
 [current source evidence](docs/spec/models/ratchet-source-evidence.md#current-result-2026-10-13)
