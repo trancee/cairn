@@ -573,6 +573,21 @@ failed in `replay-encrypted_origin` during tool installation: `curl` exit 56,
 This is a download failure, not the earlier Tamarin `<<loop>>` symptom
 or a reported counterexample. No successful post-merge formal run is claimed.
 
+### Frozen-input manifest generation
+
+Apple tool/Gradle/Cargo/Native preparation now shares a streaming SHA-256
+manifest generator, preserving byte-sorted `shasum` records and the independent
+post-cell `shasum --check` gates. Copies, root/read-only setup, pinned inputs,
+fresh compilation and limits are unchanged; empty or unreadable inventories
+fail explicitly. The retained component benchmark compares the real CLI
+against the committed `a6b0767` pipeline with identical manifests, source/
+environment/workload hashes and a 10% improvement threshold. On the local
+1.21 GB Rust `1.99.0` tool tree, the median changed from `3.79s` to `0.68s`;
+full hosted preparation/CodeQL improvement remains unverified.
+Commands and scope are in the
+[Apple reference](proofs/bindings/apple/README.md#frozen-input-manifest-generation).
+No protocol, public API, compiler profile or constant-time claim changes.
+
 The schema below is retained for the future implementation profile.
 
 ```text

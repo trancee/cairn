@@ -49,6 +49,49 @@ Its recorded revision matches the run and Mach-O inspection reports
 deterministic first-attempt reliability remain unproven; this is real generated
 simulator execution, not strict runtime containment or hardware evidence.
 
+## Frozen-input manifest generation
+
+The four `freeze-*.sh` entry points create their existing SHA-256 manifests
+with `tool-input-manifest.py` after unchanged root ownership/read-only setup.
+Its CLI accepts an input root and an optional normalized relative directory
+scope (default `.`). It emits byte-sorted regular-file records in the existing
+`shasum` format, including escaped backslash/newline names and unchanged
+root/scoped prefixes. Symbolic links and special files are not hashed.
+Root/scope symlinks, path escapes, empty regular-file inventories and read
+failures return nonzero with a redacted reason and no manifest on stdout.
+File contents are read in 1 MiB chunks; the manifest is emitted after every
+selected file has been hashed successfully.
+
+The workflow's independent `shasum -a 256 --check` gates remain unchanged for
+tools, Gradle, Cargo and Native inputs after the bounded cell. No check,
+fresh compilation, archive verification, resource limit or copy/permission
+operation is removed. Nothing is cached by this change.
+
+`benchmark-tool-manifest.py INPUT_ROOT [--repetitions N]` compares the actual
+CLI with the manifest pipeline from committed baseline `a6b0767`. The default
+is three alternating-order comparisons; fewer than three are rejected.
+Every manifest must match byte-for-byte and remain unchanged across samples.
+JSON records source hashes, platform/Python/OpenSSL/CPU metadata, workload
+file/byte counts, manifest hash and all timings. A median candidate/baseline
+ratio above `0.9` fails; this is a local component benchmark, not a noisy
+shared-runner latency gate.
+
+From the repository root, on macOS with an installed Rust toolchain:
+
+```bash
+rustc --version
+xcrun python3 -I proofs/bindings/apple/benchmark-tool-manifest.py \
+  "$(rustc --print sysroot)"
+```
+
+Local measurement on 2026-10-13 used Rust `1.99.0`, 451 files,
+1,206,736,728 bytes, eight-core ARM64 macOS `27.0.1`, Xcode Python `3.9.6`
+and LibreSSL `2.8.3`. The median fell from `3.79s` to `0.68s` (about 82%);
+all manifests matched. The performance test first failed at ratio `1.03`.
+This is not a measurement of the full pinned Apple preparation tree, the
+GitHub `macos-26` runner or end-to-end CodeQL latency. Those require hosted
+comparison. See [ADR 0014](../../../docs/adr/0014-hosted-apple-isolation-probes.md#manifest-generation-optimization).
+
 ## Earlier probe evidence
 
 ### Opt-in Kotlin CodeQL diagnostic

@@ -4,6 +4,7 @@ test "${GITHUB_ACTIONS:-}" = true
 test "$(id -u)" -eq 0
 test "$#" -eq 1
 prepared=$1
+scripts="$(cd "$(dirname "$0")" && pwd -P)"
 destination=/opt/cairn-apple-tools/native-dependencies
 test ! -e "$destination"
 mkdir "$destination"
@@ -11,7 +12,7 @@ mkdir "$destination"
   "$prepared/native-home/native-cinterop-data/dependencies/" "$destination/"
 chown -R root:wheel "$destination"
 chmod -R a+rX,a-w "$destination"
-(cd /opt/cairn-apple-tools && /usr/bin/find native-dependencies -type f -print0 \
-  | LC_ALL=C /usr/bin/sort -z | /usr/bin/xargs -0 shasum -a 256) \
+"$(xcrun --find python3)" -I "$scripts/tool-input-manifest.py" \
+  /opt/cairn-apple-tools native-dependencies \
   > "$prepared/native-inputs.sha256"
 echo 'PASS: extracted Native dependencies frozen read-only'

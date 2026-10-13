@@ -1211,3 +1211,37 @@ cause is not established or fixed, and first-attempt reliability is not proven.
 This closes the approved functional-runtime implementation only: strict
 helper containment, final issue-45 acceptance, Compose/app integration,
 release behavior and physical iPhone execution remain open.
+
+## Manifest-generation optimization
+
+On 2026-10-13 the owner requested lower CI latency while retaining the supplied
+GitHub macOS VM and existing strict gates. The observed CodeQL preparation
+baseline spent 139 seconds freezing tools. A bounded local comparison of a
+real 1.21 GB Rust tool tree found copying negligible (`0.09s`) but serial
+`shasum` generation slower than Python's SHA-256 implementation. The actual
+CLI component benchmark first failed its 10% improvement target, then passed
+with identical manifests: median `3.79s` versus `0.68s`, about 82% lower.
+This is local component evidence, not an end-to-end or hosted speedup.
+
+Use one standard-library streaming generator for the four existing manifests,
+after their unchanged ownership/read-only setup. Preserve byte sorting,
+regular-file selection, escaped filenames, SHA-256 and manifest prefixes.
+Keep the independent native `shasum --check` gates after the full strict cell.
+Reject empty inventories, invalid/root-escaping scopes and I/O failures
+explicitly without emitting a partial stdout manifest. This is tooling-input
+integrity, not a protocol cryptographic-provider or constant-time change.
+
+Changing copy strategy was rejected because `ditto` already copied this
+workload quickly. Caching compiled results, removing integrity/probe gates,
+prebuilding the generator outside its owning task, widening permissions or
+raising budgets are not selected. No cached manifest/result is trusted.
+
+The risk is a generator/format mismatch or platform-dependent performance.
+Exact comparisons against the previous pipeline, independent `shasum` replay
+and adversarial scope/name/error tests bound the format change. The retained
+benchmark records the committed baseline, source hashes, workload, environment
+and all samples; it cannot substitute for full hosted preparation/analysis.
+Migration changes only the four manifest producers. Existing manifest names,
+consumers, copies, compiler tasks, all security/resource controls and immutable
+pins remain unchanged. Hosted comparison requires separate publication/
+execution approval; no issue-45 or scratch-reliability acceptance is implied.
