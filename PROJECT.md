@@ -585,10 +585,15 @@ environment/workload hashes and a 10% improvement threshold. On the local
 1.21 GB Rust `1.99.0` tool tree, the median changed from `3.79s` to `0.68s`;
 full hosted preparation/CodeQL improvement remains unverified.
 Initial hosted freeze steps took `162s`/`242s` versus `139s`; both strict cells
-failed before final acceptance (unexpected UID processes or startup deadline).
-The same-path manifests are retained, but neither faster hosted CI nor a
-reliability fix is established. Bounded same-VM phase/A/B diagnostics preserve
-all controls; unexpected processes are reported, never trusted or pre-cleaned.
+failed (unexpected UID processes or startup deadline). The later same-VM
+full-tree A/B at `a8fff9e` verifies identical manifests for 80,635 files/
+5,860,115,366 bytes: median `76.27s` to `46.17s` (39.5% lower).
+The supplied three-CPU ARM64 VM reports macOS `26.6.2`, Xcode Python `3.9.6`
+and LibreSSL `2.8.3`. Profiling overhead exhausted that manual job's unchanged
+30-minute ceiling; ordinary PR/push CodeQL and Rust/formal gates pass at the
+same revision. Tagged timing/manual profiling are removed; normal CI has no
+benchmark overhead. No end-to-end speedup or reliability fix is established.
+Unexpected processes are reported, never trusted or pre-cleaned.
 Commands and scope are in the
 [Apple reference](proofs/bindings/apple/README.md#frozen-input-manifest-generation).
 No protocol, public API, compiler profile or constant-time claim changes.

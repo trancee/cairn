@@ -90,7 +90,8 @@ and LibreSSL `2.8.3`. The median fell from `3.79s` to `0.68s` (about 82%);
 all manifests matched. The performance test first failed at ratio `1.03`.
 This is not a measurement of the full pinned Apple preparation tree, the
 GitHub `macos-26` runner or end-to-end CodeQL latency. Those require hosted
-comparison. See [ADR 0014](../../../docs/adr/0014-hosted-apple-isolation-probes.md#manifest-generation-optimization).
+comparison. The full-tree hosted result below supersedes that local-only
+limitation. See [ADR 0014](../../../docs/adr/0014-hosted-apple-isolation-probes.md#manifest-generation-optimization).
 
 Initial hosted validation at `d17aded` does not establish a speedup:
 the whole freeze step took `162s` in PR run `38450721754` and `242s` in
@@ -102,17 +103,37 @@ acceptance: the PR supervisor rejected unexpected dedicated-UID processes
 before Native cinterop; the branch exhausted the unchanged 60-second
 tool/startup/selection command ceiling. Causes remain unestablished.
 
-Temporary `[DEBUG-ci-manifest]` phase timings separate copying, ownership/
-permissions and manifest generation. A manual `workflow_dispatch` of the
-owning preparation workflow also compares the full frozen tree against the
-baseline pipeline before target work, retaining the benchmark log in the
-existing artifact. It uses the same three alternating comparisons and
-120-second per-command ceiling within the unchanged 30-minute job.
+The same-VM full-tree comparison in
+[run 38460658960](https://github.com/trancee/cairn/actions/runs/38460658960)
+at `a8fff9e` passes with identical manifests for 80,635 files and
+5,860,115,366 bytes. Environment: the supplied three-CPU ARM64 `macos-26`
+VM, macOS `26.6.2`, Xcode Python `3.9.6`, LibreSSL `2.8.3`.
+Baseline generation samples were `76.27s`, `59.31s`, `78.51s`; candidate
+samples were `50.15s`, `38.27s`, `46.17s`. Median generation changed from
+`76.27s` to `46.17s`, about 39.5% lower, with the unchanged `0.9` threshold.
+The manifest SHA-256 is
+`5f5759844b54cc702180eed95cd29167098004ba7514e39cad9d5af65cb99b6a`.
+The public benchmark baseline commit must be present locally; the temporary
+hosted probe fetched only that exact object into the shallow checkout.
+
+Tagged phase measurement on that VM recorded copying `77s`, ownership/
+permissions `19s`, and initial generation `39s`. Other observed runs varied
+substantially. The six-command comparison itself took about six minutes;
+the subsequent full diagnostic exceeded the unchanged 30-minute job ceiling.
+It therefore proves the measured component only, not a complete diagnostic
+build or end-to-end CodeQL speedup. Independent ordinary PR/push runs
+`38460667964`/`38460659594` at the same revision pass all strict extraction,
+coverage/query, immutable-input, cleanup and upload gates; Rust/formal gates
+also pass. Earlier intermittent failures are not shown to be fixed.
+
+Temporary timing and manual workflow instrumentation have been removed.
+The retained local benchmark is opt-in and never adds profiling overhead
+to normal CI. Its existing 120-second per-command ceiling is unchanged.
 The supervisor's existing-UID rejection now reports only owned PID/parent,
 state, CPU time and command basename before refusing; it neither launches
 nor cleans those pre-existing processes. No retry or boundary/budget change
-is introduced. The temporary phase/dispatch instrumentation must be removed
-after evidence collection.
+is introduced. The unexpected-process failure did not reproduce in subsequent
+runs, so its identity and root cause remain unestablished.
 
 ## Earlier probe evidence
 

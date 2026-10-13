@@ -1266,3 +1266,36 @@ the unchanged existing-UID rejection: diagnostics only, never preflight
 cleanup, delayed trust acceptance or a resource/permission increase.
 This diagnostic regression was observed red before that report and green
 after it; local simulation does not prove the hosted helper's identity/cause.
+
+### Same-VM result and diagnostic cleanup
+
+[Manual run 38460658960](https://github.com/trancee/cairn/actions/runs/38460658960)
+at `a8fff9e` compares the full 80,635-file, 5,860,115,366-byte pinned tree
+on one supplied `macos-26` VM. The three-CPU ARM64 environment reports
+macOS `26.6.2`, Xcode Python `3.9.6` and LibreSSL `2.8.3`.
+Three alternating baseline/candidate samples retain identical manifests:
+baseline `76.27s`/`59.31s`/`78.51s`, candidate `50.15s`/`38.27s`/`46.17s`.
+The median ratio is `0.6054` (39.5% lower), below the unchanged `0.9`
+acceptance threshold. The manifest SHA-256 is
+`5f5759844b54cc702180eed95cd29167098004ba7514e39cad9d5af65cb99b6a`.
+Phase timing records copy `77s`, ownership/permissions `19s` and initial
+generation `39s`; whole-step variation cannot be attributed to hashing alone.
+
+The earlier manual request `38454793910` acquired no hosted runner.
+Run `38459283620` failed before target work because the shallow checkout
+lacked the baseline Git object; fetching only the exact public commit fixed
+that diagnostic setup. No compiler/build failure was bypassed.
+The successful A/B adds about six minutes of measurement and the full
+diagnostic later exhausts the unchanged 30-minute job ceiling.
+Do not treat that partial diagnostic as a complete build or latency proof.
+Ordinary PR/push CodeQL runs `38460667964`/`38460659594` at `a8fff9e`
+pass strict Kotlin extraction, coverage, queries, post-cell integrity,
+cleanup and result delivery/processing; ordinary Rust/formal checks also pass.
+Full CodeQL wall-clock improvement and deterministic runner reliability remain
+unestablished. The unexpected UID condition did not recur, so no helper
+identity/root-cause or reliability fix is claimed.
+
+Remove the tagged timing, temporary manual step and exact-object fetch.
+Retain only the opt-in representative benchmark, faster manifest producers
+and tested redacted preflight report. Normal CI performs no A/B workload.
+Final cleanup-head hosted gates remain required before merge.
