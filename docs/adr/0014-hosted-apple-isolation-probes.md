@@ -1345,7 +1345,7 @@ UID-59000 `distnoted`; its one unchanged failed-job replay also fails.
 This closes final PR-head acceptance, not deterministic runner reliability
 or successful duplicate-push acceptance.
 
-## Same-VM generator compilation reuse
+## Same-VM generator compilation reuse evaluation
 
 The owner approved implementation, publication and bounded hosted comparison
 on 2026-10-14. Successful PR run `38515603675` took 23m38s versus the original
@@ -1355,35 +1355,56 @@ on 2026-10-14. Successful PR run `38515603675` took 23m38s versus the original
 Pinned Ubique `b819fb4` sets the install task's `CARGO_TARGET_DIR` from its
 own `bindgenBuildPath`, overriding the shell's shared directory. Its installer
 also uses an implicit host target, unlike explicit-target fixture compilation.
-Configure that public task property to the fixture's `cargo.targetDirectory`;
-the existing generator-only adapter supplies `--target aarch64-apple-darwin`.
-Reject competing target/directory arguments. Default Linux/Android configuration
-and SDK Rust profiles/targets remain unchanged.
+The evaluated implementation at `75c5623` configured that public task property
+to the fixture's `cargo.targetDirectory` and supplied explicit
+`--target aarch64-apple-darwin` for generator installation. Competing target/
+directory arguments failed before Cargo. Default Linux/Android configuration
+and SDK Rust profiles/targets were unchanged.
 
-Cargo alone decides which freshly compiled same-VM dependencies are compatible
+Cargo alone decided which freshly compiled same-VM dependencies were compatible
 by its normal source, version, feature, profile, target and compiler fingerprints.
-Keep the plugin's real installation, source fingerprint, target lock and ready
-record. Do not inject binaries, manufacture fingerprints, restore compiled
-outputs across runs or skip compilation/consumer/integrity/security gates.
-The effective-configuration probe checks both task directories agree; real
-adapter tests fail on missing target ownership before the fix.
+The experiment retained the plugin's real installation, source fingerprint,
+target lock and ready record, without binary injection, fabricated fingerprints,
+cross-run compiled restores or skipped gates. An effective-configuration probe
+checked both task directories; real adapter assertions were red before the
+target-ownership implementation and green afterward.
 
-The retained opt-in paired benchmark replays the committed `8b4c2d6` Cargo
-installation policy with an empty baseline target directory versus the current
-adapter using fixture dependencies compiled earlier on that VM. Both install
-the same locked, immutable generator source freshly into separate empty roots.
-Cargo JSON must establish fresh generator compilation in both cases, zero
-baseline reuse and positive candidate reuse; inspect both real ARM64 binaries.
-The result includes source/lock/adapter/benchmark hashes, Rust/host/Python/CPU
-metadata, artifact counts, binary hashes and elapsed times. It measures Cargo
+The archived opt-in paired benchmark replayed the committed `8b4c2d6` Cargo
+installation policy with an empty baseline target directory versus the
+experimental adapter using fixture dependencies compiled earlier on that VM.
+Both installed the same locked, immutable generator source freshly into
+separate empty roots. Cargo JSON established fresh generator compilation
+in both cases, zero baseline reuse and positive candidate reuse; both real
+ARM64 binaries were inspected.
+The result included source/lock/adapter/benchmark hashes, Rust/host/Python/CPU
+metadata, artifact counts, binary hashes and elapsed times. It measured Cargo
 installation, not Gradle startup or whole-workflow latency.
 
-Each explicitly selected comparison retains the existing 600-second command,
+Each explicitly selected comparison retained the existing 600-second command,
 30-minute job and all memory/disk/file/process/CPU/network/isolation bounds.
-Normal CI does not run it. Retain at least three independent paired reports,
-both execution orders and matching environments/inputs. The summary rejects
-invalid/incomparable evidence or a median paired regression above 10%.
-Actual savings require those measurements; the 4m10s hotspot is not a promised
-saving. Current hosted evidence is recorded in [PR #8](https://github.com/trancee/cairn/pull/8).
+Normal CI never ran it. Three complete independent paired reports, both orders
+and matching input/environment hashes passed their checksum and all four
+post-cell immutable-input gates:
+`38525913102`, `38529286247` and `38529289684`, each attempt 2.
+Their first attempts failed pre-existing UID-helper refusal or a five-second
+`diskutil info` timeout; each failed job was explicitly replayed once, unchanged.
+These are not reliability fixes or automatic retries.
+
+Paired candidate/baseline ratios were `1.06195`, `1.08933`, `0.92474`;
+median `1.06195`, about **6.2% slower**, despite reusing 36 artifact records
+and reducing compiled records from 103 to 72. The 10% regression ceiling
+passed, but the requested speedup did not. Ordinary Native/framework/executable
+compilation and functional simulator calls also passed in `38529289684`,
+attempt 2; CodeQL/Rust/formal and all four processed PR scans passed at
+`75c5623`.
+
+Do not adopt this optimization: restore the original generator adapter,
+SDK/task directory configuration and owning workflows byte-for-byte from
+`8b4c2d6`; remove the experiment-only test, dispatch and benchmark paths.
+The implementation and reproducible report summarizer remain in committed
+`75c5623`, and verified results are recorded in
+[PR #8](https://github.com/trancee/cairn/pull/8).
+Retain the separately approved duplicate-scheduling fix. No elapsed-time
+improvement is claimed from fewer Cargo artifact records.
 Checksum-verified archive reuse and change-aware gate applicability are not
 part of this decision.

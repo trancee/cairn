@@ -623,21 +623,23 @@ CodeQL/Rust/formal gates pass; all four PR scans process at
 `47a9c5207514ea28f5ab7393233148ced60dc5b5` without errors. Duplicate push
 `38515598161` fails both attempts. Deterministic reliability is not established.
 
-### Same-VM generator compilation
+### Same-VM generator reuse evaluation
 
-The Apple SDK fixture configures the owning `installBindgen.bindgenBuildPath`
-to its Cargo target directory; the generator-only adapter selects explicit
-`aarch64-apple-darwin`, matching preceding fresh host-library compilation.
-Cargo fingerprints control compatible same-VM dependency reuse. Plugin
-installation/source/ready records, default Linux/Android configuration, SDK
-profiles, fresh compilation, strict boundaries and integrity/security gates
-remain unchanged; no compiled outputs are restored across runs.
-Observed owning installation at `8b4c2d6` takes about 4m10s, not a guaranteed
-saving. The retained opt-in paired comparison replays that committed baseline
-policy under the same limits; three matching reports with both orders and
-a median regression at most 10% are required for performance acceptance.
-Commands, scope and current evidence are in the
-[Apple reference](proofs/bindings/apple/README.md#same-vm-bindgen-dependency-reuse)
+The approved experiment at `75c5623` aligned the owning bindgen directory
+and explicit host target with preceding fixture compilation, preserving
+all plugin/Cargo fingerprints, SDK profiles, bounds and security gates.
+Three complete independent same-VM comparisons at unchanged-source attempt 2
+(`38525913102`, `38529286247`, `38529289684`) verify all input checksums and
+both execution orders. Median paired ratio is `1.06195`: about 6.2% slower,
+despite 36 reused artifact records and fewer compiled records (103 to 72).
+The ordinary Native/runtime case and CodeQL/Rust/formal/processed scan gates
+pass at experiment revision `75c5623`. First attempts fail existing helper refusal or disk-query
+timeout; their one explicit replay each does not establish reliability.
+The experiment is not adopted; its code/tests/dispatch paths are removed,
+restoring `8b4c2d6` compiler/task behavior exactly while keeping the
+duplicate-scheduling fix. Reproducible experiment source remains in
+committed `75c5623`; results and limitations are in the
+[Apple reference](proofs/bindings/apple/README.md#generator-reuse-evaluation)
 and [PR #8](https://github.com/trancee/cairn/pull/8).
 
 The schema below is retained for the future implementation profile.

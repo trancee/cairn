@@ -35,7 +35,6 @@ cp "$scripts/inspect-allocator-inputs.py" "$destination/inspect-allocator-inputs
 cp "$scripts/check-fixture-rust.sh" "$destination/check-fixture-rust.sh"
 cp "$scripts/inspect-fixture-artifacts.py" "$destination/inspect-fixture-artifacts.py"
 cp "$scripts/check-fixture-bindings.sh" "$destination/check-fixture-bindings.sh"
-cp "$scripts/benchmark-bindgen-reuse.py" "$destination/benchmark-bindgen-reuse.py"
 if [ -d "$prepared/codeql" ]; then
   ditto "$prepared/codeql" "$destination/codeql"
   cp "$prepared/android-api.jar" "$destination/android-api.jar"

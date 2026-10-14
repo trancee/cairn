@@ -178,47 +178,38 @@ and formal `38515603660` pass; all four PR scans process without errors at
 `47a9c5207514ea28f5ab7393233148ced60dc5b5`. Duplicate push `38515598161`
 fails both attempts. These results do not establish deterministic reliability.
 
-## Same-VM bindgen dependency reuse
+## Generator reuse evaluation
 
-Apple's `installBindgen.bindgenBuildPath` now uses `cargo.targetDirectory`.
-The generator-only Cargo adapter adds the same explicit
-`aarch64-apple-darwin` target used by the fixture's host library; competing
-`--target`/`--target-dir` arguments fail before Cargo starts. Other Cargo
-commands and Linux/Android configuration are unchanged. The owning plugin
-still installs, fingerprints and marks readiness; Cargo reuses only compatible
-dependencies freshly compiled on that disposable VM. No compiled cache is
-restored across runs.
+The experiment at
+[`75c5623`](https://github.com/trancee/cairn/commit/75c56232fd6c3d65d00e88c4f0e9709325b9c287)
+shared the owning bindgen Cargo directory and selected an explicit Darwin
+host target. Three complete paired comparisons replayed committed baseline
+`8b4c2d6`, using both orders and matching source/lock/environment hashes.
+Both generators compiled freshly as ARM64; independent post-cell input checks
+passed in all three accepted runs. Normal CI had no measurement workload.
 
-Manual preparation input `bindgen_benchmark` accepts `off` (default),
-`baseline-first` or `candidate-first`. A selected pair runs after fresh fixture
-Rust compilation and before the normal owning installer/consumer/security gates,
-inside the same bounded offline cell. Each pair has the existing 600-second
-ceiling; whole-job and other resource limits are unchanged.
+| Accepted run (attempt 2) | Order | Baseline | Candidate | Ratio |
+| --- | --- | --- | --- | --- |
+| `38525913102` | baseline first | `255.42s` | `271.24s` | `1.06195` |
+| `38529286247` | candidate first | `153.29s` | `166.98s` | `1.08933` |
+| `38529289684` | baseline first | `260.23s` | `240.64s` | `0.92474` |
 
-`benchmark-bindgen-reuse.py /opt/cairn-apple-tools --order baseline-first`
-replays committed baseline `8b4c2d6` with an empty target directory and implicit
-host target, then the current adapter with the fixture target directory and
-explicit host target. Separate empty installation roots, actual Cargo artifact
-records and ARM64 inspection verify both generators compile freshly. The
-benchmark fails on malformed evidence, baseline reuse, absent candidate reuse,
-wrong architecture, child errors or deadlines. Its JSON records timings,
-artifact counts, source/lock/tool-policy hashes and environment metadata.
-Root exports `bindgen-benchmark.json` and its relative SHA-256 manifest;
-normal input-integrity checks remain mandatory before accepting the artifact.
+Median paired ratio `1.06195` is about **6.2% slower**, not a speedup.
+36 reused Cargo artifact records and fewer compiled records (103 to 72)
+did not establish faster elapsed time. The ordinary Native/framework/
+executable and delivered functional simulator assertions passed in the third
+run; PR CodeQL/Rust/formal and four processed scans passed at `75c5623`.
+First attempts failed pre-existing UID-helper refusal or a five-second disk
+query; one explicit unchanged failed-job replay each passed. No reliability
+fix, automatic retry or limit/permission increase is implied.
 
-After retaining at least three independent paired reports with both orders:
-
-```sh
-xcrun python3 -I proofs/bindings/apple/benchmark-bindgen-reuse.py --reports \
-  /path/to/first/bindgen-benchmark.json \
-  /path/to/second/bindgen-benchmark.json \
-  /path/to/third/bindgen-benchmark.json
-```
-
-The summary requires matching inputs/environment and rejects a median paired
-regression above 10%. Cargo-install improvement is not whole-CI improvement;
-current measurements and complete gate results are recorded in
-[PR #8](https://github.com/trancee/cairn/pull/8).
+The experiment is not adopted. Its compiler/task configuration, benchmark/
+test files and dispatch selector are removed; all owning files match
+`8b4c2d6` again. The committed
+[benchmark source](https://github.com/trancee/cairn/blob/75c56232fd6c3d65d00e88c4f0e9709325b9c287/proofs/bindings/apple/benchmark-bindgen-reuse.py)
+retains the reproducible three-report comparison. Evidence and current
+final-head acceptance are recorded in [PR #8](https://github.com/trancee/cairn/pull/8).
+The independently approved duplicate-scheduling fix remains.
 
 ## Earlier probe evidence
 

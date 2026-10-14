@@ -264,9 +264,10 @@ This removes duplicate same-revision push/PR work and stale PR work; it does
 not reduce one cold Kotlin build's duration. Every language, default security
 suite, upload/processing gate, forced compilation, strict-cell boundary and
 resource ceiling remains unchanged. No database, query result, compiled
-artifact or proof result is restored across runs. Fresh, compatible Cargo
-dependencies may be reused within one disposable VM as specified in
-[ADR 0014](0014-hosted-apple-isolation-probes.md#same-vm-generator-compilation-reuse).
+artifact or proof result is restored across runs.
+The separately approved same-VM Cargo experiment did not demonstrate a
+speedup and was removed after measurement; see
+[ADR 0014](0014-hosted-apple-isolation-probes.md#same-vm-generator-compilation-reuse-evaluation).
 Checksum-verified download reuse and
 avoiding repeated export/precomputation are separate potential optimizations,
 not implemented or measured improvements here.

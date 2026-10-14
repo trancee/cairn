@@ -9,11 +9,6 @@ on:
         default: false
   workflow_dispatch:
     inputs:
-      bindgen_benchmark:
-        description: Opt-in paired Cargo installation measurement before owning gates
-        type: choice
-        options: [off, baseline-first, candidate-first]
-        default: off
       codeql:
         description: Trace Kotlin compilation in the strict offline build cell
         type: boolean
@@ -122,10 +117,8 @@ jobs:
           sudo -n /usr/bin/env GITHUB_ACTIONS=true \
             /bin/bash proofs/bindings/apple/freeze-native-inputs.sh "$RUNNER_TEMP/apple-preparation"
       - name: Probe frozen tool startup inside the bounded cell
-        env:
-          CAIRN_BINDGEN_BENCHMARK: ${{ inputs.bindgen_benchmark || 'off' }}
         run: |
-          sudo -n /usr/bin/env GITHUB_ACTIONS=true CAIRN_BINDGEN_BENCHMARK="$CAIRN_BINDGEN_BENCHMARK" \
+          sudo -n /usr/bin/env GITHUB_ACTIONS=true \
             /bin/bash proofs/bindings/apple/run-resource-probes.sh \
             "$RUNNER_TEMP/apple-preparation" /opt/cairn-apple-tools \
             2>&1 | tee "$RUNNER_TEMP/apple-preparation/toolchain-cell.log"
@@ -198,7 +191,6 @@ jobs:
             ${{ runner.temp }}/apple-preparation/gradle-dependencies.sha256
             ${{ runner.temp }}/apple-preparation/cargo*.log
             ${{ runner.temp }}/apple-preparation/cargo-inputs.sha256
-            ${{ runner.temp }}/apple-preparation/bindgen-benchmark.*
             ${{ runner.temp }}/apple-preparation/codeql*.log
             ${{ runner.temp }}/apple-preparation/codeql-startup-logs
             ${{ runner.temp }}/apple-preparation/codeql-failed-analysis

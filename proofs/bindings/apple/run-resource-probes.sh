@@ -7,11 +7,6 @@ fi
 test "$(id -u)" -eq 0
 test "$#" -ge 1
 test "$#" -le 2
-benchmark=${CAIRN_BINDGEN_BENCHMARK:-off}
-case "$benchmark" in
-  off|baseline-first|candidate-first) ;;
-  *) echo 'FAIL: unsupported bindgen comparison order' >&2; exit 2 ;;
-esac
 output=$1
 test -d "$output"
 scripts="$(cd "$(dirname "$0")" && pwd -P)"
@@ -212,17 +207,6 @@ if [ "$#" -eq 2 ]; then
       -D PRIVATE_IPC=false -f "$work/build.sb" \
       "$python" -I "$tools/inspect-fixture-artifacts.py" "$target"
   done
-  if [ "$benchmark" != off ]; then
-    "$python" -I "$scripts/uid-supervisor.py" --seconds 600 --diagnose-after 540 \
-      "$work/proof-output/bindgen-benchmark.log" \
-      /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
-      -D PRIVATE_IPC=false -f "$work/build.sb" \
-      "$python" -I "$tools/benchmark-bindgen-reuse.py" "$tools" --order "$benchmark"
-    cp "$volume/bindgen-benchmark/result.json" "$output/bindgen-benchmark.json"
-    chmod 0444 "$output/bindgen-benchmark.json"
-    (cd "$output" && shasum -a 256 bindgen-benchmark.json > bindgen-benchmark.sha256)
-    chmod 0444 "$output/bindgen-benchmark.sha256"
-  fi
   "$python" -I "$scripts/uid-supervisor.py" --seconds 600 --diagnose-after 540 \
     "$work/proof-output/fixture-install-bindgen.log" \
     /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
