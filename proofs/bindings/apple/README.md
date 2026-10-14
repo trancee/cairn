@@ -49,6 +49,168 @@ Its recorded revision matches the run and Mach-O inspection reports
 deterministic first-attempt reliability remain unproven; this is real generated
 simulator execution, not strict runtime containment or hardware evidence.
 
+## Frozen-input manifest generation
+
+The four `freeze-*.sh` entry points create their existing SHA-256 manifests
+with `tool-input-manifest.py` after unchanged root ownership/read-only setup.
+Its CLI accepts an input root and an optional normalized relative directory
+scope (default `.`). It emits byte-sorted regular-file records in the existing
+`shasum` format, including escaped backslash/newline names and unchanged
+root/scoped prefixes. Symbolic links and special files are not hashed.
+Root/scope symlinks, path escapes, empty regular-file inventories and read
+failures return nonzero with a redacted reason and no manifest on stdout.
+File contents are read in 1 MiB chunks; the manifest is emitted after every
+selected file has been hashed successfully.
+
+The workflow's independent `shasum -a 256 --check` gates remain unchanged for
+tools, Gradle, Cargo and Native inputs after the bounded cell. No check,
+fresh compilation, archive verification, resource limit or copy/permission
+operation is removed. Nothing is cached by this change.
+
+`benchmark-tool-manifest.py INPUT_ROOT [--repetitions N]` compares the actual
+CLI with the manifest pipeline from committed baseline `a6b0767`. The default
+is three alternating-order comparisons; fewer than three are rejected.
+Every manifest must match byte-for-byte and remain unchanged across samples.
+JSON records source hashes, platform/Python/OpenSSL/CPU metadata, workload
+file/byte counts, manifest hash and all timings. A median candidate/baseline
+ratio above `0.9` fails; this is a local component benchmark, not a noisy
+shared-runner latency gate.
+
+From the repository root, on macOS with an installed Rust toolchain:
+
+```bash
+rustc --version
+xcrun python3 -I proofs/bindings/apple/benchmark-tool-manifest.py \
+  "$(rustc --print sysroot)"
+```
+
+Local measurement on 2026-10-13 used Rust `1.99.0`, 451 files,
+1,206,736,728 bytes, eight-core ARM64 macOS `27.0.1`, Xcode Python `3.9.6`
+and LibreSSL `2.8.3`. The median fell from `3.79s` to `0.68s` (about 82%);
+all manifests matched. The performance test first failed at ratio `1.03`.
+This is not a measurement of the full pinned Apple preparation tree, the
+GitHub `macos-26` runner or end-to-end CodeQL latency. Those require hosted
+comparison. The full-tree hosted result below supersedes that local-only
+limitation. See [ADR 0014](../../../docs/adr/0014-hosted-apple-isolation-probes.md#manifest-generation-optimization).
+
+Initial hosted validation at `d17aded` does not establish a speedup:
+the whole freeze step took `162s` in PR run `38450721754` and `242s` in
+branch run `38450715255`, against the earlier `139s` baseline. Every one
+of the baseline's 80,635 paths remains in both tool manifests; five digest
+differences are confined to Rust component metadata and Ubique Git metadata.
+Both strict cells failed before actual Kotlin extraction/post-cell integrity
+acceptance: the PR supervisor rejected unexpected dedicated-UID processes
+before Native cinterop; the branch exhausted the unchanged 60-second
+tool/startup/selection command ceiling. Causes remain unestablished.
+
+The same-VM full-tree comparison in
+[run 38460658960](https://github.com/trancee/cairn/actions/runs/38460658960)
+at `a8fff9e` passes with identical manifests for 80,635 files and
+5,860,115,366 bytes. Environment: the supplied three-CPU ARM64 `macos-26`
+VM, macOS `26.6.2`, Xcode Python `3.9.6`, LibreSSL `2.8.3`.
+Baseline generation samples were `76.27s`, `59.31s`, `78.51s`; candidate
+samples were `50.15s`, `38.27s`, `46.17s`. Median generation changed from
+`76.27s` to `46.17s`, about 39.5% lower, with the unchanged `0.9` threshold.
+The manifest SHA-256 is
+`5f5759844b54cc702180eed95cd29167098004ba7514e39cad9d5af65cb99b6a`.
+The public benchmark baseline commit must be present locally; the temporary
+hosted probe fetched only that exact object into the shallow checkout.
+
+Tagged phase measurement on that VM recorded copying `77s`, ownership/
+permissions `19s`, and initial generation `39s`. Other observed runs varied
+substantially. The six-command comparison itself took about six minutes;
+the subsequent full diagnostic exceeded the unchanged 30-minute job ceiling.
+It therefore proves the measured component only, not a complete diagnostic
+build or end-to-end CodeQL speedup. Independent ordinary PR/push runs
+`38460667964`/`38460659594` at the same revision pass all strict extraction,
+coverage/query, immutable-input, cleanup and upload gates; Rust/formal gates
+also pass. Earlier intermittent failures are not shown to be fixed.
+
+Temporary timing and manual workflow instrumentation have been removed.
+The retained local benchmark is opt-in and never adds profiling overhead
+to normal CI. Its existing 120-second per-command ceiling is unchanged.
+The supervisor's existing-UID rejection now reports only owned PID/parent,
+state, CPU time and command basename before refusing; it neither launches
+nor cleans those pre-existing processes. No retry or boundary/budget change
+is introduced. The unexpected-process failure did not reproduce in subsequent
+runs, so its identity and root cause remain unestablished.
+
+### Final-head diagnostic follow-up
+
+Cleanup head `db68586` passes Rust/formal gates and the final
+Actions/Python/Rust scans, but not Kotlin acceptance. PR run `38465374925`
+first fails ordinary scratch detach; its unchanged failed-job replay fails
+the existing one-shot process-snapshot test. Push run `38465367937` passes
+tool/selection probes but expires the separate 60-second offline Apple
+target/dependency-metadata invocation. No root cause or reliability fix is
+established for those failures.
+
+`check-fixture-targets.sh` now streams both Gradle output channels through
+`tee` to the existing bounded collector while retaining its scratch log.
+Partial diagnostics survive command expiry; `pipefail` preserves Gradle's
+failure status. The 60-second command, 64 MiB collector, 128 MiB child-file
+and 8 GiB scratch ceilings remain unchanged. The real-script/collector
+regression was red on missing partial output, then green after streaming:
+
+```sh
+xcrun python3 -B -m unittest discover -s proofs/bindings/apple \
+  -p test_fixture_target_output.py
+```
+
+This controlled subprocess test proves output/exit propagation, not a timing
+fix. Manual hosted probes `38514098575` pass all six supervisor cases and all
+boundary/resource assertions; their eight retained artifact checksums verify.
+PR run `38513991094` at diagnostic head `6ad4bb9` passes offline effective
+targets/dependency metadata and later refuses a `distnoted` process under UID
+59000, parent PID 1. Its origin/lifetime remains unestablished; it is neither
+trusted nor pre-cleaned. The earlier missing-snapshot failure does not recur.
+Formal run `38513991093` separately fails unchanged mutation-certificate replay
+with Tamarin `<<loop>>`, not a reported security counterexample.
+Push run `38513985911` completes Kotlin extraction, coverage and security
+queries, then fails ordinary scratch detach (`Resource busy`) before mandatory
+post-cell input checks and result delivery. It is not accepted Kotlin CI.
+Temporary tagged bootstrap/snapshot tracing is removed after collection.
+Controlled child-log failure context remains, with unchanged assertions and
+timers. The cleanup-head results below supersede that earlier acceptance gap.
+
+At cleanup head `8b4c2d6`, PR CodeQL `38515603675`, Rust `38515603697`
+and formal `38515603660` pass; all four PR scans process without errors at
+`47a9c5207514ea28f5ab7393233148ced60dc5b5`. Duplicate push `38515598161`
+fails both attempts. These results do not establish deterministic reliability.
+
+## Generator reuse evaluation
+
+The experiment at
+[`75c5623`](https://github.com/trancee/cairn/commit/75c56232fd6c3d65d00e88c4f0e9709325b9c287)
+shared the owning bindgen Cargo directory and selected an explicit Darwin
+host target. Three complete paired comparisons replayed committed baseline
+`8b4c2d6`, using both orders and matching source/lock/environment hashes.
+Both generators compiled freshly as ARM64; independent post-cell input checks
+passed in all three accepted runs. Normal CI had no measurement workload.
+
+| Accepted run (attempt 2) | Order | Baseline | Candidate | Ratio |
+| --- | --- | --- | --- | --- |
+| `38525913102` | baseline first | `255.42s` | `271.24s` | `1.06195` |
+| `38529286247` | candidate first | `153.29s` | `166.98s` | `1.08933` |
+| `38529289684` | baseline first | `260.23s` | `240.64s` | `0.92474` |
+
+Median paired ratio `1.06195` is about **6.2% slower**, not a speedup.
+36 reused Cargo artifact records and fewer compiled records (103 to 72)
+did not establish faster elapsed time. The ordinary Native/framework/
+executable and delivered functional simulator assertions passed in the third
+run; PR CodeQL/Rust/formal and four processed scans passed at `75c5623`.
+First attempts failed pre-existing UID-helper refusal or a five-second disk
+query; one explicit unchanged failed-job replay each passed. No reliability
+fix, automatic retry or limit/permission increase is implied.
+
+The experiment is not adopted. Its compiler/task configuration, benchmark/
+test files and dispatch selector are removed; all owning files match
+`8b4c2d6` again. The committed
+[benchmark source](https://github.com/trancee/cairn/blob/75c56232fd6c3d65d00e88c4f0e9709325b9c287/proofs/bindings/apple/benchmark-bindgen-reuse.py)
+retains the reproducible three-report comparison. Evidence and current
+final-head acceptance are recorded in [PR #8](https://github.com/trancee/cairn/pull/8).
+The independently approved duplicate-scheduling fix remains.
+
 ## Earlier probe evidence
 
 ### Opt-in Kotlin CodeQL diagnostic
@@ -81,9 +243,11 @@ proof; default Actions/Python/Rust scanning stays enabled. See
 The staged `.github/workflows/codeql.yml` runs existing Actions/Python/Rust
 default suites and calls this strict Kotlin lane. A manual `upload=false`
 dispatch validates without publishing scans while default setup stays enabled.
-Feature-branch pushes likewise validate without publishing. Default-branch,
-PR and weekly runs upload after the separately approved setting
-cutover. Only mapped `java-kotlin.sarif` is uploaded; raw SARIF and compiled
+Feature branches without a PR use manual dispatch; main pushes, PRs targeting
+main and weekly runs remain automatic. Feature pushes no longer duplicate a
+PR's full strict-cell build. Only superseded PR runs are cancelled; main,
+weekly and manual runs are preserved. Automatic uploads require the separately
+approved setting cutover. Only mapped `java-kotlin.sarif` is uploaded; raw SARIF and compiled
 source inventory remain diagnostic artifacts. Generated paths retain their
 owning untracked build location, not a fabricated handwritten annotation.
 CodeQL mode skips the unrelated functional simulator runtime; ordinary
@@ -242,6 +406,14 @@ effective target checks remain pending. An earlier ordinary scratch detach
 failed with `Resource busy`; later cleanup passed, but its cause remains
 unverified. Failed detach retains PID/command-only holder diagnostics and
 still fails the job without retry or force.
+
+The settings-only selection probe streams each Gradle invocation to its
+scratch log and the bounded collector. Real-script/collector regressions
+cover partial default-selection progress at deadline and child exit-status
+propagation. This closes diagnostic loss, not the startup deadline itself:
+the invalid/default/explicit-platform assertions, 60-second aggregate
+tool-cell limit and all isolation controls are unchanged. Current-source
+hosted selection and compiled CodeQL acceptance must still pass.
 
 Pinned plugin preparation and offline effective target configuration passed in
 [run 38130344648](https://github.com/trancee/cairn/actions/runs/38130344648)

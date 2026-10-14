@@ -523,6 +523,17 @@ main/merge-group/manual runs are not cancelled. All proof, build, test,
 coverage and fuzz gates still execute; results and compiled project targets
 are not cached.
 
+CodeQL likewise runs on main pushes, PRs targeting main, weekly scans and
+manual dispatch; feature branches without a PR use manual validation.
+Only superseded PR CodeQL runs are cancelled. Its original all-branch push
+trigger duplicated the full strict Kotlin build on PR updates. Observed
+baseline at `85aa105`: CodeQL PR 24m16s, Kotlin preparation 20m14s,
+formal workflow 6m45s, Rust foundation 2m. Removing duplicate triggers reduces
+work, not the duration of one cold analysis; strict build/analysis and upload
+gates are unchanged. See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md#post-deployment-scheduling-refinement).
+Publication was initially kept local; the owner approved this scheduling
+change and bounded same-VM Cargo reuse validation on 2026-10-14.
+
 Setup caches contain version-keyed host tool binaries, lockfile-keyed Cargo
 registry downloads and pinned proof archives. Proof archives are checksum
 verified after every restore. Cache misses install the same pinned tools.
@@ -596,6 +607,64 @@ failed in `replay-encrypted_origin` during tool installation: `curl` exit 56,
 `Recv failure: Connection reset by peer`. Its proof step did not run.
 This is a download failure, not the earlier Tamarin `<<loop>>` symptom
 or a reported counterexample. No successful post-merge formal run is claimed.
+
+### Frozen-input manifest generation
+
+Apple tool/Gradle/Cargo/Native preparation now shares a streaming SHA-256
+manifest generator, preserving byte-sorted `shasum` records and the independent
+post-cell `shasum --check` gates. Copies, root/read-only setup, pinned inputs,
+fresh compilation and limits are unchanged; empty or unreadable inventories
+fail explicitly. The retained component benchmark compares the real CLI
+against the committed `a6b0767` pipeline with identical manifests, source/
+environment/workload hashes and a 10% improvement threshold. On the local
+1.21 GB Rust `1.99.0` tool tree, the median changed from `3.79s` to `0.68s`;
+full hosted preparation/CodeQL improvement remains unverified.
+Initial hosted freeze steps took `162s`/`242s` versus `139s`; both strict cells
+failed (unexpected UID processes or startup deadline). The later same-VM
+full-tree A/B at `a8fff9e` verifies identical manifests for 80,635 files/
+5,860,115,366 bytes: median `76.27s` to `46.17s` (39.5% lower).
+The supplied three-CPU ARM64 VM reports macOS `26.6.2`, Xcode Python `3.9.6`
+and LibreSSL `2.8.3`. Profiling overhead exhausted that manual job's unchanged
+30-minute ceiling; ordinary PR/push CodeQL and Rust/formal gates pass at the
+same revision. Tagged timing/manual profiling are removed; normal CI has no
+benchmark overhead. No end-to-end speedup or reliability fix is established.
+Unexpected processes are reported, never trusted or pre-cleaned.
+Commands and scope are in the
+[Apple reference](proofs/bindings/apple/README.md#frozen-input-manifest-generation).
+No protocol, public API, compiler profile or constant-time claim changes.
+Final cleanup head `db68586` fails Kotlin acceptance on scratch detach,
+one-shot snapshot or offline effective-target expiry; final non-Kotlin scans,
+Rust and formal gates pass. The target script now streams partial Gradle
+diagnostics into the existing bounded collector with unchanged exit/budget
+semantics, verified by real-script timeout/error tests. Hosted manual probe
+`38514098575` passes; PR `38513991094` passes offline targets then rejects
+UID-59000 `distnoted`, with unestablished helper origin/lifetime. Formal
+`38513991093` separately fails unchanged Tamarin mutation replay (`<<loop>>`).
+Push `38513985911` completes Kotlin extraction/coverage/queries but fails
+ordinary scratch detach before mandatory input-integrity/delivery gates.
+Temporary startup/snapshot tracing is removed. Cleanup-head `8b4c2d6` PR
+CodeQL/Rust/formal gates pass; all four PR scans process at
+`47a9c5207514ea28f5ab7393233148ced60dc5b5` without errors. Duplicate push
+`38515598161` fails both attempts. Deterministic reliability is not established.
+
+### Same-VM generator reuse evaluation
+
+The approved experiment at `75c5623` aligned the owning bindgen directory
+and explicit host target with preceding fixture compilation, preserving
+all plugin/Cargo fingerprints, SDK profiles, bounds and security gates.
+Three complete independent same-VM comparisons at unchanged-source attempt 2
+(`38525913102`, `38529286247`, `38529289684`) verify all input checksums and
+both execution orders. Median paired ratio is `1.06195`: about 6.2% slower,
+despite 36 reused artifact records and fewer compiled records (103 to 72).
+The ordinary Native/runtime case and CodeQL/Rust/formal/processed scan gates
+pass at experiment revision `75c5623`. First attempts fail existing helper refusal or disk-query
+timeout; their one explicit replay each does not establish reliability.
+The experiment is not adopted; its code/tests/dispatch paths are removed,
+restoring `8b4c2d6` compiler/task behavior exactly while keeping the
+duplicate-scheduling fix. Reproducible experiment source remains in
+committed `75c5623`; results and limitations are in the
+[Apple reference](proofs/bindings/apple/README.md#generator-reuse-evaluation)
+and [PR #8](https://github.com/trancee/cairn/pull/8).
 
 The schema below is retained for the future implementation profile.
 

@@ -61,7 +61,7 @@ class DedicatedSupervisorTest(unittest.TestCase):
                 for line in result.stdout.splitlines()
                 if line.startswith("DIAGNOSTIC: owned-process ")
             ]
-            self.assertTrue(snapshots, result.stdout)
+            self.assertTrue(snapshots, result.stdout + "\n" + output.read_text())
             self.assertEqual({row["uid"] for row in snapshots}, {59000})
             self.assertTrue(all(set(row) == {
                 "uid", "pid", "ppid", "state", "cpu_time", "command",
