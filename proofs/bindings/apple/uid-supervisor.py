@@ -13,15 +13,10 @@ import time
 from pathlib import Path
 
 
-def launch_child(command, diagnose=False):
+def launch_child(command):
     if os.geteuid() != 0 or os.environ.get("GITHUB_ACTIONS") != "true" or not command:
         raise SystemExit("FAIL: child setup requires the hosted root supervisor")
-    if diagnose:
-        print(f"[DEBUG-ci-bootstrap] child-start {time.monotonic():.6f}", flush=True)
     account = pwd.getpwnam("cairnbenignprobe")
-    if diagnose:
-        print(f"[DEBUG-ci-bootstrap] child-account-resolved {time.monotonic():.6f}",
-              flush=True)
     if account.pw_uid != 59000 or account.pw_gid != 20 or account.pw_shell != "/usr/bin/false":
         raise SystemExit("FAIL: child account identity does not match")
     for limit, value in (
@@ -32,9 +27,6 @@ def launch_child(command, diagnose=False):
     os.setgroups([])
     os.setgid(account.pw_gid)
     os.setuid(account.pw_uid)
-    if diagnose:
-        print(f"[DEBUG-ci-bootstrap] child-uid-dropped {time.monotonic():.6f}",
-              flush=True)
     os.chdir(account.pw_dir)
     os.execvpe(command[0], command, {
         "PATH": "/usr/bin:/bin", "HOME": account.pw_dir,
@@ -85,27 +77,22 @@ def interrupted(number, _frame):
 
 
 def report_account_processes(uid):
-    print(f"[DEBUG-ci-bootstrap] snapshot-start {time.monotonic():.6f}", flush=True)
     result = subprocess.run(
         ["/bin/ps", "-axo", "uid=,pid=,ppid=,stat=,time=,comm="],
         check=True, capture_output=True, text=True, timeout=5,
     )
-    count = 0
     for line in result.stdout.splitlines():
         owner, pid, parent, state, cpu_time, command = line.split(maxsplit=5)
         if int(owner) == uid:
-            count += 1
             print("DIAGNOSTIC: owned-process " + json.dumps({
                 "uid": int(owner), "pid": int(pid), "ppid": int(parent),
                 "state": state, "cpu_time": cpu_time, "command": Path(command).name,
             }), flush=True)
-    print(f"[DEBUG-ci-bootstrap] snapshot-complete {time.monotonic():.6f} count={count}",
-          flush=True)
 
 
 def main():
-    if sys.argv[1:2] in (["--child"], ["--diagnostic-child"]):
-        launch_child(sys.argv[2:], diagnose=sys.argv[1] == "--diagnostic-child")
+    if sys.argv[1:2] == ["--child"]:
+        launch_child(sys.argv[2:])
         return 1
     parser = argparse.ArgumentParser()
     parser.add_argument("--seconds", type=float, default=30)
@@ -135,8 +122,7 @@ def main():
     collector = Path(__file__).parent.parent / "linux-android" / "bounded-proof.py"
     child_command = [
         sys.executable, "-I", str(Path(__file__).resolve()),
-        "--diagnostic-child" if arguments.diagnose_after is not None else "--child",
-        *arguments.command,
+        "--child", *arguments.command,
     ]
     if arguments.user_bootstrap:
         child_command = ["/bin/launchctl", "asuser", "59000", *child_command]
@@ -146,8 +132,6 @@ def main():
     ], start_new_session=True)
     try:
         if arguments.diagnose_after is not None:
-            print(f"[DEBUG-ci-bootstrap] collector-launched {time.monotonic():.6f}",
-                  flush=True)
             try:
                 return process.wait(timeout=arguments.diagnose_after)
             except subprocess.TimeoutExpired:

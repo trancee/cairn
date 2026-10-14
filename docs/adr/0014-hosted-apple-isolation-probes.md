@@ -1320,9 +1320,22 @@ propagates unchanged. The test uses controlled subprocesses, not an accepted
 Gradle build.
 
 Increasing timeouts, repeated automatic runs and accepting an empty snapshot
-instead of the existing assertion are not selected. Temporary tagged
-child-bootstrap/snapshot times and failure-log context distinguish incomplete
-startup from an observation failure; they must be removed after collection.
-The migration changes diagnostic delivery only, not tools, targets, compiler
-tasks, public API, ownership, network policy or any resource/deadline budget.
-Final hosted acceptance and failure causes remain unestablished.
+instead of the existing assertion are not selected. Manual hosted probe
+`38514098575` passes all supervisor/resource/boundary cases at `6ad4bb9`;
+its eight artifact checksums verify. PR run `38513991094` passes offline
+effective targets/metadata and later rejects a UID-59000 `distnoted` process
+parented by PID 1. This identifies that observed helper, not its origin,
+lifetime or the helper in earlier failures. No pre-cleanup or trust exception
+is added. The missing-snapshot failure does not recur, so its cause remains
+unestablished. Separate formal run `38513991093` fails unchanged mutation
+certificate replay with Tamarin `<<loop>>`.
+Push run `38513985911` completes Kotlin extraction, coverage and queries but
+fails ordinary scratch detach before post-cell input integrity and delivery.
+Those missing gates are not waived by the earlier completed extraction.
+
+Remove temporary tagged child-bootstrap/snapshot tracing after collection;
+retain controlled test-child log context on assertion failure. The migration
+changes diagnostic delivery only, not tools, targets, compiler tasks, public
+API, ownership, network policy or any resource/deadline budget.
+Final cleanup-head hosted acceptance and deterministic reliability remain
+unestablished.

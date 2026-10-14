@@ -157,11 +157,21 @@ xcrun python3 -B -m unittest discover -s proofs/bindings/apple \
   -p test_fixture_target_output.py
 ```
 
-This controlled subprocess test proves output/exit propagation, not Gradle
-configuration or a timing fix. Temporary tagged child-bootstrap/snapshot
-timestamps and retained failure context are being used only to diagnose the
-hosted one-shot observation; acceptance assertions and timers are unchanged.
-These tags must be removed after collection.
+This controlled subprocess test proves output/exit propagation, not a timing
+fix. Manual hosted probes `38514098575` pass all six supervisor cases and all
+boundary/resource assertions; their eight retained artifact checksums verify.
+PR run `38513991094` at diagnostic head `6ad4bb9` passes offline effective
+targets/dependency metadata and later refuses a `distnoted` process under UID
+59000, parent PID 1. Its origin/lifetime remains unestablished; it is neither
+trusted nor pre-cleaned. The earlier missing-snapshot failure does not recur.
+Formal run `38513991093` separately fails unchanged mutation-certificate replay
+with Tamarin `<<loop>>`, not a reported security counterexample.
+Push run `38513985911` completes Kotlin extraction, coverage and security
+queries, then fails ordinary scratch detach (`Resource busy`) before mandatory
+post-cell input checks and result delivery. It is not accepted Kotlin CI.
+Temporary tagged bootstrap/snapshot tracing is removed after collection.
+Controlled child-log failure context remains, with unchanged assertions and
+timers. Final cleanup-head hosted acceptance is still required.
 
 ## Earlier probe evidence
 

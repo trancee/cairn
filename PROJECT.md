@@ -601,8 +601,14 @@ Final cleanup head `db68586` fails Kotlin acceptance on scratch detach,
 one-shot snapshot or offline effective-target expiry; final non-Kotlin scans,
 Rust and formal gates pass. The target script now streams partial Gradle
 diagnostics into the existing bounded collector with unchanged exit/budget
-semantics, verified by real-script timeout/error tests. Scoped temporary
-startup/snapshot observation is pending hosted evidence, not a reliability fix.
+semantics, verified by real-script timeout/error tests. Hosted manual probe
+`38514098575` passes; PR `38513991094` passes offline targets then rejects
+UID-59000 `distnoted`, with unestablished helper origin/lifetime. Formal
+`38513991093` separately fails unchanged Tamarin mutation replay (`<<loop>>`).
+Push `38513985911` completes Kotlin extraction/coverage/queries but fails
+ordinary scratch detach before mandatory input-integrity/delivery gates.
+Temporary startup/snapshot tracing is removed; final cleanup-head acceptance
+and deterministic reliability remain unestablished.
 
 The schema below is retained for the future implementation profile.
 
