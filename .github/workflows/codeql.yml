@@ -8,6 +8,7 @@ on:
         type: boolean
         default: false
   push:
+    branches: [main]
   pull_request:
     branches: [main]
   schedule:
@@ -15,6 +16,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   CODEQL_UPLOAD: ${{ ((github.event_name != 'workflow_dispatch' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')) || (github.event_name == 'workflow_dispatch' && inputs.upload)) && 'always' || 'never' }}

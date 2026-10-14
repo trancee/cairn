@@ -19,8 +19,7 @@ result=0
   --init-script "$tools/assert-apple-targets.gradle" \
   --init-script "$tools/resolve-apple-inputs.gradle" cairnResolveAppleInputs \
   :sdk:transformNativeMainCInteropDependenciesMetadata \
-  > "$HOME/fixture-targets.log" 2>&1 || result=$?
-cat "$HOME/fixture-targets.log"
+  2>&1 | tee "$HOME/fixture-targets.log" || result=$?
 if [ "$result" -ne 0 ]; then exit "$result"; fi
 grep -F 'PASS: effective Apple SDK targets' "$HOME/fixture-targets.log"
 "$python" -I -c '

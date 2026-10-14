@@ -52,7 +52,6 @@ chmod 0755 "$destination/generator-tools/cargo"
 chown -R root:wheel "$destination"
 chmod -R a+rX,a-w "$destination"
 ls -ld "$destination" "$destination/rust" "$destination/rust/bin" "$destination/rust/bin/rustc"
-(cd "$destination" && /usr/bin/find . -type f -print0 \
-  | LC_ALL=C /usr/bin/sort -z | /usr/bin/xargs -0 shasum -a 256) \
+"$(xcrun --find python3)" -I "$scripts/tool-input-manifest.py" "$destination" \
   > "$prepared/toolchains.sha256"
 echo 'PASS: trusted tool copies are root-owned read-only; fixture/cache freezing is not implied'

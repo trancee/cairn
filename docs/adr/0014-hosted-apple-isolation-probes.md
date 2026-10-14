@@ -1211,3 +1211,200 @@ cause is not established or fixed, and first-attempt reliability is not proven.
 This closes the approved functional-runtime implementation only: strict
 helper containment, final issue-45 acceptance, Compose/app integration,
 release behavior and physical iPhone execution remain open.
+
+## Manifest-generation optimization
+
+On 2026-10-13 the owner requested lower CI latency while retaining the supplied
+GitHub macOS VM and existing strict gates. The observed CodeQL preparation
+baseline spent 139 seconds freezing tools. A bounded local comparison of a
+real 1.21 GB Rust tool tree found copying negligible (`0.09s`) but serial
+`shasum` generation slower than Python's SHA-256 implementation. The actual
+CLI component benchmark first failed its 10% improvement target, then passed
+with identical manifests: median `3.79s` versus `0.68s`, about 82% lower.
+This is local component evidence, not an end-to-end or hosted speedup.
+
+Use one standard-library streaming generator for the four existing manifests,
+after their unchanged ownership/read-only setup. Preserve byte sorting,
+regular-file selection, escaped filenames, SHA-256 and manifest prefixes.
+Keep the independent native `shasum --check` gates after the full strict cell.
+Reject empty inventories, invalid/root-escaping scopes and I/O failures
+explicitly without emitting a partial stdout manifest. This is tooling-input
+integrity, not a protocol cryptographic-provider or constant-time change.
+
+Changing copy strategy was rejected because `ditto` already copied this
+workload quickly. Caching compiled results, removing integrity/probe gates,
+prebuilding the generator outside its owning task, widening permissions or
+raising budgets are not selected. No cached manifest/result is trusted.
+
+The risk is a generator/format mismatch or platform-dependent performance.
+Exact comparisons against the previous pipeline, independent `shasum` replay
+and adversarial scope/name/error tests bound the format change. The retained
+benchmark records the committed baseline, source hashes, workload, environment
+and all samples; it cannot substitute for full hosted preparation/analysis.
+Migration changes only the four manifest producers. Existing manifest names,
+consumers, copies, compiler tasks, all security/resource controls and immutable
+pins remain unchanged. Hosted comparison requires separate publication/
+execution approval; no issue-45 or scratch-reliability acceptance is implied.
+
+### Initial hosted acceptance and bounded diagnosis
+
+At `d17aded`, both generated tool manifests preserve the same 80,635 input
+paths as the verified baseline. The five digest differences are confined to
+Rust component metadata/Ubique Git metadata. However, whole-step freezing
+takes `162s`/`242s` rather than the earlier `139s`; the observed comparison
+does not pass the performance gate or isolate the cause. The PR cell then
+rejects unexpected dedicated-UID processes before Native cinterop; the branch
+cell expires the existing 60-second startup/selection deadline. No final
+Kotlin extraction/query/integrity acceptance or failure fix is established.
+
+Use temporary tagged copy/ownership/manifest phase timing and a manual-only
+full pinned-tree A/B measurement in the existing fresh preparation VM.
+Each existing benchmark command stays capped at 120 seconds; the job remains
+30 minutes. Remove this temporary workflow/timing instrumentation after
+collection. Add the already-existing redacted process-identity report before
+the unchanged existing-UID rejection: diagnostics only, never preflight
+cleanup, delayed trust acceptance or a resource/permission increase.
+This diagnostic regression was observed red before that report and green
+after it; local simulation does not prove the hosted helper's identity/cause.
+
+### Same-VM result and diagnostic cleanup
+
+[Manual run 38460658960](https://github.com/trancee/cairn/actions/runs/38460658960)
+at `a8fff9e` compares the full 80,635-file, 5,860,115,366-byte pinned tree
+on one supplied `macos-26` VM. The three-CPU ARM64 environment reports
+macOS `26.6.2`, Xcode Python `3.9.6` and LibreSSL `2.8.3`.
+Three alternating baseline/candidate samples retain identical manifests:
+baseline `76.27s`/`59.31s`/`78.51s`, candidate `50.15s`/`38.27s`/`46.17s`.
+The median ratio is `0.6054` (39.5% lower), below the unchanged `0.9`
+acceptance threshold. The manifest SHA-256 is
+`5f5759844b54cc702180eed95cd29167098004ba7514e39cad9d5af65cb99b6a`.
+Phase timing records copy `77s`, ownership/permissions `19s` and initial
+generation `39s`; whole-step variation cannot be attributed to hashing alone.
+
+The earlier manual request `38454793910` acquired no hosted runner.
+Run `38459283620` failed before target work because the shallow checkout
+lacked the baseline Git object; fetching only the exact public commit fixed
+that diagnostic setup. No compiler/build failure was bypassed.
+The successful A/B adds about six minutes of measurement and the full
+diagnostic later exhausts the unchanged 30-minute job ceiling.
+Do not treat that partial diagnostic as a complete build or latency proof.
+Ordinary PR/push CodeQL runs `38460667964`/`38460659594` at `a8fff9e`
+pass strict Kotlin extraction, coverage, queries, post-cell integrity,
+cleanup and result delivery/processing; ordinary Rust/formal checks also pass.
+Full CodeQL wall-clock improvement and deterministic runner reliability remain
+unestablished. The unexpected UID condition did not recur, so no helper
+identity/root-cause or reliability fix is claimed.
+
+Remove the tagged timing, temporary manual step and exact-object fetch.
+Retain only the opt-in representative benchmark, faster manifest producers
+and tested redacted preflight report. Normal CI performs no A/B workload.
+Final cleanup-head hosted gates remain required before merge.
+
+### Partial target diagnostics and final-head failure observation
+
+At cleanup head `db68586`, final Rust/formal and non-Kotlin CodeQL gates pass.
+PR run `38465374925` first fails ordinary scratch detach, then its unchanged
+failed-job replay fails the existing one-shot UID snapshot assertion.
+Push run `38465367937` expires the separate offline effective-target/
+dependency-metadata cell after the tool/selection probes pass. The target
+script buffers Gradle output until return, so expiry loses that partial
+stage evidence. These failures do not establish a manifest regression or
+their own root causes.
+
+The owner approved a scoped diagnostic/fix/publication follow-up without
+relaxed gates. Stream both Gradle channels through `tee` into the existing
+bounded collector, keeping the existing scratch log and `pipefail` failure
+propagation. A real-script/collector regression is red on missing partial
+output before this change and green after it; nonzero child status also
+propagates unchanged. The test uses controlled subprocesses, not an accepted
+Gradle build.
+
+Increasing timeouts, repeated automatic runs and accepting an empty snapshot
+instead of the existing assertion are not selected. Manual hosted probe
+`38514098575` passes all supervisor/resource/boundary cases at `6ad4bb9`;
+its eight artifact checksums verify. PR run `38513991094` passes offline
+effective targets/metadata and later rejects a UID-59000 `distnoted` process
+parented by PID 1. This identifies that observed helper, not its origin,
+lifetime or the helper in earlier failures. No pre-cleanup or trust exception
+is added. The missing-snapshot failure does not recur, so its cause remains
+unestablished. Separate formal run `38513991093` fails unchanged mutation
+certificate replay with Tamarin `<<loop>>`.
+Push run `38513985911` completes Kotlin extraction, coverage and queries but
+fails ordinary scratch detach before post-cell input integrity and delivery.
+Those missing gates are not waived by the earlier completed extraction.
+
+Remove temporary tagged child-bootstrap/snapshot tracing after collection;
+retain controlled test-child log context on assertion failure. The migration
+changes diagnostic delivery only, not tools, targets, compiler tasks, public
+API, ownership, network policy or any resource/deadline budget.
+At cleanup head `8b4c2d6`, PR CodeQL `38515603675`, Rust `38515603697`
+and formal `38515603660` pass. GitHub processed all four PR language scans
+at merge revision `47a9c5207514ea28f5ab7393233148ced60dc5b5` without errors.
+Duplicate push `38515598161` fails its first attempt on another pre-existing
+UID-59000 `distnoted`; its one unchanged failed-job replay also fails.
+This closes final PR-head acceptance, not deterministic runner reliability
+or successful duplicate-push acceptance.
+
+## Same-VM generator compilation reuse evaluation
+
+The owner approved implementation, publication and bounded hosted comparison
+on 2026-10-14. Successful PR run `38515603675` took 23m38s versus the original
+24m16s, but preparation still took 20m59s and owning `installBindgen` about
+4m10s. These different-VM observations do not establish a causal speedup.
+
+Pinned Ubique `b819fb4` sets the install task's `CARGO_TARGET_DIR` from its
+own `bindgenBuildPath`, overriding the shell's shared directory. Its installer
+also uses an implicit host target, unlike explicit-target fixture compilation.
+The evaluated implementation at `75c5623` configured that public task property
+to the fixture's `cargo.targetDirectory` and supplied explicit
+`--target aarch64-apple-darwin` for generator installation. Competing target/
+directory arguments failed before Cargo. Default Linux/Android configuration
+and SDK Rust profiles/targets were unchanged.
+
+Cargo alone decided which freshly compiled same-VM dependencies were compatible
+by its normal source, version, feature, profile, target and compiler fingerprints.
+The experiment retained the plugin's real installation, source fingerprint,
+target lock and ready record, without binary injection, fabricated fingerprints,
+cross-run compiled restores or skipped gates. An effective-configuration probe
+checked both task directories; real adapter assertions were red before the
+target-ownership implementation and green afterward.
+
+The archived opt-in paired benchmark replayed the committed `8b4c2d6` Cargo
+installation policy with an empty baseline target directory versus the
+experimental adapter using fixture dependencies compiled earlier on that VM.
+Both installed the same locked, immutable generator source freshly into
+separate empty roots. Cargo JSON established fresh generator compilation
+in both cases, zero baseline reuse and positive candidate reuse; both real
+ARM64 binaries were inspected.
+The result included source/lock/adapter/benchmark hashes, Rust/host/Python/CPU
+metadata, artifact counts, binary hashes and elapsed times. It measured Cargo
+installation, not Gradle startup or whole-workflow latency.
+
+Each explicitly selected comparison retained the existing 600-second command,
+30-minute job and all memory/disk/file/process/CPU/network/isolation bounds.
+Normal CI never ran it. Three complete independent paired reports, both orders
+and matching input/environment hashes passed their checksum and all four
+post-cell immutable-input gates:
+`38525913102`, `38529286247` and `38529289684`, each attempt 2.
+Their first attempts failed pre-existing UID-helper refusal or a five-second
+`diskutil info` timeout; each failed job was explicitly replayed once, unchanged.
+These are not reliability fixes or automatic retries.
+
+Paired candidate/baseline ratios were `1.06195`, `1.08933`, `0.92474`;
+median `1.06195`, about **6.2% slower**, despite reusing 36 artifact records
+and reducing compiled records from 103 to 72. The 10% regression ceiling
+passed, but the requested speedup did not. Ordinary Native/framework/executable
+compilation and functional simulator calls also passed in `38529289684`,
+attempt 2; CodeQL/Rust/formal and all four processed PR scans passed at
+`75c5623`.
+
+Do not adopt this optimization: restore the original generator adapter,
+SDK/task directory configuration and owning workflows byte-for-byte from
+`8b4c2d6`; remove the experiment-only test, dispatch and benchmark paths.
+The implementation and reproducible report summarizer remain in committed
+`75c5623`, and verified results are recorded in
+[PR #8](https://github.com/trancee/cairn/pull/8).
+Retain the separately approved duplicate-scheduling fix. No elapsed-time
+improvement is claimed from fewer Cargo artifact records.
+Checksum-verified archive reuse and change-aware gate applicability are not
+part of this decision.

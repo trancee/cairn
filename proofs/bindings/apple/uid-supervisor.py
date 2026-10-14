@@ -112,6 +112,7 @@ def main():
     if account.pw_uid != 59000 or account.pw_gid != 20 or account.pw_shell != "/usr/bin/false":
         parser.error("Dedicated disabled-login probe account identity does not match")
     if account_processes(account.pw_uid):
+        report_account_processes(account.pw_uid)
         parser.error("Dedicated probe UID already has processes; refusing to launch or clean them")
     output_directory = Path(arguments.output).parent.stat()
     if output_directory.st_uid != 0 or output_directory.st_mode & 0o077:
