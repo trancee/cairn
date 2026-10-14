@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from projection import ProjectionError, lean_certificate, project_export
 from proof_tools import check_axioms, check_tamarin_version
+from equations.maude_runner import run_guarded_tamarin
 
 AUDITED_THEOREMS = {
     "Lifecycle": (
@@ -57,7 +58,9 @@ def main() -> int:
         prover = run(["tamarin-prover", "--version"])
         check_tamarin_version(prover)
         run([sys.executable, "-m", "unittest", "discover", "-s", str(here), "-p", "test_*.py"])
-        expanded = run(["tamarin-prover", "--parse-only", str(here.parent / "ratchet.spthy")])
+        expanded = run_guarded_tamarin(
+            ["tamarin-prover", "--parse-only", str(here.parent / "ratchet.spthy")], 120,
+        )
         rows = project_export(expanded)
         with tempfile.TemporaryDirectory(prefix="cairn-lifecycle-") as temporary:
             build = Path(temporary)
@@ -76,7 +79,7 @@ def main() -> int:
         print(f"Lean {pin}; expanded theory SHA-256: {digest}")
         print(f"Checked {len(rows)} rule projections: {dict(Counter(row.action for row in rows))}")
         print("PASS: inductive lifecycle, token simulation, event recording, source projection")
-        print("Trust boundary: Tamarin export + Python projection + Lean kernel; not a Tamarin replay.")
+        print("Trust boundary: Tamarin/Maude + Python boundary/projection + Lean kernel; not a Tamarin replay.")
         return 0
     except (OSError, RuntimeError, ProjectionError, subprocess.TimeoutExpired) as error:
         print(f"FAIL: {error}", file=sys.stderr)

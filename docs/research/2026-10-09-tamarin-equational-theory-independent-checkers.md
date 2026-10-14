@@ -10,9 +10,108 @@ natural-numbers`; `functions: kdf/3, ext/2, mac/2, kem/2, kdec/2, pk/1, roleA/0,
 applicability for checking convergence, confluence and the finite variant property (FVP) of that
 theory as used by Tamarin 1.12.0. No protocol rule, lemma, equation or runtime
 behavior is changed. The original investigation was read-only; the update below
-adds a termination proof and its directly related local/CI/documentation surfaces.
+adds typed convergence/boundedness proofs and directly related local/CI/docs.
 
 ## Update: source-guarded termination and the flat-pattern criterion (2026-10-14)
+
+The owner-selected guarded native boundary is now wired into all repository
+ratchet acceptance callers. It checks the entire pinned module and each query/
+complete reply, with mandatory private lifecycle records. Bad solutions are
+not filtered; any unsupported operation rejects the proof invocation.
+Pinned `Types.hs` distinguishes original `MaudeVar` from generated `FreshVar`;
+its fresh/free substitution importers require different namespaces. The guard
+enforces those constraints and rejects per-solution `#`/`%` collisions that the
+pinned reply parser would conflate. This is runtime membership/provenance
+evidence under trusted Python/tool code, not a verified variable-renaming/
+importer or algorithm proof. Real native reduction, unification, matching,
+variants and guarded Tamarin parse pass. Parse-only exports are byte-identical
+with measured `+3.5%` median overhead; full-search/memory costs remain unmeasured.
+See the [boundary reference](../spec/models/equations/README.md#native-stream-boundary).
+Sorted AC-unification and full theorem/FVP transfer remain open.
+The pinned
+[`Console.hs`](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/src/Main/Console.hs)
+also invokes a no-argument installation probe with exactly `quit\n`. A real
+tiny exact-signature normalization-witness test exposed its initial rejection.
+The proxy now executes and checks only that probe; arbitrary no-argument
+commands still fail. The witness verifies through genuine guarded
+precomputation/proof streams, not just `--parse-only`.
+
+The latest local [equation checker](../spec/models/equations/README.md)
+proves typed B-coherence, global matching confluence, quotient-path confluence
+modulo natural AC and a template-only normalization bound under normalized
+substitutions. Nonlinear key-copy overlaps are joined; normality is
+AC-invariant. All 53 required audits and kernel cases pass; eighteen audits use no
+axioms. The checked boundedness quantifies over every template and normalized
+assignment, not sampled ground terms. Missing boundedness/confluence audit
+transcripts have fail-closed CLI red/green checks. Native query-image transfer,
+complete sorted AC-unification and the remaining FVP theorem hypotheses are
+still open. A later structural frozen-index foundation also proves natural/
+message encoding left inverses and injectivity, separating rigid atoms from
+variables with the same native index. Its recognizers reject improper node/
+list/natural sorts. Independent raw structural AC and six-rule/context
+rewriting now preserve and reflect that image; recognized terms are exactly
+encodings. Quotient steps have typed matching realizations modulo AC.
+Typed natural/message substitutions commute with encoding and freeze rigid
+indices; node assignments stay in node atoms/variables, never messages. Free
+tuple/Node framing is also closed under AC, rewriting and typed substitution.
+Its envelope is wider than the printer's fixed tuple shape; it rejects
+`h(list(nil))`, unlike a naive use of the host sort classifier. The raw rewrite
+relation deliberately omits sort guards, which decoder reflection validates
+only for encoded message inputs. These are algebraic representation proofs,
+not actual backend query/framing or substitution-provenance proofs, nor a
+verified importer. Narrowing/unification closure remains open.
+The published termination checkpoint passed hosted acceptance
+at `70c1c19` in PR #9; this addition is unpublished at authoring.
+The earlier termination-only snapshot in the following paragraphs is historical.
+
+Primary-source follow-up also identifies the kind-completion boundary:
+[Maude manual section 3.5](https://maude.lcc.uma.es/maude-manual/maude-manualch3.html)
+automatically lifts operators to kinds and admits error terms with no proper
+sort, while section 14.2 states its flat-pattern criterion using kind-sorted
+variables. The 17 declared-sort checks therefore are not treated as a
+complete certificate for the implicit kind-completed signature.
+
+A new bounded diagnostic on the unchanged captured native module addresses
+that enumeration gap: all 17 protocol ranks with kind-level arguments,
+plus the eight explicitly declared bookkeeping/list ranks, exhaust under
+Maude `3.5.1`. Each of the 25 commands has an exhaustion marker and no
+warning/error/advisory. The collector retains the existing 60-second/
+64 MiB limits. Error-kind identity variants remain in the result; the
+five reducible operators also produce their expected sorted branches.
+This does not enumerate imported `NAT` operators or discharge native
+convergence/coherence, builtin admissibility or query-image conservativity.
+The owner chose correspondence for the actual typed protocol-query image,
+not a proof carrier widened to native error terms/imported arithmetic.
+That image still requires preservation/reflection and substitution,
+unification and narrowing closure; enumeration certifies none of these.
+
+Pinned native source narrows a possible conservativity proof to the actual
+query image, not all imported arithmetic. [`Types.hs:65-77`](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/lib/term/src/Term/Maude/Types.hs#L65-L77)
+recursively preserves function structure and encodes variables/constant tags.
+[`Parser.hs:141-157`](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/lib/term/src/Term/Maude/Parser.hs#L141-L157)
+prints atom indices as closed decimal literals and wraps tuples in
+`list`/`cons`/`nil`; its
+[returned-variable sort parser](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/lib/term/src/Term/Maude/Parser.hs#L305-L312)
+does not accept bookkeeping `Nat`, `TOP` or kind variables.
+This is structural evidence for a frozen-index image-language proof route,
+not a completed preservation/reflection, unification or FVP certificate.
+
+The pinned [`LTerm.hs:299-305`](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/lib/term/src/Term/LTerm.hs#L299-L305)
+sort classifier returns `LSortMsg` for all other function applications,
+including `List`, and
+[`Raw.hs:139-141`](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/lib/term/src/Term/Term/Raw.hs#L139-L141)
+constructs lists without a dependent sort check. The native printer instead
+gives list framing sort `TOP`. Therefore a Haskell term/sort tag is not itself
+a proof of native proper-sort membership. A correspondence proof must account
+for the actual query construction and framing discipline; it cannot simply
+assume every `LNTerm` lies in the typed message carrier.
+
+[`Process.hs:226-233`](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/lib/term/src/Term/Maude/Process.hs#L226-L233)
+builds both matching tuples from the two projections of the same equation
+list, so their fixed framing has equal arity. Normalization, unification
+and variant queries use the generic recursive conversion without this wrapper.
+This establishes the matching wrapper's source shape, not proper message-sort
+membership of every tuple element or term supplied by its callers.
 
 The [Lean termination subgate](../spec/models/equations/README.md) now proves
 well-founded rewriting for all six exact equations in every typed message

@@ -3,9 +3,30 @@
 Mathematical review of the default
 [`ratchet.spthy`](ratchet.spthy) equation set, observed on 2026-10-09.
 The `2026-10-14` [source-guarded Lean termination subgate](equations/README.md)
-now kernel-checks the termination argument below, including sorted natural AC.
-Confluence/FVP arguments and the overall independent-acceptance gate remain
-separate; this is not a kernel-checked combined convergence/FVP certificate.
+now kernel-checks termination, B-coherence, confluence modulo sorted natural
+AC and a normalization bound independent of normalized substitutions.
+These results cover the typed algebra. Native query-image transfer and the
+remaining FVP hypotheses stay separate; this is not a native FVP certificate.
+
+## Why executed queries now need a guard
+
+Candidate-image closure cannot establish that the backend actually receives
+that image: the pinned host classifier treats lists as messages, while native
+framing has sort `TOP`. The owner chose a fail-closed command/reply proxy as the
+next proof-only boundary. Ratchet acceptance runners now reject unsupported
+queries and complete replies before accepting proof results, without dropping
+individual solutions. The shared source inventory also pins the full native
+module; private lifecycle records prevent ignored startup errors from becoming
+successful proof evidence.
+
+The guard checks sorts, rigid-index provenance and the pinned importer's
+original/generated variable distinction. It rejects ambiguous `#`/`%` identities
+inside one solution. These checks enforce membership for executed operations,
+not a kernel proof of query builders, variable renaming, importer behavior or
+Maude algorithms. The [reference](equations/README.md#native-stream-boundary)
+records syntax, errors, deadlines and the parse-only performance comparison.
+Sorted AC-unification, admissible decomposition and full FVP transfer remain
+open; neither the guard nor its four real-operation tests close that gate.
 
 ## Exact scope
 
@@ -66,7 +87,28 @@ kernel-checked correspondences. It shares the equation inventory and mandatory
 axiom audit with the lifecycle gate. The translation/export remain trusted
 boundaries, not a verified importer.
 
-## Confluence argument and repeated-key caveat
+## Matching modulo AC and B-coherence
+
+Repeated keys need equality modulo AC, not literal equality of representatives.
+For example, `sdec(senc(payload, one + n), n + one)` has a decryption match
+modulo natural AC even though a purely syntactic matcher cannot apply the
+repeated-key rule directly. The source equation itself is unchanged.
+
+[`Coherence.lean`](equations/Coherence.lean) models that matching relation and
+closes it under every existing typed message context. It proves soundness
+against the quotient rewrite relation and transport of any quotient step back
+to a matching step from the original representative. It also proves a stronger
+one-step form of B-coherence: if one representative takes a matching step,
+every AC-equivalent representative can take a matching step to an
+AC-equivalent result. The four soundness/coherence theorem audits use no
+axioms; matching termination inherits the existing termination proof.
+
+This closes the B-coherence obligation for the typed algebra, not for every
+kind-completed native Maude term. It is not Maude ChC's separate rule-versus-
+equation coherence check. Native query-image correspondence and FVP still
+need their respective evidence.
+
+## Kernel-checked confluence and repeated-key overlaps
 
 Different root rules cannot compete on the same redex. The destructor
 heads `fst`, `snd`, `sdec`, `kdec`, `flip` are distinct, and the two
@@ -85,9 +127,81 @@ shared key, it may temporarily disable the outer decryption rule.
 Applying the same step in the other occurrence restores the equality
 test; both paths then return the same payload (with its surviving nested
 reductions). The same joining argument applies to `dk` in the KEM rule.
-Together with termination, this gives a local-peak/confluence argument
-for the six ordinary message rewrite rules. It needs review as an argument,
-not a claimed output of an automated critical-pair checker.
+[`Confluence.lean`](equations/Confluence.lean) checks that argument for the
+matching-modulo-AC relation, using B-coherence to copy a reduction between
+AC-equivalent keys. Structural induction joins all local peaks; strong
+induction on the accepted weight proves global matching confluence.
+[`Convergence.lean`](equations/Convergence.lean) transports complete paths
+across AC representatives and proves quotient-path joinability modulo AC.
+It also proves normality is AC-invariant and matching normal forms are unique.
+This is a kernel proof in the typed algebra, not native-kind acceptance or a
+claim that the full Tamarin proof search terminates.
+
+## Substitution-independent normalization bound
+
+[`Boundedness.lean`](equations/Boundedness.lean) proves a uniform bound for
+every message template and every normalized message assignment, with arbitrary
+natural assignments. Normalize children bottom-up. Once children are normal,
+a root rewrite either returns an already normal child subterm or a normal
+role constant; at most one root step remains. Summing these steps bounds
+normalization by the template's unary/binary/ternary constructor count,
+independent of the assigned terms' size. Natural terms have no message rewrite
+steps; AC rearrangements are equality, not counted reductions.
+
+The theorem constructs a bounded normalizing derivation, rather than bounding
+all possible reduction orders. This is the quantifier order in the boundedness
+criterion, not a ground-term weight bound that grows with substitutions.
+The existing checker rebuilds these proofs, regression cases and all
+53 required theorem audits. The typed bound does not itself establish native
+substitution/narrowing closure or complete sorted AC unification.
+
+## Frozen-index encoding foundation
+
+[`QueryImage.lean`](equations/QueryImage.lean) models the pinned printer's
+structural protocol syntax. It distinguishes rigid atom indices from
+variables even when their numeric indices agree, and proves a natural/message
+encoding left inverse and injectivity. The even/odd labels used to distinguish
+them exist only in the mathematical carrier; Tamarin's printed indices,
+protocol counters and wire formats do not change. A native natural atom
+`t(0)` is not protocol natural zero.
+
+The message recognizer rejects node terms and `TOP` list framing used
+inside message constructors, as well as natural sums with message-sort
+operands. These checks define a candidate proper-message image, not proof
+that every actual query obeys its framing/typing discipline. Encoding round trips
+alone do not establish native correspondence.
+
+The independent raw relations now close the algebraic part of this candidate
+image boundary. Structural AC acts even on improperly sorted raw children;
+its decoder proof shows that recognition is invariant and preserves/reflects
+typed AC. Every recognized term is exactly an encoding. Raw six-rule rewriting
+under every raw context preserves the encoded message image and reflects a
+typed rewrite. AC-rewrite-AC paths have the same correspondence. Source
+B-coherence then realizes each encoded quotient step by matching from the
+original representative, with an AC-equivalent result. The raw root rules omit
+native message-sort guards; successful message recognition proves their
+payload/key arguments are messages on the encoded image, not on all raw inputs.
+
+Sort-separated natural/message substitutions also commute with encoding.
+Rigid odd labels and all native index fields remain unchanged, rather than
+being mistaken for variables. Public/fresh assignments stay in their respective
+atom sorts; message/natural assignments range over their full typed carriers.
+Node assignments stay in node atoms/variables, outside the message image.
+Raw substitution preserves structural AC and rewriting even for arbitrary
+assignments; image membership is asserted only for the typed assignments.
+
+The free tuple/Node framing envelope is now closed under structural AC,
+rewriting and typed substitution as well. It admits messages and node leaves
+under free `TOP` constructors, but never list framing under a message function
+or nodes inside natural sums. The kernel regression exposes the host-classifier
+mistake on `h(list(nil))`. This envelope is wider than the printer's exact tuple
+shape; closure is not proof that all actual caller-built queries belong to it.
+
+These are mathematical relation/representation proofs, not a verified Haskell
+printer/importer or Maude algorithm. The guard checks executed input/output
+membership and substitution provenance. Universal query-builder/importer
+correspondence, narrowing/unification closure and complete sorted AC
+unification remain separate obligations.
 
 ## Finite-variant rationale
 
@@ -99,14 +213,12 @@ The other collapsing rules are documented builtin equations. The two
 role rules have finite ground left sides and ground normal right sides;
 they cannot produce another role-redex.
 
-For normalized substitutions over free message constructors, the
-subterm/ground shape bounds useful narrowing at a fixed term's
-non-variable positions. Collapsing steps remove existing structure,
-and role steps have two finite root alternatives. Reductions internal
-to a substitution are accounted for by normalization rather than an
-unbounded family of new message equations. This is the subterm-convergent
-FVP rationale; checking finitely many sample terms would not establish
-FVP for all terms.
+The checked uniform bound now replaces an informal subterm/ground boundedness
+rationale. Cholewa, Meseguer and Escobar's theorem 6 relates boundedness to
+EMS-FVP under its decomposition hypotheses. Convergence/B-coherence and the
+bound are checked in the typed algebra, but the complete sort/signature,
+AC-unification and native-image correspondence obligations must still be
+reconciled before applying that theorem to Tamarin's backend.
 
 There is a stronger, exhaustive flat-pattern criterion, not a sample-term
 shortcut: [Maude 3.5.1 manual, section 14.2](https://maude.lcc.uma.es/maude-manual/maude-manualch14.html)
@@ -122,9 +234,20 @@ A bounded local investigation completed all 17 declared protocol flat patterns
 on the unchanged native module. A known non-FVP control stopped at its explicit
 five-variant cap without an exhaustion marker. A separately source-checked sorted
 protocol module passed CRC's local-confluence and sort-decreasingness checks.
-These do not yet prove admissibility/coherence or conservative correspondence
+These do not yet prove full native admissibility or conservative correspondence
 between the protocol algebra, the native bookkeeping signature and the paper's
-sort/kind assumptions. Full FVP acceptance remains open.
+sort/kind assumptions. Maude automatically lifts operators to kinds, including
+error terms without a proper sort ([manual, section 3.5](https://maude.lcc.uma.es/maude-manual/maude-manualch3.html)).
+The flat-pattern criterion's manual statement uses kind-sorted variables.
+Declared-sort exhaustion alone is therefore not treated as complete evidence
+for that broader signature. A new bounded native diagnostic also exhausts
+all 25 explicitly declared ranks at kind level (17 protocol and eight
+bookkeeping/list ranks), retaining error-kind variants. Imported `NAT`
+operators, native admissibility and correspondence are not discharged.
+Full FVP acceptance remains open. The owner selected the actual typed
+protocol-query image as the correspondence target, not the entire imported
+arithmetic/error-kind carrier. That choice does not waive preservation,
+reflection or substitution/unification/narrowing closure.
 
 The manual cites Comon-Lundh and Delaune, *The Finite Variant Property:
 How to Get Rid of Some Algebraic Properties*, RTA 2005, pages 294-307

@@ -15,6 +15,72 @@ Put the model under `docs/spec/models/`. A failing lemma reopens the relevant AD
 
 ## Comments
 
+2026-10-14: the owner-approved `guarded-maude-boundary` is wired into all
+ratchet acceptance callers. It rejects altered modules, improperly sorted
+queries/whole replies, unsafe variable namespaces and missing/inconsistent
+private lifecycle evidence; it never filters solutions. Real native operations
+and guarded Tamarin parsing pass. The canonical export is unchanged; parse-only
+median overhead measures `+3.5%`. Python/tool/importer trust remains explicit.
+Complete sorted AC-unification/FVP transfer and full assembled replay are still
+open, so this is not implementation/default activation or publication approval.
+Earlier query-membership comments below are historical checkpoints.
+
+2026-10-14: free tuple/Node framing closure is now kernel-checked under raw
+structural AC, rewriting and typed substitutions, including node assignments.
+The naive `h(list(nil))` framing kernel red and old 50-audit CLI red are green;
+the [checker](../../../docs/spec/models/equations/README.md) requires 53 audits.
+This free framing envelope is wider than the exact printed tuple grammar.
+Actual caller/input/output membership, substitution provenance and native
+narrowing/unification/FVP acceptance remain open. This checkpoint supersedes
+the earlier node-fixed assignment, without changing equations, API, wire,
+runtime, CI jobs or ceilings. Local/unpublished; implementation remains closed.
+
+2026-10-14: the [equation checker](../../../docs/spec/models/equations/README.md)
+now requires 50 audits. Independent raw structural AC and six-rule/context
+rewriting preserve and reflect the encoded message image; every recognized
+term is an encoding. Encoded quotient steps have typed matching realizations
+modulo AC. Typed natural/message substitution commutes with encoding, with
+rigid atom indices frozen and public/fresh assignments kept sort-separated.
+The rigid-natural substitution kernel red and old 26-/44-audit CLI reds
+are green. The native assignment fixes node variables; actual framing/query
+construction, backend substitution provenance, narrowing/unification closure
+and complete sorted AC-unification/FVP acceptance remain open.
+This increment is local/unpublished, with no equation, API, wire, primitive,
+constant-time, CI-job or resource-ceiling change. Ticket stays claimed,
+profile opt-in and implementation closed. Earlier comments are snapshots.
+
+2026-10-14: the [equation checker](../../../docs/spec/models/equations/README.md)
+also checks frozen-index natural/message encoding left inverses and injectivity.
+Variables and rigid atoms with the same native index remain distinct in the
+mathematical carrier. The kernel collision red and missing-image-audit CLI red
+are green; all 26 audits and image rejection cases run in the existing cell.
+This is a structural encoding foundation, not completed native AC/matching/
+substitution/framing correspondence or narrowing/unification closure.
+No native index, protocol counter, wire data or acceptance gate changes.
+The increment remains local/unpublished.
+
+2026-10-14: the local [equation checker](../../../docs/spec/models/equations/README.md)
+now proves a substitution-independent normalization bound, global matching
+confluence and quotient-path confluence modulo natural AC. Nonlinear key-copy
+peaks, AC path transport and normality invariance are checked; all 22 audits
+and kernel cases run in the existing lifecycle cell. Missing boundedness and
+confluence reports have intended CLI red/green coverage. This increment is
+unpublished; current-source hosted acceptance is not claimed.
+The owner selected the actual typed protocol-query image for correspondence.
+Native preservation/reflection, substitution/unification/narrowing closure,
+remaining FVP hypotheses and full assembled replay are still open.
+Ticket stays claimed, profile opt-in and implementation closed.
+
+2026-10-14: the local [equation checker](../../../docs/spec/models/equations/README.md)
+now also kernel-checks typed B-coherence and matching soundness modulo natural
+AC. AC-equivalent repeated keys and the inherited termination relation are
+covered; five new audits are mandatory. The source/CLI/kernel red/green
+boundary is preserved. The published termination checkpoint passed
+formal/Rust/four-language CodeQL at `70c1c19` in PR #9; this addition is
+unpublished and has no hosted acceptance yet. Native query-image/FVP acceptance
+and full assembled replay remain open. No profile,
+implementation or merge authorization changes.
+
 2026-10-14: the source-guarded [equation termination checker](../../../docs/spec/models/equations/README.md)
 kernel-checks all six message equations in every typed context modulo sorted
 natural AC, with generated source correspondences and six mandatory axiom audits.

@@ -21,7 +21,7 @@ if [ -n "$lean" ]; then
   python3 docs/spec/models/lifecycle/check.py --lean "$lean"
   python3 docs/spec/models/equations/termination.py --lean "$lean"
 else
-  echo "skip: set LEAN=<path to pinned lean> to run lifecycle/equation termination gates" >&2
+  echo "skip: set LEAN=<path to pinned lean> to run lifecycle/equation convergence/image gates" >&2
 fi
 
 if [ "${REPLAY:-0}" = 1 ]; then

@@ -110,7 +110,7 @@ jobs:
           unzip -q lean.zip
           printf '%s\n' "$tools" "$tools/maude" "$tools/lean-4.34.1-linux/bin" >> "$GITHUB_PATH"
           printf 'MAUDE_LIB=%s\n' "$tools/maude" >> "$GITHUB_ENV"
-      - name: Check fast gates, lifecycle proofs, equation termination and source projection
+      - name: Check fast gates, lifecycle proofs, equation convergence/image and source projection
         if: matrix.name == 'lifecycle'
         run: scripts/check.sh
       - name: Check exact-source witness replay

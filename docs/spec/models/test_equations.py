@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import shutil
 import subprocess
 import sys
@@ -24,6 +25,47 @@ equations:
 tactic: example
 end
 """
+
+REPORT_GROUPS = {
+    "termination": (
+        "natural_ac_preserves_weight", "message_ac_preserves_weight",
+        "primitive_rewrite_decreases_weight", "rewrite_decreases_weight",
+        "modulo_ac_rewrite_decreases_weight", "modulo_ac_termination",
+    ),
+    "coherence": (
+        "modulo_ac_matching_coherence", "matching_primitive_modulo_ac",
+        "matching_rewrite_modulo_ac", "matching_termination", "matching_rewrite_ac_coherent",
+    ),
+    "boundedness": (
+        "matching_steps_transitive", "matching_steps_context", "normalized_substitution_bound",
+    ),
+    "confluence": (
+        "matching_local_confluence", "matching_steps_do_not_increase_weight", "matching_confluence",
+    ),
+    "convergence": (
+        "normal_ac_invariant", "matching_steps_ac_coherent", "matching_normal_forms_unique",
+        "modulo_ac_steps_matching", "modulo_ac_confluence",
+    ),
+    "query-image": (
+        "native_natural_round_trip", "native_message_round_trip",
+        "native_natural_encoding_injective", "native_message_encoding_injective",
+    ),
+    "native-algebra": (
+        "native_natural_recognition", "native_message_recognition",
+        "native_natural_ac_preservation", "native_message_ac_preservation",
+        "native_natural_ac_reflection", "native_message_ac_reflection",
+        "native_ac_natural_image", "native_ac_message_image",
+        "native_primitive_preservation", "native_rewrite_preservation",
+        "native_rewrite_decode", "native_rewrite_image", "native_rewrite_reflection",
+        "native_modulo_ac_preservation", "native_modulo_ac_decode", "native_modulo_ac_reflection",
+        "native_matching_preservation", "native_matching_realization",
+    ),
+    "substitution": (
+        "native_natural_substitution", "native_message_substitution",
+        "native_natural_substitution_image", "native_message_substitution_image",
+        "native_ac_substitution", "native_rewrite_substitution",
+    ),
+}
 
 
 class EquationSignatureTests(unittest.TestCase):
@@ -174,7 +216,7 @@ class EquationCommandTests(unittest.TestCase):
         for path in source.rglob("*.py"):
             target = self.distribution / path.relative_to(source)
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(path, target)
+            shutil.copy2(path, target)
         self.command = [sys.executable, str(self.distribution / "equations/termination.py")]
 
     def test_missing_toolchain_pin_reports_a_controlled_failure(self):
@@ -213,6 +255,108 @@ class EquationCommandTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertEqual(result.stderr.strip(), "FAIL: expected Lean 4.34.1")
+        self.assertNotIn("PASS:", result.stdout)
+
+    def run_with_axiom_reports(self, *groups):
+        (self.distribution / "lifecycle/lean-toolchain").write_text(
+            "leanprover/lean4:v4.34.1\n",
+        )
+        exporter = self.distribution / "tamarin-prover"
+        version = "tamarin-prover 1.12.0,\nMaude version 3.5.1"
+        exporter.write_text(
+            f"#!{sys.executable}\nimport os, sys\nfrom pathlib import Path\n"
+            "report = os.environ.get('CAIRN_MAUDE_GUARD_REPORT')\n"
+            "if report:\n"
+            "    Path(report).write_text('{\"event\":\"version\",\"pid\":1337}\\n')\n"
+            f"print({version!r} if '--version' in sys.argv else {SOURCE!r})\n",
+        )
+        exporter.chmod(0o700)
+        tool = self.distribution / "lean-audit-fixture"
+        reports = "\n".join(
+            f"'Cairn.Equations.{name}' does not depend on any axioms"
+            for group in groups for name in REPORT_GROUPS[group]
+        )
+        tool.write_text(
+            f"#!{sys.executable}\nimport sys\n"
+            f"print('Lean (version 4.34.1, fixture)' if '--version' in sys.argv else {reports!r})\n",
+        )
+        tool.chmod(0o700)
+        environment = {**os.environ, "PATH": f"{self.distribution}{os.pathsep}{os.environ['PATH']}"}
+
+        return subprocess.run(
+            [*self.command, "--lean", str(tool)], env=environment,
+            text=True, capture_output=True, timeout=30,
+        )
+
+    def test_coherence_axiom_reports_are_required_before_success(self):
+        result = self.run_with_axiom_reports("termination")
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+        self.assertIn("modulo_ac_matching_coherence", result.stderr)
+        self.assertNotIn("PASS:", result.stdout)
+
+    def test_boundedness_axiom_reports_are_required_before_success(self):
+        result = self.run_with_axiom_reports("termination", "coherence")
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+        self.assertIn("normalized_substitution_bound", result.stderr)
+        self.assertNotIn("PASS:", result.stdout)
+
+    def test_confluence_axiom_reports_are_required_before_success(self):
+        for groups, missing in (
+            (("termination", "coherence", "boundedness"), "matching_local_confluence"),
+            (("termination", "coherence", "boundedness", "confluence"), "modulo_ac_confluence"),
+        ):
+            with self.subTest(missing=missing):
+                result = self.run_with_axiom_reports(*groups)
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+                self.assertIn(missing, result.stderr)
+                self.assertNotIn("PASS:", result.stdout)
+
+    def test_query_image_axiom_reports_are_required_before_success(self):
+        result = self.run_with_axiom_reports(
+            "termination", "coherence", "boundedness", "confluence", "convergence",
+        )
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+        self.assertIn("native_message_round_trip", result.stderr)
+        self.assertNotIn("PASS:", result.stdout)
+
+    def test_native_algebra_axiom_reports_are_required_before_success(self):
+        result = self.run_with_axiom_reports(
+            "termination", "coherence", "boundedness", "confluence", "convergence", "query-image",
+        )
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+        self.assertIn("native_natural_recognition", result.stderr)
+        self.assertNotIn("PASS:", result.stdout)
+
+    def test_substitution_axiom_reports_are_required_before_success(self):
+        result = self.run_with_axiom_reports(
+            "termination", "coherence", "boundedness", "confluence", "convergence", "query-image",
+            "native-algebra",
+        )
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+        self.assertIn("native_natural_substitution", result.stderr)
+        self.assertNotIn("PASS:", result.stdout)
+
+    def test_framing_axiom_reports_are_required_before_success(self):
+        result = self.run_with_axiom_reports(
+            "termination", "coherence", "boundedness", "confluence", "convergence", "query-image",
+            "native-algebra", "substitution",
+        )
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+        self.assertIn("native_framed_ac", result.stderr)
         self.assertNotIn("PASS:", result.stdout)
 
 

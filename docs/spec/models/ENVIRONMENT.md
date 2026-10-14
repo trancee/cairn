@@ -7,14 +7,28 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
 - Apple silicon macOS, 8 GiB RAM. Tamarin on `ratchet.spthy` can exceed 7 GiB.
 - Tools: Tamarin 1.12.0, Maude 3.5.1, Lean 4.34.1 (pinned in `lifecycle/lean-toolchain`).
 - Lean is not on `PATH`; pass it with `LEAN=<path>/bin/lean scripts/check.sh` or `check.py --lean`.
-- `scripts/check.sh` also invokes the [equation termination checker](equations/README.md)
-  with that Lean executable. It proves termination of the six source message
-  equations modulo sorted natural AC, not combined-theory/FVP acceptance.
+- `scripts/check.sh` also invokes the [equation convergence/boundedness checker](equations/README.md)
+  with that Lean executable. It proves termination, B-coherence, confluence
+  modulo natural AC and substitution-independent normalization boundedness
+  for the six source equations in the typed algebra. It also checks structural
+  frozen-index encoding round trips, independent raw AC/rewrite correspondence
+  and typed substitution commutation, including free tuple/Node framing closure
+  (53 audits). Ratchet acceptance callers additionally enforce the approved
+  [native stream boundary](equations/README.md#native-stream-boundary):
+  pinned module, proper query/reply sorts, frozen indices and complete private
+  lifecycle evidence. Whole unsupported operations fail, without filtering
+  solutions. Universal query-builder/importer correctness, complete sorted
+  unification and narrowing correspondence remain unverified; this is not
+  complete native query-image transfer or combined-theory/FVP acceptance.
 
 ## Commands
 
+- Ratchet runners supply `--with-maude` automatically. Do not override it.
+  Proof deadlines/options remain unchanged; native/outer teardown uses the
+  `5`-second grace. Direct interactive branch work remains exploratory, not
+  acceptance evidence. Resume/SAS operations do not use the ratchet-only guard.
 - `scripts/check.sh` runs the fast gates: whitespace, unit tests and `actionlint`,
-  plus lifecycle/source-projection and equation-termination proofs when pinned
+  plus lifecycle/source-projection and equation convergence/boundedness proofs when pinned
   Lean is available. The pre-commit hook and CI both call it.
 - `REPLAY=1 scripts/check.sh` adds the default/refined witness replays,
   eight refined-origin replays and both guard-mutation regressions.

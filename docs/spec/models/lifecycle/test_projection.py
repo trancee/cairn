@@ -1,6 +1,5 @@
 import unittest
 from pathlib import Path
-import subprocess
 
 from projection import ProjectionError, parse_fact, project_export, project_rule, split_terms
 
@@ -165,10 +164,9 @@ class ExportTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         model = Path(__file__).resolve().parent.parent / "ratchet.spthy"
-        cls.export = subprocess.run(
-            ["tamarin-prover", "--parse-only", str(model)], check=True,
-            text=True, capture_output=True, timeout=120,
-        ).stdout
+        from equations.maude_runner import run_guarded_tamarin
+
+        cls.export = run_guarded_tamarin(["tamarin-prover", "--parse-only", str(model)], 120)
 
     def test_every_default_rule_is_projected(self):
         rows = project_export(self.export)

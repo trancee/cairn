@@ -1,4 +1,4 @@
-"""Kernel-check the reviewed message rules' termination modulo sorted natural AC."""
+"""Kernel-check typed convergence, boundedness and structural image correspondence."""
 
 import argparse
 import hashlib
@@ -10,6 +10,7 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from equations.signature import lean_correspondence, reviewed_signature
+from equations.maude_runner import run_guarded_tamarin
 from proof_tools import check_axioms, check_tamarin_version
 from replay import ReplayError, run
 
@@ -21,6 +22,75 @@ AUDITED_THEOREMS = (
     "rewrite_decreases_weight",
     "modulo_ac_rewrite_decreases_weight",
     "modulo_ac_termination",
+)
+COHERENCE_THEOREMS = (
+    "modulo_ac_matching_coherence",
+    "matching_primitive_modulo_ac",
+    "matching_rewrite_modulo_ac",
+    "matching_termination",
+    "matching_rewrite_ac_coherent",
+)
+BOUNDEDNESS_THEOREMS = (
+    "matching_steps_transitive",
+    "matching_steps_context",
+    "normalized_substitution_bound",
+)
+CONFLUENCE_THEOREMS = (
+    "matching_local_confluence",
+    "matching_steps_do_not_increase_weight",
+    "matching_confluence",
+)
+CONVERGENCE_THEOREMS = (
+    "normal_ac_invariant",
+    "matching_steps_ac_coherent",
+    "matching_normal_forms_unique",
+    "modulo_ac_steps_matching",
+    "modulo_ac_confluence",
+)
+QUERY_IMAGE_THEOREMS = (
+    "native_natural_round_trip",
+    "native_message_round_trip",
+    "native_natural_encoding_injective",
+    "native_message_encoding_injective",
+)
+QUERY_RECOGNITION_THEOREMS = (
+    "native_natural_recognition",
+    "native_message_recognition",
+)
+QUERY_AC_THEOREMS = (
+    "native_natural_ac_preservation",
+    "native_message_ac_preservation",
+    "native_natural_ac_reflection",
+    "native_message_ac_reflection",
+    "native_ac_natural_image",
+    "native_ac_message_image",
+)
+QUERY_REWRITE_THEOREMS = (
+    "native_primitive_preservation",
+    "native_rewrite_preservation",
+    "native_rewrite_decode",
+    "native_rewrite_image",
+    "native_rewrite_reflection",
+    "native_modulo_ac_preservation",
+    "native_modulo_ac_decode",
+    "native_modulo_ac_reflection",
+)
+QUERY_MATCHING_THEOREMS = (
+    "native_matching_preservation",
+    "native_matching_realization",
+)
+QUERY_SUBSTITUTION_THEOREMS = (
+    "native_natural_substitution",
+    "native_message_substitution",
+    "native_natural_substitution_image",
+    "native_message_substitution_image",
+    "native_ac_substitution",
+    "native_rewrite_substitution",
+)
+QUERY_FRAMING_THEOREMS = (
+    "native_framed_ac",
+    "native_framed_rewrite",
+    "native_framed_substitution",
 )
 
 
@@ -41,27 +111,61 @@ def main() -> int:
         if not re.search(rf"\bversion {re.escape(pin)}(?:,|\))", version):
             raise ReplayError(f"expected Lean {pin}")
         check_tamarin_version(run(["tamarin-prover", "--version"], 30))
-        expanded = run(["tamarin-prover", "--parse-only", str(here.parent / "ratchet.spthy")], 120)
+        expanded = run_guarded_tamarin(
+            ["tamarin-prover", "--parse-only", str(here.parent / "ratchet.spthy")], 120,
+        )
         equations = reviewed_signature(expanded)
         with tempfile.TemporaryDirectory(prefix="cairn-equations-") as temporary:
             build = Path(temporary)
             environment = ["env", f"LEAN_PATH={build}"]
-            output = run([
-                *environment, arguments.lean, "-DwarningAsError=true",
-                "-o", str(build / "Termination.olean"), str(here / "Termination.lean"),
-            ], 120)
-            check_axioms(
-                output, tuple(f"Cairn.Equations.{name}" for name in AUDITED_THEOREMS),
-            )
+            outputs = []
+            for module, theorems in (
+                ("Termination", AUDITED_THEOREMS),
+                ("Coherence", COHERENCE_THEOREMS),
+                ("Boundedness", BOUNDEDNESS_THEOREMS),
+                ("Confluence", CONFLUENCE_THEOREMS),
+                ("Convergence", CONVERGENCE_THEOREMS),
+                ("QueryImage", QUERY_IMAGE_THEOREMS),
+                ("QueryRecognition", QUERY_RECOGNITION_THEOREMS),
+                ("QueryAC", QUERY_AC_THEOREMS),
+                ("QueryRewrite", QUERY_REWRITE_THEOREMS),
+                ("QueryMatching", QUERY_MATCHING_THEOREMS),
+                ("QuerySubstitution", QUERY_SUBSTITUTION_THEOREMS),
+                ("QueryFraming", QUERY_FRAMING_THEOREMS),
+            ):
+                output = run([
+                    *environment, arguments.lean, "-DwarningAsError=true",
+                    "-o", str(build / f"{module}.olean"), str(here / f"{module}.lean"),
+                ], 120)
+                check_axioms(
+                    output, tuple(f"Cairn.Equations.{name}" for name in theorems),
+                )
+                outputs.append(output.strip())
+            for module in (
+                "CoherenceCases", "BoundednessCases", "ConfluenceCases", "QueryImageCases",
+                "QueryACCases", "QueryRewriteCases", "QuerySubstitutionCases", "QueryFramingCases",
+            ):
+                run([
+                    *environment, arguments.lean, "-DwarningAsError=true",
+                    str(here / f"{module}.lean"),
+                ], 120)
             certificate = build / "SourceEquations.lean"
             certificate.write_text(lean_correspondence(equations))
             run([*environment, arguments.lean, "-DwarningAsError=true", str(certificate)], 120)
         digest = hashlib.sha256(expanded.encode()).hexdigest()
-        print(output.strip())
+        print("\n".join(outputs))
         print(f"Lean {pin}; expanded theory SHA-256: {digest}")
         print("PASS: all six source equations terminate in every message context modulo natural AC.")
-        print("Scope: termination only; not confluence, AC coherence or a combined FVP certificate.")
-        print("Trust boundary: Tamarin export + reviewed signature/translation + Lean kernel.")
+        print("PASS: matching modulo AC is sound and B-coherent in the same typed message algebra.")
+        print("PASS: normalized substitutions have a source-template-only normalization bound.")
+        print("PASS: matching is confluent and quotient rewrite paths join modulo natural AC.")
+        print("PASS: typed frozen-index encoding round-trips without variable/constant collisions.")
+        print("PASS: the encoded image preserves/reflects structural AC and six-rule/context rewriting.")
+        print("PASS: encoded quotient steps are realizable by typed matching modulo AC.")
+        print("PASS: typed natural/message substitutions commute with encoding and preserve its image.")
+        print("PASS: free tuple/Node framing is closed under structural AC, rewriting and typed substitution.")
+        print("Scope: typed image algebra + enforced native stream membership; not a native FVP certificate.")
+        print("Trust boundary: Tamarin/Maude + Python boundary/signature/translation + Lean kernel.")
         return 0
     except (OSError, RuntimeError, ReplayError) as error:
         print(f"FAIL: {error}", file=sys.stderr)

@@ -2,6 +2,44 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation; SDK/application=not implemented.
 
+## Current typed equation convergence/image evidence (2026-10-14)
+
+The [equation checker](docs/spec/models/equations/README.md) kernel-checks
+B-coherence, global matching confluence, quotient-path confluence modulo AC
+and a normalization bound depending only on the source template, not the
+normalized substitution. Nonlinear key-copy overlaps are joined even when
+keys have different AC representatives. A structural frozen-index image
+encoding also has checked left inverses/injectivity, distinguishing variables
+from rigid atoms with the same native index. Independent raw AC and six-rule/
+context relations preserve and reflect this image, and encoded quotient steps
+are realizable by typed matching modulo AC. Sort-separated natural/message
+substitutions commute with encoding and preserve image membership while rigid
+indices stay frozen. Free tuple/Node framing is closed under AC, rewriting and
+typed substitution, including node assignments; framing remains excluded from
+message functions. All 53 theorem audits and the kernel
+regression cases run in the existing lifecycle cell, without a new job or
+larger ceiling. Eighteen audits use no axioms; none uses `sorryAx`.
+This addition is locally verified and unpublished at authoring.
+
+The owner-approved proof-only Maude boundary now checks the pinned native
+module and every executed query/complete reply, with fail-closed lifecycle
+evidence required by ratchet export, projection, equation, precompute, replay,
+mutation and attack callers. Returned sort/index provenance and importer
+variable-namespace restrictions are checked; no solutions are filtered.
+Real native operations and guarded Tamarin parsing pass. Parse-only comparison
+retains the identical canonical export and measured `+3.5%` median overhead.
+Python recognition, tool implementations and injective variable renaming/
+importer correspondence are not kernel-verified.
+
+The earlier termination-only checkpoint passed final-source formal/Rust/
+four-language CodeQL acceptance in PR #9 at `70c1c19`. Native bookkeeping
+hypotheses, universal query-builder/importer correspondence, narrowing/
+unification closure, sorted AC-unification/FVP acceptance and full assembled replay remain
+open. The owner selected the actual typed protocol-query image as the
+correspondence target, not the entire arithmetic/error-kind carrier.
+No merge, profile activation or SDK/ratchet
+implementation approval is implied. Earlier sections below are snapshots.
+
 ## Current equation termination evidence (2026-10-14)
 
 The [equation termination checker](docs/spec/models/equations/README.md) now

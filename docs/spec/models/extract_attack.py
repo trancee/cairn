@@ -7,7 +7,8 @@ import sys
 import tempfile
 
 from mutation import OPTIONS, TARGETS, check_outcome, check_toolchain
-from replay import ReplayError, export_parts, run
+from replay import ReplayError, export_parts
+from equations.maude_runner import GuardError, run_guarded_tamarin
 
 
 def extract_attack(source: str, target: str) -> tuple[str, str]:
@@ -52,7 +53,7 @@ def main() -> int:
         with tempfile.TemporaryDirectory(prefix="cairn-attack-extract-") as temporary:
             theory = Path(temporary) / "attack.spthy"
             theory.write_text(prefix + certificate + "end\n")
-            output = run(["tamarin-prover", str(theory), *OPTIONS], 180)
+            output = run_guarded_tamarin(["tamarin-prover", str(theory), *OPTIONS], 180)
             check_outcome(output, "falsified", target)
         output_path = arguments.output or Path(__file__).resolve().with_name(
             f"ratchet-{arguments.mutation.lower().replace('_', '-')}-attack.inc",
@@ -63,7 +64,7 @@ def main() -> int:
         )
         print(f"Saved replayed attack certificate: {output_path}")
         return 0
-    except (OSError, ReplayError) as error:
+    except (OSError, ReplayError, GuardError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1
 

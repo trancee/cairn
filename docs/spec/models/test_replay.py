@@ -37,6 +37,9 @@ class ProfileTests(unittest.TestCase):
         export = EXPORT.replace("witness", "executable")
 
         def native(command, timeout):
+            if command[0] == "env":
+                report = Path(command[1].split("=", 1)[1])
+                report.write_text('{"event":"version","pid":1337}\n')
             if "--version" in command:
                 return "tamarin-prover 1.12.0,\nMaude version 3.5.1\n"
             if "--precompute-only" in command:
