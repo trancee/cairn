@@ -1299,3 +1299,30 @@ Remove the tagged timing, temporary manual step and exact-object fetch.
 Retain only the opt-in representative benchmark, faster manifest producers
 and tested redacted preflight report. Normal CI performs no A/B workload.
 Final cleanup-head hosted gates remain required before merge.
+
+### Partial target diagnostics and final-head failure observation
+
+At cleanup head `db68586`, final Rust/formal and non-Kotlin CodeQL gates pass.
+PR run `38465374925` first fails ordinary scratch detach, then its unchanged
+failed-job replay fails the existing one-shot UID snapshot assertion.
+Push run `38465367937` expires the separate offline effective-target/
+dependency-metadata cell after the tool/selection probes pass. The target
+script buffers Gradle output until return, so expiry loses that partial
+stage evidence. These failures do not establish a manifest regression or
+their own root causes.
+
+The owner approved a scoped diagnostic/fix/publication follow-up without
+relaxed gates. Stream both Gradle channels through `tee` into the existing
+bounded collector, keeping the existing scratch log and `pipefail` failure
+propagation. A real-script/collector regression is red on missing partial
+output before this change and green after it; nonzero child status also
+propagates unchanged. The test uses controlled subprocesses, not an accepted
+Gradle build.
+
+Increasing timeouts, repeated automatic runs and accepting an empty snapshot
+instead of the existing assertion are not selected. Temporary tagged
+child-bootstrap/snapshot times and failure-log context distinguish incomplete
+startup from an observation failure; they must be removed after collection.
+The migration changes diagnostic delivery only, not tools, targets, compiler
+tasks, public API, ownership, network policy or any resource/deadline budget.
+Final hosted acceptance and failure causes remain unestablished.

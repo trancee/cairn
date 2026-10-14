@@ -597,6 +597,12 @@ Unexpected processes are reported, never trusted or pre-cleaned.
 Commands and scope are in the
 [Apple reference](proofs/bindings/apple/README.md#frozen-input-manifest-generation).
 No protocol, public API, compiler profile or constant-time claim changes.
+Final cleanup head `db68586` fails Kotlin acceptance on scratch detach,
+one-shot snapshot or offline effective-target expiry; final non-Kotlin scans,
+Rust and formal gates pass. The target script now streams partial Gradle
+diagnostics into the existing bounded collector with unchanged exit/budget
+semantics, verified by real-script timeout/error tests. Scoped temporary
+startup/snapshot observation is pending hosted evidence, not a reliability fix.
 
 The schema below is retained for the future implementation profile.
 

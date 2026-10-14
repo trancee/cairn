@@ -135,6 +135,34 @@ nor cleans those pre-existing processes. No retry or boundary/budget change
 is introduced. The unexpected-process failure did not reproduce in subsequent
 runs, so its identity and root cause remain unestablished.
 
+### Final-head diagnostic follow-up
+
+Cleanup head `db68586` passes Rust/formal gates and the final
+Actions/Python/Rust scans, but not Kotlin acceptance. PR run `38465374925`
+first fails ordinary scratch detach; its unchanged failed-job replay fails
+the existing one-shot process-snapshot test. Push run `38465367937` passes
+tool/selection probes but expires the separate 60-second offline Apple
+target/dependency-metadata invocation. No root cause or reliability fix is
+established for those failures.
+
+`check-fixture-targets.sh` now streams both Gradle output channels through
+`tee` to the existing bounded collector while retaining its scratch log.
+Partial diagnostics survive command expiry; `pipefail` preserves Gradle's
+failure status. The 60-second command, 64 MiB collector, 128 MiB child-file
+and 8 GiB scratch ceilings remain unchanged. The real-script/collector
+regression was red on missing partial output, then green after streaming:
+
+```sh
+xcrun python3 -B -m unittest discover -s proofs/bindings/apple \
+  -p test_fixture_target_output.py
+```
+
+This controlled subprocess test proves output/exit propagation, not Gradle
+configuration or a timing fix. Temporary tagged child-bootstrap/snapshot
+timestamps and retained failure context are being used only to diagnose the
+hosted one-shot observation; acceptance assertions and timers are unchanged.
+These tags must be removed after collection.
+
 ## Earlier probe evidence
 
 ### Opt-in Kotlin CodeQL diagnostic
