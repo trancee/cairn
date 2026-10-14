@@ -49,6 +49,36 @@ Its recorded revision matches the run and Mach-O inspection reports
 deterministic first-attempt reliability remain unproven; this is real generated
 simulator execution, not strict runtime containment or hardware evidence.
 
+## Scratch teardown
+
+The hosted resource fixture's exit trap uses `detach-scratch.py` for ordinary
+verbose ejection of its owned `/private/tmp/cairn-resource-<suffix>/scratch`
+volume. Noncanonical paths fail before any native command. Successful ejection
+returns zero without querying optional disk state or open-file holders.
+Prior workload/account-cleanup failures remain failures in the caller.
+
+Failed or unavailable ejection returns nonzero. Only then collect the five
+device/mount/ejectability fields with `diskutil info -plist` (five seconds)
+and holder PID/command fields with `lsof -Fpc +f --` (15 seconds).
+Unavailable, malformed or timed-out diagnostics remain explicitly observable
+and cannot turn failed ejection into success. If unmount already succeeded,
+the mount-path query may be unavailable; no whole-disk state is inferred.
+No retry, forced detach, unrelated process termination or limit/permission
+change is included. This fixes a success-path diagnostic dependency, not
+intermittent busy-eject reliability or strict runtime acceptance.
+
+The existing benign-preflight test discovery includes the OS-boundary
+regressions. The focused command is:
+
+```sh
+xcrun python3 -B -m unittest discover -s proofs/bindings/apple \
+  -p test_scratch_detach.py
+```
+
+These simulations establish failure propagation and diagnostic behavior,
+not native disk-ejection reliability. See
+[the decision and observed regression](../../../docs/adr/0014-hosted-apple-isolation-probes.md#failure-only-scratch-detach-diagnostics).
+
 ## Frozen-input manifest generation
 
 The four `freeze-*.sh` entry points create their existing SHA-256 manifests

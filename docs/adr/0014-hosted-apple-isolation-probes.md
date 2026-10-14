@@ -1418,3 +1418,48 @@ Retain the separately approved duplicate-scheduling fix. No elapsed-time
 improvement is claimed from fewer Cargo artifact records.
 Checksum-verified archive reuse and change-aware gate applicability are not
 part of this decision.
+
+## Failure-only scratch-detach diagnostics
+
+PR #9 CodeQL run `38573866366` at branch head `53de10f` completed actual
+Kotlin tracing, coverage, bundled security queries and export, then failed
+the resource fixture's exit trap. Its eager five-second `diskutil info`
+lookup timed out even though subsequent ordinary `hdiutil detach -verbose`
+successfully ejected `disk7`. The earlier diagnostic error retained result
+one. Post-cell immutable-input checks and successful-result upload were
+skipped, so this is not accepted Kotlin CI. The outer PF cleanup's result
+one propagates the child failure; it does not establish a PF cleanup failure.
+
+The owner approved a failure-only diagnostic fix, OS-command/teardown tests
+and updated-source CI. Extract ordinary scratch teardown into the stable
+internal `detach-scratch.py` boundary. Validate the caller's canonical owned
+volume path before native mutation. Eject first and return zero only after
+actual ejection success. On failure, retain failure and collect the existing
+selected disk-state and holder-identity diagnostics within their unchanged
+five-/15-second ceilings. Invalid or unavailable diagnostics report a
+redacted error category without hiding the independent holder collection.
+The caller still preserves earlier workload/account-cleanup failures.
+
+The approved OS-boundary regression first returned one for successful
+ejection plus a timed-out metadata lookup, then passed after the lookup
+became failure-only. Failed ejection remains nonzero with state/holder
+reports; unavailable commands, malformed/truncated metadata, invalid volume
+paths and diagnostic timeout/error cases are covered. Python `3.9` local
+execution passes the complete Apple tooling suite (58 tests, six hosted-only
+supervisor skips). Hosted native teardown and final-source four-language
+analysis remain separate authoritative requirements.
+
+Keeping the eager lookup was rejected because optional diagnostics must not
+create an independent success-path failure. Ignoring real detach failures,
+retrying, forcing ejection or increasing deadlines was not selected.
+Moving lookup after failed ejection can lose mount-path metadata when unmount
+already succeeded; report that unavailability rather than invent disk state.
+The selected fields still include `ParentWholeDisk` when available.
+Earlier busy detach/helper failures and first-attempt reliability remain open.
+
+Migration replaces only the final trap's inline teardown with the helper;
+existing benign-preflight discovery owns its tests. No protocol, API, wire,
+production dependency, sandbox/PF permission, resource budget, compilation
+task, integrity gate or result-acceptance change is authorized. Final-head
+hosted evidence must be recorded by the PR; successful Kotlin analysis alone
+cannot substitute for cleanup, post-cell integrity and processed scans.
