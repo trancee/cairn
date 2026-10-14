@@ -9,8 +9,9 @@ kernel-checks all six expanded source equations in every typed message context
 modulo sorted natural AC, with mandatory theorem axiom audits and generated
 source correspondences. It shares the exact equation inventory/audit helpers
 with the lifecycle gate and runs in the existing fast/CI lifecycle cell.
-Local proof/source-boundary checks pass; hosted validation of this increment is
-unverified. Native flat-pattern exhaustion and sorted CRC checks are supporting
+At authoring, local proof/source-boundary checks pass; hosted validation of
+this snapshot is pending. Published revision status is recorded by its PR/CI.
+Native flat-pattern exhaustion and sorted CRC checks are supporting
 evidence, not a combined FVP certificate: source/signature transfer and
 admissibility/coherence hypotheses remain unverified. Full assembled replay
 also remains incomplete. No profile activation, SDK/ratchet implementation,

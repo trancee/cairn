@@ -20,7 +20,7 @@ context modulo sorted natural AC. Its source guard pins all 15 message ranks,
 the six equations and the natural builtin; generated correspondences and all
 six theorem axiom audits pass locally. The exporter/translation are trusted,
 not verified importers. No equation, rule, restriction or protocol behavior
-changes. New hosted validation is unverified.
+changes. Hosted validation was pending when this snapshot was written.
 
 The earlier discussion of sampled variant enumeration below is historical.
 [Maude 3.5.1 manual section 14.2](https://maude.lcc.uma.es/maude-manual/maude-manualch14.html)

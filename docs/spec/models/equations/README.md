@@ -75,4 +75,5 @@ green. Separate source-boundary red/green cases cover an unrepresented function,
 malformed equations, quoted declaration spoofing and excessive arity.
 Real CLI regressions also reject missing, truncated, malformed and non-ASCII
 toolchain pins with controlled diagnostics before invoking proof tools.
-Current-source hosted validation of this new checker remains unverified.
+Hosted validation was pending when this snapshot was written; the published
+revision's PR/CI records subsequent acceptance separately.

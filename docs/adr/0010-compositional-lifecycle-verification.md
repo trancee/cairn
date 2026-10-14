@@ -76,8 +76,9 @@ discharge source/signature-transfer or AC-coherence hypotheses automatically.
 The Python translation and Tamarin export remain trusted. The source equations,
 rules, restrictions, attacker model, wire/API/runtime behavior and proof
 certificates are unchanged. Keep the profile opt-in and implementation closed.
-Local kernel/source checks pass; hosted validation of this increment remains
-unverified. See the [checker reference](../spec/models/equations/README.md).
+At authoring, local kernel/source checks pass and hosted validation is pending.
+Published revision status is recorded by its PR/CI. See the
+[checker reference](../spec/models/equations/README.md).
 
 ### Current proof-only increment (2026-10-13)
 
