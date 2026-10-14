@@ -15,6 +15,15 @@ Put the model under `docs/spec/models/`. A failing lemma reopens the relevant AD
 
 ## Comments
 
+2026-10-14: the source-guarded [equation termination checker](../../../docs/spec/models/equations/README.md)
+kernel-checks all six message equations in every typed context modulo sorted
+natural AC, with generated source correspondences and six mandatory axiom audits.
+Local checks pass; new hosted acceptance is unverified. Sorted CRC local
+confluence/sort-decreasingness and exhaustive native flat patterns are additional
+evidence, not a mixed-theory/FVP certificate without the missing admissibility/
+coherence and source/signature correspondence. Full assembled replay remains
+incomplete. Ticket stays claimed, profile opt-in and implementation closed.
+
 2026-10-13: joint raw-source induction of KEM and encrypted CT-tail origins
 verifies in 60 steps and closes refined deconstructions (43 groups, zero
 residual chains). All 56 completed safety certificates replay together;

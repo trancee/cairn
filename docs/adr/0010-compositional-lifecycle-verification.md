@@ -58,6 +58,27 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Source-guarded equation termination (2026-10-14)
+
+The owner approved reproducible CLI/kernel/checker test seams for the exact
+equational-theory gate. Add a Lean `4.34.1` termination subgate for the six
+expanded equations modulo sorted natural AC. Validate all message-function
+ranks and generate source-to-kernel rule correspondences; reuse the lifecycle
+equation inventory and mandatory theorem axiom audit. Run it in the existing
+fast/CI lifecycle cell, without another job, application dependency or larger
+resource ceiling. The kernel red rejects a constructor-only measure on both
+ground role rewrites; the all-function-symbol measure passes.
+
+This is an additional accepted proof mechanism, not a waiver of full
+assembled replay or independent mixed-theory/FVP acceptance. CRC local
+confluence/sort-decreasingness and finite flat-pattern enumeration do not
+discharge source/signature-transfer or AC-coherence hypotheses automatically.
+The Python translation and Tamarin export remain trusted. The source equations,
+rules, restrictions, attacker model, wire/API/runtime behavior and proof
+certificates are unchanged. Keep the profile opt-in and implementation closed.
+Local kernel/source checks pass; hosted validation of this increment remains
+unverified. See the [checker reference](../spec/models/equations/README.md).
+
 ### Current proof-only increment (2026-10-13)
 
 The owner requested continued ratchet proof completion. Add the generated

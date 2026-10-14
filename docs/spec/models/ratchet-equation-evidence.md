@@ -1,9 +1,11 @@
 # Why the ratchet equations fit the symbolic model
 
-Internal mathematical review of the default
+Mathematical review of the default
 [`ratchet.spthy`](ratchet.spthy) equation set, observed on 2026-10-09.
-This is a checkable argument for review, not an independently reviewed or
-kernel-checked convergence/finite-variant certificate.
+The `2026-10-14` [source-guarded Lean termination subgate](equations/README.md)
+now kernel-checks the termination argument below, including sorted natural AC.
+Confluence/FVP arguments and the overall independent-acceptance gate remain
+separate; this is not a kernel-checked combined convergence/FVP certificate.
 
 ## Exact scope
 
@@ -57,6 +59,13 @@ reintroduces a removed destructor. This establishes termination of these
 message rewrites. It is not a termination argument for protocol executions,
 proof search, or an orientation of AC associativity/commutativity.
 
+The new typed `MessageTerm`/`NaturalTerm` model proves this for all six exact
+equations, every message context and AC-equivalent representatives.
+The source checker validates all 15 message ranks and generates six
+kernel-checked correspondences. It shares the equation inventory and mandatory
+axiom audit with the lifecycle gate. The translation/export remain trusted
+boundaries, not a verified importer.
+
 ## Confluence argument and repeated-key caveat
 
 Different root rules cannot compete on the same redex. The destructor
@@ -98,6 +107,24 @@ to a substitution are accounted for by normalization rather than an
 unbounded family of new message equations. This is the subterm-convergent
 FVP rationale; checking finitely many sample terms would not establish
 FVP for all terms.
+
+There is a stronger, exhaustive flat-pattern criterion, not a sample-term
+shortcut: [Maude 3.5.1 manual, section 14.2](https://maude.lcc.uma.es/maude-manual/maude-manualch14.html)
+cites Cholewa, Meseguer and Escobar, *Variants of Variants and the Finite Variant
+Property*, theorem 7 ([2014 technical report](https://www.ideals.illinois.edu/items/47132)).
+For an already admissible convergent order-sorted decomposition, finite complete
+variant sets for every required flat operator pattern establish the stronger
+EMS-FVP. Termination, confluence, sort-decreasingness, coherence modulo AC,
+sort/signature hypotheses and complete AC unification are prerequisites, not
+outputs of merely printing `No more variants`.
+
+A bounded local investigation completed all 17 declared protocol flat patterns
+on the unchanged native module. A known non-FVP control stopped at its explicit
+five-variant cap without an exhaustion marker. A separately source-checked sorted
+protocol module passed CRC's local-confluence and sort-decreasingness checks.
+These do not yet prove admissibility/coherence or conservative correspondence
+between the protocol algebra, the native bookkeeping signature and the paper's
+sort/kind assumptions. Full FVP acceptance remains open.
 
 The manual cites Comon-Lundh and Delaune, *The Finite Variant Property:
 How to Get Rid of Some Algebraic Properties*, RTA 2005, pages 294-307

@@ -21,7 +21,7 @@ Run commands from the repository root; setup and limits are in [`ENVIRONMENT.md`
 | Replay tooling selects and compares certificates correctly | `test_replay.py` | `python3 -m unittest discover -s docs/spec/models -p 'test_replay.py'` |
 | Certificates are finished and every include file is wired in | `check_certificates.py`, `test_check_certificates.py` | `python3 docs/spec/models/check_certificates.py` |
 | Branch driver parses methods and picks the closing priority | `test_branch.py` | `python3 -m unittest discover -s docs/spec/models -p 'test_branch.py'` |
-| Ratchet equation evidence: internal termination/FVP rationale and independent CRC local-confluence check on the reduced message theory | [`ratchet-equation-evidence.md`](ratchet-equation-evidence.md), [checker research](../../research/2026-10-09-tamarin-equational-theory-independent-checkers.md) | Independent combined-theory/FVP acceptance open |
+| Ratchet equation evidence: source-guarded Lean termination modulo sorted AC; CRC local confluence; conditional flat-pattern criterion | [`equations/`](equations/README.md), [`ratchet-equation-evidence.md`](ratchet-equation-evidence.md), [checker research](../../research/2026-10-09-tamarin-equational-theory-independent-checkers.md) | `python3 docs/spec/models/equations/termination.py --lean <lean>`; independent combined-theory/FVP acceptance open |
 | All fast gates | `scripts/check.sh` | pre-commit hook and CI |
 
 ## Tooling

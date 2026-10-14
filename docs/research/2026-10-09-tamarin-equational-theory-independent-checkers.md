@@ -8,11 +8,58 @@ Scope is bounded to the exact equation theory in
 natural-numbers`; `functions: kdf/3, ext/2, mac/2, kem/2, kdec/2, pk/1, roleA/0, roleB/0, flip/1`;
 `equations: kdec(kem(ss, pk(dk)), dk) = ss, flip(roleA) = roleB, flip(roleB) = roleA`) and to tool
 applicability for checking convergence, confluence and the finite variant property (FVP) of that
-theory as used by Tamarin 1.12.0. It does not touch protocol rules, lemmas, workflows or any other
-doc, and does not re-litigate the equations themselves (see the linked evidence doc for that
-argument).
+theory as used by Tamarin 1.12.0. No protocol rule, lemma, equation or runtime
+behavior is changed. The original investigation was read-only; the update below
+adds a termination proof and its directly related local/CI/documentation surfaces.
 
-No model equations, rules, source lemmas or workflows were changed; the evidence index and project
+## Update: source-guarded termination and the flat-pattern criterion (2026-10-14)
+
+The [Lean termination subgate](../spec/models/equations/README.md) now proves
+well-founded rewriting for all six exact equations in every typed message
+context modulo sorted natural AC. Its source guard pins all 15 message ranks,
+the six equations and the natural builtin; generated correspondences and all
+six theorem axiom audits pass locally. The exporter/translation are trusted,
+not verified importers. No equation, rule, restriction or protocol behavior
+changes. New hosted validation is unverified.
+
+The earlier discussion of sampled variant enumeration below is historical.
+[Maude 3.5.1 manual section 14.2](https://maude.lcc.uma.es/maude-manual/maude-manualch14.html)
+does specify an exhaustive flat-pattern semi-decision procedure, citing theorem
+7 of Cholewa, Meseguer and Escobar's
+[*Variants of Variants and the Finite Variant Property*](https://www.ideals.illinois.edu/items/47132),
+an unpublished 2014 technical report. The criterion is an iff for EMS-FVP under
+an already admissible convergent order-sorted decomposition. It does not
+automatically verify termination, confluence, sort-decreasingness, AC coherence,
+the sort/signature conditions or complete AC unification.
+
+All 17 declared protocol flat patterns exhaust on the unchanged native module
+under Maude `3.5.1`. A known non-FVP control `f(s(x)) = s(f(x))`, limited to five
+variants, has no exhaustion marker. The separate source-checked protocol
+module retains `Pub`, `Fresh` and `TamNat` below `Msg`, all 15 message ranks,
+zero/identity-free natural AC and all six equations. It passes CRC's
+local-confluence and sort-decreasingness checks with official Maude `3.5.1`
+and checksum-verified MFE `mfe-3.5.1`; it omits native name-index/`NAT`/`TOP`
+bookkeeping. That omission needs a correspondence/conservativity argument
+before treating the result as an exact native combination certificate.
+CRC still assumes termination and does not independently discharge all
+variant-engine admissibility/coherence hypotheses.
+
+The Homebrew launcher overrides `MAUDE_LIB`; the compatible official
+standard-library scripts require invoking its unchanged underlying binary
+with an explicit library path. MFE's loop commands must be supplied on
+standard input after module/tool loading. Earlier file-stack invocations
+exhausted the unchanged 60-second bound without a CRC result; the corrected
+invocation reports all critical pairs joined, local confluence and
+sort-decreasingness. Neither tool-startup failures nor the successful corrected
+run changes the 60-second/64 MiB diagnostic limits.
+
+Independent exact mixed-theory/FVP acceptance remains open. Native bookkeeping
+`NAT` is not the protocol `TamNat`; its separate import must not be mistaken
+for a zero/identity in the protocol's natural AC operator.
+
+## Original investigation (2026-10-09)
+
+No model equations, rules, source lemmas or workflows were changed by that investigation; the evidence index and project
 profile now link to this report. All commands below were actually run in this environment
 (macOS/arm64, the repository's pinned `tamarin-prover 1.12.0` / `maude 3.5.1` from the
 `tamarin-prover/tap` Homebrew tap); exact output is quoted or summarized with the command that

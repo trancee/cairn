@@ -2,6 +2,20 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation; SDK/application=not implemented.
 
+## Current equation termination evidence (2026-10-14)
+
+The [equation termination checker](docs/spec/models/equations/README.md) now
+kernel-checks all six expanded source equations in every typed message context
+modulo sorted natural AC, with mandatory theorem axiom audits and generated
+source correspondences. It shares the exact equation inventory/audit helpers
+with the lifecycle gate and runs in the existing fast/CI lifecycle cell.
+Local proof/source-boundary checks pass; hosted validation of this increment is
+unverified. Native flat-pattern exhaustion and sorted CRC checks are supporting
+evidence, not a combined FVP certificate: source/signature transfer and
+admissibility/coherence hypotheses remain unverified. Full assembled replay
+also remains incomplete. No profile activation, SDK/ratchet implementation,
+protocol, public API, wire, primitive or constant-time claim change is authorized.
+
 ## Current ratchet evidence (2026-10-13)
 
 The opt-in `DISCLOSURE_SOURCES` profile now reports complete refined
