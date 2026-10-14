@@ -6,4 +6,10 @@ gradle.projectsEvaluated {
         throw new GradleException("FAIL: Apple SDK targets ${targets}; expected ${expected}")
     }
     println("PASS: effective Apple SDK targets ${targets}; configuration only")
+    def cargoDirectory = sdk.extensions.getByName("cargo").targetDirectory.get().asFile
+    def bindgenDirectory = sdk.tasks.named("installBindgen").get().bindgenBuildPath.get().asFile
+    if (bindgenDirectory.canonicalFile != cargoDirectory.canonicalFile) {
+        throw new GradleException("FAIL: bindgen and fixture Cargo target directories differ")
+    }
+    println("PASS: effective bindgen build directory shares the fixture Cargo target; configuration only")
 }

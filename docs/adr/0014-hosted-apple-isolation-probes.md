@@ -1337,5 +1337,53 @@ Remove temporary tagged child-bootstrap/snapshot tracing after collection;
 retain controlled test-child log context on assertion failure. The migration
 changes diagnostic delivery only, not tools, targets, compiler tasks, public
 API, ownership, network policy or any resource/deadline budget.
-Final cleanup-head hosted acceptance and deterministic reliability remain
-unestablished.
+At cleanup head `8b4c2d6`, PR CodeQL `38515603675`, Rust `38515603697`
+and formal `38515603660` pass. GitHub processed all four PR language scans
+at merge revision `47a9c5207514ea28f5ab7393233148ced60dc5b5` without errors.
+Duplicate push `38515598161` fails its first attempt on another pre-existing
+UID-59000 `distnoted`; its one unchanged failed-job replay also fails.
+This closes final PR-head acceptance, not deterministic runner reliability
+or successful duplicate-push acceptance.
+
+## Same-VM generator compilation reuse
+
+The owner approved implementation, publication and bounded hosted comparison
+on 2026-10-14. Successful PR run `38515603675` took 23m38s versus the original
+24m16s, but preparation still took 20m59s and owning `installBindgen` about
+4m10s. These different-VM observations do not establish a causal speedup.
+
+Pinned Ubique `b819fb4` sets the install task's `CARGO_TARGET_DIR` from its
+own `bindgenBuildPath`, overriding the shell's shared directory. Its installer
+also uses an implicit host target, unlike explicit-target fixture compilation.
+Configure that public task property to the fixture's `cargo.targetDirectory`;
+the existing generator-only adapter supplies `--target aarch64-apple-darwin`.
+Reject competing target/directory arguments. Default Linux/Android configuration
+and SDK Rust profiles/targets remain unchanged.
+
+Cargo alone decides which freshly compiled same-VM dependencies are compatible
+by its normal source, version, feature, profile, target and compiler fingerprints.
+Keep the plugin's real installation, source fingerprint, target lock and ready
+record. Do not inject binaries, manufacture fingerprints, restore compiled
+outputs across runs or skip compilation/consumer/integrity/security gates.
+The effective-configuration probe checks both task directories agree; real
+adapter tests fail on missing target ownership before the fix.
+
+The retained opt-in paired benchmark replays the committed `8b4c2d6` Cargo
+installation policy with an empty baseline target directory versus the current
+adapter using fixture dependencies compiled earlier on that VM. Both install
+the same locked, immutable generator source freshly into separate empty roots.
+Cargo JSON must establish fresh generator compilation in both cases, zero
+baseline reuse and positive candidate reuse; inspect both real ARM64 binaries.
+The result includes source/lock/adapter/benchmark hashes, Rust/host/Python/CPU
+metadata, artifact counts, binary hashes and elapsed times. It measures Cargo
+installation, not Gradle startup or whole-workflow latency.
+
+Each explicitly selected comparison retains the existing 600-second command,
+30-minute job and all memory/disk/file/process/CPU/network/isolation bounds.
+Normal CI does not run it. Retain at least three independent paired reports,
+both execution orders and matching environments/inputs. The summary rejects
+invalid/incomparable evidence or a median paired regression above 10%.
+Actual savings require those measurements; the 4m10s hotspot is not a promised
+saving. Current hosted evidence is recorded in [PR #8](https://github.com/trancee/cairn/pull/8).
+Checksum-verified archive reuse and change-aware gate applicability are not
+part of this decision.

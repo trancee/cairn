@@ -153,6 +153,8 @@ the annotated tag object. Dispatch with `upload=false` for validation while
 default setup remains enabled. No database publication is requested.
 Feature-branch pushes also perform upload-free validation, allowing the new
 workflow to register and run before deployment to the default branch.
+That initial registration behavior is superseded by the scheduling refinement
+below after the workflow is deployed to `main`.
 Only default-branch/PR/scheduled runs and explicit `upload=true` dispatches
 publish after cutover; branch validation does not change scanning settings.
 The unrelated functional simulator runtime is skipped only in CodeQL mode;
@@ -237,3 +239,34 @@ This does not establish teardown reliability or permit a failed-gate bypass.
 Deployment and successful processed scans on `main` remain required before
 declaring the persistent scanning fix complete. Restore default setup if
 deployment fails; no existing alert is dismissed.
+
+## Post-deployment scheduling refinement
+
+The owner requested faster CI on 2026-10-13. At revision `85aa105`, CodeQL
+ran on both branch push (`38442371579`) and pull request (`38442378458`),
+repeating the strict Kotlin cell for the same revision. The PR run took
+24m16s; the Kotlin preparation job took 20m14s, with 13m46s inside the bounded
+cell. Rust foundation took 2m and formal checks 6m45s. These are observed
+baselines, not guaranteed durations.
+
+The initial scheduling patch stayed local by owner choice. On 2026-10-14
+the owner explicitly approved publishing it together with implementation
+and bounded hosted validation of same-VM Cargo dependency reuse. Merge is
+not authorized by that approval.
+
+Now that advanced setup is deployed, trigger pushes only on `main`, retaining
+PRs targeting `main`, weekly scans and explicit manual dispatch. A branch
+without a PR uses manual validation, matching the other maintained workflows.
+Use event/ref-scoped concurrency and cancel superseded PR runs only.
+Main, scheduled and manual runs are not cancelled by newer PR work.
+
+This removes duplicate same-revision push/PR work and stale PR work; it does
+not reduce one cold Kotlin build's duration. Every language, default security
+suite, upload/processing gate, forced compilation, strict-cell boundary and
+resource ceiling remains unchanged. No database, query result, compiled
+artifact or proof result is restored across runs. Fresh, compatible Cargo
+dependencies may be reused within one disposable VM as specified in
+[ADR 0014](0014-hosted-apple-isolation-probes.md#same-vm-generator-compilation-reuse).
+Checksum-verified download reuse and
+avoiding repeated export/precomputation are separate potential optimizations,
+not implemented or measured improvements here.

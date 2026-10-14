@@ -1,3 +1,4 @@
+import ch.ubique.uniffi.plugin.tasks.InstallBindgenTask
 import java.io.File
 
 plugins {
@@ -9,6 +10,9 @@ cargo {
     targetDirectory.set(
         layout.dir(providers.environmentVariable("CARGO_TARGET_DIR").map { File(it) })
     )
+}
+tasks.named<InstallBindgenTask>("installBindgen") {
+    bindgenBuildPath.set(cargo.targetDirectory)
 }
 uniffi {
     bindgenFromPath(

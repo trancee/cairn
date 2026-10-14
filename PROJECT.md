@@ -499,6 +499,17 @@ main/merge-group/manual runs are not cancelled. All proof, build, test,
 coverage and fuzz gates still execute; results and compiled project targets
 are not cached.
 
+CodeQL likewise runs on main pushes, PRs targeting main, weekly scans and
+manual dispatch; feature branches without a PR use manual validation.
+Only superseded PR CodeQL runs are cancelled. Its original all-branch push
+trigger duplicated the full strict Kotlin build on PR updates. Observed
+baseline at `85aa105`: CodeQL PR 24m16s, Kotlin preparation 20m14s,
+formal workflow 6m45s, Rust foundation 2m. Removing duplicate triggers reduces
+work, not the duration of one cold analysis; strict build/analysis and upload
+gates are unchanged. See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md#post-deployment-scheduling-refinement).
+Publication was initially kept local; the owner approved this scheduling
+change and bounded same-VM Cargo reuse validation on 2026-10-14.
+
 Setup caches contain version-keyed host tool binaries, lockfile-keyed Cargo
 registry downloads and pinned proof archives. Proof archives are checksum
 verified after every restore. Cache misses install the same pinned tools.
@@ -607,8 +618,27 @@ UID-59000 `distnoted`, with unestablished helper origin/lifetime. Formal
 `38513991093` separately fails unchanged Tamarin mutation replay (`<<loop>>`).
 Push `38513985911` completes Kotlin extraction/coverage/queries but fails
 ordinary scratch detach before mandatory input-integrity/delivery gates.
-Temporary startup/snapshot tracing is removed; final cleanup-head acceptance
-and deterministic reliability remain unestablished.
+Temporary startup/snapshot tracing is removed. Cleanup-head `8b4c2d6` PR
+CodeQL/Rust/formal gates pass; all four PR scans process at
+`47a9c5207514ea28f5ab7393233148ced60dc5b5` without errors. Duplicate push
+`38515598161` fails both attempts. Deterministic reliability is not established.
+
+### Same-VM generator compilation
+
+The Apple SDK fixture configures the owning `installBindgen.bindgenBuildPath`
+to its Cargo target directory; the generator-only adapter selects explicit
+`aarch64-apple-darwin`, matching preceding fresh host-library compilation.
+Cargo fingerprints control compatible same-VM dependency reuse. Plugin
+installation/source/ready records, default Linux/Android configuration, SDK
+profiles, fresh compilation, strict boundaries and integrity/security gates
+remain unchanged; no compiled outputs are restored across runs.
+Observed owning installation at `8b4c2d6` takes about 4m10s, not a guaranteed
+saving. The retained opt-in paired comparison replays that committed baseline
+policy under the same limits; three matching reports with both orders and
+a median regression at most 10% are required for performance acceptance.
+Commands, scope and current evidence are in the
+[Apple reference](proofs/bindings/apple/README.md#same-vm-bindgen-dependency-reuse)
+and [PR #8](https://github.com/trancee/cairn/pull/8).
 
 The schema below is retained for the future implementation profile.
 

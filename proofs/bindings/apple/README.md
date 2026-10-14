@@ -171,7 +171,54 @@ queries, then fails ordinary scratch detach (`Resource busy`) before mandatory
 post-cell input checks and result delivery. It is not accepted Kotlin CI.
 Temporary tagged bootstrap/snapshot tracing is removed after collection.
 Controlled child-log failure context remains, with unchanged assertions and
-timers. Final cleanup-head hosted acceptance is still required.
+timers. The cleanup-head results below supersede that earlier acceptance gap.
+
+At cleanup head `8b4c2d6`, PR CodeQL `38515603675`, Rust `38515603697`
+and formal `38515603660` pass; all four PR scans process without errors at
+`47a9c5207514ea28f5ab7393233148ced60dc5b5`. Duplicate push `38515598161`
+fails both attempts. These results do not establish deterministic reliability.
+
+## Same-VM bindgen dependency reuse
+
+Apple's `installBindgen.bindgenBuildPath` now uses `cargo.targetDirectory`.
+The generator-only Cargo adapter adds the same explicit
+`aarch64-apple-darwin` target used by the fixture's host library; competing
+`--target`/`--target-dir` arguments fail before Cargo starts. Other Cargo
+commands and Linux/Android configuration are unchanged. The owning plugin
+still installs, fingerprints and marks readiness; Cargo reuses only compatible
+dependencies freshly compiled on that disposable VM. No compiled cache is
+restored across runs.
+
+Manual preparation input `bindgen_benchmark` accepts `off` (default),
+`baseline-first` or `candidate-first`. A selected pair runs after fresh fixture
+Rust compilation and before the normal owning installer/consumer/security gates,
+inside the same bounded offline cell. Each pair has the existing 600-second
+ceiling; whole-job and other resource limits are unchanged.
+
+`benchmark-bindgen-reuse.py /opt/cairn-apple-tools --order baseline-first`
+replays committed baseline `8b4c2d6` with an empty target directory and implicit
+host target, then the current adapter with the fixture target directory and
+explicit host target. Separate empty installation roots, actual Cargo artifact
+records and ARM64 inspection verify both generators compile freshly. The
+benchmark fails on malformed evidence, baseline reuse, absent candidate reuse,
+wrong architecture, child errors or deadlines. Its JSON records timings,
+artifact counts, source/lock/tool-policy hashes and environment metadata.
+Root exports `bindgen-benchmark.json` and its relative SHA-256 manifest;
+normal input-integrity checks remain mandatory before accepting the artifact.
+
+After retaining at least three independent paired reports with both orders:
+
+```sh
+xcrun python3 -I proofs/bindings/apple/benchmark-bindgen-reuse.py --reports \
+  /path/to/first/bindgen-benchmark.json \
+  /path/to/second/bindgen-benchmark.json \
+  /path/to/third/bindgen-benchmark.json
+```
+
+The summary requires matching inputs/environment and rejects a median paired
+regression above 10%. Cargo-install improvement is not whole-CI improvement;
+current measurements and complete gate results are recorded in
+[PR #8](https://github.com/trancee/cairn/pull/8).
 
 ## Earlier probe evidence
 
@@ -205,9 +252,11 @@ proof; default Actions/Python/Rust scanning stays enabled. See
 The staged `.github/workflows/codeql.yml` runs existing Actions/Python/Rust
 default suites and calls this strict Kotlin lane. A manual `upload=false`
 dispatch validates without publishing scans while default setup stays enabled.
-Feature-branch pushes likewise validate without publishing. Default-branch,
-PR and weekly runs upload after the separately approved setting
-cutover. Only mapped `java-kotlin.sarif` is uploaded; raw SARIF and compiled
+Feature branches without a PR use manual dispatch; main pushes, PRs targeting
+main and weekly runs remain automatic. Feature pushes no longer duplicate a
+PR's full strict-cell build. Only superseded PR runs are cancelled; main,
+weekly and manual runs are preserved. Automatic uploads require the separately
+approved setting cutover. Only mapped `java-kotlin.sarif` is uploaded; raw SARIF and compiled
 source inventory remain diagnostic artifacts. Generated paths retain their
 owning untracked build location, not a fabricated handwritten annotation.
 CodeQL mode skips the unrelated functional simulator runtime; ordinary

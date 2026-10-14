@@ -12,6 +12,9 @@ if [ "${1:-}" = install ]; then
       --debug|--profile|--profile=*)
         echo 'FAIL: generator profile must be owned by the approved adapter' >&2
         exit 2 ;;
+      --target|--target=*|--target-dir|--target-dir=*)
+        echo 'FAIL: generator compilation context must be owned by the proof' >&2
+        exit 2 ;;
     esac
     previous=$argument
   done
@@ -20,6 +23,6 @@ if [ "${1:-}" = install ]; then
     exit 2
   fi
   echo 'INFO: approved debug-profile generator installation; SDK profiles unchanged'
-  exec /opt/cairn-apple-tools/rust/bin/cargo install --debug "$@"
+  exec /opt/cairn-apple-tools/rust/bin/cargo install --debug --target aarch64-apple-darwin "$@"
 fi
 exec /opt/cairn-apple-tools/rust/bin/cargo "$@"
