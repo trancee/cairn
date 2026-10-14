@@ -2,6 +2,30 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation; SDK/application=not implemented.
 
+## Current ratchet evidence (2026-10-13)
+
+The opt-in `DISCLOSURE_SOURCES` profile now reports complete refined
+deconstructions (43 groups, zero residual chains), using a Tamarin-generated
+joint KEM/CT-tail source certificate verified against raw sources in 60 steps.
+All 56 completed safety certificates replay together, and all four
+honest/recovery witnesses replay independently against the same 43 rules and
+13 restrictions. The fresh-secret origin certificate is migrated with unchanged
+formula/attributes. The runner fails closed on incomplete source evidence;
+local/CI gate definitions cover the joint source, complete safety and witnesses.
+
+The three serialization claims use the accepted Lean compositional gate.
+Full assembled replay was system-killed with exit 137 before a summary.
+All 19 formal jobs passed at `85aa105` in
+[run 38442377893](https://github.com/trancee/cairn/actions/runs/38442377893).
+A separate full-context hint-hiding experiment timed out and was discarded.
+Independent mixed-equation/FVP acceptance remains outstanding.
+Default activation and ratchet implementation
+are not authorized by these partial-context results. Earlier source counts
+and replay results elsewhere in this profile are historical; the
+[current source evidence](docs/spec/models/ratchet-source-evidence.md#current-result-2026-10-13)
+is authoritative for this increment. No protocol, API, wire, primitive,
+runtime dependency or constant-time claim changes.
+
 ## Standalone binding proof
 
 The [Linux/Android fixture](proofs/bindings/linux-android/README.md) preserves

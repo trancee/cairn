@@ -26,7 +26,10 @@ fi
 if [ "${REPLAY:-0}" = 1 ]; then
   python3 docs/spec/models/replay.py --timeout 180
   python3 docs/spec/models/replay.py --disclosure-sources --timeout 180
-  for target in kem_ciphertext_origin fresh_dk_origin encrypted_origin extract_origin \
+  for target in executable initiator_candidate_recovery fresh_epoch_after_compromise; do
+    python3 docs/spec/models/replay.py --disclosure-sources --target "$target" --timeout 240
+  done
+  for target in complete_safety kem_and_ct_tail_origin kem_ciphertext_origin fresh_dk_origin encrypted_origin extract_origin \
       ratchet_key_origin session_key_origin initial_ck_secret fresh_ss_origin \
       encrypted_ct_tail_encapsulated; do
     python3 docs/spec/models/replay.py --disclosure-sources --target "$target" --timeout 180

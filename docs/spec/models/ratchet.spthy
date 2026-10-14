@@ -322,6 +322,10 @@ rule Receive_CT_duplicate_prefix_complete:
 --[ TraceStep(pid,r,'Receive_CT_duplicate_prefix_complete',%1),  SessionUse(pid,r,ks,kr), Cur(pid,r,ck), EUse(pid,r,%e), ProgressSent(pid,r,%e,'CT','full'), EncryptedOutput(<'PROGRESS',%e,'CT','full'>,ks), EncryptedOutput(<'DONE',%e>,ks) ]->
   [ Out(senc(<'PROGRESS',%e,'CT','full'>,ks)), Out(senc(<'DONE',%e>,ks)) ]
 
+#ifdef DISCLOSURE_SOURCES
+#include "ratchet-ct-tail-sources.inc"
+#endif
+
 #include "ratchet-witnesses.inc"
 #include "ratchet-properties.inc"
 

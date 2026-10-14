@@ -1,5 +1,13 @@
 # Reviewing the residual `Reveal_SS` source chain
 
+**Update (2026-10-13):** joint induction of KEM and encrypted CT-tail payload
+origins now yields a raw-source certificate and complete refined
+deconstructions. This brief's branch counts and unsuccessful attempts are
+historical. Independent review should evaluate the new certificate and exact
+mixed-equation/FVP assumptions, not assume that 15/16 residual chains remain.
+See the [current evidence](../spec/models/ratchet-source-evidence.md#current-result-2026-10-13).
+Full assembled invocation and independent equation acceptance remain open.
+
 This brief asks for an independent Tamarin review of one representative
 residual disclosure-source branch in Cairn's ratchet model. It records the
 current symbolic evidence and its limits; it does not claim source closure or

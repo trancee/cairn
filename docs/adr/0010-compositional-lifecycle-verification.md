@@ -58,6 +58,39 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Current proof-only increment (2026-10-13)
+
+The owner requested continued ratchet proof completion. Add the generated
+`kem_and_ct_tail_origin [sources, use_induction]` certificate only to
+`DISCLOSURE_SOURCES`. Joint induction proves KEM and encrypted CT-tail
+payload provenance against raw sources in 60 steps; certificate-only replay
+has no search bound. Refined deconstructions now complete, while raw sources
+retain 30 chains. No equation, rule, restriction, compromise capability,
+wire contract or runtime dependency changes.
+
+All 56 completed safety certificates replay together. Regenerate only the
+stale `fresh_ss_origin` proof tree through Tamarin, retaining its exact formula
+and attributes; it verifies in 85 steps. Replay all four existential witnesses
+separately with all source certificates and the unchanged transition system.
+The owning runner now requires complete refined-source output and rejects
+any unexpected incomplete safety certificate. Add the joint-source, complete
+safety and missing witness targets to existing local/CI gates.
+
+This replaces the earlier 16-chain limitation, not the acceptance policy.
+The full assembled invocation was system-killed with exit 137 before a
+summary. A full-context variant hiding ordinary reuse hints only from the
+existential witnesses also timed out at 240 seconds and was not adopted.
+All 19 formal jobs passed at `85aa105` in
+[run 38442377893](https://github.com/trancee/cairn/actions/runs/38442377893).
+Independent combined-equation/FVP acceptance remains unverified.
+Keep the profile opt-in and the ratchet
+implementation gate closed. Independent contexts are not a claimed full
+assembled Tamarin result. The three serialization claims still use the
+accepted Lean compositional route. See the
+[current evidence](../spec/models/ratchet-source-evidence.md#current-result-2026-10-13).
+
+### Earlier observations
+
 Add the compositional command alongside existing Tamarin gates and report its
 results separately. The original model needs no migration. The ratchet's
 overall implementation gate remains closed until its other evidence

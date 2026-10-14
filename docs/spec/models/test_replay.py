@@ -2,6 +2,8 @@ import unittest
 import sys
 from unittest.mock import patch
 import io
+import replay
+from pathlib import Path
 
 from replay import ReplayError, check_result, compare_replay, main, run, select_certificate
 
@@ -31,6 +33,66 @@ end
 
 
 class ProfileTests(unittest.TestCase):
+    def test_partial_sources_stop_before_certificate_replay(self):
+        export = EXPORT.replace("witness", "executable")
+
+        def native(command, timeout):
+            if "--version" in command:
+                return "tamarin-prover 1.12.0,\nMaude version 3.5.1\n"
+            if "--precompute-only" in command:
+                return "Refined sources: 43 cases, 16 partial deconstructions left\n"
+            destination = next(arg[9:] for arg in command if arg.startswith("--output="))
+            text = export if Path(destination).name == "assembled.spthy" else select_certificate(
+                export, "executable",
+            )[0]
+            Path(destination).write_text(text)
+            return ""
+
+        with patch.object(
+            sys, "argv", ["replay.py", "--disclosure-sources", "--target", "executable"],
+        ), patch("replay.run", side_effect=native) as execute, patch(
+            "sys.stderr", new_callable=io.StringIO,
+        ) as diagnostics:
+            result = main()
+
+        self.assertEqual(result, 1)
+        self.assertIn("source deconstructions", diagnostics.getvalue())
+        self.assertEqual(execute.call_count, 4)
+        self.assertIn("--precompute-only", execute.call_args.args[0])
+
+    def test_exists_trace_witness_targets_are_accepted(self):
+        version = "tamarin-prover 1.12.0,\nMaude version 3.5.1\n"
+        targets = (
+            "executable", "initiator_candidate_recovery",
+            "fresh_epoch_after_compromise",
+        )
+        for target in targets:
+            with self.subTest(target=target), patch.object(
+                sys, "argv",
+                ["replay.py", "--disclosure-sources", "--target", target],
+            ), patch(
+                "replay.run", side_effect=[version, ReplayError("export probe")]
+            ) as execute, patch("sys.stderr", new_callable=io.StringIO) as diagnostics:
+                result = main()
+
+            self.assertEqual(result, 1)
+            self.assertIn("export probe", diagnostics.getvalue())
+            self.assertIn("--defines=DISCLOSURE_SOURCES", execute.call_args_list[1].args[0])
+
+    def test_joint_ct_origin_target_is_accepted(self):
+        version = "tamarin-prover 1.12.0,\nMaude version 3.5.1\n"
+        with patch.object(
+            sys, "argv",
+            ["replay.py", "--disclosure-sources", "--target", "kem_and_ct_tail_origin"],
+        ), patch(
+            "replay.run", side_effect=[version, ReplayError("export probe")]
+        ) as execute, patch("sys.stderr", new_callable=io.StringIO) as diagnostics:
+            result = main()
+
+        self.assertEqual(result, 1)
+        self.assertIn("export probe", diagnostics.getvalue())
+        self.assertIn("--defines=DISCLOSURE_SOURCES", execute.call_args_list[1].args[0])
+
     def test_ct_tail_origin_target_is_accepted(self):
         version = "tamarin-prover 1.12.0,\nMaude version 3.5.1\n"
         with patch.object(
@@ -69,6 +131,40 @@ class ProfileTests(unittest.TestCase):
 
 
 class SelectionTests(unittest.TestCase):
+    def test_complete_safety_suite_retains_every_safety_certificate(self):
+        export = EXPORT.replace("by sorry", "by contradiction")
+
+        selected, retained = select_certificate(export, "complete_safety", "all-traces")
+
+        self.assertEqual(retained, ("unrelated", "origin"))
+        self.assertNotIn("lemma witness", selected)
+
+    def test_complete_safety_suite_rejects_unexpected_incomplete_claim(self):
+        with self.assertRaisesRegex(ReplayError, "unrelated: incomplete safety certificate"):
+            select_certificate(EXPORT, "complete_safety", "all-traces")
+
+    def test_complete_safety_suite_excludes_only_named_compositional_claims(self):
+        export = EXPORT.replace("lemma unrelated", "lemma lock_stage_order")
+
+        selected, retained = select_certificate(export, "complete_safety", "all-traces")
+
+        self.assertEqual(retained, ("origin",))
+        self.assertNotIn("lemma lock_stage_order", selected)
+
+    def test_complete_safety_suite_roundtrip_preserves_all_certificates(self):
+        export = EXPORT.replace("by sorry", "by contradiction")
+        selected, retained = select_certificate(export, "complete_safety", "all-traces")
+
+        self.assertEqual(
+            compare_replay(export, selected, "complete_safety", "all-traces"), retained,
+        )
+
+    def test_complete_safety_suite_rejects_empty_safety_inventory(self):
+        export = EXPORT.replace("all-traces", "exists-trace")
+
+        with self.assertRaisesRegex(ReplayError, "missing safety certificates"):
+            select_certificate(export, "complete_safety", "all-traces")
+
     def test_safety_certificate_selection_requires_explicit_trace_kind(self):
         selected, retained = select_certificate(EXPORT, "origin", trace_kind="all-traces")
 
@@ -256,6 +352,24 @@ class CorrespondenceTests(unittest.TestCase):
 
 
 class ResultTests(unittest.TestCase):
+    def test_complete_refined_sources_are_accepted(self):
+        output = "Refined sources: 43 cases, deconstructions complete\n"
+
+        replay.check_source_completion(output)
+
+    def test_partial_refined_sources_are_rejected(self):
+        output = "Refined sources: 43 cases, 16 partial deconstructions left\n"
+
+        with self.assertRaisesRegex(ReplayError, "source deconstructions"):
+            replay.check_source_completion(output)
+
+    def test_missing_malformed_or_duplicate_source_results_are_rejected(self):
+        complete = "Refined sources: 43 cases, deconstructions complete\n"
+        for output in ("", "Refined sources: 0 cases, deconstructions complete\n", complete * 2):
+            with self.subTest(output=output):
+                with self.assertRaisesRegex(ReplayError, "source deconstructions"):
+                    replay.check_source_completion(output)
+
     def test_each_verified_result_is_required(self):
         output = (
             "witness (exists-trace): verified (826 steps)\n"

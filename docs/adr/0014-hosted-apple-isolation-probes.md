@@ -458,6 +458,16 @@ consumer with original build filenames; Apple selects SDK/consumer and
 and ordinary scratch/UID/PF cleanup passed. No fixture plugins, binding
 generation, Native compilation or generated calls ran.
 
+PR #7's preparation failed the same aggregate tool-cell deadline after the
+expected invalid-selection rejection. The settings probe buffered subsequent
+Gradle output until return, obscuring partial progress when the collector
+expired. A real-script/collector regression fails on that missing output;
+streaming through the existing `tee` pattern preserves progress and the
+original child status under `pipefail`. This is diagnostic hardening only:
+no command, assertion, budget, permission, cache policy or retry changes.
+Current-source hosted acceptance remains required; no latency or reliability
+improvement is inferred from the regression.
+
 The owner approved extending the separate disposable network-enabled
 preparation phase to execute the pinned Gradle/Kotlin/Ubique plugins against
 a preparation-only project for dependency resolution, then freeze inputs

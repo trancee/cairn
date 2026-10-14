@@ -115,36 +115,10 @@ next
         qed
       next
         case Reveal_SS_case_1
-        by contradiction /* from formulas */
+        by contradiction
       next
         case Reveal_SS_case_2
-        solve( !SSValue( pid.1, t )[no_precomp] ▶₀ #vr.1 )
-          case Decode_known_ciphertext
-          solve( splitEqs(1) )
-            case split_case_1
-            solve( (∃ pid #j.
-                     (FreshSS( pid, t, pk(~dk.1) ) @ #j) ∧ #j < #vk.3)  ∥
-                   (∃ #j. (!KU( t ) @ #j) ∧ #j < #vk.3) )
-              case case_1
-              solve( (#vl, 0) ~~> (#j, 0) )
-                case Var_fresh_1_ss
-                by contradiction /* from formulas */
-              qed
-            next
-              case case_2
-              by contradiction /* cyclic */
-            qed
-          next
-            case split_case_2
-            by solve( (#vl, 0) ~~> (#j, 0) )
-          qed
-        next
-          case Prepare_encapsulation
-          solve( (#vl, 0) ~~> (#j, 0) )
-            case Var_fresh_1_ss
-            by contradiction /* from formulas */
-          qed
-        qed
+        by contradiction /* from formulas */
       next
         case Send_CT_tail
         by contradiction
@@ -240,36 +214,10 @@ next
         qed
       next
         case Reveal_SS_case_1
-        by contradiction /* from formulas */
+        by contradiction
       next
         case Reveal_SS_case_2
-        solve( !SSValue( pid.1, t )[no_precomp] ▶₀ #vr.1 )
-          case Decode_known_ciphertext
-          solve( splitEqs(1) )
-            case split_case_1
-            solve( (∃ pid #j.
-                     (FreshSS( pid, t, pk(~dk.1) ) @ #j) ∧ #j < #vk.3)  ∥
-                   (∃ #j. (!KU( t ) @ #j) ∧ #j < #vk.3) )
-              case case_1
-              solve( (#vl, 0) ~~> (#j, 0) )
-                case Var_fresh_1_ss
-                by contradiction /* from formulas */
-              qed
-            next
-              case case_2
-              by contradiction /* cyclic */
-            qed
-          next
-            case split_case_2
-            by solve( (#vl, 0) ~~> (#j, 0) )
-          qed
-        next
-          case Prepare_encapsulation
-          solve( (#vl, 0) ~~> (#j, 0) )
-            case Var_fresh_1_ss
-            by contradiction /* from formulas */
-          qed
-        qed
+        by contradiction /* from formulas */
       next
         case Send_CT_tail
         by contradiction
@@ -296,10 +244,10 @@ next
         by contradiction /* unannotated */
       next
         case Reveal_SS_case_1
-        by contradiction /* from formulas */
+        by contradiction
       next
         case Reveal_SS_case_2
-        by contradiction /* node #j after last node #i */
+        by contradiction
       next
         case Send_CT_tail
         by contradiction
@@ -323,10 +271,10 @@ next
         by contradiction /* unannotated */
       next
         case Reveal_SS_case_1
-        by contradiction /* from formulas */
+        by contradiction
       next
         case Reveal_SS_case_2
-        by contradiction /* node #j after last node #i */
+        by contradiction
       next
         case Send_CT_tail
         by contradiction
@@ -340,3 +288,4 @@ next
     by contradiction
   qed
 qed
+

@@ -407,6 +407,14 @@ failed with `Resource busy`; later cleanup passed, but its cause remains
 unverified. Failed detach retains PID/command-only holder diagnostics and
 still fails the job without retry or force.
 
+The settings-only selection probe streams each Gradle invocation to its
+scratch log and the bounded collector. Real-script/collector regressions
+cover partial default-selection progress at deadline and child exit-status
+propagation. This closes diagnostic loss, not the startup deadline itself:
+the invalid/default/explicit-platform assertions, 60-second aggregate
+tool-cell limit and all isolation controls are unchanged. Current-source
+hosted selection and compiled CodeQL acceptance must still pass.
+
 Pinned plugin preparation and offline effective target configuration passed in
 [run 38130344648](https://github.com/trancee/cairn/actions/runs/38130344648)
 at `2472082`. Networked preparation runs only `help` with sanitized environment
