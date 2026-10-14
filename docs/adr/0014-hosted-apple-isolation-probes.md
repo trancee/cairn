@@ -1444,8 +1444,8 @@ The approved OS-boundary regression first returned one for successful
 ejection plus a timed-out metadata lookup, then passed after the lookup
 became failure-only. Failed ejection remains nonzero with state/holder
 reports; unavailable commands, malformed/truncated metadata, invalid volume
-paths and diagnostic timeout/error cases are covered. Python `3.9` local
-execution passes the complete Apple tooling suite (58 tests, six hosted-only
+paths and diagnostic timeout/error cases are covered. The initial fix's Python
+`3.9` local execution passes the complete Apple tooling suite (58 tests, six hosted-only
 supervisor skips). Hosted native teardown and final-source four-language
 analysis remain separate authoritative requirements.
 
@@ -1463,3 +1463,52 @@ production dependency, sandbox/PF permission, resource budget, compilation
 task, integrity gate or result-acceptance change is authorized. Final-head
 hosted evidence must be recorded by the PR; successful Kotlin analysis alone
 cannot substitute for cleanup, post-cell integrity and processed scans.
+
+### Owned-image diagnostic follow-up
+
+At published `8e6d82d`, final formal `38580683833` (19 jobs) and Rust
+`38580683851` (11 jobs) pass, attempt one. CodeQL `38580684474` instead fails
+benign preflight on real `hdiutil` ejection failure: `Resource busy`.
+All 58 tooling tests, all six actual dedicated-UID supervisor regressions,
+resource/sandbox assertions and empty-UID checks pass. The new helper correctly
+retains nonzero. Mount-path metadata and holder collection both return
+`CalledProcessError`; that is unavailable evidence, not proof of no holders
+or completed unmount. The eight retained artifact checksums verify.
+Kotlin preparation and its final integrity/delivery gates are skipped.
+
+The owner approved bounded owned-image diagnostics, their tests, commit/push
+and updated-source CI. Pass the current owned image path from the protected
+hosted caller; require the same canonical fixture directory and one of its
+two existing image filenames. After failed ejection, use the native
+[machine-readable image inventory](https://keith.github.io/xcode-man-pages/hdiutil.1.html#info)
+to select only an exact image-path match. Validate unique device entries,
+one whole-disk namespace and assigned mount points before printing or using
+device targets. Never print the full inventory or unrelated image metadata.
+Reported mount-point presence is evidence at that observation, not inferred
+whole-disk state or a successful-unmount assertion.
+
+The original mount-state query and image inventory share the existing
+five-second monotonic metadata window. Filesystem-holder and exact
+image/device-holder queries share the existing 15-second window; exhausted
+windows prohibit follow-on commands. Only PID/command fields are accepted.
+Keep valid partial holder output on nonzero query status and report that
+status explicitly. All errors retain the original ejection failure.
+Discovery failure still permits independent read-only collection for the
+known owned image file, never guessed or foreign devices.
+
+The approved regression is red on missing owned-device/holder identity after
+failed ejection plus unavailable mount-path information, then green after
+this change. Sixteen focused tests cover unrelated-image exclusion, malformed/
+ambiguous inventory, invalid image paths, reported mounts, partial/invalid
+holder fields and virtual-clock shared-deadline exhaustion. Python `3.9`
+passes the complete 66-test tooling suite with six hosted-only supervisor
+skips. Simulation is not native busy-ejection root-cause or reliability proof;
+final-source hosted execution remains required.
+
+Parsing human-readable verbose output was rejected in favor of the documented
+plist interface. Suppressing real ejection failure, retry/force, guessing disk
+identity, signaling holders or granting each new command a fresh deadline
+are not selected. This follow-up changes diagnostics only, not detach strategy,
+permission, budget, resource/integrity gates or the unresolved acceptance scope.
+Migration updates the sole owning shell invocation and every test consumer
+to the two-path internal CLI; no released SDK/API or protocol change.

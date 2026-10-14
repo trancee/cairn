@@ -33,7 +33,7 @@ finish() {
     if ! dscl . -delete "/Users/$user"; then result=1; fi
   fi
   if [ "$mounted" -eq 1 ]; then
-    if ! "$python" -I "$scripts/detach-scratch.py" "$volume"; then
+    if ! "$python" -I "$scripts/detach-scratch.py" "$volume" "$image"; then
       result=1
     fi
   fi

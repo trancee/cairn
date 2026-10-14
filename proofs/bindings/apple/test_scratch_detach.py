@@ -16,6 +16,12 @@ spec = importlib.util.spec_from_file_location(
 scratch_detach = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(scratch_detach)
 VOLUME = "/private/tmp/cairn-resource-fixture/scratch"
+IMAGE = "/private/tmp/cairn-resource-fixture/build-scratch.dmg"
+INVENTORY = plistlib.dumps({"images": [
+    {"image-path": IMAGE, "system-entities": [
+        {"dev-entry": "/dev/disk7"}, {"dev-entry": "/dev/disk7s2"},
+    ]},
+]})
 
 
 class ScratchDetachTest(unittest.TestCase):
@@ -28,7 +34,7 @@ class ScratchDetachTest(unittest.TestCase):
         diagnostics = io.StringIO()
         with mock.patch.object(scratch_detach.subprocess, "run", side_effect=operating_system):
             with contextlib.redirect_stderr(diagnostics):
-                result = scratch_detach.detach_scratch(VOLUME)
+                result = scratch_detach.detach_scratch(VOLUME, IMAGE)
 
         self.assertEqual(result, 0, diagnostics.getvalue())
         self.assertEqual(diagnostics.getvalue(), "")
@@ -40,8 +46,10 @@ class ScratchDetachTest(unittest.TestCase):
         }
 
         def operating_system(command, **options):
-            if command[0] == "/usr/bin/hdiutil":
+            if command[:2] == ["/usr/bin/hdiutil", "detach"]:
                 return subprocess.CompletedProcess(command, 1)
+            if command[:2] == ["/usr/bin/hdiutil", "info"]:
+                return subprocess.CompletedProcess(command, 0, stdout=INVENTORY)
             if command[0] == "/usr/sbin/diskutil":
                 return subprocess.CompletedProcess(command, 0, stdout=plistlib.dumps(state))
             return subprocess.CompletedProcess(command, 0, stdout="p123\ncfixture\n")
@@ -49,7 +57,7 @@ class ScratchDetachTest(unittest.TestCase):
         output, errors = io.StringIO(), io.StringIO()
         with mock.patch.object(scratch_detach.subprocess, "run", side_effect=operating_system):
             with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
-                result = scratch_detach.detach_scratch(VOLUME)
+                result = scratch_detach.detach_scratch(VOLUME, IMAGE)
 
         self.assertEqual(result, 1)
         self.assertIn("FAIL: scratch detach failed", errors.getvalue())
@@ -67,7 +75,7 @@ class ScratchDetachTest(unittest.TestCase):
             scratch_detach.subprocess, "run", side_effect=FileNotFoundError,
         ):
             with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
-                result = scratch_detach.detach_scratch(VOLUME)
+                result = scratch_detach.detach_scratch(VOLUME, IMAGE)
 
         self.assertEqual(result, 1)
         self.assertIn("FAIL: scratch detach command unavailable", errors.getvalue())
@@ -81,7 +89,7 @@ class ScratchDetachTest(unittest.TestCase):
                     side_effect=AssertionError("invalid input reached native mutation"),
                 ):
                     with contextlib.redirect_stderr(errors):
-                        result = scratch_detach.detach_scratch(volume)
+                        result = scratch_detach.detach_scratch(volume, IMAGE)
 
                 self.assertEqual(result, 1)
                 self.assertIn("FAIL: invalid owned scratch volume", errors.getvalue())
@@ -96,8 +104,10 @@ class ScratchDetachTest(unittest.TestCase):
         ):
             with self.subTest(response=response):
                 def operating_system(command, **options):
-                    if command[0] == "/usr/bin/hdiutil":
+                    if command[:2] == ["/usr/bin/hdiutil", "detach"]:
                         return subprocess.CompletedProcess(command, 1)
+                    if command[:2] == ["/usr/bin/hdiutil", "info"]:
+                        return subprocess.CompletedProcess(command, 0, stdout=INVENTORY)
                     if command[0] == "/usr/sbin/diskutil":
                         return subprocess.CompletedProcess(command, 0, stdout=response)
                     return subprocess.CompletedProcess(command, 0, stdout="p123\ncfixture\n")
@@ -105,7 +115,7 @@ class ScratchDetachTest(unittest.TestCase):
                 output, errors = io.StringIO(), io.StringIO()
                 with mock.patch.object(scratch_detach.subprocess, "run", side_effect=operating_system):
                     with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
-                        result = scratch_detach.detach_scratch(VOLUME)
+                        result = scratch_detach.detach_scratch(VOLUME, IMAGE)
 
                 self.assertEqual(result, 1)
                 self.assertIn("DIAGNOSTIC: scratch detach state unavailable", errors.getvalue())
@@ -113,16 +123,17 @@ class ScratchDetachTest(unittest.TestCase):
 
     def test_failed_ejection_with_timed_out_diagnostics_preserves_deadlines_and_failure(self):
         def operating_system(command, **options):
-            if command[0] == "/usr/bin/hdiutil":
+            if command[:2] == ["/usr/bin/hdiutil", "detach"]:
                 return subprocess.CompletedProcess(command, -15)
-            expected_deadline = 5 if command[0] == "/usr/sbin/diskutil" else 15
-            self.assertEqual(options["timeout"], expected_deadline)
+            expected_deadline = 15 if command[0] == "/usr/sbin/lsof" else 5
+            self.assertGreater(options["timeout"], 0)
+            self.assertLessEqual(options["timeout"], expected_deadline)
             raise subprocess.TimeoutExpired(command, expected_deadline)
 
         output, errors = io.StringIO(), io.StringIO()
         with mock.patch.object(scratch_detach.subprocess, "run", side_effect=operating_system):
             with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
-                result = scratch_detach.detach_scratch(VOLUME)
+                result = scratch_detach.detach_scratch(VOLUME, IMAGE)
 
         self.assertEqual(result, 1)
         self.assertIn("scratch detach state unavailable: TimeoutExpired", errors.getvalue())
@@ -130,14 +141,14 @@ class ScratchDetachTest(unittest.TestCase):
 
     def test_nonzero_diagnostic_commands_cannot_turn_failed_ejection_into_success(self):
         def operating_system(command, **options):
-            if command[0] == "/usr/bin/hdiutil":
+            if command[:2] == ["/usr/bin/hdiutil", "detach"]:
                 return subprocess.CompletedProcess(command, 1)
             raise subprocess.CalledProcessError(1, command, stderr=b"untrusted diagnostic output")
 
         output, errors = io.StringIO(), io.StringIO()
         with mock.patch.object(scratch_detach.subprocess, "run", side_effect=operating_system):
             with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
-                result = scratch_detach.detach_scratch(VOLUME)
+                result = scratch_detach.detach_scratch(VOLUME, IMAGE)
 
         self.assertEqual(result, 1)
         self.assertIn("scratch detach state unavailable: CalledProcessError", errors.getvalue())
@@ -145,7 +156,7 @@ class ScratchDetachTest(unittest.TestCase):
         self.assertNotIn("untrusted diagnostic output", errors.getvalue())
 
     def test_cli_rejects_invalid_arity_and_path_without_traceback(self):
-        for arguments in ([], ["/"], [VOLUME, "extra"]):
+        for arguments in ([], ["/", IMAGE], [VOLUME, "extra"], [VOLUME, IMAGE, "extra"]):
             with self.subTest(arguments=arguments):
                 result = subprocess.run(
                     [sys.executable, "-I", str(Path(__file__).with_name("detach-scratch.py")),
