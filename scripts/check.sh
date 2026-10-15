@@ -6,6 +6,14 @@ cd "$(dirname "$0")/.."
 git diff --check
 git diff --cached --check
 
+native_manifest="docs/spec/models/equations/native-proxy/Cargo.toml"
+native_target="${CARGO_TARGET_DIR:-$PWD/target/native-proxy}"
+cargo fmt --manifest-path "$native_manifest" --check
+cargo clippy --locked --manifest-path "$native_manifest" --target-dir "$native_target" -- -D warnings
+cargo build --locked --release --manifest-path "$native_manifest" --target-dir "$native_target"
+python3 docs/spec/models/equations/native-proxy/check.py \
+  --proxy "$native_target/release/cairn-maude-proxy"
+
 python3 docs/spec/models/check_certificates.py
 python3 -m unittest discover -s docs/spec/models -p 'test_*.py'
 python3 -m unittest discover -s docs/spec/models/lifecycle -p 'test_*.py'

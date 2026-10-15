@@ -110,9 +110,27 @@ jobs:
           unzip -q lean.zip
           printf '%s\n' "$tools" "$tools/maude" "$tools/lean-4.34.1-linux/bin" >> "$GITHUB_PATH"
           printf 'MAUDE_LIB=%s\n' "$tools/maude" >> "$GITHUB_ENV"
+      # T3: native-proxy is an internal host proof tool, excluded from SDK coverage.
+      # Its static, CLI/native-stream, process and budget gates run in this workflow.
+      - name: Build the source-identified native guard candidate
+        run: |
+          rustup show active-toolchain
+          target="$RUNNER_TEMP/cairn-maude-proxy"
+          cargo build --release --locked \
+            --manifest-path docs/spec/models/equations/native-proxy/Cargo.toml \
+            --target-dir "$target"
+          printf 'CARGO_TARGET_DIR=%s\n' "$target" >> "$GITHUB_ENV"
+          printf 'CAIRN_MAUDE_GUARD_CANDIDATE=%s\n' "$target/release/cairn-maude-proxy" >> "$GITHUB_ENV"
       - name: Check fast gates, lifecycle proofs, equation convergence/image and source projection
         if: matrix.name == 'lifecycle'
         run: scripts/check.sh
+      - name: Check representative and startup-only native guard budgets
+        if: matrix.name == 'lifecycle'
+        run: |
+          for workload in full-export startup; do
+            python3 docs/spec/models/equations/native-proxy/experiment.py \
+              --proxy "$CAIRN_MAUDE_GUARD_CANDIDATE" --workload "$workload"
+          done
       - name: Check exact-source witness replay
         if: matrix.name != 'lifecycle' && !matrix.mutation
         env:

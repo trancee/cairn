@@ -15,7 +15,8 @@ Put the model under `docs/spec/models/`. A failing lemma reopens the relevant AD
 
 ## Comments
 
-2026-10-14: the owner-approved `guarded-maude-boundary` is wired into all
+2026-10-14 (published 53-audit checkpoint; see the derivation-kind follow-up
+at the end): the owner-approved `guarded-maude-boundary` is wired into all
 ratchet acceptance callers. It rejects altered modules, improperly sorted
 queries/whole replies, unsafe variable namespaces and missing/inconsistent
 private lifecycle evidence; it never filters solutions. Real native operations
@@ -671,3 +672,148 @@ default/`NO_PREFIX_GUARD` verified/falsified in 4/526 steps (67.04/75.40 s).
 Transition-prefix digests matched macOS. Fast gates, pinned Lean, links,
 workflow syntax and model secret scanning also passed. Hosted native
 confirmation remains required.
+
+2026-10-14 (required derivation-kind follow-up): published `3d5dd7c` passed
+the lifecycle cell but failed all 18 replay/mutation cells in
+[formal run 38622779805](https://github.com/trancee/cairn/actions/runs/38622779805).
+The exact default replay and a valid paired-counter input reproduced
+`tamtplus(x0:Fresh,tamXCtone)` locally. Pinned Tamarin deliberately applies
+`natToFreshVars` inside premise constructors during derivation checks.
+The owner chose `extend-derivation-kind-image`, not a bypass or backend patch.
+
+The guard now admits only controlled Fresh/natural sum leaves and their
+enclosing message/free framing contexts. Arbitrary operands, kind variables
+and kind-valued returned bindings/results still fail closed. Disjoint
+proof-only shadow labels have a checked inverse/injectivity; raw AC/rewrite
+transfer, image closure, substitution commutation and decoded-kind termination
+are checked. Framed substitution closure has a typed-shadow compatibility
+premise not yet universally derived. Raw rules omit native proper-message
+guards, so these results do not establish native confluence, normalizing
+paths, complete narrowing/unification or FVP.
+
+The real derivation regression, kernel collision and old 53-audit CLI
+red/green checks pass. Fresh fast gates pass 115 model/50 lifecycle tests,
+43 projections, six correspondences and 67 audits (21 axiom-free).
+The original guarded default recovery verifies in 826 steps plus the
+nine-step ownership helper (`127.70` seconds of reported proof processing).
+The guarded refined complete-safety context verifies all 56 certificates
+with complete sources (`54.59` seconds). Rules/restrictions remain 43/13.
+Final parse-only comparison is byte-identical at the canonical SHA,
+`1.494`/`1.535` seconds median (`+2.7%`); full-search/memory overhead is
+unmeasured. These are local selected contexts, not full assembled acceptance.
+The fix is unpublished; the failed hosted run remains unsuperseded.
+Implementation/default activation and complete native FVP acceptance stay closed.
+
+2026-10-14 (representative performance follow-up): both real mutation runners
+pass under original limits: default/`CLASSIC_FALLBACK` verifies/falsifies in
+2/504 steps (`60.58`/`71.80` seconds), and default/`NO_PREFIX_GUARD` in
+4/526 steps (`65.22`/`70.57` seconds). A whole-model, strict derivation-check
+export benchmark then exposes `+46.3%` direct/guarded overhead:
+`24.178`/`35.385` seconds median across three alternating paired runs with
+identical bytes and unchanged `120`-second caps. The one-rule fixture has
+`+0.301` seconds fixed cost (`0.116`/`0.417`, `+259.5%`). These measure the
+whole guard, not just the incremental kind parser. Parse-only `+2.7%` was
+not representative of this path.
+
+The checked diagnostic profile retains the identical export and observes
+90,874 operations, 181,760 per-event report opens/writes/closes and `8.619`
+instrumented seconds in record handling. Report-I/O optimization or an
+explicit approved budget/rationale is still needed under Constitution P4;
+no waiver, relaxed deadline or performance acceptance is implied. Native
+sorted matching/FVP and full assembled replay also remain open.
+
+2026-10-15 (approved evidence-I/O optimization): the owner selected
+`optimize-evidence-io`, not a performance exception. The guard now retains
+every operation event through one validated append descriptor per process,
+with bounded 16 KiB batching plus at most one record. The journal flushes and
+closes before successful shutdown evidence. Other lifecycle/failure records
+remain immediate; partial writes, report-capacity failures and incomplete
+reconciliation still reject the entire command. Selector reuse and shared
+canonical parser/audit fast paths preserve the original validation paths.
+
+The final-source fast gate passes 117 model tests, 50 lifecycle tests,
+43 projections, six source correspondences and 67 audits (21 axiom-free).
+New CLI/native-stream regressions cover complete 512-operation evidence and
+controlled report-capacity failure. The optimized default recovery replays
+in 826 steps plus the nine-step helper (`106.77` seconds), and all 56 refined
+safety certificates verify with complete sources (`44.85` seconds).
+Default/`CLASSIC_FALLBACK` verifies/falsifies in 2/504 steps
+(`48.50`/`55.13` seconds); default/`NO_PREFIX_GUARD` in 4/526 steps
+(`49.82`/`56.79` seconds). These are reported proof-processing times,
+not paired benchmarks. All proof options, rules, restrictions and deadlines
+are unchanged.
+
+The representative final-source three-pair export benchmark measures
+`24.303`/`29.761` seconds direct/guarded median (`+22.5%`), with identical
+bytes at the same full-export SHA-256. This is approximately 16% faster than
+the initial whole guard, but still exceeds Constitution P4's 10% merge limit.
+An unsuccessful single-pass token experiment was removed. No performance
+budget exception, compiled/upstream rewrite, publication, merge or activation
+is approved. Native sorted matching/narrowing, complete AC-unification/FVP
+transfer and full assembled acceptance remain separate open gates.
+
+2026-10-15 (compiled proxy feasibility): the owner selected
+`prototype-compiled-proxy`, explicitly measuring before any default cutover.
+The [opt-in Rust prototype](../../../docs/spec/models/equations/native-proxy/README.md)
+has no third-party dependencies and shares the reviewed generated inventory.
+It retains iterative query/reply recognition, all sort/kind/namespace/index
+and whole-solution checks, complete journals, checked write/close failures and
+ready/pending interruption. Native process POSIX FFI is isolated from app/core
+code. The Python acceptance route and proof deadlines remain unchanged.
+
+Intended reduction and missing-unification reds are green. All 18 opt-in
+CLI/process/proof checks, strict Rust formatting/Clippy and the existing
+117-model/50-lifecycle/67-audit fast gate pass. Three alternating complete-export
+pairs on Apple-silicon macOS measure direct/prototype medians
+`24.281`/`25.931` seconds (`+6.80%`), with unchanged full-export SHA-256
+`aaaf873a9b7baff6fbf209f1cf87088581552498ade6f9a5e471ee2b5ea6fb5d`.
+This workload is below `10%`, but tiny derivation startup separately adds
+`39.93` ms (`0.118`/`0.158` seconds, `+33.76%`); no absolute allowance is
+approved. Default Python overhead remains `+22.5%` and performance-blocked.
+
+The experiment establishes local representative feasibility, not exhaustive
+parser equivalence, full-proof/memory performance, Linux/full-caller parity
+or global P4 acceptance. Maintained integration/default replacement needs
+separate approval and validation. No commit/push/hosted dispatch/merge,
+protocol/API/wire/primitive/constant-time change or implementation activation
+occurred. Native sorted matching/narrowing, complete AC-unification/FVP
+transfer and full assembled acceptance remain open.
+
+2026-10-15 (promotion and bounded startup budget): the owner selected
+`promote-with-50ms-startup-budget`. The startup-only three-pair median
+additional allowance is `50` ms; the representative full-export limit remains
+`10%`, and no proof deadlines or checks are relaxed. The rationale and exact
+workload/environment/method are recorded in
+[ADR 0010](../../../docs/adr/0010-compositional-lifecycle-verification.md#maintained-proxy-promotion-and-startup-only-budget-2026-10-15).
+Linux parity, all caller regressions and CI integration must pass before
+default cutover. Local Docker is unavailable and Colima is stopped; this host's
+documented memory/emulation limits do not establish native Linux proof parity.
+The owner subsequently selected `publish-promotion-checkpoints`, authorizing
+commits, pushes and PR-description updates limited to this promotion, necessary
+fixes and conditional cutover after the required criteria pass, using PR #9's
+existing native CI. No manual dispatch, merge or SDK/profile activation is
+authorized.
+
+Maintained staging is now implemented under `equations/native-proxy`, with
+generated source identity in every compiled version record and mandatory
+current-source reconciliation. Invalid/missing/stale candidates reject rather
+than silently building or falling back. All existing callers retain the shared
+runner; explicit candidate selection stages local/19-cell CI validation before
+default cutover. `scripts/check.sh` builds and statically checks the host tool;
+CI names its internal-tool coverage exclusion and adds both rejecting
+three-pair budget gates without new jobs or longer deadlines.
+The clean local candidate gate passes 18 native cases, 134 model tests,
+50 lifecycle tests, 43 projections and 67 equation audits. The missing-identity
+and unsupported budget-mode reds and real stale-executable rejection are
+retained, together with controlled source-input/inventory-output I/O reds.
+Final-source three-pair medians are `24.235925`/`25.894241` seconds for
+full export (`+6.8424%`) and `0.115764`/`0.162232` seconds for startup
+(`+46.467751` ms, `+40.1399%`), both passing the separately approved limits.
+The final build also passes original-cap recovery (826+9 steps), complete
+refined safety (56 certificates) and both mutation regressions (verified
+defaults, 504-/526-step attacks). All non-lemma declarations remain identical.
+These four selected local contexts are not native Linux/all 19 CI cells;
+that acceptance awaits the authorized current-source CI execution.
+Full-proof/memory overhead remains unmeasured.
+The Python default and independent native FVP/full-context obligations are
+unchanged.

@@ -2,8 +2,15 @@
 
 from pathlib import Path
 import json
+import re
 import tempfile
 import time
+
+
+OPERATION_RECORD = re.compile(
+    r'\{"event": "(begin|accepted)", "pid": ([1-9][0-9]{0,9}), '
+    r'"kind": "(reduce|variants|unify|match)"\}'
+)
 
 
 class GuardError(RuntimeError):
@@ -19,7 +26,7 @@ def unique_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
     return fields
 
 
-def boundary_complete(report: Path) -> bool:
+def boundary_complete(report: Path, *, source_id: str | None = None) -> bool:
     try:
         text = report.read_text()
     except (OSError, UnicodeError) as error:
@@ -30,6 +37,14 @@ def boundary_complete(report: Path) -> bool:
     versions: set[int] = set()
     installations: set[int] = set()
     for line in text.splitlines():
+        operation = OPERATION_RECORD.fullmatch(line)
+        if operation is not None:
+            name, identifier, kind = operation[1], int(operation[2]), operation[3]
+            previous = ("ready", None) if name == "begin" else ("pending", kind)
+            if states.get(identifier) != previous:
+                raise GuardError("inconsistent native boundary lifecycle")
+            states[identifier] = ("pending", kind) if name == "begin" else ("ready", None)
+            continue
         try:
             event = json.loads(line, object_pairs_hook=unique_fields)
         except (ValueError, RecursionError) as error:
@@ -40,7 +55,15 @@ def boundary_complete(report: Path) -> bool:
         if not isinstance(name, str):
             raise GuardError("malformed native boundary event")
         expected = {"event", "pid"}
-        if name in {"begin", "accepted"}:
+        if name == "version":
+            if source_id is not None or "source_id" in event:
+                expected.add("source_id")
+                identity = event.get("source_id")
+                if not isinstance(identity, str) or re.fullmatch(r"[0-9a-f]{64}", identity) is None:
+                    raise GuardError("missing or malformed native boundary source identity")
+                if source_id is not None and identity != source_id:
+                    raise GuardError("stale native boundary source identity; rebuild the maintained guard")
+        elif name in {"begin", "accepted"}:
             expected.add("kind")
             if not isinstance(event.get("kind"), str) or event["kind"] not in {
                 "reduce", "variants", "unify", "match",
@@ -75,14 +98,17 @@ def boundary_complete(report: Path) -> bool:
     return all(state == ("shutdown", None) for state in states.values())
 
 
-def run_guarded_tamarin(command: list[str], timeout: int) -> str:
+def run_guarded_tamarin(
+    command: list[str], timeout: int, *, candidate: Path | None = None,
+) -> str:
+    from .maude_candidate import select_proxy
     from replay import ReplayError, run
 
     if not command or Path(command[0]).name != "tamarin-prover" or any(
         argument.startswith("--with-maude") for argument in command[1:]
     ):
         raise GuardError("unsupported guarded Tamarin invocation")
-    proxy = Path(__file__).with_name("maude_boundary.py").resolve()
+    proxy, source_id = select_proxy(candidate)
     with tempfile.TemporaryDirectory(prefix="cairn-maude-boundary-") as temporary:
         report = Path(temporary) / "events.jsonl"
         try:
@@ -93,7 +119,7 @@ def run_guarded_tamarin(command: list[str], timeout: int) -> str:
         except (OSError, ReplayError) as error:
             raise GuardError(str(error)) from error
         deadline = time.monotonic() + 5
-        while not boundary_complete(report):
+        while not boundary_complete(report, source_id=source_id):
             if time.monotonic() >= deadline:
                 raise GuardError("native boundary shutdown incomplete")
             time.sleep(0.01)

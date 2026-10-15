@@ -7,6 +7,7 @@ import tempfile
 import unittest
 
 from equations.signature import EQUATIONS, lean_correspondence, reviewed_signature
+from equations.maude_candidate import source_identity, source_inputs
 from replay import ReplayError
 
 
@@ -64,6 +65,12 @@ REPORT_GROUPS = {
         "native_natural_substitution", "native_message_substitution",
         "native_natural_substitution_image", "native_message_substitution_image",
         "native_ac_substitution", "native_rewrite_substitution",
+    ),
+    "framing": (
+        "native_framed_ac", "native_framed_rewrite", "native_framed_substitution",
+    ),
+    "relabeling": (
+        "native_ac_relabeling", "native_rewrite_relabeling", "native_modulo_ac_relabeling",
     ),
 }
 
@@ -211,10 +218,14 @@ class EquationCommandTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory(prefix="cairn-equation-command-")
         self.addCleanup(temporary.cleanup)
-        self.distribution = Path(temporary.name)
+        self.distribution = Path(temporary.name) / "docs/spec/models"
         source = Path(__file__).resolve().parent
         for path in source.rglob("*.py"):
             target = self.distribution / path.relative_to(source)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, target)
+        for path in source_inputs():
+            target = Path(temporary.name) / path.relative_to(source.parents[2])
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, target)
         self.command = [sys.executable, str(self.distribution / "equations/termination.py")]
@@ -267,7 +278,8 @@ class EquationCommandTests(unittest.TestCase):
             f"#!{sys.executable}\nimport os, sys\nfrom pathlib import Path\n"
             "report = os.environ.get('CAIRN_MAUDE_GUARD_REPORT')\n"
             "if report:\n"
-            "    Path(report).write_text('{\"event\":\"version\",\"pid\":1337}\\n')\n"
+            "    Path(report).write_text("
+            f"'{{\"event\":\"version\",\"pid\":1337,\"source_id\":\"{source_identity()}\"}}\\n')\n"
             f"print({version!r} if '--version' in sys.argv else {SOURCE!r})\n",
         )
         exporter.chmod(0o700)
@@ -358,6 +370,22 @@ class EquationCommandTests(unittest.TestCase):
         self.assertIn("missing Lean theorem axiom reports:", result.stderr)
         self.assertIn("native_framed_ac", result.stderr)
         self.assertNotIn("PASS:", result.stdout)
+
+    def test_kind_abstraction_axiom_reports_are_required_before_success(self):
+        for additional, missing in (
+            ((), "native_ac_relabeling"),
+            (("relabeling",), "native_kind_round_trip"),
+        ):
+            with self.subTest(additional=additional):
+                result = self.run_with_axiom_reports(
+                    "termination", "coherence", "boundedness", "confluence", "convergence",
+                    "query-image", "native-algebra", "substitution", "framing", *additional,
+                )
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+                self.assertIn(missing, result.stderr)
+                self.assertNotIn("PASS:", result.stdout)
 
 
 if __name__ == "__main__":

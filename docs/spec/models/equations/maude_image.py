@@ -12,10 +12,20 @@ class BoundaryError(ReplayError):
 
 
 SORTS = frozenset({"Pub", "Fresh", "Msg", "TamNat", "Node", "TOP"})
+VARIABLE_SORTS = SORTS - {"TOP"}
 MESSAGE_SORTS = frozenset({"Pub", "Fresh", "Msg", "TamNat"})
+KIND_IMAGES = frozenset({"KindNatural", "KindMessage", "KindFraming"})
+MESSAGE_IMAGES = MESSAGE_SORTS | {"KindNatural", "KindMessage"}
+FRAMING_IMAGES = SORTS | KIND_IMAGES
 ATOM_SORTS = {"p": "Pub", "f": "Fresh", "c": "Msg", "t": "TamNat", "n": "Node"}
 TOKEN = re.compile(r"\s+|[x#%][0-9]+:[A-Za-z][A-Za-z0-9]*|[A-Za-z][A-Za-z0-9]*|[0-9]+|[(),]")
 DECIMAL = re.compile(r"(?:0|[1-9][0-9]*)")
+VARIABLE = re.compile(r"[x#%][0-9]+:[A-Za-z][A-Za-z0-9]*")
+CLOSED_ATOM = re.compile(r"([pfctn])\((0|[1-9][0-9]*)\)")
+NULLARY_SORTS = {
+    "nil": "TOP", "tamXCtone": "TamNat",
+    **{f"tamXC{name}": "Msg" for name in FUNCTIONS if FUNCTIONS[name][0] == 0},
+}
 
 
 @dataclass(frozen=True)
@@ -31,10 +41,29 @@ class QueryImage:
     terms: tuple[TermImage, ...]
 
 
+def variable_sort(token: str, *, query: bool) -> str:
+    identifier, sort = token.split(":")
+    if sort not in VARIABLE_SORTS or not DECIMAL.fullmatch(identifier[1:]):
+        raise BoundaryError("native variable: unsupported sort or index")
+    if query and identifier[0] != "x":
+        raise BoundaryError("native query: unexpected fresh-variable namespace")
+    return sort
+
+
 def parse_native_term(text: str, *, query: bool = False) -> TermImage:
     """Recognize the free framing image without a recursion-depth ceiling."""
     if not text.isascii():
         raise BoundaryError("native term: non-ASCII syntax")
+    text = text.strip()
+    if not text:
+        raise BoundaryError("native term: malformed syntax")
+    if text[0] in "x#%" and VARIABLE.fullmatch(text):
+        return TermImage(variable_sort(text, query=query), frozenset({text}), frozenset())
+    atom = CLOSED_ATOM.fullmatch(text) if text[0] in "pfctn" else None
+    if atom is not None:
+        return TermImage(ATOM_SORTS[atom[1]], frozenset(), frozenset({(atom[1], atom[2])}))
+    if text in NULLARY_SORTS:
+        return TermImage(NULLARY_SORTS[text], frozenset(), frozenset())
     tokens = []
     end = 0
     for match in TOKEN.finditer(text):
@@ -65,22 +94,22 @@ def parse_native_term(text: str, *, query: bool = False) -> TermImage:
         if name == "nil" and not arguments:
             return "TOP", None
         if name in {"list", "cons"} and len(arguments) == {"list": 1, "cons": 2}[name]:
-            if not all(sort in SORTS for sort in sorts):
+            if not all(sort in FRAMING_IMAGES for sort in sorts):
                 raise BoundaryError("native framing: invalid child sort")
-            return "TOP", None
+            return ("KindFraming" if any(sort in KIND_IMAGES for sort in sorts) else "TOP"), None
         if name == "tamXCtone" and not arguments:
             return "TamNat", None
         if name == "tamtplus" and len(arguments) >= 2:
-            if any(sort != "TamNat" for sort in sorts):
+            if any(sort not in {"TamNat", "Fresh", "KindNatural"} for sort in sorts):
                 raise BoundaryError("native natural sum: non-natural operand")
-            return "TamNat", None
+            return ("TamNat" if all(sort == "TamNat" for sort in sorts) else "KindNatural"), None
         if name.startswith("tamXC") and name[5:] in FUNCTIONS:
             arity = FUNCTIONS[name[5:]][0]
             if len(arguments) != arity:
                 raise BoundaryError("native message function: wrong arity")
-            if any(sort not in MESSAGE_SORTS for sort in sorts):
+            if any(sort not in MESSAGE_IMAGES for sort in sorts):
                 raise BoundaryError("native message function: invalid operand sort")
-            return "Msg", None
+            return ("KindMessage" if any(sort in KIND_IMAGES for sort in sorts) else "Msg"), None
         raise BoundaryError("native term: unreviewed constructor or arity")
 
     while True:
@@ -90,11 +119,7 @@ def parse_native_term(text: str, *, query: bool = False) -> TermImage:
             token = tokens[position]
             position += 1
             if ":" in token:
-                identifier, sort = token.split(":")
-                if sort not in SORTS - {"TOP"} or not DECIMAL.fullmatch(identifier[1:]):
-                    raise BoundaryError("native variable: unsupported sort or index")
-                if query and identifier[0] != "x":
-                    raise BoundaryError("native query: unexpected fresh-variable namespace")
+                sort = variable_sort(token, query=query)
                 variables.add(token)
                 result = sort, None
             elif DECIMAL.fullmatch(token):
@@ -111,7 +136,7 @@ def parse_native_term(text: str, *, query: bool = False) -> TermImage:
         if result is None:
             raise BoundaryError("native term: missing result")
         if not frames:
-            if position != len(tokens) or result[0] not in SORTS:
+            if position != len(tokens) or result[0] not in FRAMING_IMAGES:
                 raise BoundaryError("native term: trailing syntax or unsupported root sort")
             return TermImage(result[0], frozenset(variables), frozenset(atoms))
         name, arguments = frames[-1]
@@ -159,6 +184,10 @@ def validate_query(command: str) -> QueryImage:
 def sort_below(actual: str, expected: str) -> bool:
     return actual == expected or expected == "TOP" and actual in SORTS or (
         expected == "Msg" and actual in MESSAGE_SORTS
+    ) or (
+        expected in {"KindNatural", "KindMessage"} and actual in MESSAGE_IMAGES
+    ) or (
+        expected == "KindFraming" and actual in FRAMING_IMAGES
     )
 
 

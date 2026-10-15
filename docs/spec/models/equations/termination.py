@@ -92,6 +92,16 @@ QUERY_FRAMING_THEOREMS = (
     "native_framed_rewrite",
     "native_framed_substitution",
 )
+QUERY_RELABELING_THEOREMS = (
+    "native_ac_relabeling", "native_rewrite_relabeling", "native_modulo_ac_relabeling",
+)
+QUERY_KIND_THEOREMS = (
+    "native_kind_round_trip", "native_kind_abstraction_injective",
+    "native_kind_substitution", "native_kind_framed_substitution",
+    "native_kind_ac_reflection", "native_kind_rewrite_reflection",
+    "native_kind_modulo_ac_reflection", "native_kind_framed_ac", "native_kind_framed_rewrite",
+    "native_kind_modulo_ac_decode", "native_kind_termination",
+)
 
 
 def main() -> int:
@@ -132,6 +142,8 @@ def main() -> int:
                 ("QueryMatching", QUERY_MATCHING_THEOREMS),
                 ("QuerySubstitution", QUERY_SUBSTITUTION_THEOREMS),
                 ("QueryFraming", QUERY_FRAMING_THEOREMS),
+                ("QueryRelabeling", QUERY_RELABELING_THEOREMS),
+                ("QueryKind", QUERY_KIND_THEOREMS),
             ):
                 output = run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -144,6 +156,7 @@ def main() -> int:
             for module in (
                 "CoherenceCases", "BoundednessCases", "ConfluenceCases", "QueryImageCases",
                 "QueryACCases", "QueryRewriteCases", "QuerySubstitutionCases", "QueryFramingCases",
+                "QueryKindCases",
             ):
                 run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -164,6 +177,7 @@ def main() -> int:
         print("PASS: encoded quotient steps are realizable by typed matching modulo AC.")
         print("PASS: typed natural/message substitutions commute with encoding and preserve its image.")
         print("PASS: free tuple/Node framing is closed under structural AC, rewriting and typed substitution.")
+        print("PASS: fresh/natural kind abstraction is injective and transports AC/rewrite image evidence.")
         print("Scope: typed image algebra + enforced native stream membership; not a native FVP certificate.")
         print("Trust boundary: Tamarin/Maude + Python boundary/signature/translation + Lean kernel.")
         return 0

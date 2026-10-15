@@ -2,7 +2,7 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation; SDK/application=not implemented.
 
-## Current typed equation convergence/image evidence (2026-10-14)
+## Current typed equation convergence/image evidence (2026-10-15)
 
 The [equation checker](docs/spec/models/equations/README.md) kernel-checks
 B-coherence, global matching confluence, quotient-path confluence modulo AC
@@ -16,27 +16,85 @@ are realizable by typed matching modulo AC. Sort-separated natural/message
 substitutions commute with encoding and preserve image membership while rigid
 indices stay frozen. Free tuple/Node framing is closed under AC, rewriting and
 typed substitution, including node assignments; framing remains excluded from
-message functions. All 53 theorem audits and the kernel
+message functions. All 67 theorem audits and the kernel
 regression cases run in the existing lifecycle cell, without a new job or
-larger ceiling. Eighteen audits use no axioms; none uses `sorryAx`.
-This addition is locally verified and unpublished at authoring.
+larger ceiling. Twenty-one audits use no axioms; none uses `sorryAx`.
 
 The owner-approved proof-only Maude boundary now checks the pinned native
 module and every executed query/complete reply, with fail-closed lifecycle
 evidence required by ratchet export, projection, equation, precompute, replay,
 mutation and attack callers. Returned sort/index provenance and importer
 variable-namespace restrictions are checked; no solutions are filtered.
-Real native operations and guarded Tamarin parsing pass. Parse-only comparison
-retains the identical canonical export and measured `+3.5%` median overhead.
+Real native operations and guarded Tamarin parsing pass. The initial complete
+ratchet export measured `+46.3%` overhead, unlike the unrepresentative `+2.7%`
+parse-only result. Owner-approved bounded operation-journal batching,
+selector reuse and conservative parser/audit fast paths reduce final-source
+medians to `24.303`/`29.761` seconds direct/guarded (`+22.5%`), with identical
+exports and unchanged deadlines. Every operation record is retained; the
+journal closes before successful shutdown evidence. This is approximately
+16% faster than the initial whole guard, but still blocks merge under
+Constitution P4. No representative-workload exception is approved.
 Python recognition, tool implementations and injective variable renaming/
 importer correspondence are not kernel-verified.
+
+The owner then selected a bounded
+[compiled proxy prototype](docs/spec/models/equations/native-proxy/README.md),
+not a default cutover. Its standalone, dependency-free Rust host tool preserves
+the stream/evidence checks and shares the reviewed generated inventory.
+Eighteen opt-in CLI/process/proof checks pass. Three paired full-export runs
+measure `24.281`/`25.931` seconds direct/prototype (`+6.80%`), with identical
+bytes. A separate tiny derivation fixture adds `39.93` ms (`+33.76%`).
+The owner subsequently approved maintained promotion with a startup-only
+`50` ms additive allowance, retaining the full-export `10%` limit.
+Linux parity, caller regressions and CI integration must precede default
+cutover. The default remains Python at `+22.5%`.
+The maintained candidate now embeds a source identity, rejects missing/stale
+build evidence and uses the shared guarded runner. An explicit
+`CAIRN_MAUDE_GUARD_CANDIDATE` selects it for existing callers; invalid selection
+does not fall back to Python. The local/19-cell CI gates are wired without
+new jobs or larger deadlines. The clean local candidate fast gate passes
+18 native checks, 134 model tests, 50 lifecycle tests, 43 projections and 67 audits.
+Startup/full-export budgets have reproducible rejecting CLI gates.
+Final-source three-pair medians are `24.235925`/`25.894241` seconds for the
+full export (`+6.8424%`) and `0.115764`/`0.162232` seconds for startup
+(`+46.467751` ms, `+40.1399%`), passing the separate approved limits.
+The final compiled build passes the default recovery, all 56 refined safety
+certificates and both actual mutation regressions at their original caps.
+Native Linux/all 19 CI cells remain unverified. The owner authorized promotion
+commits/pushes and PR-description updates in PR #9 for existing native CI,
+including necessary fixes and conditional cutover after the required criteria
+pass; merge and SDK/profile activation remain unapproved. Full-proof/memory overhead
+remains unmeasured, and the default has not changed.
+Native FVP and full assembled acceptance are unchanged.
+
+The 53-audit boundary checkpoint was published at `3d5dd7c`.
+Its [formal run](https://github.com/trancee/cairn/actions/runs/38622779805)
+passed the lifecycle cell but failed all 18 replay/mutation cells: Tamarin's
+derivation checker changes natural variables to Fresh inside natural sums.
+The owner selected `extend-derivation-kind-image`. A disjoint Fresh/natural
+shadow encoding now proves injectivity, raw AC/rewrite transfer, image closure
+and decoded-kind termination. Substitution commutation is unconditional;
+framed closure still has an explicit typed-shadow compatibility premise.
+The guard admits these controlled kind queries, not arbitrary sum operands,
+kind variables or kind-valued returned bindings/results. Raw rules omit
+native message-sort guards, so these kind results do not transfer native
+confluence, normalization-path existence or narrowing/FVP completeness.
+
+At the preceding local extension checkpoint, the fresh fast gate passed
+117 model tests, 50 lifecycle tests, 43 projections and all 67 equation audits.
+The guarded default recovery witness and 56 refined safety certificates replay
+successfully with unchanged 43 rules/13 restrictions and deadlines.
+Both actual mutation regressions also preserve their verified defaults and
+expected 504-/526-step counterexamples.
+Selected contexts do not establish full assembled acceptance; the published
+head's failed formal run has not been superseded by hosted validation.
 
 The earlier termination-only checkpoint passed final-source formal/Rust/
 four-language CodeQL acceptance in PR #9 at `70c1c19`. Native bookkeeping
 hypotheses, universal query-builder/importer correspondence, narrowing/
 unification closure, sorted AC-unification/FVP acceptance and full assembled replay remain
-open. The owner selected the actual typed protocol-query image as the
-correspondence target, not the entire arithmetic/error-kind carrier.
+open. The owner selected the actual protocol-query image, extended to required
+derivation-kind terms, not the entire arithmetic/error-kind carrier.
 No merge, profile activation or SDK/ratchet
 implementation approval is implied. Earlier sections below are snapshots.
 

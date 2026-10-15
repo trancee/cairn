@@ -58,6 +58,200 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Maintained-proxy promotion and startup-only budget (2026-10-15)
+
+The owner selected `promote-with-50ms-startup-budget`. Prepare maintained
+compiled proof tooling, but require Linux parity, all caller regressions and CI
+integration before default cutover. That selection did not authorize publication.
+The owner subsequently selected `publish-promotion-checkpoints`, authorizing
+commits, pushes and PR-description updates limited to this promotion, necessary
+fixes and conditional default cutover after the required criteria pass.
+Use PR #9's existing native CI; no manual dispatch, merge, SDK work or profile
+activation is authorized.
+
+The approved budget is narrowly workload-specific:
+
+| Workload | Environment and method | Threshold |
+|---|---|---|
+| Complete strict `ratchet.spthy` MSR export | Apple-silicon macOS `27.0.1`, 8 GiB, pinned Rust `1.99.0`/Tamarin `1.12.0`/Maude `3.5.1`; three alternating direct/guarded pairs, identical bytes and complete evidence | Guarded median at most `10%` above direct median |
+| One-rule paired-counter [`derivation.spthy`](../spec/models/equations/native-proxy/derivation.spthy) export | Same environment, toolchain and three-pair method | Guarded median at most `50` ms above direct median |
+
+The rationale is the measured `39.93` ms fixed cost on a `118.29` ms fixture,
+while representative overhead is `6.80%`. Only the tiny startup workload gets
+an additive allowance; it is not a blanket relative waiver or larger proof
+deadline. The default Python path still fails its representative budget.
+The maintained [CLI reference](../spec/models/equations/native-proxy/README.md)
+records reproducible measurement and rejecting report/budget gates.
+The same limits apply per recorded native-host environment in CI; do not mix
+hosts or reuse an earlier binary's performance as current-source acceptance.
+Other platforms and full-proof/memory performance still require their own
+evidence; the local result is not native Linux or hosted acceptance.
+
+The candidate is now a standalone `cairn-maude-proxy` Cargo package under
+`equations/native-proxy`, outside the SDK workspace. Build once per gate/cell.
+Embed a deterministic source ID from reviewed Rust/build/generator/shared
+inventory/reconciler inputs and the root Rust pin; include it in each
+`version` record and require a current match before accepting native evidence.
+Missing/stale binaries or journals fail closed with rebuild guidance, without
+extra per-proof version subprocesses or a Python fallback.
+
+Use one temporary explicit `CAIRN_MAUDE_GUARD_CANDIDATE` route through the
+existing shared runner for local and existing 19-cell CI caller validation.
+The benchmark's explicit candidate also uses that runner. This stages Linux
+acceptance before default cutover without duplicating CI jobs. After verified
+Linux/caller/performance acceptance, change the central default and remove the
+temporary selector and obsolete Python implementation/tests.
+
+Alternatives were leaving an unmaintained prototype, accepting stale binaries,
+adding per-operation builds or doing an unverified immediate cutover.
+Those do not satisfy the approved freshness/performance/rollout constraints.
+The source hash is not signed build attestation; native parsing/FFI and the
+Python/tool/measurement boundary remain trusted. CI explicitly names this
+internal host tool's SDK-coverage exclusion and runs its static, adversarial
+CLI/native-stream/process and performance checks instead.
+
+The clean local candidate gate passes 18 native cases, 134 model tests,
+50 lifecycle tests, 43 projections and 67 equation audits. Missing-identity and
+budget-mode reds precede implementation; a real stale compiled executable
+also rejects after source changes. Source-read/encoding and generator-output
+I/O errors have intended reds and controlled failure regressions.
+
+Final-source three-pair direct/guarded medians are `24.235925`/`25.894241`
+seconds for the complete export (`+6.8424%`) and `0.115764`/`0.162232`
+seconds for the exact startup fixture (`+46.467751` ms, `+40.1399%`).
+Both approved gates pass, with unchanged export bytes and saved reports
+independently rechecked by the CLI. The reference retains source/binary
+identities and environment. Final-build default recovery, all 56 refined
+safety certificates and both native mutation regressions pass at the
+original `180`-second caps, preserving 43 rules/13 restrictions.
+These four selected local regressions are not native Linux/all 19 CI cells;
+that acceptance awaits the authorized current-source CI execution.
+Full-proof/memory overhead remains unmeasured. No default switch or merge
+has occurred.
+
+### Compiled proof-proxy feasibility prototype (2026-10-15)
+
+After I/O optimization left `+22.5%` representative overhead, the owner selected
+`prototype-compiled-proxy`: a bounded local experiment retaining every validation
+and evidence check, with measurement before any cutover. Continuing speculative
+Python changes or accepting a budget exception were alternatives; neither was
+selected. No publication, merge or default activation approval is implied.
+
+The [standalone Rust prototype](../spec/models/equations/native-proxy/README.md)
+has no third-party dependencies and does not join the application workspace.
+Cargo generates its module/function inventory from the existing reviewed Python
+inventory. Extracting that inventory builder leaves the default Python module
+checker's contract unchanged. The existing independent native-stream fixture
+also accepts the explicit prototype executable for opt-in tests.
+
+Retain full iterative term recognition, sort/kind/namespace/index checks, all
+solutions, buffered whole-reply forwarding, per-process version/module/shutdown
+evidence and complete operation journals. Checked close/write failures and
+ready-versus-pending interruption remain fail closed. Host-only POSIX FFI is
+isolated in `unix.rs`; no crypto/core unsafe-code rule or shipped dependency
+changes. This port is not kernel-verified or exhaustively equivalent to Python.
+Native Linux execution and all compiled acceptance callers remain unverified.
+
+Reduction and missing-unification behavior reds precede their implementations.
+All 18 opt-in CLI/process/proof cases, strict Clippy/format checks and the
+117-model/50-lifecycle/67-audit default fast gate pass. Three alternating
+complete-export pairs on macOS measure `24.281`/`25.931` seconds (`+6.80%`),
+with identical bytes. The one-rule fixture separately adds `39.93` ms
+(`0.118`/`0.158` seconds, `+33.76%`), still exceeding the relative limit.
+No exception had been approved at that checkpoint; the subsequent narrow
+startup budget is recorded above. Passing the representative workload alone
+is not a full-proof/memory measurement.
+
+At that checkpoint the prototype was outside default acceptance/CI selection.
+The later approved maintained staging above supersedes that status, not the
+Linux/caller criteria. The default proof route remains Python at `+22.5%`,
+still blocked. Native sorted
+matching/narrowing, complete AC-unification/FVP transfer and full-context proof
+acceptance remain independent open gates. No protocol/API/wire/primitive or
+constant-time claim changes.
+
+### Checked evidence I/O optimization (2026-10-15)
+
+The owner selected `optimize-evidence-io` after the actual complete ratchet
+export exposed `+46.3%` overhead; the initial parse-only `+2.7%` figure
+was not representative. No performance budget exception was approved.
+Profiling identified 181,760 per-event report opens/writes/closes across
+90,874 operations, with `8.619` instrumented seconds in report handling.
+
+Keep every event and the existing record schema. Batch only operation
+`begin`/`accepted` records through one validated regular-file descriptor per
+process, flushing at 16 KiB plus at most one record. Flush and close before
+writing successful shutdown evidence. Keep immediate lifecycle/failure
+records, no-follow/nonblocking file validation, complete-write checks and
+mandatory final reconciliation. Missing/partial records and report-capacity
+failure still reject the whole proof command. The buffer does not impose
+a query, reply or proof-search cap.
+
+Reuse the selector and share checks between canonical-leaf and full term
+recognition. Accept canonical operation JSON through an exact checked
+grammar; keep the complete field/type/duplicate audit for other JSON.
+Bulk 512-operation and real report-capacity tests exercise the existing
+CLI/native-stream seams. All 117 model tests, 50 lifecycle tests and 67
+equation audits pass. The shared native fixture remains above the 300-line
+recommendation, below 500, for its existing independent module/stream seam.
+
+Final-source three-pair medians are `24.303`/`29.761` seconds direct/guarded
+(`+22.5%`), with unchanged full export and deadlines. This improves the initial
+guard's elapsed time by approximately 16%, but still fails Constitution P4.
+A single-pass token experiment did not materially improve performance and
+was removed. That optimization decision did not authorize compiled/upstream
+rewrites, performance waivers, publication, merge or activation; the separately
+approved prototype above does not authorize a default replacement.
+The initial measurements below remain historical evidence.
+
+### Required derivation-kind image (2026-10-14)
+
+Hosted formal run `38622779805` at published `3d5dd7c` passed the lifecycle
+cell but failed all 18 replay/mutation cells on a query containing
+`tamtplus(x0:Fresh,tamXCtone)`. The exact valid one-rule input reproduced the
+failure locally. Pinned `MessageDerivationChecks.hs` calls `natToFreshVars`
+inside premise constructors, so the proper-sort query image was too narrow.
+The owner explicitly selected `extend-derivation-kind-image`, rather than a
+Tamarin patch or keeping the blocker. Skipping derivation checks is not an
+alternative.
+
+Extend only the required grammar: Fresh/natural leaves in natural sums and
+their existing enclosing message/free framing contexts. Keep native proper
+sorts on returned bindings/results and reject kind variables, `[TOP]` result
+headers, arithmetic and arbitrary message/public/function/list sum operands.
+Preserve exact equations, attacker, claims, strict warnings, proof options
+and deadlines. No solution filtering, backend patch or success fallback.
+
+Use proof-only disjoint even/odd natural shadows for original natural/Fresh
+leaves, preserving variables versus rigid atoms. Prove structural inverse/
+injectivity, raw AC/rewrite preservation/reflection, image closure, substitution
+commutation and termination on decoded kind messages. Framed substitution
+closure retains an explicit compatible typed-shadow premise. Three generic
+relabeling and eleven kind audits bring the mandatory total to 67; 21 are
+axiom-free. The collision kernel red and old 53-audit CLI red are green, as is
+the actual one-rule derivation regression.
+
+Raw rewrite rules omit native proper-message guards. A projection can erase
+an ill-kind discarded component in the shadow/raw algebra even when actual
+Maude cannot match it. These proofs do not transfer native confluence,
+normalizing-path existence, sorted narrowing/unification completeness or FVP.
+The [explanation](../spec/models/ratchet-equation-evidence.md#what-the-new-kind-abstraction-does-not-transfer)
+records the concrete counterexample and remaining hypotheses.
+
+The default recovery and all 56 refined safety certificates replay locally;
+the latter has complete refined sources. These are selected contexts, not
+full assembled acceptance. The extension remains unpublished and hosted
+acceptance unverified. Final parse-only median overhead is `+2.7%` with
+identical exports, but complete ratchet export overhead is `+46.3%`
+(`24.178`/`35.385` seconds direct/guarded median), blocking merge under
+Constitution P4. Profiling identifies per-operation report open/write/close
+cost; no optimization or budget exception is accepted. Both mutation
+regressions also pass with their expected attacks. Full-search/memory overhead
+remains unmeasured. Passing existing deadlines is not a performance waiver.
+The earlier pure proper-sort contract below is superseded only for the
+controlled derivation-kind grammar. No protocol/API/wire/primitive,
+constant-time, dependency, CI-job, budget, merge or activation change.
+
 ### Guarded native command/reply boundary (2026-10-14)
 
 The owner explicitly selected `guarded-maude-boundary` and approved stream

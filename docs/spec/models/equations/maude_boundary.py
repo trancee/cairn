@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """Fail-closed persistent Maude proxy for Cairn's ratchet proof tools."""
 
-import json
+from contextlib import closing
 import os
 from pathlib import Path
 import selectors
 import shutil
 import signal
-import stat
 import subprocess
 import sys
 
@@ -15,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from equations.maude_image import BoundaryError, validate_query, validate_reply
 from equations.maude_module import validate_module
+from equations.maude_evidence import OperationJournal, record
 
 
 PROMPT = b"Maude> "
@@ -22,44 +22,26 @@ FLAGS = {"-interactive", "-no-tecla", "-no-banner", "-no-wrap", "-batch"}
 SETUP = {"set show command off .", "set show timing off .", "set show stats off ."}
 
 
-def record(event: str, **fields: str) -> None:
-    destination = os.environ.get("CAIRN_MAUDE_GUARD_REPORT")
-    if destination:
-        if not Path(destination).is_absolute():
-            raise BoundaryError("native evidence report: expected absolute path")
-        descriptor = os.open(
-            destination, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600,
-        )
-        try:
-            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
-                raise BoundaryError("native evidence report: expected regular file")
-            encoded = (json.dumps({"event": event, "pid": os.getpid(), **fields}) + "\n").encode("ascii")
-            if os.write(descriptor, encoded) != len(encoded):
-                raise BoundaryError("native evidence report: incomplete write")
-        finally:
-            os.close(descriptor)
-
-
-def read_reply(process: subprocess.Popen[bytes]) -> bytes:
+def read_reply(process: subprocess.Popen[bytes], selector: selectors.BaseSelector) -> bytes:
     if process.stdout is None or process.stderr is None:
         raise BoundaryError("native process: missing output pipe")
     output = bytearray()
-    with selectors.DefaultSelector() as selector:
+    if not selector.get_map():
         selector.register(process.stdout, selectors.EVENT_READ, "output")
         selector.register(process.stderr, selectors.EVENT_READ, "errors")
-        while True:
-            for key, _ in sorted(selector.select(), key=lambda event: event[0].data != "errors"):
-                chunk = os.read(key.fd, 8096)
-                if not chunk:
-                    if key.data == "output":
-                        raise BoundaryError("native process: premature EOF")
-                    selector.unregister(key.fileobj)
-                    continue
-                if key.data == "errors":
-                    raise BoundaryError("native process: stderr diagnostic")
-                output.extend(chunk)
-                if output.endswith(PROMPT):
-                    return bytes(output[:-len(PROMPT)])
+    while True:
+        for key, _ in sorted(selector.select(), key=lambda event: event[0].data != "errors"):
+            chunk = os.read(key.fd, 8096)
+            if not chunk:
+                if key.data == "output":
+                    raise BoundaryError("native process: premature EOF")
+                selector.unregister(key.fileobj)
+                continue
+            if key.data == "errors":
+                raise BoundaryError("native process: stderr diagnostic")
+            output.extend(chunk)
+            if output.endswith(PROMPT):
+                return bytes(output[:-len(PROMPT)])
 
 
 def forward(reply: bytes) -> None:
@@ -97,8 +79,23 @@ def validate_shutdown(result: tuple[int, bytes, bytes]) -> None:
         raise BoundaryError("native shutdown: unexpected exit or diagnostic")
 
 
-def main() -> int:
+def reject(error: Exception) -> int:
+    reason = str(error) if isinstance(error, BoundaryError) else "native process: I/O or version failure"
+    try:
+        record("failure", reason=reason)
+    except (OSError, BoundaryError):
+        reason = "native evidence report: I/O failure"
+    print(f"FAIL: {reason}", file=sys.stderr, flush=True)
+    try:
+        forward(b"FAIL: Cairn Maude boundary rejected this operation.\n")
+    except BrokenPipeError:
+        print("FAIL: native consumer closed its input", file=sys.stderr, flush=True)
+    return 1
+
+
+def run_boundary(journal: OperationJournal) -> int:
     process: subprocess.Popen[bytes] | None = None
+    selector = selectors.DefaultSelector()
     pending = False
     ready = False
     signal.signal(signal.SIGTERM, interrupted)
@@ -134,7 +131,7 @@ def main() -> int:
         if process.stdin is None:
             raise BoundaryError("native process: missing input pipe")
         record("start")
-        greeting = read_reply(process)
+        greeting = read_reply(process, selector)
         if greeting.strip():
             raise BoundaryError("native process: unexpected greeting")
         forward(greeting)
@@ -152,7 +149,7 @@ def main() -> int:
                 validate_module(b"".join(module).decode("ascii"))
                 process.stdin.write(b"".join(module))
                 process.stdin.flush()
-                reply = read_reply(process)
+                reply = read_reply(process, selector)
                 if reply.strip():
                     raise BoundaryError("native module: unexpected reply")
                 module.clear()
@@ -166,7 +163,7 @@ def main() -> int:
                 setup.add(command)
                 process.stdin.write(line)
                 process.stdin.flush()
-                reply = read_reply(process)
+                reply = read_reply(process, selector)
                 if reply.strip():
                     raise BoundaryError("native setup: unexpected reply")
                 forward(reply)
@@ -177,16 +174,16 @@ def main() -> int:
             if not ready:
                 raise BoundaryError("native command: missing reviewed module")
             query = validate_query(command)
-            record("begin", kind=query.kind)
+            journal.record("begin", kind=query.kind)
             pending = True
             process.stdin.write(line)
             process.stdin.flush()
-            reply = read_reply(process)
+            reply = read_reply(process, selector)
             try:
                 validate_reply(query, reply.decode("ascii"))
             except UnicodeDecodeError as error:
                 raise BoundaryError("native reply: non-ASCII syntax") from error
-            record("accepted", kind=query.kind)
+            journal.record("accepted", kind=query.kind)
             pending = False
             forward(reply)
         if module:
@@ -196,6 +193,8 @@ def main() -> int:
         shutdown = stop_native(process)
         process = None
         validate_shutdown(shutdown)
+        selector.close()
+        journal.close()
         record("shutdown")
         return 0
     except InterruptedError:
@@ -211,23 +210,26 @@ def main() -> int:
                 record("failure", reason="native shutdown failed")
                 print("FAIL: native shutdown failed", file=sys.stderr, flush=True)
                 return 1
+        selector.close()
+        journal.close()
         record("shutdown")
         return 0
     except (OSError, BoundaryError, subprocess.TimeoutExpired) as error:
-        reason = str(error) if isinstance(error, BoundaryError) else "native process: I/O or version failure"
-        try:
-            record("failure", reason=reason)
-        except (OSError, BoundaryError):
-            reason = "native evidence report: I/O failure"
-        print(f"FAIL: {reason}", file=sys.stderr, flush=True)
-        try:
-            forward(b"FAIL: Cairn Maude boundary rejected this operation.\n")
-        except BrokenPipeError:
-            print("FAIL: native consumer closed its input", file=sys.stderr, flush=True)
-        return 1
+        return reject(error)
     finally:
-        if process is not None:
-            stop_native(process)
+        try:
+            if process is not None:
+                stop_native(process)
+        finally:
+            selector.close()
+
+
+def main() -> int:
+    try:
+        with closing(OperationJournal()) as journal:
+            return run_boundary(journal)
+    except (OSError, BoundaryError) as error:
+        return reject(error)
 
 
 if __name__ == "__main__":

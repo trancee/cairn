@@ -28,6 +28,52 @@ records syntax, errors, deadlines and the parse-only performance comparison.
 Sorted AC-unification, admissible decomposition and full FVP transfer remain
 open; neither the guard nor its four real-operation tests close that gate.
 
+## Why derivation checks need a controlled kind extension
+
+The published guard at `3d5dd7c` passed the lifecycle cell but rejected all
+18 replay/mutation cells in
+[formal run 38622779805](https://github.com/trancee/cairn/actions/runs/38622779805).
+The failure is reproducible locally, not a Linux-only discrepancy. The pinned
+[`MessageDerivationChecks.hs`](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/lib/theory/src/Theory/Tools/MessageDerivationChecks.hs)
+applies `natToFreshVars` recursively to premises without changing their
+constructors. Consequently a valid counter input produces
+`tamtplus(x0:Fresh,tamXCtone)` during derivation checking. It is an error-kind
+term, even though the original protocol counter is properly sorted.
+
+The owner selected extending the proof image instead of bypassing derivation
+checks, changing equations or patching Tamarin. The extension permits only
+Fresh/natural leaves in natural-sum shapes and their existing enclosing
+contexts. Kind variables and returned kind-valued bindings/results remain
+rejected. The one-rule real regression, default recovery replay and all
+56 refined safety certificates now pass locally under unchanged deadlines.
+The fix awaits current-source hosted acceptance; selected contexts do not establish full assembled
+acceptance or supersede the failed hosted run.
+Both real guard-mutation regressions preserve their verified defaults and
+expected attacks. Representative full-export measurement initially found
+`+46.3%` whole-guard overhead versus direct native execution. Owner-approved
+bounded journal batching and conservative stream/parser optimizations reduce
+this to `+22.5%`, preserving every event and unchanged deadlines, but merge
+remains blocked under Constitution P4. The smaller parse-only result is not a substitute for
+that measurement; the [reference](equations/README.md#integration-and-observed-evidence)
+records methodology and the report-I/O profiling result.
+
+The subsequent owner-approved compiled-proxy experiment reduces representative
+full-export overhead to `+6.80%` across three pairs with identical bytes.
+It retains the checks and is now a maintained, opt-in
+[candidate](equations/native-proxy/README.md), not a default cutover
+or a new mathematical proof. Tiny-fixture startup still adds `39.93` ms
+(`+33.76%`). The owner approved maintained promotion with a startup-only
+`50` ms cap, retaining `10%` for full export; Linux/caller/CI criteria must pass
+before cutover. The default Python route and all native FVP/full-context gates
+remain unchanged. Compiled evidence now identifies its reviewed source;
+missing/stale builds reject rather than falling back. The existing local/CI
+gates are wired to validate the candidate before cutover. Clean local fast
+gates pass. The final candidate also passes its local paired budgets
+(`+6.8424%` full export, `+46.467751` ms startup) and four original-cap caller
+regressions: recovery, complete refined safety and both mutations.
+Native Linux/all 19 CI cells remain unverified; an edited workflow and selected
+local contexts are not hosted, full assembled or memory-performance evidence.
+
 ## Exact scope
 
 The custom equations are:
@@ -152,7 +198,7 @@ The theorem constructs a bounded normalizing derivation, rather than bounding
 all possible reduction orders. This is the quantifier order in the boundedness
 criterion, not a ground-term weight bound that grows with substitutions.
 The existing checker rebuilds these proofs, regression cases and all
-53 required theorem audits. The typed bound does not itself establish native
+67 required theorem audits. The typed bound does not itself establish native
 substitution/narrowing closure or complete sorted AC unification.
 
 ## Frozen-index encoding foundation
@@ -203,6 +249,33 @@ membership and substitution provenance. Universal query-builder/importer
 correspondence, narrowing/unification closure and complete sorted AC
 unification remain separate obligations.
 
+## What the new kind abstraction does not transfer
+
+[`QueryRelabeling.lean`](equations/QueryRelabeling.lean) proves raw AC/rewrite
+preservation under structural leaf relabeling.
+[`QueryKind.lean`](equations/QueryKind.lean) maps Fresh and natural leaves
+injectively to disjoint natural shadow labels. Its inverse recovers the
+original terms, preserving variables versus rigid atoms. This is a
+mathematical encoding, not a change to actual Fresh sorts, counter values,
+native syntax or wire payloads.
+
+After abstraction, the existing decoder and framing proofs provide image
+closure and raw quotient-step correspondence. The kernel also proves
+termination on decoded kind messages. The substitution square holds for
+arbitrary assignments, while framed substitution closure has a compatible
+typed-shadow premise not yet derived for every runtime-validated assignment.
+
+This does not transport the earlier proper-message matching theorem wholesale.
+Raw rules deliberately omit native message-sort guards. A raw projection can
+erase an ill-kind discarded pair component; actual Maude cannot match that
+component to its proper `Msg` variable. For example,
+`fst(pair(roleA, FreshVariable + one))` has a shadow reduction to `roleA`
+but stays at `[TOP]` in the real native reduction. Termination of this
+overapproximation is useful, but confluence or existence of a normalizing
+shadow path does not imply those properties for the guarded native subset.
+Native sorted matching/narrowing and complete AC-unification/FVP transfer
+remain explicit obligations, not consequences of the 67-audit count.
+
 ## Finite-variant rationale
 
 The KEM equation has the same term-rewrite shape as Tamarin's documented
@@ -244,9 +317,9 @@ for that broader signature. A new bounded native diagnostic also exhausts
 all 25 explicitly declared ranks at kind level (17 protocol and eight
 bookkeeping/list ranks), retaining error-kind variants. Imported `NAT`
 operators, native admissibility and correspondence are not discharged.
-Full FVP acceptance remains open. The owner selected the actual typed
-protocol-query image as the correspondence target, not the entire imported
-arithmetic/error-kind carrier. That choice does not waive preservation,
+Full FVP acceptance remains open. The owner selected the actual
+protocol-query image, later extending it to required derivation-kind terms,
+not the entire imported arithmetic/error-kind carrier. That choice does not waive preservation,
 reflection or substitution/unification/narrowing closure.
 
 The manual cites Comon-Lundh and Delaune, *The Finite Variant Property:

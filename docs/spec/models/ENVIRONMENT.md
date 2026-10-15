@@ -6,6 +6,8 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
 
 - Apple silicon macOS, 8 GiB RAM. Tamarin on `ratchet.spthy` can exceed 7 GiB.
 - Tools: Tamarin 1.12.0, Maude 3.5.1, Lean 4.34.1 (pinned in `lifecycle/lean-toolchain`).
+- The maintained host guard uses the root Rust `1.99.0` pin; final local
+  measurements use Python `3.14.8` (CI pins `3.13.16`).
 - Lean is not on `PATH`; pass it with `LEAN=<path>/bin/lean scripts/check.sh` or `check.py --lean`.
 - `scripts/check.sh` also invokes the [equation convergence/boundedness checker](equations/README.md)
   with that Lean executable. It proves termination, B-coherence, confluence
@@ -13,9 +15,13 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   for the six source equations in the typed algebra. It also checks structural
   frozen-index encoding round trips, independent raw AC/rewrite correspondence
   and typed substitution commutation, including free tuple/Node framing closure
-  (53 audits). Ratchet acceptance callers additionally enforce the approved
+  and controlled Fresh/natural derivation-kind abstraction (67 audits).
+  The kind results concern raw-overapproximation relations, not native
+  proper-sort matching completeness or convergence.
+  Ratchet acceptance callers additionally enforce the approved
   [native stream boundary](equations/README.md#native-stream-boundary):
-  pinned module, proper query/reply sorts, frozen indices and complete private
+  pinned module, proper/controlled-kind queries, proper returned bindings/results,
+  frozen indices and complete private
   lifecycle evidence. Whole unsupported operations fail, without filtering
   solutions. Universal query-builder/importer correctness, complete sorted
   unification and narrowing correspondence remain unverified; this is not
@@ -27,7 +33,39 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   Proof deadlines/options remain unchanged; native/outer teardown uses the
   `5`-second grace. Direct interactive branch work remains exploratory, not
   acceptance evidence. Resume/SAS operations do not use the ratchet-only guard.
-- `scripts/check.sh` runs the fast gates: whitespace, unit tests and `actionlint`,
+- The pinned derivation checker changes natural variables to Fresh inside
+  premise constructors. Keep these controlled kind queries supported; do not
+  skip derivation checks or admit arbitrary natural-sum operands/kind variables.
+- Current full-export guard overhead is `+22.5%` versus direct native execution,
+  reduced from `+46.3%` by owner-approved evidence/stream I/O optimization.
+  Every operation record remains mandatory; bounded batching closes before
+  shutdown evidence. The earlier `+2.7%` parse-only result was not representative.
+  The remaining regression blocks merge under Constitution P4;
+  see the [measurements](equations/README.md#integration-and-observed-evidence).
+  Passing the original proof deadlines is not performance acceptance.
+- The owner-approved [compiled candidate](equations/native-proxy/README.md)
+  remains pre-cutover. Its earlier prototype three-pair full-export
+  overhead is `+6.80%` with identical bytes, but tiny-fixture startup still adds
+  `39.93` ms (`+33.76%`). The owner approved maintained promotion with a
+  startup-only `50` ms cap, retaining the full-export `10%` bound.
+  Linux/caller/CI criteria must pass before cutover; the default Python gate
+  remains blocked. Set `CAIRN_MAUDE_GUARD_CANDIDATE` to an absolute current
+  compiled executable to select it for every guarded caller. Empty, missing,
+  non-executable or stale selections reject; there is no fallback.
+  The staged 19-cell workflow builds/selects this source-identified
+  candidate for native Linux validation and gates both budgets in its lifecycle
+  cell; hosted execution remains pending. The owner authorized promotion
+  commits/pushes to PR #9 for existing native CI, including necessary fixes and
+  conditional cutover after the required criteria pass. Do not start Colima,
+  manually dispatch, merge or activate SDK/profile behavior under that approval.
+  Final-source local three-pair overhead is `+6.8424%` for full export and
+  `+46.467751` ms (`+40.1399%`) for startup, both within their separate limits.
+  Final compiled default recovery, all 56 safety certificates and both mutation
+  regressions pass at original caps. Those four local contexts do not establish
+  native Linux/all 19 CI cells, full assembled acceptance or memory performance.
+- `scripts/check.sh` builds the host guard with the root Rust pin, checks Rust
+  formatting/strict Clippy and 18 native CLI/process cases, then runs
+  whitespace, unit tests and `actionlint`,
   plus lifecycle/source-projection and equation convergence/boundedness proofs when pinned
   Lean is available. The pre-commit hook and CI both call it.
 - `REPLAY=1 scripts/check.sh` adds the default/refined witness replays,

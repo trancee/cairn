@@ -25,7 +25,46 @@ pinned reply parser would conflate. This is runtime membership/provenance
 evidence under trusted Python/tool code, not a verified variable-renaming/
 importer or algorithm proof. Real native reduction, unification, matching,
 variants and guarded Tamarin parse pass. Parse-only exports are byte-identical
-with measured `+3.5%` median overhead; full-search/memory costs remain unmeasured.
+with initial `+2.7%` median overhead. Actual complete-export measurement
+was `24.178`/`35.385` seconds direct/guarded (`+46.3%`), blocking merge under
+Constitution P4. A diagnostic profile observes 90,874 native operations and
+181,760 report calls opening/writing/closing the journal; report handling
+consumes `8.619` instrumented seconds. This is a whole-guard cost, not an
+isolated kind-parser regression.
+
+The owner subsequently chose `optimize-evidence-io`. Bounded operation
+journaling preserves every event while reusing one validated descriptor per
+process; it closes before successful shutdown evidence. Selector reuse and
+conservative leaf/canonical-record fast paths preserve the original validation.
+Final-source medians improve to `24.303`/`29.761` seconds (`+22.5%`), with
+identical bytes, unchanged deadlines and 117 model tests/67 audits passing.
+Bulk-record reconciliation and real report-capacity failures have regressions.
+A streamed-token experiment did not materially improve performance and was
+removed. At that checkpoint P4 still blocked the default path; no budget
+exception or compiled/upstream default replacement was approved. Full-proof-search/memory costs
+remain unmeasured.
+
+The subsequently approved bounded
+[compiled prototype](../spec/models/equations/native-proxy/README.md)
+uses the shared reviewed inventory and retains all stream/evidence checks.
+All 18 opt-in cases and the unchanged default fast gate pass. Three alternating
+full-export pairs give `24.281`/`25.931` seconds (`+6.80%`) with identical bytes,
+below the representative `10%` limit. A separate one-rule fixture still adds
+`39.93` ms (`+33.76%`). The owner subsequently approved maintained promotion
+with a startup-only `50` ms cap, retaining `10%` for the full export.
+Linux/caller/CI criteria must precede cutover; default routing stays Python.
+The maintained candidate now embeds a source identity, shares the acceptance
+runner and has rejecting workload-specific budget gates. Clean local fast
+checks pass; the existing 19-cell workflow is wired for pre-cutover native
+Linux validation, not yet executed. Final local paired medians are
+`24.235925`/`25.894241` seconds for full export (`+6.8424%`) and
+`0.115764`/`0.162232` seconds for startup (`+46.467751` ms, `+40.1399%`),
+passing the separate approved limits with identical bytes.
+Final compiled recovery, all 56 safety certificates and both mutation
+regressions also pass at original caps. Those four local contexts are not all
+native Linux CI cells, full assembled acceptance or memory-performance proof;
+source identity does not establish algorithm or FVP correctness.
+This performance experiment does not supply any missing native FVP hypothesis.
 See the [boundary reference](../spec/models/equations/README.md#native-stream-boundary).
 Sorted AC-unification and full theorem/FVP transfer remain open.
 The pinned
@@ -36,11 +75,36 @@ The proxy now executes and checks only that probe; arbitrary no-argument
 commands still fail. The witness verifies through genuine guarded
 precomputation/proof streams, not just `--parse-only`.
 
+Hosted formal run
+[`38622779805`](https://github.com/trancee/cairn/actions/runs/38622779805)
+at published `3d5dd7c` then exposed a real image gap, not a Linux discrepancy:
+the lifecycle cell passed, but all 18 replay/mutation cells rejected
+`tamtplus(x0:Fresh,tamXCtone)` during derivation checking. Pinned
+[`MessageDerivationChecks.hs`](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/lib/theory/src/Theory/Tools/MessageDerivationChecks.hs)
+applies `natToFreshVars` to premise terms recursively. The owner selected
+`extend-derivation-kind-image`, retaining derivation checks and all proof
+budgets. The new real one-rule regression and guarded default recovery/
+56-certificate refined safety contexts pass locally; current-source hosted
+acceptance remains pending.
+
+The extension encodes Fresh/natural leaves injectively as disjoint natural
+shadows without changing native syntax or protocol sorts. Raw AC/rewrite
+transfer, image closure, a substitution square and decoded-kind termination
+are kernel-checked. Framed substitution closure has an explicit compatible
+typed-shadow premise. Raw rules lack native message-sort guards; the
+abstraction can therefore admit steps impossible for actual proper-sort
+matching. It does not transfer native confluence, normalizing-path existence,
+narrowing completeness or FVP. See the
+[counterexample and scope](../spec/models/ratchet-equation-evidence.md#what-the-new-kind-abstraction-does-not-transfer).
+The runtime grammar admits only required Fresh/natural sum leaves and enclosing
+contexts, while still rejecting kind variables and returned kind-valued
+bindings/results. This is not admission of the entire error-kind carrier.
+
 The latest local [equation checker](../spec/models/equations/README.md)
 proves typed B-coherence, global matching confluence, quotient-path confluence
 modulo natural AC and a template-only normalization bound under normalized
 substitutions. Nonlinear key-copy overlaps are joined; normality is
-AC-invariant. All 53 required audits and kernel cases pass; eighteen audits use no
+AC-invariant. All 67 required audits and kernel cases pass; 21 audits use no
 axioms. The checked boundedness quantifies over every template and normalized
 assignment, not sampled ground terms. Missing boundedness/confluence audit
 transcripts have fail-closed CLI red/green checks. Native query-image transfer,
@@ -61,7 +125,8 @@ only for encoded message inputs. These are algebraic representation proofs,
 not actual backend query/framing or substitution-provenance proofs, nor a
 verified importer. Narrowing/unification closure remains open.
 The published termination checkpoint passed hosted acceptance
-at `70c1c19` in PR #9; this addition is unpublished at authoring.
+at `70c1c19` in PR #9. The later 53-audit checkpoint at `3d5dd7c` has the
+formal failures described above; the 67-audit fix awaits hosted acceptance.
 The earlier termination-only snapshot in the following paragraphs is historical.
 
 Primary-source follow-up also identifies the kind-completion boundary:
@@ -80,8 +145,8 @@ warning/error/advisory. The collector retains the existing 60-second/
 five reducible operators also produce their expected sorted branches.
 This does not enumerate imported `NAT` operators or discharge native
 convergence/coherence, builtin admissibility or query-image conservativity.
-The owner chose correspondence for the actual typed protocol-query image,
-not a proof carrier widened to native error terms/imported arithmetic.
+The owner chose correspondence for the actual protocol-query image, later
+extended to required derivation-kind terms, not arbitrary error terms/imported arithmetic.
 That image still requires preservation/reflection and substitution,
 unification and narrowing closure; enumeration certifies none of these.
 

@@ -22,7 +22,7 @@ def native_equation(equation: str) -> str:
     return f"eq {left} = {right} [variant] ."
 
 
-def validate_module(module: str) -> None:
+def reviewed_module() -> str:
     expected = [
         "fmod MSG is", "protecting NAT .", "sort Pub Fresh Msg Node TamNat TOP .",
         "subsort Pub < Msg .", "subsort Fresh < Msg .", "subsort TamNat < Msg .",
@@ -37,6 +37,11 @@ def validate_module(module: str) -> None:
     )
     expected.extend(sorted(native_equation(equation) for equation in EQUATION_PROOFS))
     expected.append("endfm")
+    return "\n".join(expected) + "\n"
+
+
+def validate_module(module: str) -> None:
     actual = [" ".join(line.split()) for line in module.splitlines() if line.strip()]
-    if not module.isascii() or actual != [" ".join(line.split()) for line in expected]:
+    expected = [" ".join(line.split()) for line in reviewed_module().splitlines()]
+    if not module.isascii() or actual != expected:
         raise BoundaryError("native module: unreviewed signature or equations")

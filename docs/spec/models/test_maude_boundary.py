@@ -57,7 +57,7 @@ endfm
 """
 
 def native_stream(
-    command: str, reply: str, *, shutdown_error: bool = False,
+    command: str, reply: str, *, shutdown_error: bool = False, proxy: Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
     final_action = "continue" if shutdown_error else "raise SystemExit(0)"
     fake = f"""#!{sys.executable}
@@ -91,14 +91,48 @@ for line in sys.stdin:
         executable.chmod(0o755)
         environment = dict(os.environ, CAIRN_MAUDE_BINARY=str(executable))
         environment.pop("CAIRN_MAUDE_GUARD_REPORT", None)
+        driver = [str(proxy)] if proxy else [
+            sys.executable, str(Path(__file__).parent / "equations/maude_boundary.py"),
+        ]
         return subprocess.run(
-            [sys.executable, str(Path(__file__).parent / "equations/maude_boundary.py"),
-             "-interactive", "-no-tecla", "-no-banner", "-no-wrap", "-batch"],
+            [*driver, "-interactive", "-no-tecla", "-no-banner", "-no-wrap", "-batch"],
             input=command, text=True, capture_output=True, env=environment, timeout=30,
         )
 
 
 class NativeQueryBoundaryTests(unittest.TestCase):
+    def test_derivation_kind_support_does_not_admit_arbitrary_natural_operands(self):
+        commands = (
+            "reduce tamtplus(x0:Msg,tamXCtone) .",
+            "reduce tamtplus(p(0),tamXCtone) .",
+            "reduce tamtplus(tamXCh(f(0)),tamXCtone) .",
+            "reduce tamtplus(list(nil),tamXCtone) .",
+            "reduce tamXCh(list(cons(tamtplus(f(0),tamXCtone),nil))) .",
+            "reduce tamtplus(x0:[TOP],tamXCtone) .",
+        )
+
+        for command in commands:
+            with self.subTest(command=command), self.assertRaises(BoundaryError):
+                validate_query(command)
+
+    def test_kind_terms_cannot_be_imported_as_proper_bindings_or_kind_variables(self):
+        cases = (
+            ("unify in MSG : tamtplus(x0:Fresh,tamXCtone) =? tamtplus(x0:Fresh,tamXCtone) .",
+             "Unifier 1\nx0:Fresh --> tamtplus(#1:Fresh,tamXCtone)\n",
+             "native binding: incompatible sort"),
+            ("unify in MSG : tamtplus(x0:Fresh,tamXCtone) =? tamtplus(x0:Fresh,tamXCtone) .",
+             "Unifier 1\nx0:Fresh --> #1:[TOP]\n", "native term: unsupported token"),
+            ("reduce tamtplus(x0:Fresh,tamXCtone) .",
+             "result [TOP]: tamtplus(x0:Fresh,tamXCtone)\n", "native reply: malformed reduction result"),
+            ("reduce tamtplus(x0:Fresh,tamXCtone) .",
+             "result TOP: tamtplus(x0:Fresh,tamXCtone)\n", "native reply: incompatible result sort"),
+        )
+
+        for command, reply, reason in cases:
+            query = validate_query(command)
+            with self.subTest(command=command, reply=reply), self.assertRaisesRegex(BoundaryError, reason):
+                validate_reply(query, reply)
+
     def test_importer_variable_namespaces_cannot_be_mixed_or_conflated(self):
         cases = (
             ("unify in MSG : x0:Msg =? x1:Msg .", "Unifier 1\nx0:Msg --> x1:Msg\n"),
@@ -270,6 +304,15 @@ class NativeStreamBoundaryTests(unittest.TestCase):
             '{"event":"start","pid":1337}\n{"event":"module","pid":1337}\n'
             '{"event":"shutdown","pid":1337}\n',
             '{"event":"version","pid":1337}\n{"event":"failure","pid":1337,"reason":"rejected"}\n',
+            '{"event": "begin", "pid": 1337, "kind": "reduce"}\n',
+            '{"event":"version","pid":1337}\n{"event":"start","pid":1337}\n'
+            '{"event":"module","pid":1337}\n'
+            '{"event": "accepted", "pid": 1337, "kind": "reduce"}\n',
+            '{"event":"version","pid":1337}\n{"event":"start","pid":1337}\n'
+            '{"event":"module","pid":1337}\n'
+            '{"event": "begin", "pid": 1337, "kind": "reduce"}\n'
+            '{"event": "accepted", "pid": 1337, "kind": "match"}\n',
+            '{"event": "begin", "pid": 1337, "kind": "reduce", "kind": "match"}\n',
         )
         with tempfile.TemporaryDirectory() as temporary:
             executable = Path(temporary) / "tamarin-prover"
@@ -321,6 +364,49 @@ class NativeStreamBoundaryTests(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which("maude"), "pinned native Maude integration needs maude on PATH")
 class NativeMaudeIntegrationTests(unittest.TestCase):
+    def test_report_capacity_failure_rejects_the_stream_without_a_traceback(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            environment = dict(os.environ, CAIRN_MAUDE_GUARD_REPORT=str(Path(temporary) / "events"))
+            environment.pop("CAIRN_MAUDE_BINARY", None)
+            driver = (
+                "import os, resource, signal, sys; "
+                "signal.signal(signal.SIGXFSZ, signal.SIG_IGN); "
+                "resource.setrlimit(resource.RLIMIT_FSIZE, (512, 512)); "
+                "os.execv(sys.executable, [sys.executable, *sys.argv[1:]])"
+            )
+
+            result = subprocess.run(
+                [sys.executable, "-c", driver,
+                 str(Path(__file__).parent / "equations/maude_boundary.py"),
+                 "-interactive", "-no-tecla", "-no-banner", "-no-wrap", "-batch"],
+                input=NATIVE_MODULE + "reduce tamXCroleA .\n" * 512,
+                text=True, capture_output=True, env=environment, timeout=30,
+            )
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("native evidence report", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_many_native_operations_reconcile_complete_evidence_before_success(self):
+        commands = NATIVE_MODULE + "reduce tamXCroleA .\n" * 512
+        with tempfile.TemporaryDirectory() as temporary:
+            executable = Path(temporary) / "tamarin-prover"
+            executable.write_text(
+                f"#!{sys.executable}\nimport subprocess, sys\n"
+                "proxy = next(arg.split('=', 1)[1] for arg in sys.argv if arg.startswith('--with-maude='))\n"
+                "result = subprocess.run([proxy, '-interactive', '-no-tecla', "
+                "'-no-banner', '-no-wrap', '-batch'], "
+                f"input={commands!r}, text=True, capture_output=True, check=True, timeout=30)\n"
+                "if result.stdout.count('result Msg: tamXCroleA') != 512:\n"
+                "    raise SystemExit('missing native replies')\n"
+                "print('all native replies retained')\n",
+            )
+            executable.chmod(0o755)
+
+            output = run_guarded_tamarin([str(executable), "--fixture"], 30)
+
+        self.assertEqual(output.strip(), "all native replies retained")
+
     def test_every_native_operation_kind_preserves_the_real_reply(self):
         queries = (
             "reduce tamXCflip(tamXCroleA) .\n"
@@ -350,6 +436,16 @@ class NativeMaudeIntegrationTests(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which("tamarin-prover"), "pinned Tamarin integration needs tamarin-prover on PATH")
 class NativeTamarinIntegrationTests(unittest.TestCase):
+    def test_natural_counter_derivation_checks_retain_the_real_native_kind_query(self):
+        model = Path(__file__).parent / "equations/native-proxy/derivation.spthy"
+
+        output = run_guarded_tamarin([
+            "tamarin-prover", str(model), "--quit-on-warning",
+            "--derivcheck-timeout=60", "--output-module=msr",
+        ], 120)
+
+        self.assertIn("rule (modulo E) Natural_Input:", output)
+
     def test_guarded_tool_proves_a_tiny_exact_signature_normalization_witness(self):
         source = """theory CairnNativeBoundaryProbe
 begin
