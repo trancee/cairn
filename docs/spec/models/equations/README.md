@@ -424,5 +424,11 @@ their cases retained in native CLI tables. Current default-source local
 medians are `24.324896`/`25.820824` seconds (`+6.1498%`) and
 `0.112296`/`0.154256` seconds (`+41.960417` ms, `+37.3660%`).
 Its fast gate passes 19 native/131 model/50 lifecycle cases, 43 projections
-and 67 audits. Fresh hosted acceptance of the cutover is still required.
+and 67 audits. Actual native cutover run `38724991914` at `2fa6d16` passes
+both budgets (`+8.3650%` full export, `+25.785370` ms startup) and 18/19 cells.
+`initial_ck_secret` times out during its strict `60`-second assembled-export
+derivation check, before its selected proof; the exact local replay passes.
+This is not a native reproduction or fix, and the failed run remains evidence.
+All current-head hosted gates are still required; subsequent checks are
+recorded by [PR #9](https://github.com/trancee/cairn/pull/9/checks).
 Native FVP remains open.

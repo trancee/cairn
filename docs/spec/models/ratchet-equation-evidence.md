@@ -101,7 +101,13 @@ shared default. The temporary selector and obsolete Python validator/evidence/
 parser are removed, not kept as a second implementation. All old adversarial
 parser cases remain covered at the native CLI seam; every version now requires
 current source identity. New default-source local budgets pass at `+6.1498%`
-and `+41.960417` ms. Its final-source hosted acceptance is still pending.
+and `+41.960417` ms. Native run `38724991914` at `2fa6d16` passes both actual
+budgets (`+8.3650%` full, `+25.785370` ms startup), independently checked,
+and 18/19 cells. `initial_ck_secret` times out in its unchanged strict
+`60`-second assembled-export derivation check before proof. The exact local
+caller passes (11-step claim plus five origin helpers), not establishing a
+native reproduction or fix. Preserve the failure and require all current-head
+hosted gates, whose subsequent results are recorded by PR #9.
 This changes proof tooling, not any native FVP/full-context obligation.
 Full assembled and memory-performance evidence remain separate obligations.
 

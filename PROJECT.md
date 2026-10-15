@@ -72,7 +72,19 @@ failure rather than an earlier missing-identity check.
 Current-source macOS three-pair medians are `24.324896`/`25.820824` seconds
 for full export (`+6.1498%`) and `0.112296`/`0.154256` seconds for startup
 (`+41.960417` ms, `+37.3660%`), both within the separate limits.
-Fresh hosted acceptance of this default source remains pending.
+At cutover `2fa6d16`, native run `38724991914` passes both actual budgets:
+full export `44.715197`/`48.455601` seconds (`+8.3650%`), startup
+`0.124042`/`0.149827` seconds (`+25.785370` ms, `+20.7876%`).
+The lifecycle cell and 17 of 18 callers pass. `replay-initial_ck_secret`
+fails during assembled export because the unchanged strict `60`-second
+derivation check times out, before its selected proof. The exact local
+caller passes (11-step claim plus five origin helpers); this is not a native
+reproduction or a fix. The hosted cause remains unestablished and the failed
+run is retained, without a raised limit or manual rerun.
+Companion Rust `38724991821` and four-language CodeQL `38724992020` pass.
+All current-head hosted gates remain a merge prerequisite; the
+[PR #9 checks](https://github.com/trancee/cairn/pull/9/checks) are authoritative
+for subsequent documentation-only checkpoints.
 Promotion commits/pushes and PR-description updates in PR #9 are authorized;
 merge and SDK/profile activation remain unapproved. Full-proof/memory overhead
 remains unmeasured.

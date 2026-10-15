@@ -909,3 +909,28 @@ macOS binary SHA-256 is
 `aa8b30c421366c5f77bcce80aff804aad1ccd7708f2e2d6d68d030cb883a3838`.
 Final-source hosted acceptance remains pending. No merge, SDK/profile
 activation, protocol/wire/API/primitive or constant-time claim change.
+
+2026-10-15 (published default cutover; retained native derivation timeout):
+`2fa6d16` publishes the central cutover after both mandatory hooks and a
+full-file Gitleaks scan (30 current/deleted files, 468644 bytes, verified hashes).
+Native run `38724991914` passes the lifecycle cell and 17/18 callers, including
+both actual three-pair budgets: full export `44.715196836`/`48.455600938`
+seconds (`+8.364951%`), startup `0.124041834`/`0.149827204` seconds
+(`+25.785370` ms, `+20.787640%`). All six exports per workload are fixed and
+identical; both saved reports independently pass. Source identity is unchanged;
+Linux binary SHA-256 is
+`af8d464b6aaebf770181e08436e16156eff948cfe57804a2aabc1750ecb74b28`.
+
+`replay-initial_ck_secret`, job `116388509084`, fails during its strict
+assembled export: Tamarin reports `Derivation checks timed out` at the
+unchanged `60`-second cap; `--quit-on-warning` correctly rejects before the
+selected proof. Version/install checks pass. The log names no individual
+timed-out rule. The exact local command
+`python3 docs/spec/models/replay.py --disclosure-sources --target initial_ck_secret --timeout 180`
+passes its 11-step claim and five origin
+helpers; no native red-capable local reproduction or root cause is established.
+This is not a fix or all-green native acceptance. No larger budget, warning
+relaxation, filtering, manual rerun or unrelated infrastructure repair.
+Rust `38724991821` and four-language CodeQL `38724992020` pass.
+All current-head authoritative gates remain required;
+PR #9 records subsequent documentation-only publication checks.

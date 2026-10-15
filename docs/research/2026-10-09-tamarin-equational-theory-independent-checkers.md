@@ -91,7 +91,11 @@ runner now selects only the maintained compiled guard, with mandatory source
 identity; the temporary route and obsolete Python validator/evidence/parser are
 removed. All nine private parser-test groups retain native CLI counterparts.
 Current default-source local budgets are `+6.1498%` and `+41.960417` ms,
-respectively; final-source hosted acceptance remains pending. None of this
+respectively. Native cutover `2fa6d16` passes both actual budgets (`+8.3650%`,
+`+25.785370` ms) and 18/19 cells; `initial_ck_secret` times out in its unchanged
+strict `60`-second assembled-export derivation check before proof. The exact
+local caller passes, not establishing a native fix. The failed run is retained;
+all current-head hosted gates remain required. None of this
 establishes native FVP, universal importer correspondence or full assembled
 acceptance.
 This performance experiment does not supply any missing native FVP hypothesis.

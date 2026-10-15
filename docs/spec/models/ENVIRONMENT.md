@@ -49,8 +49,13 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
 - Budgets remain three alternating pairs, six identical fixed-digest exports,
   full export at most `+10%`, startup at most `+50` ms. Current default-source
   local overhead is `+6.1498%` and `+41.960417` ms (`+37.3660%`), respectively.
-  Fresh hosted acceptance of this changed source remains pending; preceding
-  staging evidence is not a substitute. Measured raw combined stdout and
+  At `2fa6d16`, actual native budgets also pass: `+8.3650%` full export,
+  `+25.785370` ms (`+20.7876%`) startup. Its lifecycle cell and 17/18 callers
+  pass; `initial_ck_secret` fails its unchanged strict `60`-second derivation
+  check during assembled export, before its selected proof. The exact local
+  caller passes, not establishing a native fix. Retain that failure and require
+  all current-head hosted gates; preceding staging evidence is not a substitute.
+  Measured raw combined stdout and
   `1` ms final-evidence polling retain every check/event and the `5`-second grace.
   Passing proof deadlines alone is not performance acceptance.
   The existing 19-cell workflow builds once per cell with the shared Cargo

@@ -198,8 +198,16 @@ explicitly. Malformed lifecycle fixtures now include valid identity where
 appropriate and assert the intended reason. The current default fast gate
 passes 19 native/131 model/50 lifecycle cases, 43 projections and 67 audits.
 Current-source local budgets pass at `+6.1498%` full export and `+41.960417` ms
-startup (`+37.3660%`). Fresh hosted acceptance of this changed source remains
-required. Leaving a permanent dual validator, keeping aliases to the temporary
+startup (`+37.3660%`). At `2fa6d16`, actual native budgets pass at `+8.3650%`
+full export and `+25.785370` ms startup (`+20.7876%`), with independently
+checked saved reports. Native run `38724991914` passes 18/19 cells:
+`initial_ck_secret` fails its unchanged strict `60`-second derivation check
+during assembled export, before its selected proof. The exact local caller
+passes its 11-step claim and five origin helpers, not establishing a native
+reproduction or fix. Preserve the failure; do not raise limits, relax warnings
+or manually rerun it unchanged. All current-head hosted gates remain required
+and subsequent publication checks are recorded by PR #9.
+Leaving a permanent dual validator, keeping aliases to the temporary
 route, or reusing an older source report were rejected alternatives.
 No shipped API, protocol, wire, primitive, runtime dependency or constant-time
 claim changes; the proof tool/parser/compiler/importer remain trusted.

@@ -3,7 +3,7 @@
 Maintained, dependency-free host guard at the existing CLI/native-stream boundary.
 It is the shared ratchet acceptance default after the owner-approved native
 staging criteria passed at `71168a1`. There is no Python validator or fallback.
-Final-source hosted acceptance of the cutover remains required. This is not
+All current-head hosted gates remain required. This is not
 a native FVP certificate or approval to change proof deadlines, protocol
 behavior, implementation gates or SDK/profile activation.
 
@@ -132,7 +132,7 @@ termination and checked descriptor close. The signal handler only stores an
 atomic flag. No application/core unsafe-code policy or shipped dependency
 changes. Compile-time platform branches cover macOS and Linux. The accepted
 staging source passes native Linux caller/fast and both performance gates;
-final-source cutover acceptance remains pending.
+the subsequent cutover run and its retained timeout are recorded below.
 
 The CLI cases cover real operations, malformed terms and replies, kind/sort/
 namespace boundaries, deep framing, changed equations, complete bulk evidence,
@@ -180,9 +180,34 @@ the intended failure reason, rather than rejecting early for missing identity.
 
 The owner authorized promotion checkpoints in PR #9 for existing native CI,
 including necessary fixes and conditional cutover after the required criteria
-pass. Final-source cutover acceptance remains incomplete; merge and SDK/profile activation
-are not authorized. The local budgets do not measure full-proof or memory overhead,
-establish FVP or supersede final-source hosted acceptance.
+pass. Merge and SDK/profile activation are not authorized.
+The local budgets do not measure full-proof or memory overhead,
+establish FVP or supersede current-head hosted acceptance.
+
+## Native default-source checkpoint (`2fa6d16`)
+
+[Run `38724991914`](https://github.com/trancee/cairn/actions/runs/38724991914)
+uses the source ID above and Linux binary SHA-256
+`af8d464b6aaebf770181e08436e16156eff948cfe57804a2aabc1750ecb74b28`.
+Its actual three-pair budgets both pass:
+
+| Workload | Direct / guarded median seconds | Overhead |
+|---|---|---|
+| Complete strict export | `44.715197` / `48.455601` | `+8.3650%` |
+| Paired-counter startup | `0.124042` / `0.149827` | `+25.785370` ms (`+20.7876%`) |
+
+All six exports per workload match the fixed Linux digest and each other;
+both saved reports independently pass `--check-report`.
+The lifecycle cell and 17/18 callers pass, but `replay-initial_ck_secret`
+fails its unchanged strict `60`-second derivation check during assembled
+export, before its selected proof. The exact local caller passes its
+11-step claim and five origin helpers; that is not a native reproduction
+or a fix. The cause remains unestablished. No timeout/warning relaxation,
+unchanged manual rerun or selective sample removal is used.
+Companion Rust `38724991821` and four-language CodeQL `38724992020` pass.
+This snapshot is not all-green hosted acceptance. All current-head checks
+remain required; [PR #9](https://github.com/trancee/cairn/pull/9/checks)
+records subsequent documentation-only checkpoints.
 
 ## Accepted native staging (`71168a1`)
 
@@ -200,5 +225,5 @@ Linux binary SHA-256
 Rust `38721189142` and four-language CodeQL `38721189358` also pass,
 including the Apple preflight.
 These actual native criteria permit the owner-authorized central default
-change, not a merge or SDK/profile activation. The new default source still
-requires its own hosted acceptance.
+change, not a merge or SDK/profile activation. These preceding-source results
+do not replace current-head hosted acceptance.
