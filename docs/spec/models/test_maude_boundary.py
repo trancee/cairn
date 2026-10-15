@@ -8,7 +8,7 @@ import shutil
 import tempfile
 import unittest
 
-from equations.maude_image import BoundaryError, validate_query, validate_reply
+from equations.maude_native import select_proxy, source_identity
 from equations.maude_runner import GuardError, run_guarded_tamarin
 
 NATIVE_MODULE = """set show command off .
@@ -91,130 +91,11 @@ for line in sys.stdin:
         executable.chmod(0o755)
         environment = dict(os.environ, CAIRN_MAUDE_BINARY=str(executable))
         environment.pop("CAIRN_MAUDE_GUARD_REPORT", None)
-        driver = [str(proxy)] if proxy else [
-            sys.executable, str(Path(__file__).parent / "equations/maude_boundary.py"),
-        ]
+        driver = [str(proxy if proxy is not None else select_proxy()[0])]
         return subprocess.run(
             [*driver, "-interactive", "-no-tecla", "-no-banner", "-no-wrap", "-batch"],
             input=command, text=True, capture_output=True, env=environment, timeout=30,
         )
-
-
-class NativeQueryBoundaryTests(unittest.TestCase):
-    def test_derivation_kind_support_does_not_admit_arbitrary_natural_operands(self):
-        commands = (
-            "reduce tamtplus(x0:Msg,tamXCtone) .",
-            "reduce tamtplus(p(0),tamXCtone) .",
-            "reduce tamtplus(tamXCh(f(0)),tamXCtone) .",
-            "reduce tamtplus(list(nil),tamXCtone) .",
-            "reduce tamXCh(list(cons(tamtplus(f(0),tamXCtone),nil))) .",
-            "reduce tamtplus(x0:[TOP],tamXCtone) .",
-        )
-
-        for command in commands:
-            with self.subTest(command=command), self.assertRaises(BoundaryError):
-                validate_query(command)
-
-    def test_kind_terms_cannot_be_imported_as_proper_bindings_or_kind_variables(self):
-        cases = (
-            ("unify in MSG : tamtplus(x0:Fresh,tamXCtone) =? tamtplus(x0:Fresh,tamXCtone) .",
-             "Unifier 1\nx0:Fresh --> tamtplus(#1:Fresh,tamXCtone)\n",
-             "native binding: incompatible sort"),
-            ("unify in MSG : tamtplus(x0:Fresh,tamXCtone) =? tamtplus(x0:Fresh,tamXCtone) .",
-             "Unifier 1\nx0:Fresh --> #1:[TOP]\n", "native term: unsupported token"),
-            ("reduce tamtplus(x0:Fresh,tamXCtone) .",
-             "result [TOP]: tamtplus(x0:Fresh,tamXCtone)\n", "native reply: malformed reduction result"),
-            ("reduce tamtplus(x0:Fresh,tamXCtone) .",
-             "result TOP: tamtplus(x0:Fresh,tamXCtone)\n", "native reply: incompatible result sort"),
-        )
-
-        for command, reply, reason in cases:
-            query = validate_query(command)
-            with self.subTest(command=command, reply=reply), self.assertRaisesRegex(BoundaryError, reason):
-                validate_reply(query, reply)
-
-    def test_importer_variable_namespaces_cannot_be_mixed_or_conflated(self):
-        cases = (
-            ("unify in MSG : x0:Msg =? x1:Msg .", "Unifier 1\nx0:Msg --> x1:Msg\n"),
-            ("match in MSG : x0:Msg <=? x1:Msg .", "Matcher 1\nx0:Msg --> #1:Msg\n"),
-            ("reduce x0:Msg .", "result Msg: #1:Msg\n"),
-            ("unify in MSG : x0:Msg =? x1:Msg .",
-             "Unifier 1\nx0:Msg --> #1:Msg\nx1:Msg --> %1:Msg\n"),
-        )
-
-        for command, reply in cases:
-            query = validate_query(command)
-            with self.subTest(command=command, reply=reply), self.assertRaisesRegex(
-                BoundaryError, "variable namespace",
-            ):
-                validate_reply(query, reply)
-
-    def test_rejected_query_shapes_never_enter_the_native_image(self):
-        commands = (
-            "reduce 0 .", "reduce t(x0:Nat) .", "reduce p(01) .",
-            "reduce tamtplus(tamXCroleA,tamXCtone) .",
-            "reduce tamXCh(n(0)) .", "reduce x0:TOP .",
-            "reduce #0:Msg .", "reduce tamXCh(p(0) .",
-            "reduce tamXCh(p(0)) trailing .", "reduce tamXCunknown .",
-            "reduce tamXCroleA\u00a0.",
-            "unify in MSG : p(0) =? p(0) =? p(0) .",
-        )
-
-        for command in commands:
-            with self.subTest(command=command), self.assertRaises(BoundaryError):
-                validate_query(command)
-
-    def test_rejected_solution_shapes_invalidate_the_entire_reply(self):
-        query = validate_query("unify in MSG : x0:Pub =? p(0) .")
-        replies = (
-            "Unifier 1\nx0:Pub --> p(1)\n",
-            "Unifier 1\nx0:Pub --> x1:Pub\n",
-            "Unifier 1\nx0:Pub --> #0:TOP\n",
-            "Unifier 1\nx1:Pub --> p(0)\n",
-            "Unifier 1\nx0:Pub --> p(0)\nx0:Pub --> p(0)\n",
-            "Unifier 1\nx0:Pub --> p(0)\nUnifier 3\nempty substitution\n",
-            "Unifier 1\nx0:Pub --> p(0)\nUnifier 2\nx0:Pub --> tamXCroleA\n",
-            "Unifier 1\n", "No unifier.\nUnifier 1\nempty substitution\n",
-            "Warning: ignored term\nNo unifier.\n",
-        )
-
-        for reply in replies:
-            with self.subTest(reply=reply), self.assertRaises(BoundaryError):
-                validate_reply(query, reply)
-
-    def test_variant_exhaustion_and_metadata_are_mandatory(self):
-        query = validate_query("get variants in MSG : tamXCflip(x0:Msg) .")
-        replies = (
-            "Variant 1\nrewrites: 0\nMsg: tamXCflip(#1:Msg)\nx0:Msg --> #1:Msg\n",
-            "Variant 1\nMsg: tamXCflip(#1:Msg)\nNo more variants.\nrewrites: 0\n",
-            "Variant 2\nrewrites: 0\nMsg: tamXCroleA\nNo more variants.\nrewrites: 0\n",
-            "No more variants.\nrewrites: 0\n",
-        )
-
-        for reply in replies:
-            with self.subTest(reply=reply), self.assertRaises(BoundaryError):
-                validate_reply(query, reply)
-
-    def test_deep_terms_and_flattened_natural_ac_remain_supported(self):
-        message = "tamXCh(" * 2000 + "tamXCroleA" + ")" * 2000
-        natural = "tamtplus(" + ",".join(["t(0)"] * 1000) + ")"
-        query = validate_query(f"reduce list(cons({message},cons({natural},nil))) .")
-        reply = f"result TOP: list(cons({message},cons({natural},nil)))\n"
-
-        validate_reply(query, reply)
-
-    def test_framing_beneath_a_message_function_rejects_the_whole_query(self):
-        command = "reduce tamXCh(list(nil)) ."
-
-        with self.assertRaisesRegex(BoundaryError, "message function.*operand sort"):
-            validate_query(command)
-
-    def test_an_unsorted_returned_binding_rejects_the_whole_reply(self):
-        query = validate_query("unify in MSG : x0:Pub =? p(0) .")
-        reply = "\nUnifier 1\nx0:Pub --> tamXCroleA\n"
-
-        with self.assertRaisesRegex(BoundaryError, "binding.*sort"):
-            validate_reply(query, reply)
 
 
 class NativeStreamBoundaryTests(unittest.TestCase):
@@ -236,7 +117,7 @@ class NativeStreamBoundaryTests(unittest.TestCase):
             for command in ("quit\n", "reduce tamXCroleA .\n"):
                 with self.subTest(command=command):
                     result = subprocess.run(
-                        [sys.executable, str(Path(__file__).parent / "equations/maude_boundary.py")],
+                        [str(select_proxy()[0])],
                         input=command, text=True, capture_output=True, env=environment, timeout=5,
                     )
 
@@ -284,7 +165,7 @@ class NativeStreamBoundaryTests(unittest.TestCase):
             )
 
             result = subprocess.run(
-                [sys.executable, str(Path(__file__).parent / "equations/maude_boundary.py"), "--version"],
+                [str(select_proxy()[0]), "--version"],
                 text=True, capture_output=True, env=environment, timeout=5,
             )
 
@@ -293,30 +174,38 @@ class NativeStreamBoundaryTests(unittest.TestCase):
         self.assertNotIn("Traceback", result.stderr)
 
     def test_malformed_evidence_is_a_controlled_command_failure(self):
+        identity = source_identity()
+        version = f'{{"event":"version","pid":1337,"source_id":"{identity}"}}\n'
         reports = (
-            "", '{"event":"version","pid":1337}', "not-json\n",
-            '{"event":[],"pid":1337}\n',
-            '{"event":"version","pid":true}\n',
-            '{"event":"unknown","pid":1337}\n',
-            '{"event":"begin","pid":1337,"kind":[]}\n',
-            '{"event":"shutdown","pid":1337}\n',
-            '{"event":"version","pid":1337,"extra":0}\n',
-            '{"event":"start","pid":1337}\n{"event":"module","pid":1337}\n'
-            '{"event":"shutdown","pid":1337}\n',
-            '{"event":"version","pid":1337}\n{"event":"failure","pid":1337,"reason":"rejected"}\n',
-            '{"event": "begin", "pid": 1337, "kind": "reduce"}\n',
-            '{"event":"version","pid":1337}\n{"event":"start","pid":1337}\n'
-            '{"event":"module","pid":1337}\n'
-            '{"event": "accepted", "pid": 1337, "kind": "reduce"}\n',
-            '{"event":"version","pid":1337}\n{"event":"start","pid":1337}\n'
-            '{"event":"module","pid":1337}\n'
-            '{"event": "begin", "pid": 1337, "kind": "reduce"}\n'
-            '{"event": "accepted", "pid": 1337, "kind": "match"}\n',
-            '{"event": "begin", "pid": 1337, "kind": "reduce", "kind": "match"}\n',
+            ("", "truncated native boundary records"),
+            (version.rstrip("\n"), "truncated native boundary records"),
+            ("not-json\n", "malformed native boundary records"),
+            ('{"event":[],"pid":1337}\n', "malformed native boundary event"),
+            ('{"event":"version","pid":true}\n', "malformed native boundary record"),
+            ('{"event":"unknown","pid":1337}\n', "inconsistent native boundary lifecycle"),
+            ('{"event":"begin","pid":1337,"kind":[]}\n', "malformed native boundary operation"),
+            ('{"event":"shutdown","pid":1337}\n', "inconsistent native boundary lifecycle"),
+            (f'{{"event":"version","pid":1337,"source_id":"{identity}","extra":0}}\n',
+             "malformed native boundary fields"),
+            ('{"event":"start","pid":1337}\n{"event":"module","pid":1337}\n'
+             '{"event":"shutdown","pid":1337}\n', "inconsistent native boundary lifecycle"),
+            (version + '{"event":"failure","pid":1337,"reason":"rejected"}\n',
+             "native boundary rejected an operation"),
+            ('{"event": "begin", "pid": 1337, "kind": "reduce"}\n',
+             "inconsistent native boundary lifecycle"),
+            (version + '{"event":"start","pid":1337}\n{"event":"module","pid":1337}\n'
+             '{"event": "accepted", "pid": 1337, "kind": "reduce"}\n',
+             "inconsistent native boundary lifecycle"),
+            (version + '{"event":"start","pid":1337}\n{"event":"module","pid":1337}\n'
+             '{"event": "begin", "pid": 1337, "kind": "reduce"}\n'
+             '{"event": "accepted", "pid": 1337, "kind": "match"}\n',
+             "inconsistent native boundary lifecycle"),
+            ('{"event": "begin", "pid": 1337, "kind": "reduce", "kind": "match"}\n',
+             "duplicate native boundary field"),
         )
         with tempfile.TemporaryDirectory() as temporary:
             executable = Path(temporary) / "tamarin-prover"
-            for report in reports:
+            for report, reason in reports:
                 executable.write_text(
                     f"#!{sys.executable}\nimport os\nfrom pathlib import Path\n"
                     f"Path(os.environ['CAIRN_MAUDE_GUARD_REPORT']).write_text({report!r})\n"
@@ -324,7 +213,7 @@ class NativeStreamBoundaryTests(unittest.TestCase):
                 )
                 executable.chmod(0o755)
 
-                with self.subTest(report=report), self.assertRaises(GuardError):
+                with self.subTest(report=report), self.assertRaisesRegex(GuardError, reason):
                     run_guarded_tamarin([str(executable), "--parse-only", "fixture.spthy"], 30)
 
     def test_duplicate_evidence_fields_cannot_hide_native_failure(self):
@@ -372,12 +261,11 @@ class NativeMaudeIntegrationTests(unittest.TestCase):
                 "import os, resource, signal, sys; "
                 "signal.signal(signal.SIGXFSZ, signal.SIG_IGN); "
                 "resource.setrlimit(resource.RLIMIT_FSIZE, (512, 512)); "
-                "os.execv(sys.executable, [sys.executable, *sys.argv[1:]])"
+                "os.execv(sys.argv[1], sys.argv[1:])"
             )
 
             result = subprocess.run(
-                [sys.executable, "-c", driver,
-                 str(Path(__file__).parent / "equations/maude_boundary.py"),
+                [sys.executable, "-c", driver, str(select_proxy()[0]),
                  "-interactive", "-no-tecla", "-no-banner", "-no-wrap", "-batch"],
                 input=NATIVE_MODULE + "reduce tamXCroleA .\n" * 512,
                 text=True, capture_output=True, env=environment, timeout=30,
@@ -419,7 +307,7 @@ class NativeMaudeIntegrationTests(unittest.TestCase):
         environment.pop("CAIRN_MAUDE_GUARD_REPORT", None)
 
         result = subprocess.run(
-            [sys.executable, str(Path(__file__).parent / "equations/maude_boundary.py"),
+            [str(select_proxy()[0]),
              "-interactive", "-no-tecla", "-no-banner", "-no-wrap", "-batch"],
             input=NATIVE_MODULE + queries,
             text=True, capture_output=True, env=environment, timeout=30,

@@ -26,7 +26,7 @@ def unique_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
     return fields
 
 
-def boundary_complete(report: Path, *, source_id: str | None = None) -> bool:
+def boundary_complete(report: Path, *, source_id: str) -> bool:
     try:
         text = report.read_text()
     except (OSError, UnicodeError) as error:
@@ -56,13 +56,12 @@ def boundary_complete(report: Path, *, source_id: str | None = None) -> bool:
             raise GuardError("malformed native boundary event")
         expected = {"event", "pid"}
         if name == "version":
-            if source_id is not None or "source_id" in event:
-                expected.add("source_id")
-                identity = event.get("source_id")
-                if not isinstance(identity, str) or re.fullmatch(r"[0-9a-f]{64}", identity) is None:
-                    raise GuardError("missing or malformed native boundary source identity")
-                if source_id is not None and identity != source_id:
-                    raise GuardError("stale native boundary source identity; rebuild the maintained guard")
+            expected.add("source_id")
+            identity = event.get("source_id")
+            if not isinstance(identity, str) or re.fullmatch(r"[0-9a-f]{64}", identity) is None:
+                raise GuardError("missing or malformed native boundary source identity")
+            if identity != source_id:
+                raise GuardError("stale native boundary source identity; rebuild the maintained guard")
         elif name in {"begin", "accepted"}:
             expected.add("kind")
             if not isinstance(event.get("kind"), str) or event["kind"] not in {
@@ -99,16 +98,16 @@ def boundary_complete(report: Path, *, source_id: str | None = None) -> bool:
 
 
 def run_guarded_tamarin(
-    command: list[str], timeout: int, *, candidate: Path | None = None,
+    command: list[str], timeout: int, *, proxy: Path | None = None,
 ) -> str:
-    from .maude_candidate import select_proxy
+    from .maude_native import select_proxy
     from replay import ReplayError, run
 
     if not command or Path(command[0]).name != "tamarin-prover" or any(
         argument.startswith("--with-maude") for argument in command[1:]
     ):
         raise GuardError("unsupported guarded Tamarin invocation")
-    proxy, source_id = select_proxy(candidate)
+    proxy, source_id = select_proxy(proxy)
     with tempfile.TemporaryDirectory(prefix="cairn-maude-boundary-") as temporary:
         report = Path(temporary) / "events.jsonl"
         try:

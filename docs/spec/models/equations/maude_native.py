@@ -1,4 +1,4 @@
-"""Source identity and explicit pre-cutover native guard selection."""
+"""Source identity and executable selection for the maintained native guard."""
 
 import hashlib
 import os
@@ -17,8 +17,7 @@ def source_inputs() -> tuple[Path, ...]:
         ROOT / "rust-toolchain.toml",
         DIRECTORY / "signature.py",
         DIRECTORY / "maude_module.py",
-        DIRECTORY / "maude_image.py",
-        DIRECTORY / "maude_candidate.py",
+        DIRECTORY / "maude_native.py",
         DIRECTORY / "maude_runner.py",
         *(NATIVE_DIRECTORY / name for name in (
             "Cargo.toml", "Cargo.lock", "build.rs", "inventory.py",
@@ -40,17 +39,20 @@ def source_identity() -> str:
     return digest.hexdigest()
 
 
-def select_proxy(candidate: Path | None = None) -> tuple[Path, str | None]:
-    selected = str(candidate) if candidate is not None else os.environ.get("CAIRN_MAUDE_GUARD_CANDIDATE")
-    if selected is None:
-        return DIRECTORY / "maude_boundary.py", None
-    if not selected or not Path(selected).is_absolute():
-        raise GuardError("native guard candidate requires an absolute executable path")
+def select_proxy(proxy: Path | None = None) -> tuple[Path, str]:
+    if proxy is None:
+        target = os.environ.get("CARGO_TARGET_DIR")
+        if target == "":
+            raise GuardError("native guard CARGO_TARGET_DIR must not be empty")
+        directory = Path(target) if target is not None else ROOT / "target/native-proxy"
+        proxy = (directory / "release/cairn-maude-proxy").absolute()
+    if not proxy.is_absolute():
+        raise GuardError("native guard requires an absolute executable path")
     try:
-        proxy = Path(selected).resolve(strict=True)
+        proxy = proxy.resolve(strict=True)
         usable = proxy.is_file() and os.access(proxy, os.X_OK)
     except (OSError, ValueError) as error:
-        raise GuardError("native guard candidate unavailable; build the maintained guard") from error
+        raise GuardError("native guard unavailable; build with scripts/check.sh") from error
     if not usable:
-        raise GuardError("native guard candidate unavailable; build the maintained guard")
+        raise GuardError("native guard unavailable; build with scripts/check.sh")
     return proxy, source_identity()

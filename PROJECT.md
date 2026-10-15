@@ -32,9 +32,9 @@ selector reuse and conservative parser/audit fast paths reduce final-source
 medians to `24.303`/`29.761` seconds direct/guarded (`+22.5%`), with identical
 exports and unchanged deadlines. Every operation record is retained; the
 journal closes before successful shutdown evidence. This is approximately
-16% faster than the initial whole guard, but still blocks merge under
-Constitution P4. No representative-workload exception is approved.
-Python recognition, tool implementations and injective variable renaming/
+16% faster than the initial whole guard, but failed Constitution P4.
+That Python validator is now removed; no representative-workload exception
+was approved. Native recognition, tool implementations and injective variable renaming/
 importer correspondence are not kernel-verified.
 
 The owner then selected a bounded
@@ -46,47 +46,36 @@ measure `24.281`/`25.931` seconds direct/prototype (`+6.80%`), with identical
 bytes. A separate tiny derivation fixture adds `39.93` ms (`+33.76%`).
 The owner subsequently approved maintained promotion with a startup-only
 `50` ms additive allowance, retaining the full-export `10%` limit.
-Linux parity, caller regressions and CI integration must precede default
-cutover. The default remains Python at `+22.5%`.
-The maintained candidate now embeds a source identity, rejects missing/stale
-build evidence and uses the shared guarded runner. An explicit
-`CAIRN_MAUDE_GUARD_CANDIDATE` selects it for existing callers; invalid selection
-does not fall back to Python. The local/19-cell CI gates are wired without
-new jobs or larger deadlines. The clean local candidate fast gate passes
-19 native checks, 138 model tests, 50 lifecycle tests, 43 projections and 67 audits.
-Startup/full-export budgets have reproducible rejecting CLI gates.
-Current-source three-pair medians are `24.248549`/`25.807651` seconds for the
-full export (`+6.4297%`) and `0.110541`/`0.147073` seconds for startup
-(`+36.531959` ms, `+33.0482%`), passing the separate approved limits.
-The final compiled build passes the default recovery, all 56 refined safety
-certificates and both actual mutation regressions at their original caps.
-Native run `38710117729` at `2e7b429` passes all 18 replay/mutation cells and
-the lifecycle fast gates, but rejects an unreviewed export before any budget
-verdict. Diagnostic run `38712391261` at `942f8d8` identifies the direct
-baseline, before any guarded run: the fixture inventory had only the macOS
-full-export digest. The exact observed native Linux digest is now also pinned;
-all six exports must still match one retained digest and each other, without
-normalization, filtering or budget changes. Run `38714285780` at `67584ea`
-then completes all six identical Linux exports but genuinely fails the full-export
-budget: `35.220242`/`38.939536` seconds (`+10.5601%`); startup does not run.
-Profiling motivates one checked raw stdout write per complete validated reply
-and a `1` ms final-evidence poll instead of `10` ms, retaining the `5`-second
-grace. The stdout-only intermediate source fails local startup at `+52.560041` ms;
-the final poll change produces the current passing local medians above.
-Those are not native Linux acceptance; default cutover remains blocked.
-Follow-up native run `38719650091` at `2b642e2` passes all 18 callers/fast gates
-and the full-export budget: `37.767068`/`40.976767` seconds (`+8.4987%`).
-Startup then rejects its direct baseline before a timing verdict because the
-inventory had only the macOS startup digest. Both exact observed startup
-digests are now retained, still requiring six identical exports and the same
-`50` ms cap. Fresh startup acceptance remains pending. Companion Rust passes;
-CodeQL is separately blocked by the previously observed Apple scratch-detach
-`Resource busy` failure, not a native guard finding.
-The owner authorized promotion
-commits/pushes and PR-description updates in PR #9 for existing native CI,
-including necessary fixes and conditional cutover after the required criteria
-pass; merge and SDK/profile activation remain unapproved. Full-proof/memory overhead
-remains unmeasured, and the default has not changed.
+Native [run `38721189200`](https://github.com/trancee/cairn/actions/runs/38721189200)
+at `71168a1` meets those staging criteria: all 19 cells pass, including all
+replay/mutation callers and both actual three-pair budgets. Linux full export
+is `32.023234`/`35.116483` seconds (`+9.6594%`); startup is
+`0.103667`/`0.119538` seconds (`+15.871115` ms, `+15.3097%`).
+Both workloads retain fixed per-host digests and six identical exports, without
+normalization, filtering, budget changes or larger deadlines. Earlier genuine
+Linux/startup failures and their measured stdout/teardown fixes remain recorded
+in the reference and issue. Companion Rust `38721189142` and four-language
+CodeQL `38721189358` also pass, including the Apple preflight.
+
+The owner-authorized conditional cutover now makes `cairn-maude-proxy` the
+shared ratchet acceptance default. It resolves from `CARGO_TARGET_DIR/release`,
+or root `target/native-proxy/release` when unset. Empty targets and missing/
+non-executable/stale builds reject; every version requires current source
+identity. No automatic build or fallback occurs inside proof commands.
+The temporary selector and obsolete Python validator/evidence/parser are
+deleted. All nine duplicate parser-test cases remain covered by the native CLI;
+the standalone framing and unsorted-Pub cases are explicitly retained.
+The current default fast gate passes 19 native checks, 131 model tests,
+50 lifecycle tests, 43 projections and 67 audits. The intended default-selection
+red precedes implementation; malformed lifecycle fixtures reach their intended
+failure rather than an earlier missing-identity check.
+Current-source macOS three-pair medians are `24.324896`/`25.820824` seconds
+for full export (`+6.1498%`) and `0.112296`/`0.154256` seconds for startup
+(`+41.960417` ms, `+37.3660%`), both within the separate limits.
+Fresh hosted acceptance of this default source remains pending.
+Promotion commits/pushes and PR-description updates in PR #9 are authorized;
+merge and SDK/profile activation remain unapproved. Full-proof/memory overhead
+remains unmeasured.
 Native FVP and full assembled acceptance are unchanged.
 
 The 53-audit boundary checkpoint was published at `3d5dd7c`.

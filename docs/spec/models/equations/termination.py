@@ -179,7 +179,7 @@ def main() -> int:
         print("PASS: free tuple/Node framing is closed under structural AC, rewriting and typed substitution.")
         print("PASS: fresh/natural kind abstraction is injective and transports AC/rewrite image evidence.")
         print("Scope: typed image algebra + enforced native stream membership; not a native FVP certificate.")
-        print("Trust boundary: Tamarin/Maude + Python boundary/signature/translation + Lean kernel.")
+        print("Trust boundary: Tamarin/Maude + Rust stream guard + Python evidence/signature/translation + Lean kernel.")
         return 0
     except (OSError, RuntimeError, ReplayError) as error:
         print(f"FAIL: {error}", file=sys.stderr)

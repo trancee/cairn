@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 from equations.signature import EQUATIONS, lean_correspondence, reviewed_signature
-from equations.maude_candidate import source_identity, source_inputs
+from equations.maude_native import source_identity, source_inputs
 from replay import ReplayError
 
 

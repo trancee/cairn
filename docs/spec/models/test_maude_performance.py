@@ -9,7 +9,7 @@ import sys
 import tempfile
 import unittest
 
-from equations.maude_candidate import NATIVE_DIRECTORY, source_identity
+from equations.maude_native import NATIVE_DIRECTORY, source_identity
 
 
 class NativePerformanceCommandTests(unittest.TestCase):

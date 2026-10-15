@@ -79,7 +79,8 @@ The approved budget is narrowly workload-specific:
 The rationale is the measured `39.93` ms fixed cost on a `118.29` ms fixture,
 while representative overhead is `6.80%`. Only the tiny startup workload gets
 an additive allowance; it is not a blanket relative waiver or larger proof
-deadline. The default Python path still fails its representative budget.
+deadline. The preceding Python path failed its representative budget and is
+removed by the accepted cutover below.
 The maintained [CLI reference](../spec/models/equations/native-proxy/README.md)
 records reproducible measurement and rejecting report/budget gates.
 The same limits apply per recorded native-host environment in CI; do not mix
@@ -87,7 +88,7 @@ hosts or reuse an earlier binary's performance as current-source acceptance.
 Other platforms and full-proof/memory performance still require their own
 evidence; the local result is not native Linux or hosted acceptance.
 
-The candidate is now a standalone `cairn-maude-proxy` Cargo package under
+The guard is a standalone `cairn-maude-proxy` Cargo package under
 `equations/native-proxy`, outside the SDK workspace. Build once per gate/cell.
 Embed a deterministic source ID from reviewed Rust/build/generator/shared
 inventory/reconciler inputs and the root Rust pin; include it in each
@@ -95,12 +96,11 @@ inventory/reconciler inputs and the root Rust pin; include it in each
 Missing/stale binaries or journals fail closed with rebuild guidance, without
 extra per-proof version subprocesses or a Python fallback.
 
-Use one temporary explicit `CAIRN_MAUDE_GUARD_CANDIDATE` route through the
-existing shared runner for local and existing 19-cell CI caller validation.
-The benchmark's explicit candidate also uses that runner. This stages Linux
-acceptance before default cutover without duplicating CI jobs. After verified
-Linux/caller/performance acceptance, change the central default and remove the
-temporary selector and obsolete Python implementation/tests.
+Staging used one temporary explicit candidate route through the shared runner
+for local and existing 19-cell CI caller validation. The benchmark's explicit
+executable used the same runner. This established Linux acceptance before
+default cutover without duplicating CI jobs. The accepted cutover below removes
+that selector and the obsolete Python implementation/tests.
 
 Alternatives were leaving an unmaintained prototype, accepting stale binaries,
 adding per-operation builds or doing an unverified immediate cutover.
@@ -110,13 +110,13 @@ Python/tool/measurement boundary remain trusted. CI explicitly names this
 internal host tool's SDK-coverage exclusion and runs its static, adversarial
 CLI/native-stream/process and performance checks instead.
 
-The clean local candidate gate passes 19 native cases, 138 model tests,
+The staging local gate passed 19 native cases, 138 model tests,
 50 lifecycle tests, 43 projections and 67 equation audits. Missing-identity and
 budget-mode reds precede implementation; a real stale compiled executable
 also rejects after source changes. Source-read/encoding and generator-output
 I/O errors have intended reds and controlled failure regressions.
 
-Current-source three-pair direct/guarded medians are `24.248549`/`25.807651`
+Staging-source three-pair direct/guarded medians were `24.248549`/`25.807651`
 seconds for the complete export (`+6.4297%`) and `0.110541`/`0.147073`
 seconds for the exact startup fixture (`+36.531959` ms, `+33.0482%`).
 Both approved gates pass, with unchanged export bytes and saved reports
@@ -162,13 +162,47 @@ native full-export budget: `37.767068`/`40.976767` seconds (`+8.4987%`), with
 all six outputs identical. Startup then rejects an unreviewed direct baseline,
 not a timing failure. Apply the same fixed per-host inventory decision to the
 exact observed Linux startup digest recorded in the reference; retain the macOS
-digest, six-byte-identical-export requirement and `50` ms cap. Public report
+digest, the requirement that all six exports be byte-identical, and `50` ms cap. Public report
 CLI red/green and above-cap rejection cover both startup fixtures. Native guard
 source/binary identities are unchanged by this benchmark-only correction;
 the two current macOS reports and native full-export report still pass.
-Full native budget acceptance and default cutover remain blocked.
-Full-proof/memory overhead remains unmeasured. No default switch or merge
-has occurred.
+At that checkpoint full native budget acceptance and default cutover were
+blocked. Full-proof/memory overhead remains unmeasured.
+
+### Accepted native staging and central default cutover (2026-10-15)
+
+Run `38721189200` at `71168a1` passes all 19 native cells: every replay/mutation
+caller, fast gates and both actual three-pair budgets. Linux medians are
+`32.023234`/`35.116483` seconds for full export (`+9.6594%`) and
+`0.103667`/`0.119538` seconds for startup (`+15.871115` ms, `+15.3097%`).
+Both workload exports match the retained per-host digest and all six bytestrings
+within each measurement are identical. This meets the owner-approved staging
+condition for central default cutover, not a merge or SDK/profile activation.
+
+Make the compiled guard the only shared ratchet default. Resolve
+`CARGO_TARGET_DIR/release/cairn-maude-proxy`, or root
+`target/native-proxy/release/cairn-maude-proxy` when unset. Relative targets
+follow Cargo's working directory; explicitly empty targets reject, as Cargo does.
+Keep the benchmark/process CLI's explicit absolute executable via the `proxy`
+keyword. Require source identity on every version; remove the optional legacy
+identity branch, temporary selector and obsolete Python validator/evidence/
+parser. Preserve the reviewed module builder and generated inventory.
+Proof commands reject missing/stale builds with guidance, never build or fall
+back automatically. `scripts/check.sh` and existing CI build once and share
+their Cargo target with all consumers.
+
+The intended guarded-command default-selection red precedes implementation.
+All nine obsolete private-parser test groups have native CLI counterparts;
+the standalone framing and leading-blank incompatible Pub binding are retained
+explicitly. Malformed lifecycle fixtures now include valid identity where
+appropriate and assert the intended reason. The current default fast gate
+passes 19 native/131 model/50 lifecycle cases, 43 projections and 67 audits.
+Current-source local budgets pass at `+6.1498%` full export and `+41.960417` ms
+startup (`+37.3660%`). Fresh hosted acceptance of this changed source remains
+required. Leaving a permanent dual validator, keeping aliases to the temporary
+route, or reusing an older source report were rejected alternatives.
+No shipped API, protocol, wire, primitive, runtime dependency or constant-time
+claim changes; the proof tool/parser/compiler/importer remain trusted.
 
 ### Compiled proof-proxy feasibility prototype (2026-10-15)
 
@@ -205,8 +239,8 @@ is not a full-proof/memory measurement.
 
 At that checkpoint the prototype was outside default acceptance/CI selection.
 The later approved maintained staging above supersedes that status, not the
-Linux/caller criteria. The default proof route remains Python at `+22.5%`,
-still blocked. Native sorted
+Linux/caller criteria. At that prototype checkpoint the default proof route
+remained Python at `+22.5%`, still blocked. Native sorted
 matching/narrowing, complete AC-unification/FVP transfer and full-context proof
 acceptance remain independent open gates. No protocol/API/wire/primitive or
 constant-time claim changes.

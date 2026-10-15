@@ -79,7 +79,7 @@ def main() -> int:
         print(f"Lean {pin}; expanded theory SHA-256: {digest}")
         print(f"Checked {len(rows)} rule projections: {dict(Counter(row.action for row in rows))}")
         print("PASS: inductive lifecycle, token simulation, event recording, source projection")
-        print("Trust boundary: Tamarin/Maude + Python boundary/projection + Lean kernel; not a Tamarin replay.")
+        print("Trust boundary: Tamarin/Maude + Rust stream guard + Python evidence/projection + Lean kernel; not a Tamarin replay.")
         return 0
     except (OSError, RuntimeError, ProjectionError, subprocess.TimeoutExpired) as error:
         print(f"FAIL: {error}", file=sys.stderr)

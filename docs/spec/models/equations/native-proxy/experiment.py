@@ -1,4 +1,4 @@
-"""Paired native-guard performance measurement, not default cutover."""
+"""Paired native-guard performance measurement against direct pinned execution."""
 
 import argparse
 from decimal import Decimal
@@ -16,7 +16,7 @@ import time
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from equations.maude_runner import GuardError, run_guarded_tamarin, unique_fields
-from equations.maude_candidate import source_identity
+from equations.maude_native import source_identity
 from replay import ReplayError, run
 
 
@@ -117,7 +117,7 @@ def main() -> int:
             started = time.monotonic()
             output = (
                 run(command, 120) if label == "baseline"
-                else run_guarded_tamarin(command, 120, candidate=proxy)
+                else run_guarded_tamarin(command, 120, proxy=proxy)
             )
             timings[label].append(time.monotonic() - started)
             actual = hashlib.sha256(output.encode()).hexdigest()

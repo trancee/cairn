@@ -2,7 +2,6 @@
 
 import re
 
-from equations.maude_image import BoundaryError
 from equations.signature import EQUATION_PROOFS, FUNCTIONS
 
 
@@ -38,10 +37,3 @@ def reviewed_module() -> str:
     expected.extend(sorted(native_equation(equation) for equation in EQUATION_PROOFS))
     expected.append("endfm")
     return "\n".join(expected) + "\n"
-
-
-def validate_module(module: str) -> None:
-    actual = [" ".join(line.split()) for line in module.splitlines() if line.strip()]
-    expected = [" ".join(line.split()) for line in reviewed_module().splitlines()]
-    if not module.isascii() or actual != expected:
-        raise BoundaryError("native module: unreviewed signature or equations")

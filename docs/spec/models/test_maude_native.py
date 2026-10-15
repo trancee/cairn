@@ -1,4 +1,4 @@
-"""Fail-closed candidate rollout at the existing guarded-command seam."""
+"""Fail-closed native default at the existing guarded-command seam."""
 
 import os
 from pathlib import Path
@@ -8,56 +8,72 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from equations.maude_candidate import NATIVE_DIRECTORY, source_identity
+from equations.maude_native import NATIVE_DIRECTORY, source_identity
 from equations.maude_runner import GuardError, run_guarded_tamarin
 
 
-class CandidateCommandTests(unittest.TestCase):
-    def run_report(self, source_field=""):
+class NativeCommandTests(unittest.TestCase):
+    def run_report(self, source_field="", *, use_default=False):
         with tempfile.TemporaryDirectory() as temporary:
-            candidate = (Path(temporary) / "candidate").resolve()
-            candidate.write_text(f"#!{sys.executable}\nprint('3.5.1')\n")
-            candidate.chmod(0o755)
+            proxy = (Path(temporary) / "release" / "cairn-maude-proxy").resolve()
+            proxy.parent.mkdir()
+            proxy.write_text(f"#!{sys.executable}\nprint('3.5.1')\n")
+            proxy.chmod(0o755)
             tamarin = Path(temporary) / "tamarin-prover"
             tamarin.write_text(
                 f"#!{sys.executable}\nimport os\nfrom pathlib import Path\n"
                 "Path(os.environ['CAIRN_MAUDE_GUARD_REPORT']).write_text("
                 f"'{{\"event\":\"version\",\"pid\":1337{source_field}}}\\n')\n"
-                f"print('candidate-selected' if '--with-maude={candidate}' in "
+                f"print('compiled-selected' if '--with-maude={proxy}' in "
                 "__import__('sys').argv else 'legacy-selected')\n",
             )
             tamarin.chmod(0o755)
 
-            with patch.dict(os.environ, {"CAIRN_MAUDE_GUARD_CANDIDATE": str(candidate)}):
-                return run_guarded_tamarin([str(tamarin), "--fixture"], 30)
+            with patch.dict(os.environ, {"CARGO_TARGET_DIR": temporary}):
+                return run_guarded_tamarin(
+                    [str(tamarin), "--fixture"], 30, proxy=None if use_default else proxy,
+                )
 
-    def test_candidate_cannot_claim_success_without_its_source_identity(self):
+    def test_default_route_uses_the_source_identified_compiled_guard(self):
+        output = self.run_report(f',"source_id":"{source_identity()}"', use_default=True)
+
+        self.assertEqual(output.strip(), "compiled-selected")
+
+    def test_native_guard_cannot_claim_success_without_its_source_identity(self):
         with self.assertRaisesRegex(GuardError, "source identity"):
             self.run_report()
 
-    def test_candidate_with_current_source_identity_is_selected_explicitly(self):
+    def test_native_guard_with_current_source_identity_is_selected_explicitly(self):
         output = self.run_report(f',"source_id":"{source_identity()}"')
 
-        self.assertEqual(output.strip(), "candidate-selected")
+        self.assertEqual(output.strip(), "compiled-selected")
 
-    def test_stale_candidate_cannot_establish_proof_success(self):
+    def test_stale_native_guard_cannot_establish_proof_success(self):
         with self.assertRaisesRegex(GuardError, "stale native boundary source identity"):
             self.run_report(f',"source_id":"{"0" * 64}"')
 
-    def test_malformed_candidate_identity_cannot_establish_proof_success(self):
+    def test_malformed_native_identity_cannot_establish_proof_success(self):
         for field in ('[]', 'true', 'null', '0', '"short"', f'"{"A" * 64}"'):
             with self.subTest(field=field), self.assertRaisesRegex(GuardError, "source identity"):
                 self.run_report(f',"source_id":{field}')
 
-    def test_invalid_candidate_configuration_cannot_fall_back_to_python(self):
+    def test_invalid_explicit_guard_cannot_fall_back_to_the_default(self):
         with tempfile.TemporaryDirectory() as temporary:
             not_executable = Path(temporary) / "not-executable"
             not_executable.write_text("not an executable\n")
             cases = ("", "relative", temporary, str(not_executable), str(Path(temporary) / "missing"))
             for selected in cases:
-                with self.subTest(selected=selected), patch.dict(
-                    os.environ, {"CAIRN_MAUDE_GUARD_CANDIDATE": selected},
-                ), self.assertRaisesRegex(GuardError, "native guard candidate"):
+                with self.subTest(selected=selected), self.assertRaisesRegex(
+                    GuardError, "native guard",
+                ):
+                    run_guarded_tamarin(["tamarin-prover", "--version"], 30, proxy=Path(selected))
+
+    def test_invalid_default_target_cannot_claim_success(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            for target, reason in (("", "CARGO_TARGET_DIR.*empty"), (temporary, "unavailable")):
+                with self.subTest(target=target), patch.dict(
+                    os.environ, {"CARGO_TARGET_DIR": target},
+                ), self.assertRaisesRegex(GuardError, reason):
                     run_guarded_tamarin(["tamarin-prover", "--version"], 30)
 
     def test_unreadable_source_inputs_are_controlled_command_failures(self):

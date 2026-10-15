@@ -52,8 +52,8 @@ full-export pairs give `24.281`/`25.931` seconds (`+6.80%`) with identical bytes
 below the representative `10%` limit. A separate one-rule fixture still adds
 `39.93` ms (`+33.76%`). The owner subsequently approved maintained promotion
 with a startup-only `50` ms cap, retaining `10%` for the full export.
-Linux/caller/CI criteria must precede cutover; default routing stays Python.
-The maintained candidate now embeds a source identity, shares the acceptance
+Linux/caller/CI criteria had to precede cutover; staging retained Python.
+The maintained candidate embedded a source identity, shared the acceptance
 runner and has rejecting workload-specific budget gates. Clean local fast
 checks pass; the existing 19-cell workflow is wired for pre-cutover native
 Linux validation. Run `38710117729` passes all 18 caller cells and fast gates,
@@ -83,7 +83,17 @@ and full export (`37.767068`/`40.976767` seconds, `+8.4987%`). Startup rejects
 its direct baseline before a timing verdict because its fixture inventory was
 also macOS-only. Retain the exact observed Linux startup digest alongside
 macOS without relaxing byte identity or the `50` ms cap; native startup
-acceptance remains pending. No missing mathematical hypothesis is discharged.
+acceptance remained pending at that checkpoint. No missing mathematical hypothesis is discharged.
+Native staging `38721189200` at `71168a1` subsequently passes all 19 cells and
+both actual budgets (`+9.6594%` full export, `+15.871115` ms startup).
+That permits the owner-authorized conditional default cutover. The shared
+runner now selects only the maintained compiled guard, with mandatory source
+identity; the temporary route and obsolete Python validator/evidence/parser are
+removed. All nine private parser-test groups retain native CLI counterparts.
+Current default-source local budgets are `+6.1498%` and `+41.960417` ms,
+respectively; final-source hosted acceptance remains pending. None of this
+establishes native FVP, universal importer correspondence or full assembled
+acceptance.
 This performance experiment does not supply any missing native FVP hypothesis.
 See the [boundary reference](../spec/models/equations/README.md#native-stream-boundary).
 Sorted AC-unification and full theorem/FVP transfer remain open.

@@ -7,7 +7,7 @@ import replay
 from pathlib import Path
 
 from replay import ReplayError, check_result, compare_replay, main, run, select_certificate
-from equations.maude_candidate import source_identity
+from equations.maude_native import source_identity
 
 
 EXPORT = """

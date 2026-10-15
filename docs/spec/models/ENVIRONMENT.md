@@ -36,53 +36,29 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
 - The pinned derivation checker changes natural variables to Fresh inside
   premise constructors. Keep these controlled kind queries supported; do not
   skip derivation checks or admit arbitrary natural-sum operands/kind variables.
-- Current full-export guard overhead is `+22.5%` versus direct native execution,
-  reduced from `+46.3%` by owner-approved evidence/stream I/O optimization.
-  Every operation record remains mandatory; bounded batching closes before
-  shutdown evidence. The earlier `+2.7%` parse-only result was not representative.
-  The remaining regression blocks merge under Constitution P4;
-  see the [measurements](equations/README.md#integration-and-observed-evidence).
-  Passing the original proof deadlines is not performance acceptance.
-- The owner-approved [compiled candidate](equations/native-proxy/README.md)
-  remains pre-cutover. Its earlier prototype three-pair full-export
-  overhead is `+6.80%` with identical bytes, but tiny-fixture startup still adds
-  `39.93` ms (`+33.76%`). The owner approved maintained promotion with a
-  startup-only `50` ms cap, retaining the full-export `10%` bound.
-  Linux/caller/CI criteria must pass before cutover; the default Python gate
-  remains blocked. Set `CAIRN_MAUDE_GUARD_CANDIDATE` to an absolute current
-  compiled executable to select it for every guarded caller. Empty, missing,
-  non-executable or stale selections reject; there is no fallback.
-  The staged 19-cell workflow builds/selects this source-identified
-  candidate for native Linux validation and gates both budgets in its lifecycle
-  cell. Native run `38710117729` passes all 18 replay/mutation cells and fast
-  gates, but rejects an unreviewed benchmark export before any budget verdict.
-  Diagnostic run `38712391261` identifies the direct baseline: its native Linux
-  full-export digest was absent from the macOS-only fixture inventory.
-  Both exact digests are now pinned, with all six sample exports still required
-  to match each other and the retained inventory. No normalization or budget
-  change. Run `38714285780` at `67584ea` then completes all six identical Linux
-  exports but fails the actual full-export budget at `+10.5601%`
-  (`35.220242`/`38.939536` seconds); startup does not run.
-  Current source combines each fully validated reply/prompt into one checked
-  raw stdout write and polls final evidence every `1` ms, retaining the
-  `5`-second grace. Follow-up `38719650091` at `2b642e2` passes all 18 callers/
-  fast gates and full export (`+8.4987%`, `37.767068`/`40.976767` seconds).
-  Startup rejects its direct baseline before timing acceptance because its
-  retained digest was macOS-only. Both exact startup digests are now pinned,
-  without changing the six-identical-output requirement or `50` ms cap.
-  Fresh native startup acceptance remains pending. Rust passes; CodeQL's
-  separate Apple preflight hits the known scratch-detach `Resource busy` failure.
-  The owner authorized promotion
-  commits/pushes to PR #9 for existing native CI, including necessary fixes and
-  conditional cutover after the required criteria pass. Do not start Colima,
+- The [native guard](equations/native-proxy/README.md) is now the shared ratchet
+  default after accepted native staging at `71168a1`:
+  all 19 cells pass, full export `+9.6594%`, startup `+15.871115` ms.
+  Resolve `$CARGO_TARGET_DIR/release/cairn-maude-proxy`, or root
+  `target/native-proxy/release/cairn-maude-proxy` when unset. Relative targets
+  follow Cargo's working directory; an explicitly empty target rejects.
+  Build first using the reference or `scripts/check.sh`; proof commands never
+  build automatically. Missing/non-executable/stale builds reject, with no
+  Python fallback or temporary selector. Every version requires current source ID.
+  The historical Python `+22.5%` path is deleted.
+- Budgets remain three alternating pairs, six identical fixed-digest exports,
+  full export at most `+10%`, startup at most `+50` ms. Current default-source
+  local overhead is `+6.1498%` and `+41.960417` ms (`+37.3660%`), respectively.
+  Fresh hosted acceptance of this changed source remains pending; preceding
+  staging evidence is not a substitute. Measured raw combined stdout and
+  `1` ms final-evidence polling retain every check/event and the `5`-second grace.
+  Passing proof deadlines alone is not performance acceptance.
+  The existing 19-cell workflow builds once per cell with the shared Cargo
+  target and retains all caller/static/stream/kernel/budget gates, without
+  extra jobs or larger deadlines. The owner authorized this conditional
+  cutover and promotion commits/pushes/PR updates. Do not start Colima,
   manually dispatch, merge or activate SDK/profile behavior under that approval.
-  Current-source local three-pair overhead is `+6.4297%` for full export and
-  `+36.531959` ms (`+33.0482%`) for startup, both within their separate limits.
-  The stdout-only intermediate source failed startup at `+52.560041` ms;
-  the measured final-evidence sleep motivated the subsequent poll change.
-  Final compiled default recovery, all 56 safety certificates and both mutation
-  regressions pass at original caps. Those four local contexts do not establish
-  native Linux/all 19 CI cells, full assembled acceptance or memory performance.
+  Full assembled, full-proof/memory and native FVP acceptance remain separate.
 - `scripts/check.sh` builds the host guard with the root Rust pin, checks Rust
   formatting/strict Clippy and 19 native CLI/process cases, then runs
   whitespace, unit tests and `actionlint`,

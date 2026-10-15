@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from equations.maude_module import reviewed_module
 from equations.signature import FUNCTIONS
-from equations.maude_candidate import source_identity, source_inputs
+from equations.maude_native import source_identity, source_inputs
 from equations.maude_runner import GuardError
 
 

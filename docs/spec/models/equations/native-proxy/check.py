@@ -1,4 +1,4 @@
-"""Maintained candidate CLI/native-stream checks before default cutover."""
+"""Maintained native guard CLI/native-stream checks."""
 
 import argparse
 import os
@@ -10,7 +10,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from equations.maude_candidate import source_identity
+from equations.maude_native import source_identity
 from equations.maude_runner import boundary_complete
 from check_process import CompiledProcessTests
 from test_maude_boundary import NATIVE_MODULE, native_stream
@@ -138,7 +138,7 @@ class CompiledStreamTests(unittest.TestCase):
             "reduce tamtplus(tamXCh(f(0)),tamXCtone) .",
             "reduce tamtplus(list(nil),tamXCtone) .",
             "reduce tamXCh(list(cons(tamtplus(f(0),tamXCtone),nil))) .",
-            "reduce tamtplus(x0:[TOP],tamXCtone) .",
+            "reduce tamtplus(x0:[TOP],tamXCtone) .", "reduce tamXCh(list(nil)) .",
         )
         for command in commands:
             with self.subTest(command=command):
@@ -151,6 +151,7 @@ class CompiledStreamTests(unittest.TestCase):
     def test_rejected_bindings_and_solution_headers_reject_the_whole_reply(self):
         replies = (
             "Unifier 1\nx0:Pub --> p(1)\n", "Unifier 1\nx0:Pub --> x1:Pub\n",
+            "\nUnifier 1\nx0:Pub --> tamXCroleA\n",
             "Unifier 1\nx0:Pub --> #0:TOP\n", "Unifier 1\nx1:Pub --> p(0)\n",
             "Unifier 1\nx0:Pub --> p(0)\nx0:Pub --> p(0)\n",
             "Unifier 1\nx0:Pub --> p(0)\nUnifier 3\nempty substitution\n",

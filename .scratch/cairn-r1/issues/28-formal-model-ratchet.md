@@ -875,3 +875,37 @@ the existing Apple isolation preflight on `hdiutil` scratch detach
 (`Resource busy`), after its file/process/CPU limits pass. This is the previously
 documented teardown failure, not a native guard finding; no unrelated repair,
 manual rerun or external-volume cleanup is performed.
+
+2026-10-15 (native staging accepted; conditional default cutover):
+run `38721189200` at `71168a1` passes all 19 cells, including all 18 callers,
+fast gates and both actual three-pair budgets. Native full export is
+`32.023234268`/`35.116483184` seconds (`+9.659389%`); startup is
+`0.103666940`/`0.119538055` seconds (`+15.871115` ms, `+15.3097%`).
+All six exports per workload are identical and match the fixed Linux inventory.
+Both saved reports independently pass before the next source change.
+Rust `38721189142` and four-language CodeQL `38721189358` also pass,
+including the Apple preflight.
+
+Those results meet the owner's explicit condition for central default cutover.
+The public guarded-command test first fails because it observes
+`legacy-selected` instead of the compiled executable, then passes after the
+shared resolver changes. The only default is now `cairn-maude-proxy` from
+`CARGO_TARGET_DIR/release`, or root `target/native-proxy/release` when unset.
+An empty Cargo target and invalid/missing/non-executable/stale binaries reject.
+Every version requires current source identity; no automatic build or fallback.
+The temporary route and obsolete Python validator/evidence/parser are deleted;
+the shared module inventory stays. All nine private parser-test groups are
+covered by native CLI cases, with exact standalone framing and leading-blank
+unsorted-Pub cases explicitly retained. Malformed journal fixtures now carry
+valid identity where needed and assert the intended error reason.
+
+The current default fast gate, without the temporary selector, passes
+19 native/131 model/50 lifecycle cases, 43 projections and 67 audits.
+Current-source local three-pair full export is `24.324896333`/`25.820824167`
+seconds (`+6.149781%`); startup is `0.112295750`/`0.154256167` seconds
+(`+41.960417` ms, `+37.365988%`). Both saved reports independently pass.
+Source ID is `96295e1ecba13e26eac68929ff5dbff673651f5e0eb61a8fe16ae847f2ccf0a8`;
+macOS binary SHA-256 is
+`aa8b30c421366c5f77bcce80aff804aad1ccd7708f2e2d6d68d030cb883a3838`.
+Final-source hosted acceptance remains pending. No merge, SDK/profile
+activation, protocol/wire/API/primitive or constant-time claim change.

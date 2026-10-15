@@ -1,4 +1,4 @@
-"""Maintained candidate process/proof checks at the CLI/native-stream seam."""
+"""Maintained native guard process/proof checks at the CLI/native-stream seam."""
 
 import os
 from pathlib import Path
@@ -9,7 +9,7 @@ import tempfile
 import time
 import unittest
 
-from equations.maude_candidate import source_identity
+from equations.maude_native import source_identity
 from equations.maude_runner import GuardError, boundary_complete, run_guarded_tamarin
 from test_maude_boundary import NATIVE_MODULE
 
@@ -147,7 +147,7 @@ class CompiledProcessTests(unittest.TestCase):
         output = run_guarded_tamarin([
             "tamarin-prover", str(model), "--quit-on-warning",
             "--derivcheck-timeout=60", "--output-module=msr",
-        ], 120, candidate=self.proxy)
+        ], 120, proxy=self.proxy)
 
         self.assertIn("rule (modulo E) Natural_Input:", output)
 
@@ -169,6 +169,6 @@ end
 
             output = run_guarded_tamarin([
                 "tamarin-prover", str(model), "--quit-on-warning", "--prove=normalization_witness",
-            ], 60, candidate=self.proxy)
+            ], 60, proxy=self.proxy)
 
         self.assertIn("normalization_witness (exists-trace): verified", output)

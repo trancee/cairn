@@ -59,13 +59,13 @@ records methodology and the report-I/O profiling result.
 
 The subsequent owner-approved compiled-proxy experiment reduces representative
 full-export overhead to `+6.80%` across three pairs with identical bytes.
-It retains the checks and is now a maintained, opt-in
-[candidate](equations/native-proxy/README.md), not a default cutover
-or a new mathematical proof. Tiny-fixture startup still adds `39.93` ms
+It retained the checks in a maintained, staged
+[native guard](equations/native-proxy/README.md), not yet a default cutover
+or a new mathematical proof. That prototype's tiny-fixture startup added `39.93` ms
 (`+33.76%`). The owner approved maintained promotion with a startup-only
 `50` ms cap, retaining `10%` for full export; Linux/caller/CI criteria must pass
-before cutover. The default Python route and all native FVP/full-context gates
-remain unchanged. Compiled evidence now identifies its reviewed source;
+before cutover. During staging the Python default and native FVP/full-context gates
+remained unchanged. Compiled evidence identifies its reviewed source;
 missing/stale builds reject rather than falling back. The existing local/CI
 gates are wired to validate the candidate before cutover. Clean local fast
 gates pass. The current candidate also passes its local paired budgets
@@ -87,13 +87,22 @@ in a final-evidence sleep. Reducing only that poll from `10` to `1` ms,
 without changing the `5`-second grace or any check, gives the passing local
 budgets above. These measured optimizations are not proof of a Linux fix.
 Fresh native budget acceptance and default cutover remain incomplete.
-The follow-up `38719650091` at `2b642e2` now passes all 18 callers/fast gates
+The follow-up `38719650091` at `2b642e2` passed all 18 callers/fast gates
 and native full export (`+8.4987%`), without a waiver. Startup then identifies
 another host-fixture assumption: only its macOS digest was retained. Pinning
 the exact observed direct Linux startup digest uses the same fixed-inventory
 decision; it does not learn accepted bytes from runtime samples or change
 within-host byte identity and timing checks. Native startup acceptance remains
-pending, so the default is still unchanged.
+pending at that checkpoint.
+Native staging `38721189200` at `71168a1` then passes all 19 cells, including
+both actual budgets (`+9.6594%` full, `+15.871115` ms startup), without a waiver.
+That meets the owner's condition for making the maintained compiled guard the
+shared default. The temporary selector and obsolete Python validator/evidence/
+parser are removed, not kept as a second implementation. All old adversarial
+parser cases remain covered at the native CLI seam; every version now requires
+current source identity. New default-source local budgets pass at `+6.1498%`
+and `+41.960417` ms. Its final-source hosted acceptance is still pending.
+This changes proof tooling, not any native FVP/full-context obligation.
 Full assembled and memory-performance evidence remain separate obligations.
 
 ## Exact scope

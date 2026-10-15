@@ -1,13 +1,11 @@
-# Compiled Maude guard candidate
+# Native Maude guard
 
-Maintained host-only candidate at the existing CLI/native-stream boundary.
-This is **not the default acceptance proxy**, a native FVP certificate or
-approval to bypass rollout criteria, change proof deadlines, protocol behavior
-or implementation gates.
-The owner approved promotion after the prototype's performance experiment.
-Linux parity and caller/CI gates must pass before central default cutover.
-The Python default is retained only for this staged migration, not as a
-fallback when the compiled candidate fails.
+Maintained, dependency-free host guard at the existing CLI/native-stream boundary.
+It is the shared ratchet acceptance default after the owner-approved native
+staging criteria passed at `71168a1`. There is no Python validator or fallback.
+Final-source hosted acceptance of the cutover remains required. This is not
+a native FVP certificate or approval to change proof deadlines, protocol
+behavior, implementation gates or SDK/profile activation.
 
 ## Commands
 
@@ -41,7 +39,7 @@ and these checks, then the existing model/lifecycle/Lean gates.
 explicitly screening only; it never reports budget acceptance.
 
 Three alternating pairs compare unchanged committed `replay.run` with the
-shared guarded runner and explicit candidate. Every export must match a
+shared guarded runner and explicit executable. Every export must match a
 retained workload digest, and all six exports in a measurement must be
 byte-identical. The medians must satisfy **full export at most
 `+10%`** and **startup at most `+50` ms**. The tiny allowance never applies
@@ -69,45 +67,52 @@ Retained full-export digests are
 (observed pinned native Linux).
 No runtime sample creates a new accepted digest, no output is normalized or
 filtered, and different retained digests cannot be mixed within a measurement.
+The cause of cross-host output differences remains unestablished.
 
-## Candidate routing and source freshness
+## Default executable and source freshness
 
-`CAIRN_MAUDE_GUARD_CANDIDATE` explicitly selects the compiled executable for
-every existing guarded acceptance caller. It must be an absolute executable
-path. An empty/relative/missing/non-executable value rejects the proof command;
-there is no automatic build, Python fallback or user `--with-maude` override.
-The benchmark's explicit `--proxy` uses the same runner and identity checks.
+Every guarded ratchet caller resolves
+`$CARGO_TARGET_DIR/release/cairn-maude-proxy`, or
+`<repository>/target/native-proxy/release/cairn-maude-proxy` when that variable
+is unset. Relative target directories follow Cargo's working-directory semantics;
+an explicitly empty value rejects. The temporary candidate selector is removed.
+Missing/non-executable/stale builds reject with build guidance; proof commands
+never build automatically or fall back to another validator.
+The CLIs resolve their `--proxy` path before using the shared runner's
+`proxy: Path` keyword, which requires an absolute executable. Both routes
+use the same identity/evidence checks.
+User `--with-maude` overrides remain rejected.
 
 For example, after building at the path above:
 
 ```bash
-export CAIRN_MAUDE_GUARD_CANDIDATE="$PWD/target/native-proxy/release/cairn-maude-proxy"
 python3 docs/spec/models/replay.py --target lost_data_recovery --timeout 180
 ```
 
 Cargo embeds a deterministic SHA-256 of the Rust sources, Cargo/build/generator
-inputs, shared inventory/recognizer, candidate selector/reconciler and root Rust
-pin. [`source_inputs()`](../maude_candidate.py) is the inventory. Cargo watches
+inputs, shared inventory, native selector/reconciler and root Rust
+pin. [`source_inputs()`](../maude_native.py) is the inventory. Cargo watches
 those inputs and the Rust source directory. Every native `version` event adds
 `source_id`; the parent requires it to match current source before accepting
 the complete journal. Old or stale executables fail with explicit rebuild
 guidance. This is freshness evidence, not signed build/toolchain attestation.
 
-The existing 19-cell lifecycle workflow builds the candidate once per cell
-and selects it for all existing callers. The lifecycle cell also runs static/
+The existing 19-cell lifecycle workflow builds the guard once per cell
+and exports the shared Cargo target for all callers. The lifecycle cell runs static/
 stream gates and both three-pair budgets; no job or deadline is added.
 The workflow names the internal host-tool exclusion from SDK coverage.
-Native execution is observed below; full budget acceptance remains incomplete.
-Only after Linux/caller/performance acceptance may the default change and
-the temporary selector and obsolete Python validator/tests be removed.
+Native staging acceptance is recorded below. The temporary selector, obsolete
+Python validator/evidence/parser and nine duplicate parser tests are removed.
+Their adversarial cases remain in the native CLI tables, including standalone
+framing-under-message and incompatible returned-Pub binding cases.
 
 ## Implementation boundary
 
 The standalone Cargo package has no third-party dependencies and is not a
 member of the application workspace. Cargo generates the module/function
 inventory from the existing reviewed Python source into `OUT_DIR`; generated
-inventory is not edited or committed. The normal Python module checker uses
-the same inventory without changing its acceptance contract.
+inventory is not edited or committed. The Python module builder remains the
+shared source of the reviewed inventory, not a second runtime validator.
 
 The guard implements the pinned module/setup, all four operations,
 iterative term recognition, controlled Fresh/natural kinds, proper returned
@@ -125,9 +130,9 @@ error checking. Final evidence is polled every `1` ms with the same
 `unix.rs` contains the host-only POSIX FFI for poll, signals, owned-child
 termination and checked descriptor close. The signal handler only stores an
 atomic flag. No application/core unsafe-code policy or shipped dependency
-changes. Compile-time platform branches cover macOS and Linux. The preceding
-source passed native Linux caller/fast gates but failed performance below;
-fresh native acceptance of the output/teardown changes remains pending.
+changes. Compile-time platform branches cover macOS and Linux. The accepted
+staging source passes native Linux caller/fast and both performance gates;
+final-source cutover acceptance remains pending.
 
 The CLI cases cover real operations, malformed terms and replies, kind/sort/
 namespace boundaries, deep framing, changed equations, complete bulk evidence,
@@ -137,137 +142,63 @@ parser or exhaustive equivalence proof. Local maintained checks pass; native
 Linux, full caller and performance acceptance are recorded separately.
 Native FVP and full assembled proof acceptance remain open.
 
-## Prior prototype result (2026-10-15)
+Approval rationale, prototype results, rejected native budgets, fixture
+corrections and measured stdout/teardown fixes are retained in
+[ADR 0010](../../../../adr/0010-compositional-lifecycle-verification.md#migration)
+and [issue 28](../../../../../.scratch/cairn-r1/issues/28-formal-model-ratchet.md).
 
-On Apple-silicon macOS `27.0.1`, 8 GiB RAM, with Rust `1.99.0` and the pinned
-proof tools, three alternating complete-export pairs measured direct/prototype
-medians of `24.281`/`25.931` seconds (`+6.80%`). All six exports have SHA-256
-`aaaf873a9b7baff6fbf209f1cf87088581552498ade6f9a5e471ee2b5ea6fb5d`.
-This representative workload is below the `10%` limit; it is not a global
-performance waiver or evidence of full-proof/memory performance.
-
-The one-rule derivation fixture separately measures `0.118`/`0.158` seconds
-(`+39.93` ms, `+33.76%`), also across three alternating pairs. Its relative
-overhead still exceeds `10%`. The owner subsequently approved an additive
-startup-only cap of `50` ms, while retaining `10%` for the complete export;
-see [ADR 0010](../../../../adr/0010-compositional-lifecycle-verification.md#maintained-proxy-promotion-and-startup-only-budget-2026-10-15).
-Do not conceal the relative result behind the larger workload's percentage.
-The default Python path remains at `+22.5%` and remains performance-blocked.
-
-All 18 prototype checks, Rust formatting/strict Clippy and the then-default
-fast gate passed. That checkpoint reported 117 model tests, 50 lifecycle tests,
-43 projections, six source correspondences and 67 audits. The tested prototype
-binary SHA-256 is
-`4bc6cd2ad4fb883f84811b233905d404025f492f47fbd3b0ed092c9680dafce0`.
-The reduction and missing-unification behavior reds preceded their green
-implementations. These timings/hash precede source identity and maintained
-integration; they are not final maintained-candidate acceptance measurements.
-
-The clean maintained-candidate fast gate now passes 19 native checks, 138
-model tests, 50 lifecycle tests, 43 projections and 67 equation audits.
-The missing-identity behavior red, unsupported budget-CLI red and real
-stale-executable rejection are retained, as are controlled source-input and
-inventory-output I/O reds. No compiled default cutover or merge
-has occurred.
-
-## Maintained-candidate evidence (2026-10-15)
+## Current default-source evidence (2026-10-15)
 
 Current-source three-pair measurements use macOS `27.0.1`/`arm64`, eight logical
 CPUs, 8 GiB, Python `3.14.8`, Rust `1.99.0` and the pinned proof tools.
-The unchanged direct runner baseline is committed `67584ea`.
+The unchanged direct runner baseline is committed `71168a1`.
 
 | Workload | Direct / guarded median seconds | Overhead | Approved gate |
 |---|---|---|---|
-| Complete strict export | `24.248549` / `25.807651` | `+6.4297%` | Pass, at most `10%` |
-| Paired-counter startup | `0.110541` / `0.147073` | `+36.531959` ms (`+33.0482%`) | Pass, at most `50` ms |
+| Complete strict export | `24.324896` / `25.820824` | `+6.1498%` | Pass, at most `10%` |
+| Paired-counter startup | `0.112296` / `0.154256` | `+41.960417` ms (`+37.3660%`) | Pass, at most `50` ms |
 
 Every export matches its retained digest. Both saved reports also pass the
 independent `--check-report` path. The measured source ID is
-`d9ce5de97da68e702ad2c7c54b705f2c8ff2cf85032b608c93ce55e3af89c367`;
+`96295e1ecba13e26eac68929ff5dbff673651f5e0eb61a8fe16ae847f2ccf0a8`;
 the binary SHA-256 is
-`6f80c13e2b796a77a2279017ddaf12d7ae32e5a6c50763df4e7145926909fbd7`.
-All samples are retained, including the first startup guarded sample of
-`0.356682459` seconds; acceptance uses the approved median, not filtering.
+`aa8b30c421366c5f77bcce80aff804aad1ccd7708f2e2d6d68d030cb883a3838`.
+All samples are retained; acceptance uses the approved median, not filtering.
 Earlier-source reports reject as stale and are historical evidence only.
 
-The final build also passes the original `180`-second-cap recovery replay
+The preceding accepted staging build passed the original `180`-second-cap recovery replay
 (826-step witness plus nine-step owner helper), complete refined safety
 (all 56 certificates) and both mutation regressions (verified defaults and
 504-/526-step counterexamples). All 43 rules/13 restrictions and non-lemma
 declarations remain unchanged. These are four selected local caller
 regressions, not native Linux/19-cell CI or full assembled acceptance.
-The two genuine tiny Tamarin probes also pass with candidate selection
-unset, preserving the existing Python default.
+The current default fast gate passes 19 native checks, 131 model tests,
+50 lifecycle tests, 43 projections and 67 audits without a temporary selector.
+The intended default-selection red preceded implementation. All malformed
+lifecycle fixtures now carry valid source identity where appropriate and assert
+the intended failure reason, rather than rejecting early for missing identity.
 
 The owner authorized promotion checkpoints in PR #9 for existing native CI,
 including necessary fixes and conditional cutover after the required criteria
-pass. Full native acceptance remains incomplete; merge and SDK/profile activation
+pass. Final-source cutover acceptance remains incomplete; merge and SDK/profile activation
 are not authorized. The local budgets do not measure full-proof or memory overhead,
-establish FVP, authorize a default cutover or supersede the failed hosted run.
+establish FVP or supersede final-source hosted acceptance.
 
-## Native staging result (`2e7b429`)
+## Accepted native staging (`71168a1`)
 
-[Run `38710117729`](https://github.com/trancee/cairn/actions/runs/38710117729)
-passes all 18 replay/mutation cells and the lifecycle fast gates. The benchmark
-then rejects an unreviewed export before any timing-budget verdict.
-The earlier generic error did not distinguish an unexpected direct export
-from a guarded mismatch. A public benchmark CLI regression now requires the
-phase and expected/observed SHA-256 values, without logging output payloads.
-No export, evidence, budget or deadline check is relaxed.
-Native performance acceptance and default cutover remain blocked.
-
-[Diagnostic run `38712391261`](https://github.com/trancee/cairn/actions/runs/38712391261)
-at `942f8d8` again passes all 18 callers and the fast gates. It identifies
-the **direct baseline**, before any guarded sample: the retained macOS digest
-does not match the pinned Linux tool's observed digest above.
-The inventory now retains both fixed outputs rather than assuming cross-host
-byte identity. Paired runs still require exact byte identity on the actual host.
-All 13 public budget/diagnostic CLI cases pass, including the intended Linux
-fixture red/green, its unchanged relative cap and rejection of applying the
-startup allowance to it. Both retained macOS reports passed at that checkpoint.
-
-## Measured native budget failure and I/O follow-up
-
-[Run `38714285780`](https://github.com/trancee/cairn/actions/runs/38714285780)
-at `67584ea` passes all 18 native replay/mutation cells and fast gates.
-All six complete exports match the fixed Linux digest, then the unchanged
-budget correctly rejects direct/guarded medians of `35.220242391` /
-`38.939535589` seconds (`+10.560101%`). Startup does not run after that failure.
-The host records Linux `6.17.0-1022-azure`/`x86_64`, glibc `2.39`, four logical
-CPUs, `16765378560` bytes RAM and Python `3.13.16`; Rust/proof pins are unchanged.
-Companion Rust and four-language CodeQL gates pass.
-
-An active native-process sample shows stdout write/flush cost; it is not a
-syscall count or a Linux profile. The parent complete-journal audit consumes
-only `0.151` profiled seconds locally. The raw combined-write refactor above
-preserves complete validation and evidence; all 19 CLI cases pass, including
-closed-consumer failure and whole-reply rejection.
-That stdout-only intermediate source measures local full export `+6.4369%`
-but fails startup at `+52.560041` ms. An isolated exact-digest startup profile
-records `13` ms in one final-evidence sleep. Reducing that poll to `1` ms,
-without changing its deadline or checks, produces the passing local budgets
-above. Neither profiling nor local acceptance establishes a Linux fix.
-Fresh native full-export/startup acceptance and default cutover remain blocked.
-
-[Follow-up `38719650091`](https://github.com/trancee/cairn/actions/runs/38719650091)
-at `2b642e2` passes all 18 callers/fast gates and the native full-export budget:
-direct `37.767067723` / guarded `40.976766595` seconds (`+8.498671%`), all six
-exports identical. The environment matches the native host above.
-The measured Linux binary SHA-256 is
-`70b5d14f77e9f4173a8e6a55f4bdd922ac49312d9d98186a29e587b453bd740a`;
-its source identity matches the current macOS build above.
-
-Startup then rejects its direct baseline before any guarded sample or timing
-verdict because its fixed digest inventory was also macOS-only. Retain the exact
-observed Linux startup digest above alongside macOS, never a runtime-learned
-fixture. All six outputs must still be identical and the `50` ms cap is unchanged.
-The public Linux startup report red is green; all 14 cases pass, including
-above-cap rejection for both startup digests. This benchmark-only correction
-does not change the native guard identity; both current macOS reports and
-the genuine native full-export report still pass.
-Fresh native startup acceptance remains required before default cutover.
-
-Companion Rust `38719650123` passes all 11 jobs. CodeQL `38719650130` is
-separately blocked by the previously observed Apple scratch-detach
-`Resource busy` failure after passing its file/process/CPU-limit probes.
-No unrelated code repair, manual rerun or external-volume cleanup is performed.
+[Run `38721189200`](https://github.com/trancee/cairn/actions/runs/38721189200)
+passes all 19 cells: every replay/mutation caller, fast gates and both actual
+three-pair budgets. Native full export measures `32.023234268` /
+`35.116483184` seconds (`+9.659389%`); startup measures `0.103666940` /
+`0.119538055` seconds (`+15.871115` ms, `+15.3097%`). All six exports per
+workload match the fixed Linux digest and each other. Both saved reports
+independently passed before the cutover changed source identity.
+Staging source ID was
+`d9ce5de97da68e702ad2c7c54b705f2c8ff2cf85032b608c93ce55e3af89c367`,
+Linux binary SHA-256
+`70b5d14f77e9f4173a8e6a55f4bdd922ac49312d9d98186a29e587b453bd740a`.
+Rust `38721189142` and four-language CodeQL `38721189358` also pass,
+including the Apple preflight.
+These actual native criteria permit the owner-authorized central default
+change, not a merge or SDK/profile activation. The new default source still
+requires its own hosted acceptance.

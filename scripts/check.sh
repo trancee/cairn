@@ -7,7 +7,8 @@ git diff --check
 git diff --cached --check
 
 native_manifest="docs/spec/models/equations/native-proxy/Cargo.toml"
-native_target="${CARGO_TARGET_DIR:-$PWD/target/native-proxy}"
+native_target="${CARGO_TARGET_DIR-$PWD/target/native-proxy}"
+export CARGO_TARGET_DIR="$native_target"
 cargo fmt --manifest-path "$native_manifest" --check
 cargo clippy --locked --manifest-path "$native_manifest" --target-dir "$native_target" -- -D warnings
 cargo build --locked --release --manifest-path "$native_manifest" --target-dir "$native_target"

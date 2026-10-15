@@ -188,7 +188,7 @@ export/round-trip/precompute/replay, mutation and extracted-attack runners use
 it. Ordinary version checks and unrelated Resume/SAS models are unchanged.
 Caller-supplied `--with-maude` overrides are rejected.
 
-The executable `maude_boundary.py` requires Maude `3.5.1`, the pinned five
+The compiled [`cairn-maude-proxy`](native-proxy/README.md) requires Maude `3.5.1`, the pinned five
 interactive flags, the three standard setup commands and the entire exact
 native module derived from the shared 15-function/six-equation inventory.
 It accepts only `reduce`, `unify in MSG`, `match in MSG` and
@@ -223,10 +223,13 @@ truncated, duplicate-field, malformed, failed or inconsistent records reject
 the entire proof command. Each started stream requires its own version/module
 evidence and completed shutdown. Version-only evidence is permitted when no
 native stream starts. Records are consistency evidence, not cryptographic
-attestation against a malicious proof executable.
+attestation against a malicious proof executable. Every `version` record also
+requires the current source identity; there is no unversioned Python route.
+The default executable comes from the shared Cargo target, with missing/stale
+builds rejecting rather than building automatically or falling back.
 
 The owner-approved I/O optimization retains every `begin`/`accepted` event.
-`maude_evidence.py` appends operation records through one validated descriptor
+The native [`evidence.rs`](native-proxy/src/evidence.rs) appends operation records through one validated descriptor
 per process, flushing at 16 KiB plus at most one record. Other lifecycle
 events retain immediate checked writes. The operation journal is flushed
 and closed before a successful `shutdown` record; final reconciliation still
@@ -234,8 +237,8 @@ requires every event. Partial writes, exhausted report capacity, invalid
 destinations and late failures reject the whole command. This bounds only
 pending metadata, not query/reply sizes or proof search.
 
-The stream reuses its selector; leaf recognition shares the full parser's
-sort/namespace checks. Canonical operation records have an exact JSON-grammar
+The iterative native recognizer checks every leaf's sort/namespace.
+Canonical operation records have an exact JSON-grammar
 fast path with the same lifecycle transitions; other JSON still receives the
 complete duplicate-field/type/field audit. None of these paths bypasses query,
 reply, solution or lifecycle validation.
@@ -332,7 +335,7 @@ was compared with `run_guarded_tamarin` on the identical command. Median times
 were `1.494`/`1.535` seconds (`+2.7%`), with byte-identical exports at the SHA above.
 This measures parsing only, not precomputation/full replay or memory overhead.
 
-The representative complete ratchet export through the default Python guard,
+The historical representative complete ratchet export through the now-removed Python guard,
 including derivation checks, remains **performance-blocked under Constitution
 P4**. Three alternating direct-native/
 guarded pairs of the following command, each bounded at `120` seconds, produced
@@ -378,13 +381,13 @@ seconds direct/prototype (`+6.80%`), with the identical full-export SHA above.
 The separate one-rule fixture adds `39.93` ms (`+33.76%`). The owner subsequently
 approved maintained promotion with a startup-only `50` ms cap, retaining
 `10%` for the full export; Linux/caller/CI criteria must precede cutover.
-The maintained candidate now uses source-identified build evidence and the
+The maintained staging candidate used source-identified build evidence and the
 shared guarded runner, with explicit pre-cutover selection for local/CI
 callers. The existing 19-cell workflow is wired without larger ceilings.
-The clean local gate passes 19 native cases, 138 model tests, 50 lifecycle
+The staging local gate passed 19 native cases, 138 model tests, 50 lifecycle
 tests, 43 projections and 67 equation audits. Its CLI rejects malformed/stale/
 incompatible performance reports and workload-specific budget failures.
-Current-source paired medians are `24.248549`/`25.807651` seconds for full export
+Staging-source paired medians were `24.248549`/`25.807651` seconds for full export
 (`+6.4297%`) and `0.110541`/`0.147073` seconds for startup (`+36.531959` ms,
 `+33.0482%`), passing both approved limits with unchanged exports.
 The final compiled build preserves the original-cap default recovery,
@@ -402,13 +405,24 @@ with one checked raw output handle and polls final evidence every `1` ms,
 retaining the `5`-second grace and all validation. The stdout-only intermediate
 source fails local startup at `+52.560041` ms; a measured final-evidence sleep
 motivates the subsequent poll change and passing local budgets above.
-Fresh native budget acceptance and default cutover remain blocked.
+At that checkpoint native budget acceptance and default cutover remained blocked.
 Follow-up `38719650091` at `2b642e2` passes all 18 callers/fast gates and the
 native full-export budget (`37.767068`/`40.976767` seconds, `+8.4987%`).
 Startup rejects the direct baseline before a timing verdict: its inventory
 was also macOS-only. The exact observed Linux startup digest is now pinned
 alongside macOS, with all six outputs still required to match and the `50` ms
 cap unchanged. The native guard identity is unchanged; both current macOS
-reports and native full-export report still pass. Native startup remains pending.
+reports and native full-export report still passed. Native startup remained pending at that checkpoint.
 The four selected local regressions are not full assembled or memory-performance acceptance.
-Default routing stays Python at `+22.5%`; native FVP remains open.
+Those staged failures were superseded by native run `38721189200` at `71168a1`:
+all 19 cells and both actual budgets pass (`+9.6594%` full export,
+`+15.871115` ms startup), without filtering, larger budgets or deadlines.
+That satisfies the owner-approved condition for central default cutover.
+The default is now the compiled guard; the temporary selector, obsolete Python
+validator/evidence/parser and nine duplicate parser tests are removed, with
+their cases retained in native CLI tables. Current default-source local
+medians are `24.324896`/`25.820824` seconds (`+6.1498%`) and
+`0.112296`/`0.154256` seconds (`+41.960417` ms, `+37.3660%`).
+Its fast gate passes 19 native/131 model/50 lifecycle cases, 43 projections
+and 67 audits. Fresh hosted acceptance of the cutover is still required.
+Native FVP remains open.
