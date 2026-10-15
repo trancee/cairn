@@ -72,6 +72,23 @@ REPORT_GROUPS = {
     "relabeling": (
         "native_ac_relabeling", "native_rewrite_relabeling", "native_modulo_ac_relabeling",
     ),
+    "kind": (
+        "native_kind_round_trip", "native_kind_abstraction_injective",
+        "native_kind_substitution", "native_kind_framed_substitution",
+        "native_kind_ac_reflection", "native_kind_rewrite_reflection",
+        "native_kind_modulo_ac_reflection", "native_kind_framed_ac", "native_kind_framed_rewrite",
+        "native_kind_modulo_ac_decode", "native_kind_termination",
+    ),
+    "sorted-matching": (
+        "native_sorted_matching_preservation", "native_sorted_rewrite_modulo_ac",
+        "native_sorted_rewrite_decode", "native_sorted_kind_framed_rewrite",
+        "native_sorted_proper_termination", "native_sorted_kind_termination",
+    ),
+    "sorted-convergence": (
+        "native_sorted_ac_coherent", "native_sorted_steps_preservation", "native_sorted_steps_decode",
+        "native_sorted_normal_iff", "native_sorted_normal_ac_invariant", "native_sorted_confluence",
+        "native_sorted_normal_forms_unique", "native_sorted_normalized_substitution_bound",
+    ),
 }
 
 
@@ -386,6 +403,34 @@ class EquationCommandTests(unittest.TestCase):
                 self.assertIn("missing Lean theorem axiom reports:", result.stderr)
                 self.assertIn(missing, result.stderr)
                 self.assertNotIn("PASS:", result.stdout)
+
+    def test_sorted_matching_axiom_reports_are_required_before_success(self):
+        result = self.run_with_axiom_reports(*(
+            group for group in REPORT_GROUPS
+            if group not in {"sorted-matching", "sorted-convergence"}
+        ))
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+        self.assertIn("native_sorted_matching_preservation", result.stderr)
+        self.assertNotIn("PASS:", result.stdout)
+
+    def test_sorted_convergence_axiom_reports_are_required_before_success(self):
+        result = self.run_with_axiom_reports(*(
+            group for group in REPORT_GROUPS if group != "sorted-convergence"
+        ))
+
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+        self.assertIn("native_sorted_ac_coherent", result.stderr)
+        self.assertNotIn("PASS:", result.stdout)
+
+    def test_all_required_axiom_reports_allow_success(self):
+        result = self.run_with_axiom_reports(*REPORT_GROUPS)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("PASS: proper-sort native matching", result.stdout)
+        self.assertNotIn("FAIL:", result.stderr)
 
 
 if __name__ == "__main__":

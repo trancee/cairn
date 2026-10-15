@@ -138,12 +138,20 @@ The latest local [equation checker](../spec/models/equations/README.md)
 proves typed B-coherence, global matching confluence, quotient-path confluence
 modulo natural AC and a template-only normalization bound under normalized
 substitutions. Nonlinear key-copy overlaps are joined; normality is
-AC-invariant. All 67 required audits and kernel cases pass; 21 audits use no
+AC-invariant. All 81 required audits and kernel cases pass; 22 audits use no
 axioms. The checked boundedness quantifies over every template and normalized
 assignment, not sampled ground terms. Missing boundedness/confluence audit
 transcripts have fail-closed CLI red/green checks. Native query-image transfer,
 complete sorted AC-unification and the remaining FVP theorem hypotheses are
-still open. A later structural frozen-index foundation also proves natural/
+still open. The independent guarded native-sorted relation now transfers
+proper-message termination, B-coherence, convergence/normal-form uniqueness
+modulo AC and the template-only bound. It preserves controlled-kind framing
+and terminates on decoded kind messages without claiming their convergence.
+Actual Maude controls distinguish a blocked kind projection from allowed inner
+rewriting and proper-message matching. This proof increment leaves native
+source/performance identities unchanged; the
+[PR #9 checks](https://github.com/trancee/cairn/pull/9/checks) record current-head hosted acceptance.
+The structural frozen-index foundation also proves natural/
 message encoding left inverses and injectivity, separating rigid atoms from
 variables with the same native index. Its recognizers reject improper node/
 list/natural sorts. Independent raw structural AC and six-rule/context

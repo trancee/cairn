@@ -16,9 +16,23 @@ are realizable by typed matching modulo AC. Sort-separated natural/message
 substitutions commute with encoding and preserve image membership while rigid
 indices stay frozen. Free tuple/Node framing is closed under AC, rewriting and
 typed substitution, including node assignments; framing remains excluded from
-message functions. All 67 theorem audits and the kernel
+message functions. All 81 theorem audits and the kernel
 regression cases run in the existing lifecycle cell, without a new job or
-larger ceiling. Twenty-one audits use no axioms; none uses `sorryAx`.
+larger ceiling. Twenty-two audits use no axioms; none uses `sorryAx`.
+
+The new independent native-sorted relation requires proper-`Msg` equation
+variables and AC-equivalent repeated keys instead of using unguarded shadow
+rewrites. On proper-message inputs it inherits termination, B-coherence,
+confluence/normal-form uniqueness modulo AC, normality invariance and the same
+source-template-only normalizing bound. Controlled-kind framing closure and
+decoded-kind termination also hold, but controlled-kind convergence, narrowing/
+unification/FVP and importer correspondence remain open. The blocked error-kind
+projection and permitted inner rewrite agree with actual Maude controls.
+The existing kernel/CLI seams reject missing new audits after intended reds;
+fresh `scripts/check.sh` passes 19 native/134 model/50 lifecycle tests,
+43 projections and all 81 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
+record authoritative current-head hosted acceptance. This proof-only increment changes no native guard source-ID input,
+equation, protocol, API, wire, runtime dependency or resource ceiling.
 
 The owner-approved proof-only Maude boundary now checks the pinned native
 module and every executed query/complete reply, with fail-closed lifecycle
@@ -100,8 +114,8 @@ and decoded-kind termination. Substitution commutation is unconditional;
 framed closure still has an explicit typed-shadow compatibility premise.
 The guard admits these controlled kind queries, not arbitrary sum operands,
 kind variables or kind-valued returned bindings/results. Raw rules omit
-native message-sort guards, so these kind results do not transfer native
-confluence, normalization-path existence or narrowing/FVP completeness.
+native message-sort guards, so these kind results do not transfer
+controlled-kind confluence, normalization-path existence or narrowing/FVP completeness.
 
 At the preceding local extension checkpoint, the fresh fast gate passed
 117 model tests, 50 lifecycle tests, 43 projections and all 67 equation audits.

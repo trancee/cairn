@@ -40,6 +40,9 @@ The command:
 - kernel-checks `QueryRelabeling.lean` and `QueryKind.lean`, audits 14 reports
   and checks disjoint Fresh/natural shadow labels, controlled derivation-kind
   membership and the distinction between raw rewriting and proper-sort matching;
+- kernel-checks `QuerySorted.lean` and `QuerySortedConvergence.lean`, audits
+  14 reports and checks guarded native-shaped matching, proper-message
+  convergence/boundedness, controlled-kind closure and decoded-kind termination;
 - generates and kernel-checks a certificate translating every source equation
   to its exact `PrimitiveRewrite` constructor.
 
@@ -50,8 +53,8 @@ the existing `120`-second bound; version checks use `30` seconds.
 Invalid command-line syntax uses argparse's exit `2`; `--help` exits `0` without
 checking a proof.
 Only `propext`, `Classical.choice` and `Quot.sound` are permitted by the shared
-axiom audit. Twenty-one of the 67 audited theorems use no axioms. The uniform
-normalization-bound theorem uses all three permitted axioms; the other
+axiom audit. Twenty-two of the 81 audited theorems use no axioms. The typed
+and native-sorted uniform normalization-bound theorems use all three permitted axioms; the other
 non-constructive audits use at most `propext` and `Quot.sound`.
 No audited theorem uses `sorryAx` or a user-added axiom.
 
@@ -170,11 +173,30 @@ bounds actual subset steps, but does not transfer native confluence,
 normalizing-path existence, narrowing completeness or FVP. The original
 proper-message correspondence and its stronger matching results remain separate.
 
+`QuerySorted.lean` independently defines the six native-shaped root patterns
+with proper-`Msg` guards and AC-equivalent repeated keys. It closes matching
+under every raw context, including error-kind and free framing contexts.
+The relation is not defined by the source matching relation. Typed matching
+steps preserve it, and every native-sorted step is a raw quotient step.
+Consequently proper-message steps decode to typed quotient steps. The kernel
+also proves well-foundedness on the encoded proper-message carrier, closure of
+the controlled-kind framing envelope and well-foundedness on decoded kind
+messages. The blocked projection above remains blocked, while proper inner
+rewrites remain possible inside its error-kind context.
+
+`QuerySortedConvergence.lean` transports counted paths, one-step B-coherence,
+confluence modulo AC, normal-form uniqueness modulo AC and normality invariance
+to this independently guarded relation on the proper-message image. Encoded
+instantiations of the existing templates have the same substitution-independent
+normalizing bound. These stronger results require proper-message input; they
+do not establish controlled-kind convergence or bounded normalizing paths,
+complete sorted unification, narrowing completeness or backend algorithm correctness.
+
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of
 native bookkeeping `NAT`, the entire kind-completed carrier or finite variants.
-Convergence and boundedness are proved for the typed algebra, with algebraic
-correspondence to the candidate structural message/natural image. Executed
+Convergence and boundedness are proved for the typed algebra and transported
+to the guarded native-sorted relation on the proper-message image. Executed
 native operations additionally require the boundary checks below; a universal
 source-linked query-builder/importer proof remains unverified.
 Complete sorted AC unification, backend narrowing/unification closure and the
@@ -313,7 +335,7 @@ solution, and reject truncated EOF. Real Maude tests cover all four operations;
 a tiny exact-signature Tamarin normalization witness exercises actual guarded
 proof/precomputation streams and the source-linked installation check.
 
-Fresh local `scripts/check.sh` with pinned Lean passes 117 model tests,
+At the derivation-kind extension checkpoint, local `scripts/check.sh` with pinned Lean passed 117 model tests,
 50 lifecycle tests, 43 projections, six source correspondences and 67 audits.
 The guarded default `lost_data_recovery` replay verifies the 826-step witness
 and nine-step ownership helper in `106.77` seconds of reported proof processing.

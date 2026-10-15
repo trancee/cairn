@@ -58,6 +58,44 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Native proper-sort relation transfer (2026-10-15)
+
+Continue the approved kernel/CLI proof seams with independently defined native
+root patterns: proper-`Msg` guards on equation variables and AC-equivalent
+repeated keys, closed under every raw context. Do not define this relation by
+the source matching relation or replace native matching with the unguarded
+kind abstraction. Real Maude controls retain the blocked error-kind projection,
+proper Fresh projection, inner rewrite inside an error-kind context and
+AC-key decryption. The raw shadow relation intentionally remains separate.
+
+Typed matching lifts to the guarded relation, and every guarded step is a raw
+quotient step. This transports proper-message termination, B-coherence,
+confluence/normal-form uniqueness modulo AC, normality invariance and the
+source-template-only normalizing bound. Controlled-kind framing closure and
+decoded-kind termination also hold; controlled-kind convergence and bounded
+normalizing paths do not follow. Nor does this prove complete sorted
+AC-unification, narrowing/FVP, universal importer correspondence or Maude's
+algorithm implementation.
+
+Fourteen new mandatory audits bring the total to 81, with 22 axiom-free.
+Missing matching/convergence reports have intended CLI reds followed by
+fail-closed greens, plus a complete-transcript positive control. Kernel cases
+cover all six rules, improper discarded components/keys, Node/list rejection,
+AC keys, a nonlinear key-copy peak and the template bound. Fresh
+`scripts/check.sh` passes 19 native/134 model/50 lifecycle tests, 43 projections
+and all audits at unchanged limits. Keep the existing cohesive source/CLI
+fixture above the 300-line recommendation but below 500 rather than adding
+cross-fixture coupling.
+
+This proof-only increment has no native guard source-ID input or
+equation/protocol/API/wire/runtime/performance-budget change. Existing native
+guard measurements remain source-identical; no new performance result is
+claimed. The owner subsequently selected `publish-proof-checkpoints`,
+authorizing commits, normal pushes and PR-description updates for the proof-only
+phase and necessary fixes in PR #9, separately from the completed promotion.
+Current-head hosted acceptance remains required. No manual dispatch, merge,
+protocol/equation/deadline/budget change or SDK/profile activation is authorized.
+
 ### Maintained-proxy promotion and startup-only budget (2026-10-15)
 
 The owner selected `promote-with-50ms-startup-budget`. Prepare maintained

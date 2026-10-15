@@ -15,9 +15,12 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   for the six source equations in the typed algebra. It also checks structural
   frozen-index encoding round trips, independent raw AC/rewrite correspondence
   and typed substitution commutation, including free tuple/Node framing closure
-  and controlled Fresh/natural derivation-kind abstraction (67 audits).
-  The kind results concern raw-overapproximation relations, not native
-  proper-sort matching completeness or convergence.
+  and controlled Fresh/natural derivation-kind abstraction (81 audits).
+  An independently guarded native-sorted relation inherits proper-message
+  termination, B-coherence, convergence modulo AC and the template-only bound.
+  Controlled-kind framing closure and decoded-kind termination also hold;
+  controlled-kind convergence/bounded normalizing paths and native
+  unification/narrowing completeness remain unproved.
   Ratchet acceptance callers additionally enforce the approved
   [native stream boundary](equations/README.md#native-stream-boundary):
   pinned module, proper/controlled-kind queries, proper returned bindings/results,

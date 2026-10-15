@@ -5,8 +5,10 @@ Mathematical review of the default
 The `2026-10-14` [source-guarded Lean termination subgate](equations/README.md)
 now kernel-checks termination, B-coherence, confluence modulo sorted natural
 AC and a normalization bound independent of normalized substitutions.
-These results cover the typed algebra. Native query-image transfer and the
-remaining FVP hypotheses stay separate; this is not a native FVP certificate.
+These results cover the typed algebra. An independently guarded native-sorted
+relation now inherits convergence and boundedness on the proper-message image.
+Controlled-kind convergence, native narrowing/unification and the remaining
+FVP hypotheses stay separate; this is not a native FVP certificate.
 
 ## Why executed queries now need a guard
 
@@ -235,7 +237,7 @@ The theorem constructs a bounded normalizing derivation, rather than bounding
 all possible reduction orders. This is the quantifier order in the boundedness
 criterion, not a ground-term weight bound that grows with substitutions.
 The existing checker rebuilds these proofs, regression cases and all
-67 required theorem audits. The typed bound does not itself establish native
+81 required theorem audits. The typed bound does not itself establish native
 substitution/narrowing closure or complete sorted AC unification.
 
 ## Frozen-index encoding foundation
@@ -310,8 +312,22 @@ component to its proper `Msg` variable. For example,
 but stays at `[TOP]` in the real native reduction. Termination of this
 overapproximation is useful, but confluence or existence of a normalizing
 shadow path does not imply those properties for the guarded native subset.
-Native sorted matching/narrowing and complete AC-unification/FVP transfer
-remain explicit obligations, not consequences of the 67-audit count.
+The new [`QuerySorted.lean`](equations/QuerySorted.lean) instead defines
+native-shaped matching independently, requiring proper messages for each
+equation variable and AC-equivalent repeated keys. It rejects this projection
+without treating the whole error-kind context as frozen: a proper inner
+`flip(roleA)` still reduces. Real Maude controls confirm both observations,
+alongside a proper Fresh projection and AC-equivalent decryption keys.
+
+The kernel connects each such step to the raw quotient relation and lifts typed
+matching into it. On proper-message inputs, counted paths then inherit
+B-coherence, confluence and normal-form uniqueness modulo AC, normality
+invariance and the same template-only normalization bound. Controlled-kind
+framing closure and decoded-kind termination also follow, but the stronger
+convergence/bounded-path results still require a proper-message input.
+Controlled-kind convergence, sorted narrowing, complete AC-unification/FVP
+transfer and universal importer correspondence remain explicit obligations,
+not consequences of the 81-audit count.
 
 ## Finite-variant rationale
 
@@ -326,7 +342,8 @@ they cannot produce another role-redex.
 The checked uniform bound now replaces an informal subterm/ground boundedness
 rationale. Cholewa, Meseguer and Escobar's theorem 6 relates boundedness to
 EMS-FVP under its decomposition hypotheses. Convergence/B-coherence and the
-bound are checked in the typed algebra, but the complete sort/signature,
+bound are checked in the typed algebra and transferred to the guarded relation
+on proper-message inputs, but the complete sort/signature,
 AC-unification and native-image correspondence obligations must still be
 reconciled before applying that theorem to Tamarin's backend.
 

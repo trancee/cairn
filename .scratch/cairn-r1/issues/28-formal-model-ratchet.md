@@ -934,3 +934,38 @@ relaxation, filtering, manual rerun or unrelated infrastructure repair.
 Rust `38724991821` and four-language CodeQL `38724992020` pass.
 All current-head authoritative gates remain required;
 PR #9 records subsequent documentation-only publication checks.
+
+2026-10-15 (native proper-sort relation transfer, local gates complete):
+the preceding default head `7432d7d` completed native lifecycle `38728305203`
+(all 19 cells), Rust `38728305133` and four-language CodeQL `38728305302`.
+That accepts the guard promotion, not the new proof increment below.
+
+[`QuerySorted.lean`](../../../docs/spec/models/equations/QuerySorted.lean)
+independently models the native six-rule root patterns with proper-`Msg`
+guards and AC-equivalent repeated keys, under every raw context. Actual Maude
+controls retain a blocked ill-kind discarded component, a proper Fresh
+projection, a permitted inner rewrite in an error-kind context and AC-key
+decryption. The raw kind/shadow relation is not relabeled as native matching.
+
+Typed matching lifts to the guarded relation and guarded steps decode through
+raw quotient rewriting. The kernel transfers termination, one-step B-coherence,
+confluence/normal-form uniqueness modulo AC, normality invariance and the
+template-only normalization bound on proper-message inputs. Controlled-kind
+framing closure and decoded-kind termination also hold, not controlled-kind
+convergence or bounded normalizing paths. Complete sorted unification,
+narrowing/FVP, universal importer correspondence and full assembled acceptance
+remain open.
+
+The existing CLI initially accepted missing new matching/convergence audits;
+both intended reds are green after making all 14 new reports mandatory.
+A complete-transcript positive control and kernel cases cover all six rules,
+bad discarded operands/keys, Node/list rejection, AC keys, a nonlinear key-copy
+peak and the template bound. Fresh pinned `scripts/check.sh` passes
+19 native/134 model/50 lifecycle tests, 43 projections and 81 audits
+(22 axiom-free). No equation, attacker, claim, transition, restriction,
+warning, proof deadline, guard source-ID input, runtime or budget changes.
+The owner selected `publish-proof-checkpoints`, separately authorizing proof-only
+commits, normal pushes, PR-description updates and necessary fixes in PR #9.
+The [PR checks](https://github.com/trancee/cairn/pull/9/checks) record current-head
+hosted acceptance. No new benchmark, manual dispatch, merge, profile activation
+or implementation approval is claimed.
