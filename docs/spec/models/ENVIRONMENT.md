@@ -56,8 +56,11 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   candidate for native Linux validation and gates both budgets in its lifecycle
   cell. Native run `38710117729` passes all 18 replay/mutation cells and fast
   gates, but rejects an unreviewed benchmark export before any budget verdict.
-  Phase/digest diagnostics distinguish a baseline fixture mismatch from a
-  guarded mismatch without logging export payloads. The owner authorized promotion
+  Diagnostic run `38712391261` identifies the direct baseline: its native Linux
+  full-export digest was absent from the macOS-only fixture inventory.
+  Both exact digests are now pinned, with all six sample exports still required
+  to match each other and the retained inventory. No normalization or budget
+  change; full native budget acceptance remains pending. The owner authorized promotion
   commits/pushes to PR #9 for existing native CI, including necessary fixes and
   conditional cutover after the required criteria pass. Do not start Colima,
   manually dispatch, merge or activate SDK/profile behavior under that approval.

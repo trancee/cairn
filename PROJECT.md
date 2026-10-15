@@ -62,9 +62,12 @@ The final compiled build passes the default recovery, all 56 refined safety
 certificates and both actual mutation regressions at their original caps.
 Native run `38710117729` at `2e7b429` passes all 18 replay/mutation cells and
 the lifecycle fast gates, but rejects an unreviewed export before any budget
-verdict. Full native acceptance and default cutover remain blocked.
-The benchmark now distinguishes the failing phase and expected/observed
-SHA-256 values without logging the export payload. The owner authorized promotion
+verdict. Diagnostic run `38712391261` at `942f8d8` identifies the direct
+baseline, before any guarded run: the fixture inventory had only the macOS
+full-export digest. The exact observed native Linux digest is now also pinned;
+all six exports must still match one retained digest and each other, without
+normalization, filtering or budget changes. Full native performance acceptance
+and default cutover remain blocked. The owner authorized promotion
 commits/pushes and PR-description updates in PR #9 for existing native CI,
 including necessary fixes and conditional cutover after the required criteria
 pass; merge and SDK/profile activation remain unapproved. Full-proof/memory overhead

@@ -24,11 +24,14 @@ MODELS = Path(__file__).resolve().parents[2]
 WORKLOADS = {
     "full-export": (
         MODELS / "ratchet.spthy",
-        "aaaf873a9b7baff6fbf209f1cf87088581552498ade6f9a5e471ee2b5ea6fb5d",
+        (
+            "aaaf873a9b7baff6fbf209f1cf87088581552498ade6f9a5e471ee2b5ea6fb5d",
+            "1b66b2a76902af6c98de7b22edbe6f4d8fddc27cd2adb580db6d5eff639dbd48",
+        ),
     ),
     "startup": (
         Path(__file__).with_name("derivation.spthy"),
-        "ecd7e735a4f3fc7119dbd00d2edbd245c01900b6035c0dd2e271bea4c5607b64",
+        ("ecd7e735a4f3fc7119dbd00d2edbd245c01900b6035c0dd2e271bea4c5607b64",),
     ),
 }
 
@@ -46,13 +49,13 @@ def check_budget(report: object, workload: str) -> None:
         value = report.get(field)
         if not isinstance(value, str) or re.fullmatch(f"[0-9a-f]{{{width}}}", value) is None:
             raise GuardError("invalid native guard comparison identity")
-    model, expected_export = WORKLOADS[workload]
+    model, expected_exports = WORKLOADS[workload]
     if (
         report.get("workload_name") != workload
         or report.get("method") != "three alternating paired runs"
         or report.get("source_id") != source_identity()
         or report.get("model_sha256") != hashlib.sha256(model.read_bytes()).hexdigest()
-        or report.get("export_sha256") != expected_export
+        or report.get("export_sha256") not in expected_exports
     ):
         raise GuardError("incompatible native guard workload, method or source evidence")
     samples = report.get("seconds")
@@ -95,7 +98,7 @@ def main() -> int:
         print(f"PASS: native guard {arguments.workload} median meets its approved budget")
         return 0
     proxy = arguments.proxy.resolve(strict=True)
-    model, expected_export = WORKLOADS[arguments.workload]
+    model, expected_exports = WORKLOADS[arguments.workload]
     identity = source_identity()
     proxy_digest = hashlib.sha256(proxy.read_bytes()).hexdigest()
     subprocess.run(["git", "diff", "--quiet", "HEAD", "--", "docs/spec/models/replay.py"], check=True)
@@ -115,9 +118,9 @@ def main() -> int:
             )
             timings[label].append(time.monotonic() - started)
             actual = hashlib.sha256(output.encode()).hexdigest()
-            if actual != expected_export:
+            if actual not in expected_exports:
                 raise GuardError(
-                    f"unreviewed {label} export: expected {expected_export}, observed {actual}",
+                    f"unreviewed {label} export: expected {', '.join(expected_exports)}, observed {actual}",
                 )
             if digest is not None and actual != digest:
                 raise GuardError("native guard and committed-baseline exports differ")

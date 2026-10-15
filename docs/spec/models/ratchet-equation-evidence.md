@@ -73,8 +73,11 @@ gates pass. The final candidate also passes its local paired budgets
 regressions: recovery, complete refined safety and both mutations.
 Native run `38710117729` passes all 18 replay/mutation cells and fast gates,
 but its benchmark rejects an unreviewed export before a budget verdict.
-Phase/digest diagnostics now distinguish an unexpected baseline from a guarded
-mismatch without logging payloads or relaxing acceptance.
+Diagnostic run `38712391261` identifies the direct baseline, before any guarded
+sample: the inventory contained only the macOS export digest. The exact pinned
+Linux output is now also retained, without normalizing/filtering output,
+relaxing budgets or allowing different bytes within a paired measurement.
+Full native budget acceptance and default cutover remain incomplete.
 Full assembled and memory-performance evidence remain separate obligations.
 
 ## Exact scope

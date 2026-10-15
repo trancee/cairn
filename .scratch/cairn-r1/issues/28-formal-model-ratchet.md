@@ -818,6 +818,19 @@ gates, but rejects an unreviewed benchmark export before any budget verdict.
 A public CLI diagnostic red now requires the phase and expected/observed
 hashes without output payloads; it passes without weakening any check.
 Full native acceptance and default cutover remain blocked.
+
+Diagnostic run `38712391261` at `942f8d8` again passes all 18 native caller
+cells and fast gates, and identifies the rejected direct baseline before any
+guarded sample. The inventory had only the macOS full-export digest.
+Retain the exact observed pinned Linux digest
+`1b66b2a76902af6c98de7b22edbe6f4d8fddc27cd2adb580db6d5eff639dbd48`
+as well, not a digest derived from the first runtime sample. Every output must
+match the fixed inventory and all six outputs must remain byte-identical.
+No normalization, filtering, source/evidence, budget or deadline change.
+The intended public Linux-fixture CLI red is green; all 13 budget/diagnostic
+cases pass, including Linux over-limit/startup-allowance rejection and malformed
+digest values. Both saved macOS reports remain accepted.
+Native performance acceptance and conditional default cutover remain pending.
 Full-proof/memory overhead remains unmeasured.
 The Python default and independent native FVP/full-context obligations are
 unchanged.

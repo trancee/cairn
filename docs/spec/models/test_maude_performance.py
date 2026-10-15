@@ -107,6 +107,29 @@ class NativePerformanceCommandTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_reviewed_native_linux_export_retains_the_full_export_limit(self):
+        report = self.report("full-export")
+        report["export_sha256"] = "1b66b2a76902af6c98de7b22edbe6f4d8fddc27cd2adb580db6d5eff639dbd48"
+        report["platform"] = "Linux-native-fixture"
+        report["architecture"] = "x86_64"
+        report["seconds"] = {"baseline": [20] * 3, "compiled_guard": [22] * 3}
+
+        result = self.check_report(report, "full-export")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_linux_export_cannot_bypass_relative_limit_with_startup_allowance(self):
+        for baseline, guarded in ((20, 22.001), (0.12, 0.169)):
+            report = self.report("full-export")
+            report["export_sha256"] = "1b66b2a76902af6c98de7b22edbe6f4d8fddc27cd2adb580db6d5eff639dbd48"
+            report["seconds"] = {"baseline": [baseline] * 3, "compiled_guard": [guarded] * 3}
+
+            with self.subTest(baseline=baseline, guarded=guarded):
+                result = self.check_report(report, "full-export")
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("10% full-export budget", result.stderr)
+
     def test_full_export_above_ten_percent_is_rejected(self):
         report = self.report("full-export")
         report["seconds"] = {"baseline": [20] * 3, "compiled_guard": [22.001] * 3}
@@ -126,6 +149,7 @@ class NativePerformanceCommandTests(unittest.TestCase):
         changes = (
             ("source_id", "0" * 64), ("model_sha256", "0" * 64),
             ("export_sha256", "0" * 64), ("method", "one screening pair, not acceptance"),
+            ("export_sha256", []), ("export_sha256", {}), ("export_sha256", True),
             ("seconds", {"baseline": [0.12], "compiled_guard": [0.169]}),
             ("seconds", {"baseline": [0.12] * 3, "other_guard": [0.169] * 3}),
             ("platform", None), ("logical_cpus", True),

@@ -41,8 +41,9 @@ and these checks, then the existing model/lifecycle/Lean gates.
 explicitly screening only; it never reports budget acceptance.
 
 Three alternating pairs compare unchanged committed `replay.run` with the
-shared guarded runner and explicit candidate. Every export must match the
-retained workload digest. The medians must satisfy **full export at most
+shared guarded runner and explicit candidate. Every export must match a
+retained workload digest, and all six exports in a measurement must be
+byte-identical. The medians must satisfy **full export at most
 `+10%`** and **startup at most `+50` ms**. The tiny allowance never applies
 to the full export. Each command retains `120` seconds,
 `--derivcheck-timeout=60` and `5` seconds for shutdown reconciliation.
@@ -56,6 +57,15 @@ untrusted report was actually measured. Missing, malformed, incompatible,
 stale, incomplete or over-budget evidence fails with `FAIL:` and exit `1`.
 Unreviewed exports identify the phase and expected/observed SHA-256 values,
 not the export payload.
+
+Retained full-export digests are
+`aaaf873a9b7baff6fbf209f1cf87088581552498ade6f9a5e471ee2b5ea6fb5d`
+(observed macOS) and
+`1b66b2a76902af6c98de7b22edbe6f4d8fddc27cd2adb580db6d5eff639dbd48`
+(observed pinned native Linux). The startup digest remains
+`ecd7e735a4f3fc7119dbd00d2edbd245c01900b6035c0dd2e271bea4c5607b64`.
+No runtime sample creates a new accepted digest, no output is normalized or
+filtered, and different retained digests cannot be mixed within a measurement.
 
 ## Candidate routing and source freshness
 
@@ -193,3 +203,14 @@ from a guarded mismatch. A public benchmark CLI regression now requires the
 phase and expected/observed SHA-256 values, without logging output payloads.
 No export, evidence, budget or deadline check is relaxed.
 Native performance acceptance and default cutover remain blocked.
+
+[Diagnostic run `38712391261`](https://github.com/trancee/cairn/actions/runs/38712391261)
+at `942f8d8` again passes all 18 callers and the fast gates. It identifies
+the **direct baseline**, before any guarded sample: the retained macOS digest
+does not match the pinned Linux tool's observed digest above.
+The inventory now retains both fixed outputs rather than assuming cross-host
+byte identity. Paired runs still require exact byte identity on the actual host.
+All 13 public budget/diagnostic CLI cases pass, including the intended Linux
+fixture red/green, its unchanged relative cap and rejection of applying the
+startup allowance to it. Both retained macOS reports still pass.
+Native full-export/startup budget acceptance has not yet been established.

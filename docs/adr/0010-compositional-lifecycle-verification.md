@@ -130,7 +130,15 @@ the lifecycle fast gates, but its benchmark rejects an unreviewed export
 before reaching a budget verdict. Preserve every digest/budget check and
 report only the failing phase and expected/observed SHA-256 identities to
 distinguish an unexpected direct baseline from a changed guarded export.
-Full native acceptance and default cutover remain blocked.
+Diagnostic run `38712391261` at `942f8d8` identifies the unguarded baseline:
+the inventory retained only the macOS full-export digest. Also retain the exact
+pinned native Linux export digest recorded in the reference. Do not derive an
+accepted digest from the first runtime sample: every export must match the
+fixed inventory and all six must be byte-identical within a measurement.
+No output normalization, filtering, source/evidence or numeric-budget change
+is permitted. Public report CLI reds/greens cover the Linux fixture and both
+relative-limit and startup-allowance rejection. Both retained macOS reports
+still pass. Full native budget acceptance and default cutover remain blocked.
 Full-proof/memory overhead remains unmeasured. No default switch or merge
 has occurred.
 

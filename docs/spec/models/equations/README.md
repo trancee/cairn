@@ -391,7 +391,10 @@ The final compiled build preserves the original-cap default recovery,
 56-certificate refined safety context and both mutation regressions.
 Native run `38710117729` at `2e7b429` passes all 18 replay/mutation cells
 and fast gates, but rejects an unreviewed export before any budget verdict.
-The CLI now reports the failing phase and expected/observed hashes without
-export payloads; all digest and budget checks remain enforced.
+Diagnostic run `38712391261` identifies the direct baseline, before any guarded
+run: only the macOS full-export digest was retained. The observed pinned Linux
+digest is now also retained; every sample must still match the fixed inventory
+and all six outputs must be byte-identical. No normalization, filtering or
+budget change. Native budget acceptance and default cutover remain blocked.
 The four selected local regressions are not full assembled or memory-performance acceptance.
 Default routing stays Python at `+22.5%`; native FVP remains open.
