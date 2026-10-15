@@ -1048,3 +1048,28 @@ algorithm/importer/namespace correspondence and exact full assembled acceptance
 remain open. No native source-ID input, grammar, equation, attacker, claim,
 rule, restriction, option, deadline or budget changes. Existing publication
 approval applies; no manual dispatch, merge or SDK/profile activation.
+
+2026-10-15 (sorted AC-unifier composition and solution correspondence):
+[`QueryComposition.lean`](../../../docs/spec/models/equations/QueryComposition.lean)
+proves identity, ordered simultaneous composition, associativity, all-sort
+value closure and pointwise AC congruence through raw/framing contexts.
+[`QueryUnification.lean`](../../../docs/spec/models/equations/QueryUnification.lean)
+models sorted AC solutions separately from equality modulo ordinary equations.
+Solutions compose; message/natural encoding preserves/reflects them, with
+typed representations for all sorted solutions on encoded inputs. Kind
+solutions correspond only through derived compatible abstract assignments.
+
+The kernel proves a Fresh/natural original pair has no sorted AC solution,
+while unrestricted natural shadows admit an incompatible `one` assignment.
+Actual pinned Maude confirms original cross-sort/mixed-kind failures and a
+same-sort success; the separate `flip(roleA)`/`roleB` control has no plain AC
+unifier. No native solution filtering, broader grammar or runtime repair.
+Three missing-audit CLI reds become rejecting greens; the complete transcript
+passes. All 127 audits, 25 axiom-free, and new kernel cases pass. The independent
+source/native process fixtures remain 409/384 lines, transcript inventory 111,
+under the hard limit with the shared-fixture recommendation rationale in ADR 0010.
+Finite complete enumeration, most-generality, occurs-check/fresh namespace,
+narrowing/FVP, native algorithm/importer and exact full assembled acceptance
+remain open. Source-ID inputs, equations, attacker/claims/rules/restrictions,
+options, deadlines, jobs and budgets are unchanged. Existing proof-only
+publication approval applies; no dispatch, merge or SDK/profile activation.

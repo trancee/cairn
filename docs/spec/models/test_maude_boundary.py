@@ -253,6 +253,29 @@ class NativeStreamBoundaryTests(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which("maude"), "pinned native Maude integration needs maude on PATH")
 class NativeMaudeIntegrationTests(unittest.TestCase):
+    def test_ac_unification_keeps_original_sorts_and_does_not_apply_rewrite_equations(self):
+        queries = (
+            ("x0:Fresh =? x0:TamNat", "No unifier."),
+            ("tamtplus(x0:Fresh,tamXCtone) =? tamtplus(x0:TamNat,tamXCtone)", "No unifier."),
+            ("x1:TamNat =? x0:TamNat", "Unifier 1"),
+            ("tamXCflip(tamXCroleA) =? tamXCroleB", "No unifier."),
+        )
+        environment = dict(os.environ)
+        environment.pop("CAIRN_MAUDE_BINARY", None)
+        environment.pop("CAIRN_MAUDE_GUARD_REPORT", None)
+        for query, expected in queries:
+            with self.subTest(query=query):
+                result = subprocess.run(
+                    [str(select_proxy()[0]),
+                     "-interactive", "-no-tecla", "-no-banner", "-no-wrap", "-batch"],
+                    input=NATIVE_MODULE + f"unify in MSG : {query} .\n",
+                    text=True, capture_output=True, env=environment, timeout=30,
+                )
+
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(result.stderr, "")
+                self.assertIn(expected, result.stdout)
+
     def test_report_capacity_failure_rejects_the_stream_without_a_traceback(self):
         with tempfile.TemporaryDirectory() as temporary:
             environment = dict(os.environ, CAIRN_MAUDE_GUARD_REPORT=str(Path(temporary) / "events"))

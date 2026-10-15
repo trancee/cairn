@@ -13,6 +13,8 @@ Independent structural proofs now also establish guarded quotient termination,
 confluence and normal-form uniqueness modulo AC across that AST.
 Sort-respecting substitutions preserve guarded paths and controlled-kind
 framing; their compatible typed shadows are now derived rather than assumed.
+Sorted AC solutions now compose and transport exactly through the proper typed
+image and compatible kind shadows, not unrestricted shadow unification.
 Native narrowing/unification and the remaining
 FVP hypotheses stay separate; this is not a native FVP certificate.
 
@@ -243,7 +245,7 @@ The theorem constructs a bounded normalizing derivation, rather than bounding
 all possible reduction orders. This is the quantifier order in the boundedness
 criterion, not a ground-term weight bound that grows with substitutions.
 The existing checker rebuilds these proofs, regression cases and all
-114 required theorem audits. The typed bound does not itself establish native
+127 required theorem audits. The typed bound does not itself establish native
 substitution/narrowing closure or complete sorted AC unification.
 
 ## Frozen-index encoding foundation
@@ -375,7 +377,7 @@ rewrite. That last case is outside the stream grammar, demonstrating why
 properness invariance cannot be assumed for arbitrary raw terms.
 Sorted narrowing, complete AC-unification/FVP transfer, the full imported
 NAT/kind-variable carrier and universal importer correspondence remain
-explicit obligations, not consequences of the 114-audit count.
+explicit obligations, not consequences of the 127-audit count.
 
 ## Why sorted substitution no longer needs an assumed shadow
 
@@ -402,6 +404,39 @@ Nor does it prove native unifier completeness, returned-binding validation,
 variable renaming/importer correctness or FVP. Those require correspondence
 with the native algorithms, not just closure of a mathematical assignment class.
 
+## Why solution transport is not complete unifier enumeration
+
+Narrowing must compose substitutions without capture or silently changing their
+sorts. [`QueryComposition.lean`](equations/QueryComposition.lean) proves that
+applying one simultaneous assignment and then another agrees with their
+composition, which remains sorted. It also proves identity, associativity and
+pointwise AC congruence through message, natural and free framing contexts.
+This supplies algebraic composition laws, not a proof of native name generation.
+
+[`QueryUnification.lean`](equations/QueryUnification.lean) models an AC solution
+as a sorted assignment making both substituted sides AC-equivalent. Solutions
+survive sorted composition. Proper message/natural encoding preserves and
+reflects them; every native solution on those encoded inputs has an existing
+typed representation. Kind solutions likewise correspond when the shadow is
+the abstract assignment derived from the actual original assignment.
+
+Dropping that last condition is unsound. A Fresh variable and a natural
+variable cannot have a sorted original AC unifier. Abstraction maps them to
+different natural shadow variables; an unrestricted typed assignment can set
+both to `one`. That shadow solves the abstracted problem but cannot come from
+any sorted original assignment. Kernel cases prove both the no-solution claim
+and the incompatible shadow witness. Actual pinned Maude returns no unifier
+for the original variables or their mixed-kind sums, but finds a same-sort
+natural unifier. This is not a guard defect and needs no filtering or broader
+grammar; it prevents treating all abstract unifiers as original solutions.
+
+Plain AC unification also does not use ordinary equations: `flip(roleA)` and
+`roleB` have no AC unifier despite their rewrite equality. The kernel count
+invariant and actual Maude agree. Variant unification/narrowing must account
+for those equations separately. A finite complete set, sorted most-generality,
+occurs-check/fresh-name correctness, native algorithm/importer correspondence
+and FVP remain unproved by these solution-transport theorems.
+
 ## Finite-variant rationale
 
 The KEM equation has the same term-rewrite shape as Tamarin's documented
@@ -417,8 +452,9 @@ rationale. Cholewa, Meseguer and Escobar's theorem 6 relates boundedness to
 EMS-FVP under its decomposition hypotheses. Convergence/B-coherence and the
 bound are checked in the typed algebra, with independent structural guarded
 convergence/boundedness and sort-respecting substitution closure on the
-frozen-index native AST, but the complete sort/signature,
-AC-unification and native-image correspondence obligations must still be
+frozen-index native AST. Sorted AC solutions now compose and transport through
+the proper typed image and compatible kind shadows, but complete sort/signature,
+finite complete AC-unifier generation and native-image correspondence must still be
 reconciled before applying that theorem to Tamarin's backend.
 
 There is a stronger, exhaustive flat-pattern criterion, not a sample-term

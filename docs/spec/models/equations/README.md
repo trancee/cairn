@@ -54,6 +54,9 @@ The command:
   audits 12 reports and checks all-sort assignment representation, guarded
   path preservation and controlled-kind framing substitution closure with a
   derived, not assumed, compatible shadow;
+- kernel-checks `QueryComposition.lean` and `QueryUnification.lean`, audits
+  13 reports and checks sorted composition, pointwise AC congruence and
+  AC-unifier solution transport, including compatible kind shadows;
 - generates and kernel-checks a certificate translating every source equation
   to its exact `PrimitiveRewrite` constructor.
 
@@ -64,11 +67,12 @@ the existing `120`-second bound; version checks use `30` seconds.
 Invalid command-line syntax uses argparse's exit `2`; `--help` exits `0` without
 checking a proof.
 Only `propext`, `Classical.choice` and `Quot.sound` are permitted by the shared
-axiom audit. Twenty-four of the 114 audited theorems use no axioms. The three
-uniform normalization-bound theorems and the assignment-representation/
-derived-substitution audits use all three permitted axioms. Other audits use
-at most `propext` and `Quot.sound`. Assignment witnesses use classical choice
-only in the mathematical proof, not an executable native fallback.
+axiom audit. Twenty-five of the 127 audited theorems use no axioms. The three
+uniform normalization-bound theorems, assignment/shadow representation and
+closure/solution-representation audits depending on those witnesses use all
+three permitted axioms. Other audits use at most `propext` and `Quot.sound`.
+Assignment witnesses use classical choice only in the mathematical proof,
+not an executable native fallback.
 No audited theorem uses `sorryAx` or a user-added axiom.
 
 Successful output includes the canonical source SHA-256, all required axiom
@@ -262,6 +266,34 @@ natural distinctions, blocked ill-kind projections, framed substitution,
 nonlinear AC-key paths and redex creation. The independent CLI transcript
 inventory is in `../equation_fixtures.py`, separate from the shared process
 fixture to keep maintained files below the hard size limit.
+
+`QueryComposition.lean` defines `composeNativeAssignments first second` by
+applying `first`, then `second`, not the reverse. It proves identity,
+associativity, the simultaneous-substitution composition law, closure of all
+five sorted value classes and pointwise AC congruence through every raw context.
+Rigid atom indices remain frozen, and inserted values are not recursively
+resubstituted during either individual application.
+
+`QueryUnification.lean` defines `NativeACUnifier` as a sort-respecting assignment
+whose substituted terms are structurally AC-equivalent. Sorted composition
+preserves solutions. Existing typed assignments preserve/reflect message and
+natural AC solutions, and every native solution on those encoded inputs has a
+typed representation. For kind terms, the equivalence uses the assignment's
+derived abstract assignment, not any sorted shadow. Decoded kind-message
+solutions have a compatible typed-shadow representation; the raw equivalence
+also covers free framing. These are relational solution correspondences,
+not a finite complete unifier set, a most-generality or occurs-check theorem,
+narrowing completeness, equality modulo rewrite equations or native algorithm
+verification.
+
+`QueryUnificationCases.lean` retains all-sort composition, order sensitivity,
+frozen indices, framed `kdf` AC congruence and compatible kind solutions.
+It proves Fresh/natural variables have no sorted original AC unifier, while
+their abstracted natural variables have an unrestricted typed solution that
+cannot be a compatible shadow. Actual pinned Maude controls confirm the
+cross-sort failures, including a mixed-kind sum, and a same-sort success.
+A separate negative control retains that plain `unify` does not use the
+ordinary `flip` equation. No solutions are filtered or grammar widened.
 
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of

@@ -16,9 +16,9 @@ are realizable by typed matching modulo AC. Sort-separated natural/message
 substitutions commute with encoding and preserve image membership while rigid
 indices stay frozen. Free tuple/Node framing is closed under AC, rewriting and
 typed substitution, including node assignments; framing remains excluded from
-message functions. All 114 theorem audits and the kernel
+message functions. All 127 theorem audits and the kernel
 regression cases run in the existing lifecycle cell, without a new job or
-larger ceiling. Twenty-four audits use no axioms; none uses `sorryAx`.
+larger ceiling. Twenty-five audits use no axioms; none uses `sorryAx`.
 
 The new independent native-sorted relation requires proper-`Msg` equation
 variables and AC-equivalent repeated keys instead of using unguarded shadow
@@ -43,11 +43,18 @@ proper values and produces a sorted abstract assignment, so a compatible typed
 shadow exists rather than being assumed. Controlled-kind/free framing is
 therefore closed under every modeled sort-respecting assignment. This is not
 normality preservation or a kernel proof of runtime validation/importing.
-Narrowing/unification/FVP and importer correspondence remain open. The blocked error-kind
+Sorted assignments now compose, with checked simultaneous substitution laws
+and pointwise AC congruence. AC-unifier solutions are closed under sorted
+composition and preserve/reflect proper message/natural typed solutions.
+Kind solutions transfer only through compatible shadows: unrestricted natural
+shadows can solve a Fresh/natural equality that has no sorted original solution.
+Kernel and actual Maude controls retain this separation and distinguish AC
+unification from equality modulo rewrite equations. Finite complete unifier
+enumeration, most-generality, narrowing/FVP and importer correspondence remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
-fresh `scripts/check.sh` passes 19 native/136 model/50 lifecycle tests,
-43 projections and all 114 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
+fresh `scripts/check.sh` passes 19 native/137 model/50 lifecycle tests,
+43 projections and all 127 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
 record authoritative current-head hosted acceptance. This proof-only increment changes no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
 

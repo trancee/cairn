@@ -58,6 +58,45 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Sorted AC-unifier composition and image correspondence (2026-10-15)
+
+Continue the approved proof-only phase with simultaneous assignment composition
+and relational AC solutions. Applying first then second must agree with their
+composition, preserve all five sort-value classes and freeze rigid indices.
+Prove identity, associativity and pointwise AC congruence under every context.
+Define AC solutions separately from equality modulo the six rewrite equations.
+Sorted solutions compose; proper message/natural solutions preserve/reflect
+through the existing typed representation, with a representation for every
+sorted native solution on those inputs.
+
+Kind correspondence must retain the abstract assignment derived from the
+original sorted assignment. A Fresh variable and natural variable have no
+sorted original unifier, but their two abstract natural variables can both be
+assigned `one` by an unrestricted typed shadow. The kernel proves that witness
+cannot be compatible. Actual pinned Maude confirms cross-sort failures,
+including a mixed-kind sum, and a same-sort success. Plain unification also
+does not apply the `flip` equation. Reject the tempting alternative of treating
+all shadow solutions as original solutions; do not filter native solutions,
+widen grammar or assume finite complete unifier generation.
+
+Three vertical missing-audit CLI reds become rejecting greens for assignment
+algebra, sorted solutions and compatible kind solutions. Thirteen mandatory
+reports bring the total to 127, with 25 axiom-free. Kernel cases retain
+all-sort composition/order, rigid indices, framed `kdf` AC congruence, typed
+solution representations and compatible/incompatible shadows. One additional
+real-operation case preserves the approved native-stream seam. The cohesive
+independent process fixtures stay below 500 lines: `test_equations.py` 409,
+`test_maude_boundary.py` 384, transcript inventory 111. Keeping their shared
+setup intact avoids coupling fixtures solely to meet the 300-line recommendation.
+
+Finite complete enumeration, sorted most-generality, occurs-check/fresh-name
+correctness, narrowing/FVP and native algorithm/importer correspondence remain
+open. This is mathematical solution transport, not algorithm verification.
+The existing `publish-proof-checkpoints` approval covers publication subject
+to local gates, scanning and actual exact-head hosted acceptance. Equations,
+native source-ID inputs, grammar, jobs, strict options/deadlines and budgets
+stay unchanged. No SDK/profile activation, manual dispatch or merge.
+
 ### Sort-respecting guarded substitution closure (2026-10-15)
 
 Continue the approved proof-only phase by modeling native values at each of

@@ -95,4 +95,17 @@ REPORT_GROUPS = {
         "native_kind_assignment_sorted", "native_kind_shadow_representation",
         "native_kind_sorted_framed_substitution",
     ),
+    "assignment-algebra": (
+        "native_substitution_identity", "native_substitution_composition",
+        "native_sorted_value_substitution", "native_sorted_composition",
+        "native_composition_associative", "native_substitution_assignment_ac",
+    ),
+    "sorted-unifiers": (
+        "native_ac_unifier_composition", "native_message_ac_unifier_iff",
+        "native_natural_ac_unifier_iff", "native_message_ac_unifier_representation",
+        "native_natural_ac_unifier_representation",
+    ),
+    "kind-unifiers": (
+        "native_kind_ac_unifier_iff", "native_kind_ac_unifier_representation",
+    ),
 }

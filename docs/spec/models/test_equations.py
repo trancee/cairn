@@ -369,6 +369,7 @@ class EquationCommandTests(unittest.TestCase):
         self.assertIn("PASS: guarded native query templates", result.stdout)
         self.assertIn("PASS: guarded native quotient paths", result.stdout)
         self.assertIn("PASS: sort-respecting substitutions", result.stdout)
+        self.assertIn("PASS: sorted AC-unifier solutions", result.stdout)
         self.assertNotIn("FAIL:", result.stderr)
 
     def test_sorted_query_bound_axiom_reports_are_required_before_success(self):
@@ -389,6 +390,9 @@ class EquationCommandTests(unittest.TestCase):
             ("sorted-quotient", "native_sorted_modulo_ac_confluence"),
             ("sorted-substitution", "native_sorted_rewrite_substitution"),
             ("kind-substitution", "native_kind_sorted_framed_substitution"),
+            ("assignment-algebra", "native_sorted_composition"),
+            ("sorted-unifiers", "native_message_ac_unifier_representation"),
+            ("kind-unifiers", "native_kind_ac_unifier_representation"),
         ):
             with self.subTest(group=group):
                 result = self.run_with_axiom_reports(*(

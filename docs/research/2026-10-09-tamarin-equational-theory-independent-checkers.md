@@ -138,7 +138,7 @@ The latest local [equation checker](../spec/models/equations/README.md)
 proves typed B-coherence, global matching confluence, quotient-path confluence
 modulo natural AC and a template-only normalization bound under normalized
 substitutions. Nonlinear key-copy overlaps are joined; normality is
-AC-invariant. All 114 required audits and kernel cases pass; 24 audits use no
+AC-invariant. All 127 required audits and kernel cases pass; 25 audits use no
 axioms. The checked boundedness quantifies over every template and normalized
 assignment, not sampled ground terms. Missing boundedness/confluence audit
 transcripts have fail-closed CLI red/green checks. Native query-image transfer,
@@ -168,6 +168,16 @@ controlled-kind/free framing substitution closure. This replaces an assumed
 shadow premise for that modeled assignment class, not native unifier/importer
 verification. Sorted substitution can create redexes; normality preservation
 and rewrite reflection are not claimed.
+Sorted composition, simultaneous substitution laws and pointwise AC congruence
+are now checked. Sorted AC-unifier solutions compose, and message/natural
+encoding preserves/reflects all such solutions with typed representations.
+Kind solution correspondence uses compatible derived shadows, not unrestricted
+natural shadow unification: the latter admits a Fresh/natural cross-sort
+solution forbidden by the original sorts. Kernel cases and actual pinned Maude
+controls retain that boundary, including mixed-kind sums and the difference
+between plain AC unification and ordinary rewrite equality.
+Finite complete unifier enumeration, sorted most-generality, narrowing/FVP and
+native algorithm/importer/fresh-namespace correctness remain open.
 Actual Maude controls distinguish a blocked kind projection from allowed inner
 rewriting and proper-message matching. This proof increment leaves native
 source/performance identities unchanged; the
@@ -186,7 +196,8 @@ Its envelope is wider than the printer's fixed tuple shape; it rejects
 relation deliberately omits sort guards, which decoder reflection validates
 only for encoded message inputs. These are algebraic representation proofs,
 not actual backend query/framing or substitution-provenance proofs, nor a
-verified importer. Narrowing/unification closure remains open.
+verified importer. Solution composition/image correspondence is now checked;
+complete unifier generation and narrowing completeness remain open.
 The published termination checkpoint passed hosted acceptance
 at `70c1c19` in PR #9. The later 53-audit checkpoint at `3d5dd7c` has the
 formal failures described above; the 67-audit fix awaits hosted acceptance.
