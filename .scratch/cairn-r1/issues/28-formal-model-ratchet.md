@@ -993,3 +993,32 @@ warning policy, deadline, native guard source-ID input or budget changes.
 The existing `publish-proof-checkpoints` approval covers publication in PR #9;
 current-head hosted acceptance remains required. No manual dispatch, merge,
 SDK/ratchet implementation or profile activation is authorized.
+
+2026-10-15 (guarded convergence across the frozen-index native AST):
+Exact guarded root/step/path decoding to typed matching joins primitive
+overlaps without assuming their enclosing raw contexts are proper. Structural
+induction handles every same-child/disjoint-context peak, and a strictly
+decreasing context count proves global matching termination/confluence.
+Bidirectional AC transport covers natural reassociation/permutation and every
+message/framing congruence. The distinct guarded quotient relation then has
+count-preserving matching realizations, termination, AC-invariant normality,
+matching/quotient normality equivalence, confluence and normal-form uniqueness
+modulo AC. This directly covers controlled-kind/free framing, not by
+transferring unguarded shadow confluence.
+
+Four successive complete-old-transcript CLI reds (`0 != 1`) become rejecting
+greens; all 18 new reports are mandatory, for 102 audits, 24 axiom-free.
+Kernel cases retain distinct AC-equivalent error-kind normal forms, exact
+matching decoding, framed nonlinear key-copy peaks, `kdf` and explicitly marked
+raw-AST cases outside the native grammar. No arbitrary properness-invariance
+or wider grammar claim. Fresh pinned `scripts/check.sh` passes 19 native,
+136 model and 50 lifecycle cases, 43 projections and all 102 audits.
+Seven changed-document local-link sets, both Python ASTs and whitespace pass.
+Existing Python temporary-directory ResourceWarnings remain; no warning-free
+claim. Sorted narrowing/unification/FVP, the full imported
+NAT/kind-variable carrier, universal importer correspondence and full assembled
+63-declaration acceptance remain open. Equations, attacker, claims, rules,
+restrictions, strict options/deadlines, native source identity and budgets
+are unchanged. Publication remains covered by `publish-proof-checkpoints`;
+current-head hosted acceptance is required, with no manual dispatch, merge,
+SDK implementation or profile activation.

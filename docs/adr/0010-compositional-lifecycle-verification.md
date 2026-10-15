@@ -58,6 +58,40 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Guarded native convergence beyond proper messages (2026-10-15)
+
+Continue the owner's approved proof-only checkpoints without changing native
+equations or grammar. A guarded root redex is always a proper message, even
+when the surrounding context is not. Prove exact typed matching decoding
+and proper-message exact joins, then use them only for primitive overlaps.
+Structural induction joins same-child peaks and commutes disjoint child steps
+through every raw context. A strictly decreasing source-context count proves
+termination and global matching confluence on the frozen-index AST.
+
+Do not transfer unguarded shadow confluence or assume arbitrary raw properness
+invariant: a function inside a natural sum can make a formerly improper
+expression proper after reduction. Instead prove paired forward/reverse
+structural AC transport, including natural associativity/commutativity and
+message/framing congruences. The guarded quotient relation remains distinct
+from `NativeModuloACRewrite`. Count-preserving matching realization establishes
+guarded quotient confluence, AC-invariant normality and normal-form uniqueness
+modulo AC; AC-invariant strict decrease also establishes quotient termination.
+These universal frozen-index AST results cover controlled-kind/free framing,
+but neither widen the stream grammar nor verify the full imported NAT/kind
+carrier, native algorithms, sorted narrowing/unification/FVP or the importer.
+
+Four successive missing-audit CLI reds become fail-closed greens after each
+vertical proof slice. Eighteen new mandatory reports bring the total to 102,
+with 24 axiom-free. Kernel cases cover distinct AC-equivalent error-kind normal
+forms, exact matching decoding, free framing/nonlinear key-copy peaks, `kdf`
+and clearly marked raw-AST cases outside the stream grammar.
+The cohesive CLI fixture is 488 lines, retaining the preceding D9 rationale
+for its shared independent process fixture and staying below the hard limit.
+No equation, protocol, public API, wire, runtime dependency, native guard
+source-ID input, job, deadline or numeric budget changes. Current-head hosted
+acceptance remains required; publication is covered by the existing
+`publish-proof-checkpoints` approval, not merge or SDK/profile activation.
+
 ### Guarded native query normalization bound (2026-10-15)
 
 Continue the approved proof-only phase by proving normalizing-path existence

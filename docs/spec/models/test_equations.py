@@ -93,6 +93,24 @@ REPORT_GROUPS = {
         "native_sorted_steps_transitive", "native_sorted_steps_context",
         "native_sorted_query_substitution_bound",
     ),
+    "sorted-exact": (
+        "native_sorted_primitive_image", "native_sorted_rewrite_matching_decode",
+        "native_sorted_steps_matching_decode", "native_sorted_proper_confluence_exact",
+    ),
+    "sorted-global": (
+        "native_sorted_rewrite_decreases_count", "native_sorted_termination",
+        "native_sorted_local_confluence", "native_sorted_steps_count_bound",
+        "native_sorted_matching_confluence",
+    ),
+    "sorted-ac": (
+        "native_query_ac_preserves_count", "native_sorted_query_ac_coherent",
+    ),
+    "sorted-quotient": (
+        "native_sorted_query_normal_ac_invariant", "native_sorted_query_steps_ac_coherent",
+        "native_sorted_modulo_ac_termination", "native_sorted_modulo_ac_normal_iff",
+        "native_sorted_modulo_ac_steps_matching", "native_sorted_modulo_ac_confluence",
+        "native_sorted_modulo_ac_normal_forms_unique",
+    ),
 }
 
 
@@ -435,6 +453,7 @@ class EquationCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("PASS: proper-sort native matching", result.stdout)
         self.assertIn("PASS: guarded native query templates", result.stdout)
+        self.assertIn("PASS: guarded native quotient paths", result.stdout)
         self.assertNotIn("FAIL:", result.stderr)
 
     def test_sorted_query_bound_axiom_reports_are_required_before_success(self):
@@ -446,6 +465,23 @@ class EquationCommandTests(unittest.TestCase):
         self.assertIn("missing Lean theorem axiom reports:", result.stderr)
         self.assertIn("native_sorted_query_substitution_bound", result.stderr)
         self.assertNotIn("PASS:", result.stdout)
+
+    def test_native_kind_convergence_reports_are_required_before_success(self):
+        for group, missing in (
+            ("sorted-exact", "native_sorted_rewrite_matching_decode"),
+            ("sorted-global", "native_sorted_matching_confluence"),
+            ("sorted-ac", "native_sorted_query_ac_coherent"),
+            ("sorted-quotient", "native_sorted_modulo_ac_confluence"),
+        ):
+            with self.subTest(group=group):
+                result = self.run_with_axiom_reports(*(
+                    candidate for candidate in REPORT_GROUPS if candidate != group
+                ))
+
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+                self.assertIn(missing, result.stderr)
+                self.assertNotIn("PASS:", result.stdout)
 
 
 if __name__ == "__main__":

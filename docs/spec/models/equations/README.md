@@ -46,6 +46,10 @@ The command:
 - kernel-checks `QuerySortedBoundedness.lean`, audits three reports and checks
   normalizing paths bounded only by native query templates, including
   error-kind, natural-addition and free tuple/Node contexts;
+- kernel-checks `QuerySortedExact.lean`, `QuerySortedGlobal.lean`,
+  `QuerySortedAC.lean` and `QuerySortedQuotient.lean`, audits 18 reports and
+  checks exact guarded matching decoding, full frozen-index AST peak joining,
+  structural AC transport and guarded quotient convergence/normal-form uniqueness;
 - generates and kernel-checks a certificate translating every source equation
   to its exact `PrimitiveRewrite` constructor.
 
@@ -56,7 +60,7 @@ the existing `120`-second bound; version checks use `30` seconds.
 Invalid command-line syntax uses argparse's exit `2`; `--help` exits `0` without
 checking a proof.
 Only `propext`, `Classical.choice` and `Quot.sound` are permitted by the shared
-axiom audit. Twenty-four of the 84 audited theorems use no axioms. All three
+axiom audit. Twenty-four of the 102 audited theorems use no axioms. All three
 uniform normalization-bound theorems use all three permitted axioms; the other
 non-constructive audits use at most `propext` and `Quot.sound`.
 No audited theorem uses `sorryAx` or a user-added axiom.
@@ -205,15 +209,37 @@ at most one root step, whose result is a normal subterm or role constant.
 The same proof covers controlled-kind/free framing templates without a
 compatible typed-shadow premise. Its broader mathematical AST domain does not
 widen the stream grammar or prove sort/image closure for arbitrary assignments.
-Controlled-kind convergence, complete sorted unification, narrowing completeness
-and backend algorithm correctness remain unproved.
+
+`QuerySortedExact.lean` proves every guarded root redex is a proper message,
+and decodes guarded steps/count-preserving paths to exact typed matching,
+not merely quotient rewriting. It joins proper-message paths at an identical
+representative. `QuerySortedGlobal.lean` uses that result only at primitive
+overlaps; structural induction joins same-child peaks and commutes independent
+child steps in every raw context. Every guarded rewrite strictly decreases
+`nativeQueryFunctionCount` on the actual term, proving termination and exact
+matching confluence across the entire frozen-index AST.
+
+`QuerySortedAC.lean` proves the context count AC-invariant and transports a
+guarded step across arbitrary structural AC, with no decoding premise. Paired
+forward/reverse transport handles symmetry, associativity, commutativity and
+all message/natural/framing congruences. `QuerySortedQuotient.lean` defines
+`NativeSortedModuloACRewrite` and its counted paths separately from the
+unguarded shadow quotient. It proves termination, AC-invariant normality,
+equivalence of matching/quotient normality, count-preserving matching realization,
+quotient confluence and normal-form uniqueness modulo AC. These results cover
+controlled-kind/free framing as a subset without widening the stream grammar.
+Regression cases retain distinct AC-equivalent error-kind normal forms,
+framed nonlinear key-copy peaks, `kdf` and explicitly marked raw terms outside
+the stream grammar. They do not claim properness invariant on that larger AST.
+Complete sorted unification, narrowing completeness and backend algorithm
+correctness remain unproved.
 
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of
 native bookkeeping `NAT`, the entire kind-completed carrier or finite variants.
-Convergence and boundedness are proved for the typed algebra and transported
-to the guarded native-sorted relation on the proper-message image; the separate
-structural normalizing-path bound also covers raw native query templates. Executed
+Convergence and boundedness are proved for the typed algebra; independent
+structural results cover the guarded relation on the full frozen-index AST,
+including controlled-kind and free framing contexts. Executed
 native operations additionally require the boundary checks below; a universal
 source-linked query-builder/importer proof remains unverified.
 Complete sorted AC unification, backend narrowing/unification closure and the

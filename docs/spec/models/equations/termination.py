@@ -116,6 +116,24 @@ QUERY_SORTED_BOUNDEDNESS_THEOREMS = (
     "native_sorted_steps_transitive", "native_sorted_steps_context",
     "native_sorted_query_substitution_bound",
 )
+QUERY_SORTED_EXACT_THEOREMS = (
+    "native_sorted_primitive_image", "native_sorted_rewrite_matching_decode",
+    "native_sorted_steps_matching_decode", "native_sorted_proper_confluence_exact",
+)
+QUERY_SORTED_GLOBAL_THEOREMS = (
+    "native_sorted_rewrite_decreases_count", "native_sorted_termination",
+    "native_sorted_local_confluence", "native_sorted_steps_count_bound",
+    "native_sorted_matching_confluence",
+)
+QUERY_SORTED_AC_THEOREMS = (
+    "native_query_ac_preserves_count", "native_sorted_query_ac_coherent",
+)
+QUERY_SORTED_QUOTIENT_THEOREMS = (
+    "native_sorted_query_normal_ac_invariant", "native_sorted_query_steps_ac_coherent",
+    "native_sorted_modulo_ac_termination", "native_sorted_modulo_ac_normal_iff",
+    "native_sorted_modulo_ac_steps_matching", "native_sorted_modulo_ac_confluence",
+    "native_sorted_modulo_ac_normal_forms_unique",
+)
 
 
 def main() -> int:
@@ -161,6 +179,10 @@ def main() -> int:
                 ("QuerySorted", QUERY_SORTED_THEOREMS),
                 ("QuerySortedConvergence", QUERY_SORTED_CONVERGENCE_THEOREMS),
                 ("QuerySortedBoundedness", QUERY_SORTED_BOUNDEDNESS_THEOREMS),
+                ("QuerySortedExact", QUERY_SORTED_EXACT_THEOREMS),
+                ("QuerySortedGlobal", QUERY_SORTED_GLOBAL_THEOREMS),
+                ("QuerySortedAC", QUERY_SORTED_AC_THEOREMS),
+                ("QuerySortedQuotient", QUERY_SORTED_QUOTIENT_THEOREMS),
             ):
                 output = run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -174,6 +196,7 @@ def main() -> int:
                 "CoherenceCases", "BoundednessCases", "ConfluenceCases", "QueryImageCases",
                 "QueryACCases", "QueryRewriteCases", "QuerySubstitutionCases", "QueryFramingCases",
                 "QueryKindCases", "QuerySortedCases", "QuerySortedBoundednessCases",
+                "QuerySortedQuotientCases",
             ):
                 run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -197,6 +220,7 @@ def main() -> int:
         print("PASS: fresh/natural kind abstraction is injective and transports AC/rewrite image evidence.")
         print("PASS: proper-sort native matching transfers convergence and the source-template bound.")
         print("PASS: guarded native query templates have a substitution-independent normalizing bound.")
+        print("PASS: guarded native quotient paths terminate and converge modulo structural AC.")
         print("Scope: typed image algebra + enforced native stream membership; not a native FVP certificate.")
         print("Trust boundary: Tamarin/Maude + Rust stream guard + Python evidence/signature/translation + Lean kernel.")
         return 0

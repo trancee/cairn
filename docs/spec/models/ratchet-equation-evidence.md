@@ -2,14 +2,16 @@
 
 Mathematical review of the default
 [`ratchet.spthy`](ratchet.spthy) equation set, observed on 2026-10-09.
-The `2026-10-14` [source-guarded Lean termination subgate](equations/README.md)
+The `2026-10-15` [source-guarded Lean termination subgate](equations/README.md)
 now kernel-checks termination, B-coherence, confluence modulo sorted natural
 AC and a normalization bound independent of normalized substitutions.
 These results cover the typed algebra. An independently guarded native-sorted
 relation now inherits convergence and boundedness on the proper-message image.
 A separate structural proof also bounds guarded normalizing paths for raw
 frozen-index native templates, including controlled-kind and free framing.
-Controlled-kind convergence, native narrowing/unification and the remaining
+Independent structural proofs now also establish guarded quotient termination,
+confluence and normal-form uniqueness modulo AC across that AST.
+Native narrowing/unification and the remaining
 FVP hypotheses stay separate; this is not a native FVP certificate.
 
 ## Why executed queries now need a guard
@@ -239,7 +241,7 @@ The theorem constructs a bounded normalizing derivation, rather than bounding
 all possible reduction orders. This is the quantifier order in the boundedness
 criterion, not a ground-term weight bound that grows with substitutions.
 The existing checker rebuilds these proofs, regression cases and all
-84 required theorem audits. The typed bound does not itself establish native
+102 required theorem audits. The typed bound does not itself establish native
 substitution/narrowing closure or complete sorted AC unification.
 
 ## Frozen-index encoding foundation
@@ -341,9 +343,36 @@ extra terms through the stream guard or prove substitution/image closure.
 The theorem establishes a bounded normalizing derivation, not uniqueness of its
 result or a bound for all reduction orders.
 
-Controlled-kind convergence, sorted narrowing, complete AC-unification/FVP
-transfer and universal importer correspondence remain explicit obligations,
-not consequences of the 84-audit count.
+## Why guarded convergence extends beyond proper messages
+
+The new [`QuerySortedExact.lean`](equations/QuerySortedExact.lean) proves every
+guarded root redex is a proper message. Guarded steps and counted paths on that
+image decode to exact typed matching, so its existing confluence theorem joins
+every primitive overlap. This does not assume the entire raw source is proper:
+[`QuerySortedGlobal.lean`](equations/QuerySortedGlobal.lean) joins nested peaks
+structurally, including natural-addition and free tuple/Node contexts.
+A strictly decreasing source-context count yields global termination and
+matching confluence on all frozen-index native terms.
+
+[`QuerySortedAC.lean`](equations/QuerySortedAC.lean) transports steps across
+structural AC in both directions, including reassociation/permutation of raw
+natural sums. This removes the earlier whole-source decoding premise.
+[`QuerySortedQuotient.lean`](equations/QuerySortedQuotient.lean) keeps guarded
+AC-rewrite-AC steps distinct from the unguarded shadow relation and realizes
+each counted quotient path by guarded matching. Exact matching confluence then
+gives quotient confluence and normal-form uniqueness modulo AC. Normality is
+AC-invariant, matching/quotient normality agree, and the AC-invariant count
+also proves guarded quotient termination.
+
+These direct results cover the controlled-kind/free framing subset; they do
+not transport shadow confluence or change the admitted grammar. Kernel cases
+retain unequal AC-equivalent error-kind normal forms, framed nonlinear keys
+and a raw case whose initially improper root becomes proper after an inner
+rewrite. That last case is outside the stream grammar, demonstrating why
+properness invariance cannot be assumed for arbitrary raw terms.
+Sorted narrowing, complete AC-unification/FVP transfer, the full imported
+NAT/kind-variable carrier and universal importer correspondence remain
+explicit obligations, not consequences of the 102-audit count.
 
 ## Finite-variant rationale
 
