@@ -89,6 +89,10 @@ REPORT_GROUPS = {
         "native_sorted_normal_iff", "native_sorted_normal_ac_invariant", "native_sorted_confluence",
         "native_sorted_normal_forms_unique", "native_sorted_normalized_substitution_bound",
     ),
+    "sorted-query-bound": (
+        "native_sorted_steps_transitive", "native_sorted_steps_context",
+        "native_sorted_query_substitution_bound",
+    ),
 }
 
 
@@ -430,7 +434,18 @@ class EquationCommandTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("PASS: proper-sort native matching", result.stdout)
+        self.assertIn("PASS: guarded native query templates", result.stdout)
         self.assertNotIn("FAIL:", result.stderr)
+
+    def test_sorted_query_bound_axiom_reports_are_required_before_success(self):
+        result = self.run_with_axiom_reports(*(
+            group for group in REPORT_GROUPS if group != "sorted-query-bound"
+        ))
+
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+        self.assertIn("native_sorted_query_substitution_bound", result.stderr)
+        self.assertNotIn("PASS:", result.stdout)
 
 
 if __name__ == "__main__":

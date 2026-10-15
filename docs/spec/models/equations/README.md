@@ -43,6 +43,9 @@ The command:
 - kernel-checks `QuerySorted.lean` and `QuerySortedConvergence.lean`, audits
   14 reports and checks guarded native-shaped matching, proper-message
   convergence/boundedness, controlled-kind closure and decoded-kind termination;
+- kernel-checks `QuerySortedBoundedness.lean`, audits three reports and checks
+  normalizing paths bounded only by native query templates, including
+  error-kind, natural-addition and free tuple/Node contexts;
 - generates and kernel-checks a certificate translating every source equation
   to its exact `PrimitiveRewrite` constructor.
 
@@ -53,8 +56,8 @@ the existing `120`-second bound; version checks use `30` seconds.
 Invalid command-line syntax uses argparse's exit `2`; `--help` exits `0` without
 checking a proof.
 Only `propext`, `Classical.choice` and `Quot.sound` are permitted by the shared
-axiom audit. Twenty-two of the 81 audited theorems use no axioms. The typed
-and native-sorted uniform normalization-bound theorems use all three permitted axioms; the other
+axiom audit. Twenty-four of the 84 audited theorems use no axioms. All three
+uniform normalization-bound theorems use all three permitted axioms; the other
 non-constructive audits use at most `propext` and `Quot.sound`.
 No audited theorem uses `sorryAx` or a user-added axiom.
 
@@ -188,15 +191,29 @@ rewrites remain possible inside its error-kind context.
 confluence modulo AC, normal-form uniqueness modulo AC and normality invariance
 to this independently guarded relation on the proper-message image. Encoded
 instantiations of the existing templates have the same substitution-independent
-normalizing bound. These stronger results require proper-message input; they
-do not establish controlled-kind convergence or bounded normalizing paths,
-complete sorted unification, narrowing completeness or backend algorithm correctness.
+normalizing bound. These transferred results require proper-message input.
+
+`QuerySortedBoundedness.lean` separately proves a structural normalization bound
+for the entire frozen-index `NativeQueryTerm` AST using the actual guarded
+relation, not shadow rewrites. For every template and assignment of normal
+terms to its sorted variables, there exists a normalizing path of at most
+`nativeQueryFunctionCount template` steps. The count includes unary, binary,
+`kdf`, natural-addition, list and cons contexts in the source template; rigid
+leaves and variables count zero. It does not count assigned-term size or AC
+rearrangements, and does not bound every reduction order. Normal children leave
+at most one root step, whose result is a normal subterm or role constant.
+The same proof covers controlled-kind/free framing templates without a
+compatible typed-shadow premise. Its broader mathematical AST domain does not
+widen the stream grammar or prove sort/image closure for arbitrary assignments.
+Controlled-kind convergence, complete sorted unification, narrowing completeness
+and backend algorithm correctness remain unproved.
 
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of
 native bookkeeping `NAT`, the entire kind-completed carrier or finite variants.
 Convergence and boundedness are proved for the typed algebra and transported
-to the guarded native-sorted relation on the proper-message image. Executed
+to the guarded native-sorted relation on the proper-message image; the separate
+structural normalizing-path bound also covers raw native query templates. Executed
 native operations additionally require the boundary checks below; a universal
 source-linked query-builder/importer proof remains unverified.
 Complete sorted AC unification, backend narrowing/unification closure and the

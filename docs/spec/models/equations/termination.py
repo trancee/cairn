@@ -112,6 +112,10 @@ QUERY_SORTED_CONVERGENCE_THEOREMS = (
     "native_sorted_normal_iff", "native_sorted_normal_ac_invariant", "native_sorted_confluence",
     "native_sorted_normal_forms_unique", "native_sorted_normalized_substitution_bound",
 )
+QUERY_SORTED_BOUNDEDNESS_THEOREMS = (
+    "native_sorted_steps_transitive", "native_sorted_steps_context",
+    "native_sorted_query_substitution_bound",
+)
 
 
 def main() -> int:
@@ -156,6 +160,7 @@ def main() -> int:
                 ("QueryKind", QUERY_KIND_THEOREMS),
                 ("QuerySorted", QUERY_SORTED_THEOREMS),
                 ("QuerySortedConvergence", QUERY_SORTED_CONVERGENCE_THEOREMS),
+                ("QuerySortedBoundedness", QUERY_SORTED_BOUNDEDNESS_THEOREMS),
             ):
                 output = run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -168,7 +173,7 @@ def main() -> int:
             for module in (
                 "CoherenceCases", "BoundednessCases", "ConfluenceCases", "QueryImageCases",
                 "QueryACCases", "QueryRewriteCases", "QuerySubstitutionCases", "QueryFramingCases",
-                "QueryKindCases", "QuerySortedCases",
+                "QueryKindCases", "QuerySortedCases", "QuerySortedBoundednessCases",
             ):
                 run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -191,6 +196,7 @@ def main() -> int:
         print("PASS: free tuple/Node framing is closed under structural AC, rewriting and typed substitution.")
         print("PASS: fresh/natural kind abstraction is injective and transports AC/rewrite image evidence.")
         print("PASS: proper-sort native matching transfers convergence and the source-template bound.")
+        print("PASS: guarded native query templates have a substitution-independent normalizing bound.")
         print("Scope: typed image algebra + enforced native stream membership; not a native FVP certificate.")
         print("Trust boundary: Tamarin/Maude + Rust stream guard + Python evidence/signature/translation + Lean kernel.")
         return 0

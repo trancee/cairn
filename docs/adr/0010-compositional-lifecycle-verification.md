@@ -58,6 +58,41 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Guarded native query normalization bound (2026-10-15)
+
+Continue the approved proof-only phase by proving normalizing-path existence
+directly on the frozen-index native AST. Transferring the raw shadow normalizer
+would incorrectly erase blocked ill-kind components; restricting to proper
+messages would leave required derivation-kind queries uncovered. Instead use
+structural bottom-up normalization with the existing guarded relation and
+`substituteNativeQuery`. Normal children leave at most one root step, whose
+result is a normal subterm or role constant. Shared unary/binary composition
+handles the demonstrated repeated message, natural-addition and framing cases.
+
+The source-only count includes unary/binary/kdf/natural-add/list/cons contexts
+and excludes variable-assignment size and rigid indices. The theorem quantifies
+over every native template and normalized assignment, not sampled terms,
+without requiring a compatible typed shadow. Its broader raw-AST domain does
+not widen the approved stream grammar or establish arbitrary substitution/image
+closure. Controlled-kind confluence, sorted narrowing/unification, namespace/
+importer correctness and native FVP remain open; the bound concerns existence
+of a normalizing derivation, not every reduction order or native algorithms.
+
+Three new mandatory audits bring the total to 84, with 24 axiom-free.
+The existing CLI first accepts an 81-audit transcript without these reports;
+its intended `0 != 1` red becomes a rejecting green. Kernel cases retain
+the blocked projection's one-step inner normalization, source-only bounds,
+arbitrary normal replacements, tuple/Node framing, nonlinear keys and `kdf`.
+A fresh fast gate passes 19 native/135 model/50 lifecycle cases, 43 projections
+and all audits. The cohesive source/CLI fixture remains below 500 lines under
+the preceding documented D9 rationale.
+
+This increment is covered by the owner's `publish-proof-checkpoints` approval.
+There is no protocol/equation/API/wire/runtime dependency, native guard source-ID
+input or resource-budget change, nor SDK/profile activation or merge approval.
+Current-head authoritative hosted acceptance is still required; immutable
+preceding observations are not rewritten to imply acceptance of a later head.
+
 ### Native proper-sort relation transfer (2026-10-15)
 
 Continue the approved kernel/CLI proof seams with independently defined native

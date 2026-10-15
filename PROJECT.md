@@ -16,21 +16,25 @@ are realizable by typed matching modulo AC. Sort-separated natural/message
 substitutions commute with encoding and preserve image membership while rigid
 indices stay frozen. Free tuple/Node framing is closed under AC, rewriting and
 typed substitution, including node assignments; framing remains excluded from
-message functions. All 81 theorem audits and the kernel
+message functions. All 84 theorem audits and the kernel
 regression cases run in the existing lifecycle cell, without a new job or
-larger ceiling. Twenty-two audits use no axioms; none uses `sorryAx`.
+larger ceiling. Twenty-four audits use no axioms; none uses `sorryAx`.
 
 The new independent native-sorted relation requires proper-`Msg` equation
 variables and AC-equivalent repeated keys instead of using unguarded shadow
 rewrites. On proper-message inputs it inherits termination, B-coherence,
 confluence/normal-form uniqueness modulo AC, normality invariance and the same
 source-template-only normalizing bound. Controlled-kind framing closure and
-decoded-kind termination also hold, but controlled-kind convergence, narrowing/
-unification/FVP and importer correspondence remain open. The blocked error-kind
+decoded-kind termination also hold. A separate structural proof gives every
+frozen-index native query template and normalized assignment a normalizing
+path bounded only by source contexts, including controlled error-kind and free
+framing contexts. It needs no compatible typed shadow, but does not prove
+sort/image closure for arbitrary assignments. Controlled-kind convergence,
+narrowing/unification/FVP and importer correspondence remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
-fresh `scripts/check.sh` passes 19 native/134 model/50 lifecycle tests,
-43 projections and all 81 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
+fresh `scripts/check.sh` passes 19 native/135 model/50 lifecycle tests,
+43 projections and all 84 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
 record authoritative current-head hosted acceptance. This proof-only increment changes no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
 

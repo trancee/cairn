@@ -969,3 +969,27 @@ commits, normal pushes, PR-description updates and necessary fixes in PR #9.
 The [PR checks](https://github.com/trancee/cairn/pull/9/checks) record current-head
 hosted acceptance. No new benchmark, manual dispatch, merge, profile activation
 or implementation approval is claimed.
+
+2026-10-15 (guarded native query normalizing bound, local gates complete):
+[`QuerySortedBoundedness.lean`](../../../docs/spec/models/equations/QuerySortedBoundedness.lean)
+proves bounded normalizing-path existence directly for every frozen-index native
+query template and normalized assignment, using proper-sort guarded matching
+rather than raw shadow rewriting. Source-only bounds include natural-addition
+and tuple/Node contexts, not assigned-term size, without a compatible typed
+shadow. Bottom-up normalization leaves at most one root step. The broader raw
+AST theorem does not widen the stream grammar, establish arbitrary substitution/
+image closure, prove controlled-kind confluence, or close sorted unification/
+narrowing/FVP/importer and full assembled obligations.
+
+The existing CLI initially accepts a complete 81-audit transcript without the
+three new reports (`0 != 1`); the rejecting green and complete-transcript
+positive control pass. Kernel cases cover blocked-root/allowed-inner
+normalization, arbitrary normal replacements, source-only bounds, free framing,
+nonlinear keys and `kdf`. Fresh pinned `scripts/check.sh` passes
+19 native/135 model/50 lifecycle cases, 43 projections and all 84 audits,
+24 axiom-free. Existing Python temporary-directory ResourceWarnings remain;
+no warning-free claim. No equation, attacker, claim, transition, restriction,
+warning policy, deadline, native guard source-ID input or budget changes.
+The existing `publish-proof-checkpoints` approval covers publication in PR #9;
+current-head hosted acceptance remains required. No manual dispatch, merge,
+SDK/ratchet implementation or profile activation is authorized.

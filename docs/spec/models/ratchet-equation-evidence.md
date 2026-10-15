@@ -7,6 +7,8 @@ now kernel-checks termination, B-coherence, confluence modulo sorted natural
 AC and a normalization bound independent of normalized substitutions.
 These results cover the typed algebra. An independently guarded native-sorted
 relation now inherits convergence and boundedness on the proper-message image.
+A separate structural proof also bounds guarded normalizing paths for raw
+frozen-index native templates, including controlled-kind and free framing.
 Controlled-kind convergence, native narrowing/unification and the remaining
 FVP hypotheses stay separate; this is not a native FVP certificate.
 
@@ -237,7 +239,7 @@ The theorem constructs a bounded normalizing derivation, rather than bounding
 all possible reduction orders. This is the quantifier order in the boundedness
 criterion, not a ground-term weight bound that grows with substitutions.
 The existing checker rebuilds these proofs, regression cases and all
-81 required theorem audits. The typed bound does not itself establish native
+84 required theorem audits. The typed bound does not itself establish native
 substitution/narrowing closure or complete sorted AC unification.
 
 ## Frozen-index encoding foundation
@@ -323,11 +325,25 @@ The kernel connects each such step to the raw quotient relation and lifts typed
 matching into it. On proper-message inputs, counted paths then inherit
 B-coherence, confluence and normal-form uniqueness modulo AC, normality
 invariance and the same template-only normalization bound. Controlled-kind
-framing closure and decoded-kind termination also follow, but the stronger
-convergence/bounded-path results still require a proper-message input.
+framing closure and decoded-kind termination also follow. These convergence
+results still require a proper-message input.
+
+[`QuerySortedBoundedness.lean`](equations/QuerySortedBoundedness.lean) now proves
+bounded normalizing-path existence independently, by structural induction on
+the frozen-index native query template. Once children are normal, any permitted
+root step returns a normal subterm or role constant; an improper root can
+remain blocked without blocking valid inner steps. The source context count
+includes natural addition and tuple/list framing as well as message functions,
+but never constructors introduced by assignments. Thus the bound covers
+controlled-kind/framed templates and normalized assignments without a compatible
+typed shadow. It also holds on the broader raw AST; this does not admit those
+extra terms through the stream guard or prove substitution/image closure.
+The theorem establishes a bounded normalizing derivation, not uniqueness of its
+result or a bound for all reduction orders.
+
 Controlled-kind convergence, sorted narrowing, complete AC-unification/FVP
 transfer and universal importer correspondence remain explicit obligations,
-not consequences of the 81-audit count.
+not consequences of the 84-audit count.
 
 ## Finite-variant rationale
 
