@@ -58,6 +58,43 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Sort-respecting guarded substitution closure (2026-10-15)
+
+Continue the approved proof-only phase by modeling native values at each of
+the five variable sorts. Arbitrary raw assignments can turn proper equation
+arguments into nodes, framing or ill-kind sums; unguarded substitution closure
+cannot justify guarded matching. Instead prove both directions between
+sort-respecting native assignments and the existing typed substitution
+representation. This preserves proper-message guards and guarded
+matching/quotient steps and count-preserving paths under simultaneous
+substitution, while rigid indices stay frozen.
+
+Kind abstraction preserves recognized natural/proper-message values, and its
+abstract assignment is sorted. A typed representation therefore supplies the
+previously assumed compatible shadow. Controlled-kind/free framing closure
+now follows for every modeled sorted assignment, without a second premise.
+Do not claim arbitrary assignment closure, rewrite reflection or normality
+preservation: even a normal sorted pair assignment can create a new root redex.
+Native unification/narrowing completeness, algorithm/classifier/importer
+correctness, namespace correspondence and FVP remain open.
+
+A green 38-case equation baseline precedes extracting the independent
+transcript inventory to `equation_fixtures.py`; the same 38 cases remain green.
+The shared process fixture stays cohesive at 405 lines, below the 500-line
+hard limit, without importing the production audit inventory into its oracle.
+Two vertical missing-audit CLI reds become rejecting greens; 12 new reports
+bring the total to 114, with 24 axiom-free. Representation witnesses and their
+derived substitution results use the already allowed classical choice only
+in the mathematical proof, not the executable guard.
+Kernel cases retain all-sort rejection, simultaneous substitution, frozen
+same-index atoms, Fresh/natural shadow separation, controlled-kind framing,
+blocked root matches, nonlinear AC keys, counted paths and redex creation.
+
+Publication is covered by `publish-proof-checkpoints`, subject to local gates,
+full-file scanning and actual new-head hosted acceptance. Native guard
+source-ID inputs, grammar, equations, options, deadlines, jobs and numeric
+budgets remain unchanged; no SDK/profile activation or merge is authorized.
+
 ### Guarded native convergence beyond proper messages (2026-10-15)
 
 Continue the owner's approved proof-only checkpoints without changing native

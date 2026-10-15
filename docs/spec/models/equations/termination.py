@@ -134,6 +134,17 @@ QUERY_SORTED_QUOTIENT_THEOREMS = (
     "native_sorted_modulo_ac_steps_matching", "native_sorted_modulo_ac_confluence",
     "native_sorted_modulo_ac_normal_forms_unique",
 )
+QUERY_SORTED_SUBSTITUTION_THEOREMS = (
+    "native_typed_assignment_sorted", "native_sorted_assignment_representation",
+    "native_sorted_proper_substitution", "native_sorted_rewrite_substitution",
+    "native_sorted_steps_substitution", "native_sorted_modulo_ac_substitution",
+    "native_sorted_modulo_ac_steps_substitution",
+)
+QUERY_KIND_SUBSTITUTION_THEOREMS = (
+    "native_kind_natural_image", "native_kind_proper_image",
+    "native_kind_assignment_sorted", "native_kind_shadow_representation",
+    "native_kind_sorted_framed_substitution",
+)
 
 
 def main() -> int:
@@ -183,6 +194,8 @@ def main() -> int:
                 ("QuerySortedGlobal", QUERY_SORTED_GLOBAL_THEOREMS),
                 ("QuerySortedAC", QUERY_SORTED_AC_THEOREMS),
                 ("QuerySortedQuotient", QUERY_SORTED_QUOTIENT_THEOREMS),
+                ("QuerySortedSubstitution", QUERY_SORTED_SUBSTITUTION_THEOREMS),
+                ("QueryKindSubstitution", QUERY_KIND_SUBSTITUTION_THEOREMS),
             ):
                 output = run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -197,6 +210,7 @@ def main() -> int:
                 "QueryACCases", "QueryRewriteCases", "QuerySubstitutionCases", "QueryFramingCases",
                 "QueryKindCases", "QuerySortedCases", "QuerySortedBoundednessCases",
                 "QuerySortedQuotientCases",
+                "QuerySortedSubstitutionCases",
             ):
                 run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -221,6 +235,7 @@ def main() -> int:
         print("PASS: proper-sort native matching transfers convergence and the source-template bound.")
         print("PASS: guarded native query templates have a substitution-independent normalizing bound.")
         print("PASS: guarded native quotient paths terminate and converge modulo structural AC.")
+        print("PASS: sort-respecting substitutions preserve guarded paths and controlled-kind framing.")
         print("Scope: typed image algebra + enforced native stream membership; not a native FVP certificate.")
         print("Trust boundary: Tamarin/Maude + Rust stream guard + Python evidence/signature/translation + Lean kernel.")
         return 0

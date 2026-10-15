@@ -1022,3 +1022,29 @@ restrictions, strict options/deadlines, native source identity and budgets
 are unchanged. Publication remains covered by `publish-proof-checkpoints`;
 current-head hosted acceptance is required, with no manual dispatch, merge,
 SDK implementation or profile activation.
+
+2026-10-15 (sort-respecting guarded substitution closure):
+[`QuerySortedSubstitution.lean`](../../../docs/spec/models/equations/QuerySortedSubstitution.lean)
+models the five variable-sort value disciplines and proves a complete
+representation by the existing typed substitution. Proper-message guards,
+guarded rewrites and counted matching/quotient paths survive every such
+assignment. [`QueryKindSubstitution.lean`](../../../docs/spec/models/equations/QueryKindSubstitution.lean)
+proves kind abstraction preserves proper values and produces a sorted abstract
+assignment. Its typed representation derives the previously assumed compatible
+shadow, giving controlled-kind/free framing substitution closure without an
+extra premise. This is mathematical assignment closure, not native unifier,
+validator/importer or FVP acceptance.
+
+The 38-case equation fixture baseline is green before/after extracting its
+independent transcript inventory, keeping the shared process fixture at
+405 lines and below the hard limit. Two missing-audit CLI reds (`0 != 1`)
+become rejecting greens; the complete-transcript positive control passes.
+The checker now requires 114 audits, 24 axiom-free. Kernel cases retain all-sort
+rejection, frozen same-index rigid/variable atoms, separate Fresh/natural
+shadows, simultaneous substitution, framed kind closure, blocked ill-kind
+roots, counted AC-key paths and new redex creation. No normality-preservation
+or rewrite-reflection claim. Native sorted unification/narrowing/FVP,
+algorithm/importer/namespace correspondence and exact full assembled acceptance
+remain open. No native source-ID input, grammar, equation, attacker, claim,
+rule, restriction, option, deadline or budget changes. Existing publication
+approval applies; no manual dispatch, merge or SDK/profile activation.

@@ -50,6 +50,10 @@ The command:
   `QuerySortedAC.lean` and `QuerySortedQuotient.lean`, audits 18 reports and
   checks exact guarded matching decoding, full frozen-index AST peak joining,
   structural AC transport and guarded quotient convergence/normal-form uniqueness;
+- kernel-checks `QuerySortedSubstitution.lean` and `QueryKindSubstitution.lean`,
+  audits 12 reports and checks all-sort assignment representation, guarded
+  path preservation and controlled-kind framing substitution closure with a
+  derived, not assumed, compatible shadow;
 - generates and kernel-checks a certificate translating every source equation
   to its exact `PrimitiveRewrite` constructor.
 
@@ -60,9 +64,11 @@ the existing `120`-second bound; version checks use `30` seconds.
 Invalid command-line syntax uses argparse's exit `2`; `--help` exits `0` without
 checking a proof.
 Only `propext`, `Classical.choice` and `Quot.sound` are permitted by the shared
-axiom audit. Twenty-four of the 102 audited theorems use no axioms. All three
-uniform normalization-bound theorems use all three permitted axioms; the other
-non-constructive audits use at most `propext` and `Quot.sound`.
+axiom audit. Twenty-four of the 114 audited theorems use no axioms. The three
+uniform normalization-bound theorems and the assignment-representation/
+derived-substitution audits use all three permitted axioms. Other audits use
+at most `propext` and `Quot.sound`. Assignment witnesses use classical choice
+only in the mathematical proof, not an executable native fallback.
 No audited theorem uses `sorryAx` or a user-added axiom.
 
 Successful output includes the canonical source SHA-256, all required axiom
@@ -167,9 +173,10 @@ message/public/function/list operands in sums.
 The relabeling preserves raw AC, rewriting and quotient rewriting; the inverse
 reflects them on the abstracted image. Image closure, quotient-step decoding
 and termination follow for proof-carrying decoded kind messages. Substitution
-commutes with abstraction for arbitrary raw assignments. Framed substitution
-closure additionally requires an explicit compatible typed shadow assignment;
-the checker does not derive that premise for every runtime substitution.
+commutes with abstraction for arbitrary raw assignments. The original framed-substitution theorem has an explicit compatible typed
+shadow premise. The sorted-assignment extension below derives that premise
+for every modeled sort-respecting assignment; correspondence with every
+runtime substitution remains part of the unverified native/importer boundary.
 
 Raw rewriting omits native proper-message guards. On the kind image, shadow
 rewrites may therefore exist without native counterparts. For example, the
@@ -233,6 +240,28 @@ framed nonlinear key-copy peaks, `kdf` and explicitly marked raw terms outside
 the stream grammar. They do not claim properness invariant on that larger AST.
 Complete sorted unification, narrowing completeness and backend algorithm
 correctness remain unproved.
+
+`QuerySortedSubstitution.lean` independently defines `NativeSortedValue` for
+the five variable sorts: public/fresh atoms or same-sort variables, recognized
+messages/naturals, and node atoms/variables. `NativeSortedAssignment` requires
+that value discipline at every sort/index. Every existing `QuerySubstitution`
+induces such an assignment, and every such assignment has a representation by
+`nativeQueryAssignment`. Proper-message guards survive substitution, so
+guarded matching and quotient steps/count-preserving paths do too, under every
+raw context. Substitution remains simultaneous and freezes rigid indices.
+
+`QueryKindSubstitution.lean` proves kind abstraction preserves recognized
+naturals and proper messages. The abstract assignment is sorted, including
+the disjoint even-natural/odd-Fresh shadow indices. Its typed representation
+supplies the earlier compatible-shadow premise and proves controlled-kind/free
+framing substitution closure without assuming a shadow. No arbitrary unsorted
+assignment is admitted. Sorted substitutions can create new redexes, so these
+are preservation, not reflection or normality-preservation, theorems.
+Kernel cases retain all-sort rejection, same-index rigid/variable and Fresh/
+natural distinctions, blocked ill-kind projections, framed substitution,
+nonlinear AC-key paths and redex creation. The independent CLI transcript
+inventory is in `../equation_fixtures.py`, separate from the shared process
+fixture to keep maintained files below the hard size limit.
 
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of

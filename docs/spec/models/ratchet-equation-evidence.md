@@ -11,6 +11,8 @@ A separate structural proof also bounds guarded normalizing paths for raw
 frozen-index native templates, including controlled-kind and free framing.
 Independent structural proofs now also establish guarded quotient termination,
 confluence and normal-form uniqueness modulo AC across that AST.
+Sort-respecting substitutions preserve guarded paths and controlled-kind
+framing; their compatible typed shadows are now derived rather than assumed.
 Native narrowing/unification and the remaining
 FVP hypotheses stay separate; this is not a native FVP certificate.
 
@@ -241,7 +243,7 @@ The theorem constructs a bounded normalizing derivation, rather than bounding
 all possible reduction orders. This is the quantifier order in the boundedness
 criterion, not a ground-term weight bound that grows with substitutions.
 The existing checker rebuilds these proofs, regression cases and all
-102 required theorem audits. The typed bound does not itself establish native
+114 required theorem audits. The typed bound does not itself establish native
 substitution/narrowing closure or complete sorted AC unification.
 
 ## Frozen-index encoding foundation
@@ -305,8 +307,9 @@ native syntax or wire payloads.
 After abstraction, the existing decoder and framing proofs provide image
 closure and raw quotient-step correspondence. The kernel also proves
 termination on decoded kind messages. The substitution square holds for
-arbitrary assignments, while framed substitution closure has a compatible
-typed-shadow premise not yet derived for every runtime-validated assignment.
+arbitrary assignments. The original framed-substitution theorem has a compatible
+typed-shadow premise; the sorted-assignment extension below derives it
+mathematically, without proving the runtime validator/importer correct.
 
 This does not transport the earlier proper-message matching theorem wholesale.
 Raw rules deliberately omit native message-sort guards. A raw projection can
@@ -372,7 +375,32 @@ rewrite. That last case is outside the stream grammar, demonstrating why
 properness invariance cannot be assumed for arbitrary raw terms.
 Sorted narrowing, complete AC-unification/FVP transfer, the full imported
 NAT/kind-variable carrier and universal importer correspondence remain
-explicit obligations, not consequences of the 102-audit count.
+explicit obligations, not consequences of the 114-audit count.
+
+## Why sorted substitution no longer needs an assumed shadow
+
+Guarded matching tests proper-message payloads and keys. Raw substitution
+preservation alone would be unsound here: replacing a message variable with
+a node or list can invalidate a previously permitted root match.
+[`QuerySortedSubstitution.lean`](equations/QuerySortedSubstitution.lean)
+instead models the exact mathematical value discipline of the five variable
+sorts. Every such assignment has the existing typed representation, and every
+typed assignment satisfies that discipline. Proper-message guards therefore
+survive substitution, as do guarded steps and counted matching/quotient paths.
+
+Kind abstraction maps Fresh leaves into disjoint natural shadow indices.
+[`QueryKindSubstitution.lean`](equations/QueryKindSubstitution.lean) proves
+this preserves proper values and yields a sorted abstract assignment. Its
+typed representation provides the previously assumed compatible shadow.
+Consequently the controlled-kind/free framing image is closed under all
+modeled sort-respecting assignments, including node assignments, without
+another shadow premise or broader native grammar.
+
+This does not reflect rewrites through substitution: a normal expression
+such as `fst(MessageVariable)` can acquire a pair argument and become reducible.
+Nor does it prove native unifier completeness, returned-binding validation,
+variable renaming/importer correctness or FVP. Those require correspondence
+with the native algorithms, not just closure of a mathematical assignment class.
 
 ## Finite-variant rationale
 
@@ -387,8 +415,9 @@ they cannot produce another role-redex.
 The checked uniform bound now replaces an informal subterm/ground boundedness
 rationale. Cholewa, Meseguer and Escobar's theorem 6 relates boundedness to
 EMS-FVP under its decomposition hypotheses. Convergence/B-coherence and the
-bound are checked in the typed algebra and transferred to the guarded relation
-on proper-message inputs, but the complete sort/signature,
+bound are checked in the typed algebra, with independent structural guarded
+convergence/boundedness and sort-respecting substitution closure on the
+frozen-index native AST, but the complete sort/signature,
 AC-unification and native-image correspondence obligations must still be
 reconciled before applying that theorem to Tamarin's backend.
 

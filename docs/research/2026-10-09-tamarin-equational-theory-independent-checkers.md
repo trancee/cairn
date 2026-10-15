@@ -138,7 +138,7 @@ The latest local [equation checker](../spec/models/equations/README.md)
 proves typed B-coherence, global matching confluence, quotient-path confluence
 modulo natural AC and a template-only normalization bound under normalized
 substitutions. Nonlinear key-copy overlaps are joined; normality is
-AC-invariant. All 102 required audits and kernel cases pass; 24 audits use no
+AC-invariant. All 114 required audits and kernel cases pass; 24 audits use no
 axioms. The checked boundedness quantifies over every template and normalized
 assignment, not sampled ground terms. Missing boundedness/confluence audit
 transcripts have fail-closed CLI red/green checks. Native query-image transfer,
@@ -160,6 +160,14 @@ uniqueness modulo AC, including controlled-kind/free framing. This is a direct
 proof of the guarded relation, not a shadow-confluence transfer. Sorted
 narrowing, complete AC-unification/FVP, the full imported NAT/kind-variable
 carrier and importer namespace correspondence remain open.
+Sort-respecting native assignments now have a complete existing typed
+representation, preserving proper-message guards and guarded counted
+matching/quotient paths. Kind abstraction preserves proper values and produces
+a sorted abstract assignment, deriving the compatible typed shadow for
+controlled-kind/free framing substitution closure. This replaces an assumed
+shadow premise for that modeled assignment class, not native unifier/importer
+verification. Sorted substitution can create redexes; normality preservation
+and rewrite reflection are not claimed.
 Actual Maude controls distinguish a blocked kind projection from allowed inner
 rewriting and proper-message matching. This proof increment leaves native
 source/performance identities unchanged; the
