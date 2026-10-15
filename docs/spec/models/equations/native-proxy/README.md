@@ -54,6 +54,8 @@ reject the run. `--check-report` rechecks the schema, current source/fixture
 identities, three-pair method and budget math; it does not attest that an
 untrusted report was actually measured. Missing, malformed, incompatible,
 stale, incomplete or over-budget evidence fails with `FAIL:` and exit `1`.
+Unreviewed exports identify the phase and expected/observed SHA-256 values,
+not the export payload.
 
 ## Candidate routing and source freshness
 
@@ -82,7 +84,7 @@ The existing 19-cell lifecycle workflow builds the candidate once per cell
 and selects it for all existing callers. The lifecycle cell also runs static/
 stream gates and both three-pair budgets; no job or deadline is added.
 The workflow names the internal host-tool exclusion from SDK coverage.
-Native Linux execution of this staged workflow remains unverified.
+Native execution is observed below; full budget acceptance remains incomplete.
 Only after Linux/caller/performance acceptance may the default change and
 the temporary selector and obsolete Python validator/tests be removed.
 
@@ -177,6 +179,17 @@ unset, preserving the existing Python default.
 
 The owner authorized promotion checkpoints in PR #9 for existing native CI,
 including necessary fixes and conditional cutover after the required criteria
-pass. Native Linux results remain pending; merge and SDK/profile activation
+pass. Full native acceptance remains incomplete; merge and SDK/profile activation
 are not authorized. The local budgets do not measure full-proof or memory overhead,
 establish FVP, authorize a default cutover or supersede the failed hosted run.
+
+## Native staging result (`2e7b429`)
+
+[Run `38710117729`](https://github.com/trancee/cairn/actions/runs/38710117729)
+passes all 18 replay/mutation cells and the lifecycle fast gates. The benchmark
+then rejects an unreviewed export before any timing-budget verdict.
+The earlier generic error did not distinguish an unexpected direct export
+from a guarded mismatch. A public benchmark CLI regression now requires the
+phase and expected/observed SHA-256 values, without logging output payloads.
+No export, evidence, budget or deadline check is relaxed.
+Native performance acceptance and default cutover remain blocked.

@@ -389,6 +389,9 @@ Final-source paired medians are `24.235925`/`25.894241` seconds for full export
 `+40.1399%`), passing both approved limits with unchanged exports.
 The final compiled build preserves the original-cap default recovery,
 56-certificate refined safety context and both mutation regressions.
-Native Linux/all 19 CI cells remain pending; the four selected local
-regressions are not full assembled or memory-performance acceptance.
+Native run `38710117729` at `2e7b429` passes all 18 replay/mutation cells
+and fast gates, but rejects an unreviewed export before any budget verdict.
+The CLI now reports the failing phase and expected/observed hashes without
+export payloads; all digest and budget checks remain enforced.
+The four selected local regressions are not full assembled or memory-performance acceptance.
 Default routing stays Python at `+22.5%`; native FVP remains open.

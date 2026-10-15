@@ -115,7 +115,11 @@ def main() -> int:
             )
             timings[label].append(time.monotonic() - started)
             actual = hashlib.sha256(output.encode()).hexdigest()
-            if actual != expected_export or digest is not None and actual != digest:
+            if actual != expected_export:
+                raise GuardError(
+                    f"unreviewed {label} export: expected {expected_export}, observed {actual}",
+                )
+            if digest is not None and actual != digest:
                 raise GuardError("native guard and committed-baseline exports differ")
             digest = actual
     if source_identity() != identity or hashlib.sha256(proxy.read_bytes()).hexdigest() != proxy_digest:

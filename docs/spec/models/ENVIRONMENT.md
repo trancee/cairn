@@ -54,7 +54,10 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   non-executable or stale selections reject; there is no fallback.
   The staged 19-cell workflow builds/selects this source-identified
   candidate for native Linux validation and gates both budgets in its lifecycle
-  cell; hosted execution remains pending. The owner authorized promotion
+  cell. Native run `38710117729` passes all 18 replay/mutation cells and fast
+  gates, but rejects an unreviewed benchmark export before any budget verdict.
+  Phase/digest diagnostics distinguish a baseline fixture mismatch from a
+  guarded mismatch without logging export payloads. The owner authorized promotion
   commits/pushes to PR #9 for existing native CI, including necessary fixes and
   conditional cutover after the required criteria pass. Do not start Colima,
   manually dispatch, merge or activate SDK/profile behavior under that approval.

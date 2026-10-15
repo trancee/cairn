@@ -813,7 +813,11 @@ The final build also passes original-cap recovery (826+9 steps), complete
 refined safety (56 certificates) and both mutation regressions (verified
 defaults, 504-/526-step attacks). All non-lemma declarations remain identical.
 These four selected local contexts are not native Linux/all 19 CI cells;
-that acceptance awaits the authorized current-source CI execution.
+run `38710117729` at `2e7b429` passes all 18 native caller cells and fast
+gates, but rejects an unreviewed benchmark export before any budget verdict.
+A public CLI diagnostic red now requires the phase and expected/observed
+hashes without output payloads; it passes without weakening any check.
+Full native acceptance and default cutover remain blocked.
 Full-proof/memory overhead remains unmeasured.
 The Python default and independent native FVP/full-context obligations are
 unchanged.

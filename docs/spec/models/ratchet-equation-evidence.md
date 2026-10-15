@@ -71,8 +71,11 @@ gates are wired to validate the candidate before cutover. Clean local fast
 gates pass. The final candidate also passes its local paired budgets
 (`+6.8424%` full export, `+46.467751` ms startup) and four original-cap caller
 regressions: recovery, complete refined safety and both mutations.
-Native Linux/all 19 CI cells remain unverified; an edited workflow and selected
-local contexts are not hosted, full assembled or memory-performance evidence.
+Native run `38710117729` passes all 18 replay/mutation cells and fast gates,
+but its benchmark rejects an unreviewed export before a budget verdict.
+Phase/digest diagnostics now distinguish an unexpected baseline from a guarded
+mismatch without logging payloads or relaxing acceptance.
+Full assembled and memory-performance evidence remain separate obligations.
 
 ## Exact scope
 

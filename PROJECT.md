@@ -60,7 +60,11 @@ full export (`+6.8424%`) and `0.115764`/`0.162232` seconds for startup
 (`+46.467751` ms, `+40.1399%`), passing the separate approved limits.
 The final compiled build passes the default recovery, all 56 refined safety
 certificates and both actual mutation regressions at their original caps.
-Native Linux/all 19 CI cells remain unverified. The owner authorized promotion
+Native run `38710117729` at `2e7b429` passes all 18 replay/mutation cells and
+the lifecycle fast gates, but rejects an unreviewed export before any budget
+verdict. Full native acceptance and default cutover remain blocked.
+The benchmark now distinguishes the failing phase and expected/observed
+SHA-256 values without logging the export payload. The owner authorized promotion
 commits/pushes and PR-description updates in PR #9 for existing native CI,
 including necessary fixes and conditional cutover after the required criteria
 pass; merge and SDK/profile activation remain unapproved. Full-proof/memory overhead
@@ -86,8 +90,7 @@ The guarded default recovery witness and 56 refined safety certificates replay
 successfully with unchanged 43 rules/13 restrictions and deadlines.
 Both actual mutation regressions also preserve their verified defaults and
 expected 504-/526-step counterexamples.
-Selected contexts do not establish full assembled acceptance; the published
-head's failed formal run has not been superseded by hosted validation.
+Selected contexts do not establish full assembled acceptance; full native acceptance is still incomplete as recorded above.
 
 The earlier termination-only checkpoint passed final-source formal/Rust/
 four-language CodeQL acceptance in PR #9 at `70c1c19`. Native bookkeeping

@@ -125,7 +125,12 @@ identities and environment. Final-build default recovery, all 56 refined
 safety certificates and both native mutation regressions pass at the
 original `180`-second caps, preserving 43 rules/13 restrictions.
 These four selected local regressions are not native Linux/all 19 CI cells;
-that acceptance awaits the authorized current-source CI execution.
+run `38710117729` at `2e7b429` passes all 18 native replay/mutation cells and
+the lifecycle fast gates, but its benchmark rejects an unreviewed export
+before reaching a budget verdict. Preserve every digest/budget check and
+report only the failing phase and expected/observed SHA-256 identities to
+distinguish an unexpected direct baseline from a changed guarded export.
+Full native acceptance and default cutover remain blocked.
 Full-proof/memory overhead remains unmeasured. No default switch or merge
 has occurred.
 

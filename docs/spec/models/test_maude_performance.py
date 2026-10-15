@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -12,6 +13,26 @@ from equations.maude_candidate import NATIVE_DIRECTORY, source_identity
 
 
 class NativePerformanceCommandTests(unittest.TestCase):
+    def test_unreviewed_export_identifies_the_phase_and_digests_without_its_payload(self):
+        output = "unreviewed native export\n"
+        with tempfile.TemporaryDirectory() as temporary:
+            executable = Path(temporary) / "tamarin-prover"
+            executable.write_text(f"#!{sys.executable}\nprint({output!r}, end='')\n")
+            executable.chmod(0o755)
+            environment = dict(os.environ, PATH=temporary + os.pathsep + os.environ["PATH"])
+
+            result = subprocess.run(
+                [sys.executable, str(NATIVE_DIRECTORY / "experiment.py"),
+                 "--proxy", str(executable), "--workload", "startup", "--rounds", "1"],
+                text=True, capture_output=True, env=environment, timeout=5,
+            )
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("unreviewed baseline export", result.stderr)
+        self.assertIn(hashlib.sha256(output.encode()).hexdigest(), result.stderr)
+        self.assertIn("ecd7e735a4f3fc7119dbd00d2edbd245c01900b6035c0dd2e271bea4c5607b64", result.stderr)
+        self.assertNotIn(output.strip(), result.stdout + result.stderr)
+
     def report(self, workload="startup", guarded=0.169):
         model = (
             NATIVE_DIRECTORY / "derivation.spthy" if workload == "startup"

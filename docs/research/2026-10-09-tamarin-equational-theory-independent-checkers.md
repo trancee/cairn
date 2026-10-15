@@ -56,7 +56,10 @@ Linux/caller/CI criteria must precede cutover; default routing stays Python.
 The maintained candidate now embeds a source identity, shares the acceptance
 runner and has rejecting workload-specific budget gates. Clean local fast
 checks pass; the existing 19-cell workflow is wired for pre-cutover native
-Linux validation, not yet executed. Final local paired medians are
+Linux validation. Run `38710117729` passes all 18 caller cells and fast gates,
+but rejects an unreviewed benchmark export before any budget verdict.
+Phase/expected/observed-hash diagnostics preserve rejection without logging
+payloads; full native acceptance remains incomplete. Final local paired medians are
 `24.235925`/`25.894241` seconds for full export (`+6.8424%`) and
 `0.115764`/`0.162232` seconds for startup (`+46.467751` ms, `+40.1399%`),
 passing the separate approved limits with identical bytes.
