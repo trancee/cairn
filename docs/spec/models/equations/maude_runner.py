@@ -122,5 +122,5 @@ def run_guarded_tamarin(
         while not boundary_complete(report, source_id=source_id):
             if time.monotonic() >= deadline:
                 raise GuardError("native boundary shutdown incomplete")
-            time.sleep(0.01)
+            time.sleep(0.001)
     return output

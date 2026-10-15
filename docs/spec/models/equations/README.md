@@ -381,12 +381,12 @@ approved maintained promotion with a startup-only `50` ms cap, retaining
 The maintained candidate now uses source-identified build evidence and the
 shared guarded runner, with explicit pre-cutover selection for local/CI
 callers. The existing 19-cell workflow is wired without larger ceilings.
-The clean local gate passes 18 native cases, 134 model tests, 50 lifecycle
+The clean local gate passes 19 native cases, 137 model tests, 50 lifecycle
 tests, 43 projections and 67 equation audits. Its CLI rejects malformed/stale/
 incompatible performance reports and workload-specific budget failures.
-Final-source paired medians are `24.235925`/`25.894241` seconds for full export
-(`+6.8424%`) and `0.115764`/`0.162232` seconds for startup (`+46.467751` ms,
-`+40.1399%`), passing both approved limits with unchanged exports.
+Current-source paired medians are `24.248549`/`25.807651` seconds for full export
+(`+6.4297%`) and `0.110541`/`0.147073` seconds for startup (`+36.531959` ms,
+`+33.0482%`), passing both approved limits with unchanged exports.
 The final compiled build preserves the original-cap default recovery,
 56-certificate refined safety context and both mutation regressions.
 Native run `38710117729` at `2e7b429` passes all 18 replay/mutation cells
@@ -395,6 +395,13 @@ Diagnostic run `38712391261` identifies the direct baseline, before any guarded
 run: only the macOS full-export digest was retained. The observed pinned Linux
 digest is now also retained; every sample must still match the fixed inventory
 and all six outputs must be byte-identical. No normalization, filtering or
-budget change. Native budget acceptance and default cutover remain blocked.
+budget change. Run `38714285780` at `67584ea` then genuinely fails full export:
+`35.220242`/`38.939536` seconds (`+10.5601%`), all six exports identical;
+startup does not run. Current source avoids line-buffered body/prompt splitting
+with one checked raw output handle and polls final evidence every `1` ms,
+retaining the `5`-second grace and all validation. The stdout-only intermediate
+source fails local startup at `+52.560041` ms; a measured final-evidence sleep
+motivates the subsequent poll change and passing local budgets above.
+Fresh native budget acceptance and default cutover remain blocked.
 The four selected local regressions are not full assembled or memory-performance acceptance.
 Default routing stays Python at `+22.5%`; native FVP remains open.

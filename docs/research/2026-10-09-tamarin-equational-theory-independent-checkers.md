@@ -62,12 +62,20 @@ Diagnostic run `38712391261` identifies the direct baseline: its pinned Linux
 digest was missing from the macOS-only inventory. Both fixed outputs are now
 retained, but all six samples must still be byte-identical on the measured
 host. No normalization/filtering or budget change is permitted; full native
-acceptance remains incomplete. Final local paired medians are
-`24.235925`/`25.894241` seconds for full export (`+6.8424%`) and
-`0.115764`/`0.162232` seconds for startup (`+46.467751` ms, `+40.1399%`),
+acceptance remains incomplete. Run `38714285780` at `67584ea` then genuinely
+fails full export at `+10.5601%` (`35.220242`/`38.939536` seconds), despite
+six identical exports and passing callers/fast gates; startup does not run.
+An active Rust sample motivates one checked raw write per complete validated
+reply/prompt. That intermediate source passes local full export but fails
+startup at `+52.560041` ms. An isolated profile identifies `13` ms in one
+final-evidence sleep, motivating a `1` ms poll instead of `10` ms, with the
+same `5`-second grace and complete audits. Current local paired medians are
+`24.248549`/`25.807651` seconds for full export (`+6.4297%`) and
+`0.110541`/`0.147073` seconds for startup (`+36.531959` ms, `+33.0482%`),
 passing the separate approved limits with identical bytes.
 Final compiled recovery, all 56 safety certificates and both mutation
-regressions also pass at original caps. Those four local contexts are not all
+regressions also pass at original caps. Fresh native acceptance of these
+optimizations remains pending. Those four local contexts are not all
 native Linux CI cells, full assembled acceptance or memory-performance proof;
 source identity does not establish algorithm or FVP correctness.
 This performance experiment does not supply any missing native FVP hypothesis.

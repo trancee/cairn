@@ -35,6 +35,29 @@ def read_until(descriptor: int, ending: bytes) -> bytes:
 class CompiledProcessTests(unittest.TestCase):
     proxy: Path
 
+    def test_closed_consumer_rejects_stream_with_controlled_io_failure(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            report = Path(temporary) / "events"
+            environment = dict(os.environ, CAIRN_MAUDE_GUARD_REPORT=str(report))
+            environment.pop("CAIRN_MAUDE_BINARY", None)
+            with subprocess.Popen(
+                [str(self.proxy), *FLAGS], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, env=environment,
+            ) as process:
+                process.stdout.close()
+                process.stdout = None
+
+                _, errors = process.communicate(
+                    input=(NATIVE_MODULE + "reduce tamXCroleA .\n").encode(), timeout=10,
+                )
+
+            self.assertEqual(process.returncode, 1, repr(errors))
+            self.assertIn(b"native process: I/O or version failure", errors)
+            self.assertIn(b"native consumer closed its input", errors)
+            self.assertNotIn(b"panicked", errors)
+            with self.assertRaises(GuardError):
+                boundary_complete(report, source_id=source_identity())
+
     def test_ready_stream_interrupt_closes_complete_evidence(self):
         with tempfile.TemporaryDirectory() as temporary:
             report = Path(temporary) / "events"

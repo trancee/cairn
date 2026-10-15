@@ -1,7 +1,7 @@
 use std::{
     fs::File,
     io,
-    os::fd::IntoRawFd,
+    os::fd::{AsFd, IntoRawFd},
     sync::atomic::{AtomicBool, Ordering},
 };
 
@@ -44,6 +44,10 @@ pub fn install_handlers() -> Result<()> {
 
 pub fn interrupted_now() -> bool {
     INTERRUPTED.load(Ordering::SeqCst)
+}
+
+pub fn stdout_file() -> Result<File> {
+    Ok(File::from(std::io::stdout().as_fd().try_clone_to_owned()?))
 }
 
 pub fn ready(fds: &mut [PollFd], timeout: i32, interruptible: bool) -> Result<bool> {

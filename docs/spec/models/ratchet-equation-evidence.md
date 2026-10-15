@@ -68,8 +68,8 @@ before cutover. The default Python route and all native FVP/full-context gates
 remain unchanged. Compiled evidence now identifies its reviewed source;
 missing/stale builds reject rather than falling back. The existing local/CI
 gates are wired to validate the candidate before cutover. Clean local fast
-gates pass. The final candidate also passes its local paired budgets
-(`+6.8424%` full export, `+46.467751` ms startup) and four original-cap caller
+gates pass. The current candidate also passes its local paired budgets
+(`+6.4297%` full export, `+36.531959` ms startup) and four original-cap caller
 regressions: recovery, complete refined safety and both mutations.
 Native run `38710117729` passes all 18 replay/mutation cells and fast gates,
 but its benchmark rejects an unreviewed export before a budget verdict.
@@ -77,7 +77,16 @@ Diagnostic run `38712391261` identifies the direct baseline, before any guarded
 sample: the inventory contained only the macOS export digest. The exact pinned
 Linux output is now also retained, without normalizing/filtering output,
 relaxing budgets or allowing different bytes within a paired measurement.
-Full native budget acceptance and default cutover remain incomplete.
+The next run, `38714285780` at `67584ea`, completes all six identical Linux
+exports and genuinely fails the full-export cap at `+10.5601%`; startup
+does not run. That failure is not dismissed as host noise.
+An active-process sample motivates combining each fully checked reply and
+prompt into one raw stdout write. The stdout-only intermediate source still
+fails local startup at `+52.560041` ms; a separate profile identifies `13` ms
+in a final-evidence sleep. Reducing only that poll from `10` to `1` ms,
+without changing the `5`-second grace or any check, gives the passing local
+budgets above. These measured optimizations are not proof of a Linux fix.
+Fresh native budget acceptance and default cutover remain incomplete.
 Full assembled and memory-performance evidence remain separate obligations.
 
 ## Exact scope

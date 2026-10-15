@@ -60,17 +60,25 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   full-export digest was absent from the macOS-only fixture inventory.
   Both exact digests are now pinned, with all six sample exports still required
   to match each other and the retained inventory. No normalization or budget
-  change; full native budget acceptance remains pending. The owner authorized promotion
+  change. Run `38714285780` at `67584ea` then completes all six identical Linux
+  exports but fails the actual full-export budget at `+10.5601%`
+  (`35.220242`/`38.939536` seconds); startup does not run.
+  Current source combines each fully validated reply/prompt into one checked
+  raw stdout write and polls final evidence every `1` ms, retaining the
+  `5`-second grace. Fresh native budget acceptance remains pending.
+  The owner authorized promotion
   commits/pushes to PR #9 for existing native CI, including necessary fixes and
   conditional cutover after the required criteria pass. Do not start Colima,
   manually dispatch, merge or activate SDK/profile behavior under that approval.
-  Final-source local three-pair overhead is `+6.8424%` for full export and
-  `+46.467751` ms (`+40.1399%`) for startup, both within their separate limits.
+  Current-source local three-pair overhead is `+6.4297%` for full export and
+  `+36.531959` ms (`+33.0482%`) for startup, both within their separate limits.
+  The stdout-only intermediate source failed startup at `+52.560041` ms;
+  the measured final-evidence sleep motivated the subsequent poll change.
   Final compiled default recovery, all 56 safety certificates and both mutation
   regressions pass at original caps. Those four local contexts do not establish
   native Linux/all 19 CI cells, full assembled acceptance or memory performance.
 - `scripts/check.sh` builds the host guard with the root Rust pin, checks Rust
-  formatting/strict Clippy and 18 native CLI/process cases, then runs
+  formatting/strict Clippy and 19 native CLI/process cases, then runs
   whitespace, unit tests and `actionlint`,
   plus lifecycle/source-projection and equation convergence/boundedness proofs when pinned
   Lean is available. The pre-commit hook and CI both call it.

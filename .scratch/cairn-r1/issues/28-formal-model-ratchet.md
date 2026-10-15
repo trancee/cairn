@@ -802,13 +802,13 @@ runner; explicit candidate selection stages local/19-cell CI validation before
 default cutover. `scripts/check.sh` builds and statically checks the host tool;
 CI names its internal-tool coverage exclusion and adds both rejecting
 three-pair budget gates without new jobs or longer deadlines.
-The clean local candidate gate passes 18 native cases, 134 model tests,
+The clean local candidate gate passes 19 native cases, 137 model tests,
 50 lifecycle tests, 43 projections and 67 equation audits. The missing-identity
 and unsupported budget-mode reds and real stale-executable rejection are
 retained, together with controlled source-input/inventory-output I/O reds.
-Final-source three-pair medians are `24.235925`/`25.894241` seconds for
-full export (`+6.8424%`) and `0.115764`/`0.162232` seconds for startup
-(`+46.467751` ms, `+40.1399%`), both passing the separately approved limits.
+Current-source three-pair medians are `24.248549`/`25.807651` seconds for
+full export (`+6.4297%`) and `0.110541`/`0.147073` seconds for startup
+(`+36.531959` ms, `+33.0482%`), both passing the separately approved limits.
 The final build also passes original-cap recovery (826+9 steps), complete
 refined safety (56 certificates) and both mutation regressions (verified
 defaults, 504-/526-step attacks). All non-lemma declarations remain identical.
@@ -829,8 +829,30 @@ match the fixed inventory and all six outputs must remain byte-identical.
 No normalization, filtering, source/evidence, budget or deadline change.
 The intended public Linux-fixture CLI red is green; all 13 budget/diagnostic
 cases pass, including Linux over-limit/startup-allowance rejection and malformed
-digest values. Both saved macOS reports remain accepted.
-Native performance acceptance and conditional default cutover remain pending.
+digest values. Both saved macOS reports passed at that fixture-only checkpoint.
+
+Run `38714285780` at `67584ea` completes all six identical native Linux full
+exports but genuinely fails the unchanged cap: direct `35.220242391` seconds,
+guarded `38.939535589` seconds, `+10.560101%`. All 18 replay/mutation cells and
+fast gates pass; startup does not run. Rust and four-language CodeQL pass.
+No unchanged rerun, exception or default cutover follows.
+
+An active Rust sample, not the first idle-handle sample, identifies stdout
+write/flush cost. Parent full-journal reconciliation takes only `0.151` profiled
+seconds locally. Combine each complete validated reply and original prompt
+through a once-cloned raw stdout handle with checked write/flush/close.
+The native-stream closed-consumer regression is green before and after this
+behavior-preserving refactor. The stdout-only source passes full export
+(`+6.4369%`) but genuinely fails startup (`+52.560041` ms).
+An isolated exact-digest startup profile records `13` ms in one parent
+final-evidence sleep. Poll every `1` ms instead of `10` ms while retaining the
+`5`-second grace and complete evidence audit; the resulting local budgets are
+the current passing medians above. All three startup samples are retained,
+including the first guarded `0.356682459`-second sample.
+The final fast gate passes 19 native, 137 model and 50 lifecycle cases,
+43 projections and all 67 audits. Earlier-source reports are historical,
+not reusable current-source acceptance. Fresh native performance acceptance
+and conditional default cutover remain pending.
 Full-proof/memory overhead remains unmeasured.
 The Python default and independent native FVP/full-context obligations are
 unchanged.

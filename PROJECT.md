@@ -53,11 +53,11 @@ build evidence and uses the shared guarded runner. An explicit
 `CAIRN_MAUDE_GUARD_CANDIDATE` selects it for existing callers; invalid selection
 does not fall back to Python. The local/19-cell CI gates are wired without
 new jobs or larger deadlines. The clean local candidate fast gate passes
-18 native checks, 134 model tests, 50 lifecycle tests, 43 projections and 67 audits.
+19 native checks, 137 model tests, 50 lifecycle tests, 43 projections and 67 audits.
 Startup/full-export budgets have reproducible rejecting CLI gates.
-Final-source three-pair medians are `24.235925`/`25.894241` seconds for the
-full export (`+6.8424%`) and `0.115764`/`0.162232` seconds for startup
-(`+46.467751` ms, `+40.1399%`), passing the separate approved limits.
+Current-source three-pair medians are `24.248549`/`25.807651` seconds for the
+full export (`+6.4297%`) and `0.110541`/`0.147073` seconds for startup
+(`+36.531959` ms, `+33.0482%`), passing the separate approved limits.
 The final compiled build passes the default recovery, all 56 refined safety
 certificates and both actual mutation regressions at their original caps.
 Native run `38710117729` at `2e7b429` passes all 18 replay/mutation cells and
@@ -66,8 +66,15 @@ verdict. Diagnostic run `38712391261` at `942f8d8` identifies the direct
 baseline, before any guarded run: the fixture inventory had only the macOS
 full-export digest. The exact observed native Linux digest is now also pinned;
 all six exports must still match one retained digest and each other, without
-normalization, filtering or budget changes. Full native performance acceptance
-and default cutover remain blocked. The owner authorized promotion
+normalization, filtering or budget changes. Run `38714285780` at `67584ea`
+then completes all six identical Linux exports but genuinely fails the full-export
+budget: `35.220242`/`38.939536` seconds (`+10.5601%`); startup does not run.
+Profiling motivates one checked raw stdout write per complete validated reply
+and a `1` ms final-evidence poll instead of `10` ms, retaining the `5`-second
+grace. The stdout-only intermediate source fails local startup at `+52.560041` ms;
+the final poll change produces the current passing local medians above.
+Those are not native Linux acceptance; default cutover remains blocked.
+The owner authorized promotion
 commits/pushes and PR-description updates in PR #9 for existing native CI,
 including necessary fixes and conditional cutover after the required criteria
 pass; merge and SDK/profile activation remain unapproved. Full-proof/memory overhead

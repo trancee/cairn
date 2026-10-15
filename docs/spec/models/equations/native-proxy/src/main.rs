@@ -15,6 +15,7 @@ use native::{Native, PROMPT};
 use std::{
     collections::BTreeSet,
     env,
+    fs::File,
     io::{Read, Write},
     os::unix::fs::{MetadataExt, PermissionsExt},
     path::PathBuf,
@@ -75,10 +76,9 @@ impl Input {
     }
 }
 
-fn forward(reply: &[u8]) -> Result<()> {
-    let mut output = std::io::stdout().lock();
-    output.write_all(reply)?;
-    output.write_all(PROMPT)?;
+fn forward(output: &mut impl Write, mut reply: Vec<u8>) -> Result<()> {
+    reply.extend_from_slice(PROMPT);
+    output.write_all(&reply)?;
     output.flush()?;
     Ok(())
 }
@@ -133,12 +133,13 @@ fn stream(
     journal: &mut evidence::Journal,
     ready: &mut bool,
     pending: &mut bool,
+    consumer: &mut File,
 ) -> Result<()> {
     let greeting = native.reply()?;
     if greeting.iter().any(|byte| !syntax::space(*byte)) {
         return Err(Rejected("native process: unexpected greeting"));
     }
-    forward(&greeting)?;
+    forward(consumer, greeting)?;
     let mut input = Input::new();
     let mut setup = BTreeSet::new();
     let mut module = Vec::new();
@@ -166,7 +167,7 @@ fn stream(
             module.clear();
             *ready = true;
             evidence::record("module", None)?;
-            forward(&reply)?;
+            forward(consumer, reply)?;
             continue;
         }
         if SETUP.contains(&command) && !*ready {
@@ -178,7 +179,7 @@ fn stream(
             if reply.iter().any(|byte| !syntax::space(*byte)) {
                 return Err(Rejected("native setup: unexpected reply"));
             }
-            forward(&reply)?;
+            forward(consumer, reply)?;
             continue;
         }
         if command == "fmod MSG is" && !*ready && setup.len() == SETUP.len() {
@@ -198,7 +199,7 @@ fn stream(
         reply::validate(&query, text)?;
         journal.record("accepted", query.kind.name())?;
         *pending = false;
-        forward(&output)?;
+        forward(consumer, output)?;
     }
     if !module.is_empty() {
         return Err(Rejected("native module: truncated declaration"));
@@ -209,7 +210,7 @@ fn stream(
     Ok(())
 }
 
-fn run(journal: &mut evidence::Journal) -> Result<()> {
+fn run(journal: &mut evidence::Journal, consumer: &mut File) -> Result<()> {
     unix::install_handlers()?;
     let executable = executable()?;
     let mut version = Native::spawn(&executable, &["--version".to_owned()])?;
@@ -227,8 +228,8 @@ fn run(journal: &mut evidence::Journal) -> Result<()> {
         })
         .collect::<Result<_>>()?;
     if arguments == ["--version"] {
-        std::io::stdout().write_all(&output)?;
-        std::io::stdout().flush()?;
+        consumer.write_all(&output)?;
+        consumer.flush()?;
         return Ok(());
     }
     if arguments.is_empty() {
@@ -247,8 +248,8 @@ fn run(journal: &mut evidence::Journal) -> Result<()> {
             return Err(Rejected("native installation: failed probe"));
         }
         evidence::record("installation", None)?;
-        std::io::stdout().write_all(&output)?;
-        std::io::stdout().flush()?;
+        consumer.write_all(&output)?;
+        consumer.flush()?;
         return Ok(());
     }
     let flags: BTreeSet<_> = arguments.iter().map(String::as_str).collect();
@@ -259,7 +260,7 @@ fn run(journal: &mut evidence::Journal) -> Result<()> {
     evidence::record("start", None)?;
     let mut ready = false;
     let mut pending = false;
-    match stream(&mut native, journal, &mut ready, &mut pending) {
+    match stream(&mut native, journal, &mut ready, &mut pending, consumer) {
         Ok(()) => {}
         Err(Error::Interrupted) if ready && !pending => {}
         Err(error) => return Err(error),
@@ -271,7 +272,10 @@ fn run(journal: &mut evidence::Journal) -> Result<()> {
 
 fn main() -> ExitCode {
     let mut journal = evidence::Journal::new();
-    let result = run(&mut journal);
+    let result = unix::stdout_file().and_then(|mut consumer| {
+        let result = run(&mut journal, &mut consumer);
+        result.and(unix::close_file(consumer))
+    });
     let closed = journal.close();
     if let Err(error) = result.and(closed) {
         let reason = if evidence::record("failure", Some(("reason", error.reason()))).is_err() {
@@ -280,7 +284,8 @@ fn main() -> ExitCode {
             error.reason()
         };
         eprintln!("FAIL: {reason}");
-        if forward(b"FAIL: Cairn Maude boundary rejected this operation.\n").is_err() {
+        let rejection = b"FAIL: Cairn Maude boundary rejected this operation.\n";
+        if forward(&mut std::io::stdout().lock(), rejection.to_vec()).is_err() {
             eprintln!("FAIL: native consumer closed its input");
         }
         return ExitCode::FAILURE;

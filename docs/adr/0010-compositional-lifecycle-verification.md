@@ -110,15 +110,15 @@ Python/tool/measurement boundary remain trusted. CI explicitly names this
 internal host tool's SDK-coverage exclusion and runs its static, adversarial
 CLI/native-stream/process and performance checks instead.
 
-The clean local candidate gate passes 18 native cases, 134 model tests,
+The clean local candidate gate passes 19 native cases, 137 model tests,
 50 lifecycle tests, 43 projections and 67 equation audits. Missing-identity and
 budget-mode reds precede implementation; a real stale compiled executable
 also rejects after source changes. Source-read/encoding and generator-output
 I/O errors have intended reds and controlled failure regressions.
 
-Final-source three-pair direct/guarded medians are `24.235925`/`25.894241`
-seconds for the complete export (`+6.8424%`) and `0.115764`/`0.162232`
-seconds for the exact startup fixture (`+46.467751` ms, `+40.1399%`).
+Current-source three-pair direct/guarded medians are `24.248549`/`25.807651`
+seconds for the complete export (`+6.4297%`) and `0.110541`/`0.147073`
+seconds for the exact startup fixture (`+36.531959` ms, `+33.0482%`).
 Both approved gates pass, with unchanged export bytes and saved reports
 independently rechecked by the CLI. The reference retains source/binary
 identities and environment. Final-build default recovery, all 56 refined
@@ -138,7 +138,26 @@ fixed inventory and all six must be byte-identical within a measurement.
 No output normalization, filtering, source/evidence or numeric-budget change
 is permitted. Public report CLI reds/greens cover the Linux fixture and both
 relative-limit and startup-allowance rejection. Both retained macOS reports
-still pass. Full native budget acceptance and default cutover remain blocked.
+passed at that fixture-only checkpoint. Run `38714285780` at `67584ea` then
+completes all six identical Linux exports but fails the unchanged full-export
+limit: `35.220242`/`38.939536` seconds (`+10.5601%`). Startup does not run.
+
+An active native-process sample identifies stdout write/flush cost; the parent
+full-journal audit takes only `0.151` profiled seconds locally. Forward each
+already-validated owned reply plus its original prompt through one raw stdout
+descriptor, cloned once per process, with checked writes/flush/close. This avoids
+line-buffered body/prompt splitting without removing any validation or event.
+The stdout-only intermediate source passes local full export (`+6.4369%`) but
+fails startup (`+52.560041` ms). An isolated exact-digest startup profile shows
+`13` ms in one final-evidence sleep, not missing native validation. Poll complete
+evidence every `1` ms instead of `10` ms, keeping the same `5`-second grace and
+every audit. This trades more frequent bounded teardown checks for less fixed
+startup latency, not a retry of failed proofs. Closed-consumer I/O failure has
+a public native-stream regression, green before and after the refactor.
+The resulting local budgets pass as recorded above; no unchanged budget rerun
+or allowance increase is used. Earlier source reports are historical and reject
+as stale against this source. Fresh native acceptance is still required.
+Full native budget acceptance and default cutover remain blocked.
 Full-proof/memory overhead remains unmeasured. No default switch or merge
 has occurred.
 

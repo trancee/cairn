@@ -29,7 +29,7 @@ python3 docs/spec/models/equations/native-proxy/experiment.py \
   --proxy target/native-proxy/release/cairn-maude-proxy --workload startup
 ```
 
-`check.py --proxy <executable>` runs the 18 CLI/native-stream/process/proof
+`check.py --proxy <executable>` runs the 19 CLI/native-stream/process/proof
 checks. `scripts/check.sh` builds the guard, runs Rust formatting/strict Clippy
 and these checks, then the existing model/lifecycle/Lean gates.
 
@@ -112,13 +112,19 @@ sorts, original/generated variable provenance, rigid indices and every solution.
 Replies remain buffered until the whole reply passes. Private operation
 journaling preserves every event, checks regular-file/no-follow/nonblocking
 append writes and close errors, and closes before successful shutdown evidence.
-Installation/version checks and deadlines are unchanged.
+Installation/version checks and deadlines are unchanged. Each already-validated
+owned reply has its original prompt restored and is forwarded through one
+checked raw stdout write, avoiding line-buffered body/prompt splitting.
+The output descriptor is cloned once per process and explicitly closed with
+error checking. Final evidence is polled every `1` ms with the same
+`5`-second deadline and complete audit.
 
 `unix.rs` contains the host-only POSIX FFI for poll, signals, owned-child
 termination and checked descriptor close. The signal handler only stores an
 atomic flag. No application/core unsafe-code policy or shipped dependency
-changes. Compile-time platform branches cover macOS and Linux; only native
-Apple-silicon macOS execution is presently verified.
+changes. Compile-time platform branches cover macOS and Linux. The preceding
+source passed native Linux caller/fast gates but failed performance below;
+fresh native acceptance of the output/teardown changes remains pending.
 
 The CLI cases cover real operations, malformed terms and replies, kind/sort/
 namespace boundaries, deep framing, changed equations, complete bulk evidence,
@@ -154,7 +160,7 @@ The reduction and missing-unification behavior reds preceded their green
 implementations. These timings/hash precede source identity and maintained
 integration; they are not final maintained-candidate acceptance measurements.
 
-The clean maintained-candidate fast gate now passes 18 native checks, 134
+The clean maintained-candidate fast gate now passes 19 native checks, 137
 model tests, 50 lifecycle tests, 43 projections and 67 equation audits.
 The missing-identity behavior red, unsupported budget-CLI red and real
 stale-executable rejection are retained, as are controlled source-input and
@@ -163,20 +169,23 @@ has occurred.
 
 ## Maintained-candidate evidence (2026-10-15)
 
-Final-source three-pair measurements use macOS `27.0.1`/`arm64`, eight logical
+Current-source three-pair measurements use macOS `27.0.1`/`arm64`, eight logical
 CPUs, 8 GiB, Python `3.14.8`, Rust `1.99.0` and the pinned proof tools.
-The unchanged direct runner baseline is committed `3d5dd7c`.
+The unchanged direct runner baseline is committed `67584ea`.
 
 | Workload | Direct / guarded median seconds | Overhead | Approved gate |
 |---|---|---|---|
-| Complete strict export | `24.235925` / `25.894241` | `+6.8424%` | Pass, at most `10%` |
-| Paired-counter startup | `0.115764` / `0.162232` | `+46.467751` ms (`+40.1399%`) | Pass, at most `50` ms |
+| Complete strict export | `24.248549` / `25.807651` | `+6.4297%` | Pass, at most `10%` |
+| Paired-counter startup | `0.110541` / `0.147073` | `+36.531959` ms (`+33.0482%`) | Pass, at most `50` ms |
 
 Every export matches its retained digest. Both saved reports also pass the
 independent `--check-report` path. The measured source ID is
-`ea4222469f57cad7978b5e2acbef3925b9805c0c6f043a79761c9a44cfd1d1c1`;
+`d9ce5de97da68e702ad2c7c54b705f2c8ff2cf85032b608c93ce55e3af89c367`;
 the binary SHA-256 is
-`6e6c3c809a7a6e5b64688ea67e189633e84c19ddd6daa0b335a2fe3b549e05fa`.
+`6f80c13e2b796a77a2279017ddaf12d7ae32e5a6c50763df4e7145926909fbd7`.
+All samples are retained, including the first startup guarded sample of
+`0.356682459` seconds; acceptance uses the approved median, not filtering.
+Earlier-source reports reject as stale and are historical evidence only.
 
 The final build also passes the original `180`-second-cap recovery replay
 (826-step witness plus nine-step owner helper), complete refined safety
@@ -212,5 +221,27 @@ The inventory now retains both fixed outputs rather than assuming cross-host
 byte identity. Paired runs still require exact byte identity on the actual host.
 All 13 public budget/diagnostic CLI cases pass, including the intended Linux
 fixture red/green, its unchanged relative cap and rejection of applying the
-startup allowance to it. Both retained macOS reports still pass.
-Native full-export/startup budget acceptance has not yet been established.
+startup allowance to it. Both retained macOS reports passed at that checkpoint.
+
+## Measured native budget failure and I/O follow-up
+
+[Run `38714285780`](https://github.com/trancee/cairn/actions/runs/38714285780)
+at `67584ea` passes all 18 native replay/mutation cells and fast gates.
+All six complete exports match the fixed Linux digest, then the unchanged
+budget correctly rejects direct/guarded medians of `35.220242391` /
+`38.939535589` seconds (`+10.560101%`). Startup does not run after that failure.
+The host records Linux `6.17.0-1022-azure`/`x86_64`, glibc `2.39`, four logical
+CPUs, `16765378560` bytes RAM and Python `3.13.16`; Rust/proof pins are unchanged.
+Companion Rust and four-language CodeQL gates pass.
+
+An active native-process sample shows stdout write/flush cost; it is not a
+syscall count or a Linux profile. The parent complete-journal audit consumes
+only `0.151` profiled seconds locally. The raw combined-write refactor above
+preserves complete validation and evidence; all 19 CLI cases pass, including
+closed-consumer failure and whole-reply rejection.
+That stdout-only intermediate source measures local full export `+6.4369%`
+but fails startup at `+52.560041` ms. An isolated exact-digest startup profile
+records `13` ms in one final-evidence sleep. Reducing that poll to `1` ms,
+without changing its deadline or checks, produces the passing local budgets
+above. Neither profiling nor local acceptance establishes a Linux fix.
+Fresh native full-export/startup acceptance and default cutover remain blocked.
