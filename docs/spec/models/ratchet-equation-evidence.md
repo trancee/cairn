@@ -87,6 +87,13 @@ in a final-evidence sleep. Reducing only that poll from `10` to `1` ms,
 without changing the `5`-second grace or any check, gives the passing local
 budgets above. These measured optimizations are not proof of a Linux fix.
 Fresh native budget acceptance and default cutover remain incomplete.
+The follow-up `38719650091` at `2b642e2` now passes all 18 callers/fast gates
+and native full export (`+8.4987%`), without a waiver. Startup then identifies
+another host-fixture assumption: only its macOS digest was retained. Pinning
+the exact observed direct Linux startup digest uses the same fixed-inventory
+decision; it does not learn accepted bytes from runtime samples or change
+within-host byte identity and timing checks. Native startup acceptance remains
+pending, so the default is still unchanged.
 Full assembled and memory-performance evidence remain separate obligations.
 
 ## Exact scope

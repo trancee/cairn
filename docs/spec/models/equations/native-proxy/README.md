@@ -62,8 +62,11 @@ Retained full-export digests are
 `aaaf873a9b7baff6fbf209f1cf87088581552498ade6f9a5e471ee2b5ea6fb5d`
 (observed macOS) and
 `1b66b2a76902af6c98de7b22edbe6f4d8fddc27cd2adb580db6d5eff639dbd48`
-(observed pinned native Linux). The startup digest remains
-`ecd7e735a4f3fc7119dbd00d2edbd245c01900b6035c0dd2e271bea4c5607b64`.
+(observed pinned native Linux). Retained startup digests are
+`ecd7e735a4f3fc7119dbd00d2edbd245c01900b6035c0dd2e271bea4c5607b64`
+(observed macOS) and
+`59548c48458d4bdf8e7fee57ba0257642f0a21bfd94c2004a4fb990781659fae`
+(observed pinned native Linux).
 No runtime sample creates a new accepted digest, no output is normalized or
 filtered, and different retained digests cannot be mixed within a measurement.
 
@@ -160,7 +163,7 @@ The reduction and missing-unification behavior reds preceded their green
 implementations. These timings/hash precede source identity and maintained
 integration; they are not final maintained-candidate acceptance measurements.
 
-The clean maintained-candidate fast gate now passes 19 native checks, 137
+The clean maintained-candidate fast gate now passes 19 native checks, 138
 model tests, 50 lifecycle tests, 43 projections and 67 equation audits.
 The missing-identity behavior red, unsupported budget-CLI red and real
 stale-executable rejection are retained, as are controlled source-input and
@@ -245,3 +248,26 @@ records `13` ms in one final-evidence sleep. Reducing that poll to `1` ms,
 without changing its deadline or checks, produces the passing local budgets
 above. Neither profiling nor local acceptance establishes a Linux fix.
 Fresh native full-export/startup acceptance and default cutover remain blocked.
+
+[Follow-up `38719650091`](https://github.com/trancee/cairn/actions/runs/38719650091)
+at `2b642e2` passes all 18 callers/fast gates and the native full-export budget:
+direct `37.767067723` / guarded `40.976766595` seconds (`+8.498671%`), all six
+exports identical. The environment matches the native host above.
+The measured Linux binary SHA-256 is
+`70b5d14f77e9f4173a8e6a55f4bdd922ac49312d9d98186a29e587b453bd740a`;
+its source identity matches the current macOS build above.
+
+Startup then rejects its direct baseline before any guarded sample or timing
+verdict because its fixed digest inventory was also macOS-only. Retain the exact
+observed Linux startup digest above alongside macOS, never a runtime-learned
+fixture. All six outputs must still be identical and the `50` ms cap is unchanged.
+The public Linux startup report red is green; all 14 cases pass, including
+above-cap rejection for both startup digests. This benchmark-only correction
+does not change the native guard identity; both current macOS reports and
+the genuine native full-export report still pass.
+Fresh native startup acceptance remains required before default cutover.
+
+Companion Rust `38719650123` passes all 11 jobs. CodeQL `38719650130` is
+separately blocked by the previously observed Apple scratch-detach
+`Resource busy` failure after passing its file/process/CPU-limit probes.
+No unrelated code repair, manual rerun or external-volume cleanup is performed.

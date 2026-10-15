@@ -53,7 +53,7 @@ build evidence and uses the shared guarded runner. An explicit
 `CAIRN_MAUDE_GUARD_CANDIDATE` selects it for existing callers; invalid selection
 does not fall back to Python. The local/19-cell CI gates are wired without
 new jobs or larger deadlines. The clean local candidate fast gate passes
-19 native checks, 137 model tests, 50 lifecycle tests, 43 projections and 67 audits.
+19 native checks, 138 model tests, 50 lifecycle tests, 43 projections and 67 audits.
 Startup/full-export budgets have reproducible rejecting CLI gates.
 Current-source three-pair medians are `24.248549`/`25.807651` seconds for the
 full export (`+6.4297%`) and `0.110541`/`0.147073` seconds for startup
@@ -74,6 +74,14 @@ and a `1` ms final-evidence poll instead of `10` ms, retaining the `5`-second
 grace. The stdout-only intermediate source fails local startup at `+52.560041` ms;
 the final poll change produces the current passing local medians above.
 Those are not native Linux acceptance; default cutover remains blocked.
+Follow-up native run `38719650091` at `2b642e2` passes all 18 callers/fast gates
+and the full-export budget: `37.767068`/`40.976767` seconds (`+8.4987%`).
+Startup then rejects its direct baseline before a timing verdict because the
+inventory had only the macOS startup digest. Both exact observed startup
+digests are now retained, still requiring six identical exports and the same
+`50` ms cap. Fresh startup acceptance remains pending. Companion Rust passes;
+CodeQL is separately blocked by the previously observed Apple scratch-detach
+`Resource busy` failure, not a native guard finding.
 The owner authorized promotion
 commits/pushes and PR-description updates in PR #9 for existing native CI,
 including necessary fixes and conditional cutover after the required criteria

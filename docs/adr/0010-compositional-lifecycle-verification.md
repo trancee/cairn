@@ -110,7 +110,7 @@ Python/tool/measurement boundary remain trusted. CI explicitly names this
 internal host tool's SDK-coverage exclusion and runs its static, adversarial
 CLI/native-stream/process and performance checks instead.
 
-The clean local candidate gate passes 19 native cases, 137 model tests,
+The clean local candidate gate passes 19 native cases, 138 model tests,
 50 lifecycle tests, 43 projections and 67 equation audits. Missing-identity and
 budget-mode reds precede implementation; a real stale compiled executable
 also rejects after source changes. Source-read/encoding and generator-output
@@ -157,6 +157,15 @@ a public native-stream regression, green before and after the refactor.
 The resulting local budgets pass as recorded above; no unchanged budget rerun
 or allowance increase is used. Earlier source reports are historical and reject
 as stale against this source. Fresh native acceptance is still required.
+Run `38719650091` at `2b642e2` passes all 18 callers/fast gates and the actual
+native full-export budget: `37.767068`/`40.976767` seconds (`+8.4987%`), with
+all six outputs identical. Startup then rejects an unreviewed direct baseline,
+not a timing failure. Apply the same fixed per-host inventory decision to the
+exact observed Linux startup digest recorded in the reference; retain the macOS
+digest, six-byte-identical-export requirement and `50` ms cap. Public report
+CLI red/green and above-cap rejection cover both startup fixtures. Native guard
+source/binary identities are unchanged by this benchmark-only correction;
+the two current macOS reports and native full-export report still pass.
 Full native budget acceptance and default cutover remain blocked.
 Full-proof/memory overhead remains unmeasured. No default switch or merge
 has occurred.

@@ -65,7 +65,13 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   (`35.220242`/`38.939536` seconds); startup does not run.
   Current source combines each fully validated reply/prompt into one checked
   raw stdout write and polls final evidence every `1` ms, retaining the
-  `5`-second grace. Fresh native budget acceptance remains pending.
+  `5`-second grace. Follow-up `38719650091` at `2b642e2` passes all 18 callers/
+  fast gates and full export (`+8.4987%`, `37.767068`/`40.976767` seconds).
+  Startup rejects its direct baseline before timing acceptance because its
+  retained digest was macOS-only. Both exact startup digests are now pinned,
+  without changing the six-identical-output requirement or `50` ms cap.
+  Fresh native startup acceptance remains pending. Rust passes; CodeQL's
+  separate Apple preflight hits the known scratch-detach `Resource busy` failure.
   The owner authorized promotion
   commits/pushes to PR #9 for existing native CI, including necessary fixes and
   conditional cutover after the required criteria pass. Do not start Colima,

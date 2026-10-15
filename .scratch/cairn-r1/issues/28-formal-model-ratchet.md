@@ -802,7 +802,7 @@ runner; explicit candidate selection stages local/19-cell CI validation before
 default cutover. `scripts/check.sh` builds and statically checks the host tool;
 CI names its internal-tool coverage exclusion and adds both rejecting
 three-pair budget gates without new jobs or longer deadlines.
-The clean local candidate gate passes 19 native cases, 137 model tests,
+The clean local candidate gate passes 19 native cases, 138 model tests,
 50 lifecycle tests, 43 projections and 67 equation audits. The missing-identity
 and unsupported budget-mode reds and real stale-executable rejection are
 retained, together with controlled source-input/inventory-output I/O reds.
@@ -856,3 +856,22 @@ and conditional default cutover remain pending.
 Full-proof/memory overhead remains unmeasured.
 The Python default and independent native FVP/full-context obligations are
 unchanged.
+
+Native follow-up `38719650091` at `2b642e2` passes all 18 replay/mutation cells,
+fast gates and the full-export budget: direct `37.767067723` seconds, guarded
+`40.976766595` seconds, `+8.498671%`, all six exports identical.
+Startup then rejects its direct baseline before any guarded startup sample:
+observed `59548c48458d4bdf8e7fee57ba0257642f0a21bfd94c2004a4fb990781659fae`,
+where only the macOS startup digest was retained. Pin both fixed startup
+outputs as already done for full export; no runtime-learned digest,
+normalization, filtering, numeric budget or deadline change. The intended
+Linux startup report CLI red is green; 14 cases pass, including above-`50` ms
+rejection for either digest. Both current macOS reports and the genuine native
+full-export report still pass; native guard source/binary identities do not change.
+Fresh native startup acceptance remains required before default cutover.
+
+Companion Rust `38719650123` passes all 11 jobs. CodeQL `38719650130` fails
+the existing Apple isolation preflight on `hdiutil` scratch detach
+(`Resource busy`), after its file/process/CPU limits pass. This is the previously
+documented teardown failure, not a native guard finding; no unrelated repair,
+manual rerun or external-volume cleanup is performed.

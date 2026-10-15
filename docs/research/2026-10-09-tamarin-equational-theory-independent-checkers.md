@@ -78,6 +78,12 @@ regressions also pass at original caps. Fresh native acceptance of these
 optimizations remains pending. Those four local contexts are not all
 native Linux CI cells, full assembled acceptance or memory-performance proof;
 source identity does not establish algorithm or FVP correctness.
+Follow-up run `38719650091` at `2b642e2` passes all 18 native caller/fast gates
+and full export (`37.767068`/`40.976767` seconds, `+8.4987%`). Startup rejects
+its direct baseline before a timing verdict because its fixture inventory was
+also macOS-only. Retain the exact observed Linux startup digest alongside
+macOS without relaxing byte identity or the `50` ms cap; native startup
+acceptance remains pending. No missing mathematical hypothesis is discharged.
 This performance experiment does not supply any missing native FVP hypothesis.
 See the [boundary reference](../spec/models/equations/README.md#native-stream-boundary).
 Sorted AC-unification and full theorem/FVP transfer remain open.

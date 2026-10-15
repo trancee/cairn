@@ -381,7 +381,7 @@ approved maintained promotion with a startup-only `50` ms cap, retaining
 The maintained candidate now uses source-identified build evidence and the
 shared guarded runner, with explicit pre-cutover selection for local/CI
 callers. The existing 19-cell workflow is wired without larger ceilings.
-The clean local gate passes 19 native cases, 137 model tests, 50 lifecycle
+The clean local gate passes 19 native cases, 138 model tests, 50 lifecycle
 tests, 43 projections and 67 equation audits. Its CLI rejects malformed/stale/
 incompatible performance reports and workload-specific budget failures.
 Current-source paired medians are `24.248549`/`25.807651` seconds for full export
@@ -403,5 +403,12 @@ retaining the `5`-second grace and all validation. The stdout-only intermediate
 source fails local startup at `+52.560041` ms; a measured final-evidence sleep
 motivates the subsequent poll change and passing local budgets above.
 Fresh native budget acceptance and default cutover remain blocked.
+Follow-up `38719650091` at `2b642e2` passes all 18 callers/fast gates and the
+native full-export budget (`37.767068`/`40.976767` seconds, `+8.4987%`).
+Startup rejects the direct baseline before a timing verdict: its inventory
+was also macOS-only. The exact observed Linux startup digest is now pinned
+alongside macOS, with all six outputs still required to match and the `50` ms
+cap unchanged. The native guard identity is unchanged; both current macOS
+reports and native full-export report still pass. Native startup remains pending.
 The four selected local regressions are not full assembled or memory-performance acceptance.
 Default routing stays Python at `+22.5%`; native FVP remains open.

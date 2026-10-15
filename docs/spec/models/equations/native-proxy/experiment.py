@@ -31,7 +31,10 @@ WORKLOADS = {
     ),
     "startup": (
         Path(__file__).with_name("derivation.spthy"),
-        ("ecd7e735a4f3fc7119dbd00d2edbd245c01900b6035c0dd2e271bea4c5607b64",),
+        (
+            "ecd7e735a4f3fc7119dbd00d2edbd245c01900b6035c0dd2e271bea4c5607b64",
+            "59548c48458d4bdf8e7fee57ba0257642f0a21bfd94c2004a4fb990781659fae",
+        ),
     ),
 }
 

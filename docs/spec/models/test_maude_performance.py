@@ -76,6 +76,16 @@ class NativePerformanceCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("PASS:", result.stdout)
 
+    def test_reviewed_native_linux_startup_retains_the_additive_limit(self):
+        report = self.report(guarded=0.17)
+        report["export_sha256"] = "59548c48458d4bdf8e7fee57ba0257642f0a21bfd94c2004a4fb990781659fae"
+        report["platform"] = "Linux-native-fixture"
+        report["architecture"] = "x86_64"
+
+        result = self.check_report(report)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_exact_startup_limit_uses_the_paired_medians(self):
         report = self.report()
         report["seconds"] = {
@@ -88,10 +98,18 @@ class NativePerformanceCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_startup_above_fifty_milliseconds_is_rejected(self):
-        result = self.check_report(self.report(guarded=0.170001))
+        for digest in (
+            "ecd7e735a4f3fc7119dbd00d2edbd245c01900b6035c0dd2e271bea4c5607b64",
+            "59548c48458d4bdf8e7fee57ba0257642f0a21bfd94c2004a4fb990781659fae",
+        ):
+            report = self.report(guarded=0.170001)
+            report["export_sha256"] = digest
 
-        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-        self.assertIn("50 ms startup-only budget", result.stderr)
+            with self.subTest(digest=digest):
+                result = self.check_report(report)
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("50 ms startup-only budget", result.stderr)
 
     def test_full_export_does_not_inherit_the_startup_allowance(self):
         result = self.check_report(self.report("full-export"), "full-export")
