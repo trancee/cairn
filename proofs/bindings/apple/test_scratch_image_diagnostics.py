@@ -205,7 +205,7 @@ class ScratchImageDiagnosticsTest(unittest.TestCase):
             if command[:2] == ["/usr/bin/hdiutil", "info"]:
                 return subprocess.CompletedProcess(command, 0, stdout=INVENTORY)
             if command[0] == "/usr/sbin/lsof":
-                return subprocess.CompletedProcess(command, 1, stdout="p123\ncfixture\n")
+                return subprocess.CompletedProcess(command, 1, stdout="p123\ncfixture\nf3\nfcwd\n")
             raise subprocess.CalledProcessError(1, command)
 
         output, errors = io.StringIO(), io.StringIO()
@@ -216,25 +216,35 @@ class ScratchImageDiagnosticsTest(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertIn("p123\ncfixture\n", output.getvalue())
         self.assertIn("holder-query-nonzero", errors.getvalue())
+        self.assertNotRegex(output.getvalue(), r"(?m)^f")
 
     def test_holder_field_errors_do_not_log_unselected_file_fields(self):
-        def operating_system(command, **options):
-            if command[:2] == ["/usr/bin/hdiutil", "detach"]:
-                return subprocess.CompletedProcess(command, 1)
-            if command[:2] == ["/usr/bin/hdiutil", "info"]:
-                return subprocess.CompletedProcess(command, 0, stdout=INVENTORY)
-            if command[0] == "/usr/sbin/lsof":
-                return subprocess.CompletedProcess(command, 0, stdout="p123\nnunselected-file-field\n")
-            raise subprocess.CalledProcessError(1, command)
+        for fields in (
+            "p123\nnunselected-file-field\n",
+            "p123\ncfixture\nf\n",
+            "p123\ncfixture\nf\x00unselected-file-field\n",
+            "p123\ncfixture\nf\x1bunselected-file-field\n",
+            "p123\ncfixture\nqunselected-file-field\n",
+            "pinvalid\ncfixture\nf3\n",
+        ):
+            with self.subTest(fields=fields):
+                def operating_system(command, **options):
+                    if command[:2] == ["/usr/bin/hdiutil", "detach"]:
+                        return subprocess.CompletedProcess(command, 1)
+                    if command[:2] == ["/usr/bin/hdiutil", "info"]:
+                        return subprocess.CompletedProcess(command, 0, stdout=INVENTORY)
+                    if command[0] == "/usr/sbin/lsof":
+                        return subprocess.CompletedProcess(command, 0, stdout=fields)
+                    raise subprocess.CalledProcessError(1, command)
 
-        output, errors = io.StringIO(), io.StringIO()
-        with mock.patch.object(scratch_detach.subprocess, "run", side_effect=operating_system):
-            with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
-                result = scratch_detach.detach_scratch(VOLUME, IMAGE)
+                output, errors = io.StringIO(), io.StringIO()
+                with mock.patch.object(scratch_detach.subprocess, "run", side_effect=operating_system):
+                    with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
+                        result = scratch_detach.detach_scratch(VOLUME, IMAGE)
 
-        self.assertEqual(result, 1)
-        self.assertIn("invalid-holder-fields", errors.getvalue())
-        self.assertNotIn("unselected-file-field", output.getvalue())
+                self.assertEqual(result, 1)
+                self.assertIn("invalid-holder-fields", errors.getvalue())
+                self.assertNotIn("unselected-file-field", output.getvalue() + errors.getvalue())
 
 
 if __name__ == "__main__":

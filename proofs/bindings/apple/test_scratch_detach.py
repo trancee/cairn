@@ -2,10 +2,12 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import plistlib
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest import mock
 
@@ -52,7 +54,7 @@ class ScratchDetachTest(unittest.TestCase):
                 return subprocess.CompletedProcess(command, 0, stdout=INVENTORY)
             if command[0] == "/usr/sbin/diskutil":
                 return subprocess.CompletedProcess(command, 0, stdout=plistlib.dumps(state))
-            return subprocess.CompletedProcess(command, 0, stdout="p123\ncfixture\n")
+            return subprocess.CompletedProcess(command, 0, stdout="p123\ncfixture\nf3\nfcwd\n")
 
         output, errors = io.StringIO(), io.StringIO()
         with mock.patch.object(scratch_detach.subprocess, "run", side_effect=operating_system):
@@ -68,6 +70,7 @@ class ScratchDetachTest(unittest.TestCase):
         )
         self.assertEqual(json.loads(reported_state), state)
         self.assertIn("p123\ncfixture\n", output.getvalue())
+        self.assertNotRegex(output.getvalue(), r"(?m)^f")
 
     def test_unavailable_detach_command_has_a_controlled_failure(self):
         output, errors = io.StringIO(), io.StringIO()
@@ -79,6 +82,35 @@ class ScratchDetachTest(unittest.TestCase):
 
         self.assertEqual(result, 1)
         self.assertIn("FAIL: scratch detach command unavailable", errors.getvalue())
+
+    @unittest.skipUnless(sys.platform == "darwin", "native lsof format requires macOS")
+    def test_failed_ejection_retains_native_holder_identities_without_descriptor_fields(self):
+        with tempfile.NamedTemporaryFile(prefix="cairn-holder-") as owned:
+            holders = subprocess.run(
+                ["/usr/sbin/lsof", "-nP", "-a", "-p", str(os.getpid()), "-Fpc", "--", owned.name],
+                capture_output=True, text=True, check=True, timeout=5,
+            )
+        self.assertRegex(holders.stdout, r"(?m)^f.+$")
+
+        def operating_system(command, **options):
+            if command[:2] == ["/usr/bin/hdiutil", "detach"]:
+                return subprocess.CompletedProcess(command, 1)
+            if command[:2] == ["/usr/bin/hdiutil", "info"]:
+                return subprocess.CompletedProcess(command, 0, stdout=INVENTORY)
+            if command[0] == "/usr/sbin/diskutil":
+                return subprocess.CompletedProcess(command, 0, stdout=plistlib.dumps({}))
+            return subprocess.CompletedProcess(command, 0, stdout=holders.stdout)
+
+        output, errors = io.StringIO(), io.StringIO()
+        with mock.patch.object(scratch_detach.subprocess, "run", side_effect=operating_system):
+            with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
+                result = scratch_detach.detach_scratch(VOLUME, IMAGE)
+
+        self.assertEqual(result, 1)
+        self.assertEqual(errors.getvalue(), "FAIL: scratch detach failed\n")
+        self.assertIn("p" + str(os.getpid()) + "\n", output.getvalue())
+        self.assertRegex(output.getvalue(), r"(?m)^c.+$")
+        self.assertNotRegex(output.getvalue(), r"(?m)^f")
 
     def test_invalid_volume_is_rejected_without_native_mutation(self):
         for volume in ("", "/", "scratch", VOLUME + "/../scratch", VOLUME + "\n"):

@@ -68,8 +68,12 @@ inventory is explicit; missing mount records are not proof of successful unmount
 
 Filesystem holders (`lsof -Fpc +f --`) and exact image/device holders
 (`lsof -Fpc --`) share one 15-second deadline. Only validated PID/command
-fields are emitted; partial valid results remain visible when a query returns
-nonzero, with an explicit diagnostic error.
+fields are emitted. Native `lsof -Fpc` also produces mandatory `f` descriptor
+records; validate their nonempty printable values but do not log them.
+Empty/control-bearing descriptors, malformed PID/command records and
+unselected field types still reject with `invalid-holder-fields`, without
+logging their values. Partial valid results remain visible when a query
+returns nonzero, with an explicit diagnostic error.
 Unavailable, malformed or timed-out diagnostics remain explicitly observable
 and cannot turn failed ejection into success. If unmount already succeeded,
 the mount-path query may be unavailable; no whole-disk state is inferred.
@@ -86,7 +90,11 @@ xcrun python3 -B -m unittest discover -s proofs/bindings/apple \
 ```
 
 These simulations establish failure propagation and diagnostic behavior,
-not native disk-ejection reliability. See
+not native disk-ejection reliability. The macOS-only holder regression also
+reads actual `lsof` records for one temporary file owned by the current test
+process, then exercises failed-ejection diagnostics through the OS boundary.
+It requires PID/command retention and descriptor omission; it neither mounts
+nor ejects a native disk. See
 [the decision and observed regression](../../../docs/adr/0014-hosted-apple-isolation-probes.md#failure-only-scratch-detach-diagnostics).
 
 ## Frozen-input manifest generation

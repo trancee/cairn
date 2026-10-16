@@ -1512,3 +1512,33 @@ are not selected. This follow-up changes diagnostics only, not detach strategy,
 permission, budget, resource/integrity gates or the unresolved acceptance scope.
 Migration updates the sole owning shell invocation and every test consumer
 to the two-path internal CLI; no released SDK/API or protocol change.
+
+### Mandatory native holder-record compatibility
+
+CodeQL [run `38770078501`](https://github.com/trancee/cairn/actions/runs/38770078501)
+at proof checkpoint `bfff37f` completes Kotlin extraction, mapped SARIF and
+offline security queries, then fails ordinary scratch ejection with
+`Resource busy`, before mandatory integrity checks/result delivery. The UID
+is empty; owned-image inventory reports devices but no mount point. Holder
+diagnostics report `invalid-holder-fields`, so the actual holder remains unknown.
+A local native owned-file probe reproduces that diagnostic defect:
+`lsof -Fpc` always includes file-set `f` records, as its installed manual
+documents, but the validator accepts only `p`/`c`.
+
+The owner selected the existing `detach_scratch()` OS-command boundary and
+native `lsof` against an owned temporary file as regression seams. Accept
+nonempty printable `f` values as native framing and discard them; emit only
+validated PID/command records. Unknown fields, empty/control-bearing
+descriptors and malformed identities still reject without logging their
+values. Valid partial identities remain observable on nonzero query status.
+The native-format regression first fails on `invalid-holder-fields`, then
+passes after this compatibility fix. All 67 local Apple tooling cases pass
+under Xcode Python `3.9`, with six existing hosted-only supervisor skips.
+
+Logging descriptor/file fields was rejected to preserve diagnostic scope;
+suppressing real ejection failure, forced detach, retries, holder termination
+and larger limits remain unselected. This fixes record parsing, not the
+hosted busy-eject root cause or first-attempt reliability. Migration changes
+only internal diagnostics/tests and their reference; the caller, five-/15-second
+windows, sandbox/PF/resource controls and every integrity/result gate remain
+unchanged. Updated-source hosted acceptance is separate and recorded by PR #9.

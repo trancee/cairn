@@ -58,6 +58,19 @@ fresh `scripts/check.sh` passes 19 native/137 model/50 lifecycle tests,
 record authoritative current-head hosted acceptance. This proof-only increment changes no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
 
+Published AC-unifier checkpoint `bfff37f` passes all 19 lifecycle cells,
+all 11 Rust jobs and both native budgets, but CodeQL `38770078501` fails
+ordinary Apple scratch ejection with `Resource busy` after Kotlin queries,
+before mandatory integrity/result delivery. This is not full hosted acceptance.
+A native owned-file regression reproduces a separate holder-diagnostic defect:
+`lsof -Fpc` also emits mandatory `f` records. The narrow parser fix accepts
+and discards those descriptors while retaining only validated PID/command
+output and the original ejection failure. All 67 local Apple tooling tests
+pass, with six existing hosted-only supervisor skips. Updated-source hosted
+gates remain separate; no busy-eject root-cause or reliability fix is claimed.
+See [the decision](docs/adr/0014-hosted-apple-isolation-probes.md#mandatory-native-holder-record-compatibility)
+and [current PR #9 checks](https://github.com/trancee/cairn/pull/9/checks).
+
 The owner-approved proof-only Maude boundary now checks the pinned native
 module and every executed query/complete reply, with fail-closed lifecycle
 evidence required by ratchet export, projection, equation, precompute, replay,

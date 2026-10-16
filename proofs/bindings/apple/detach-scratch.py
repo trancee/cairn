@@ -55,13 +55,14 @@ def owned_image_entities(inventory: object, image: str, volume: str) -> tuple[li
 
 
 def print_holder_fields(output: str) -> None:
+    lines = output.splitlines()
     if any(
         not re.fullmatch(r"p[0-9]+", line)
-        and not (line.startswith("c") and len(line) > 1 and line[1:].isprintable())
-        for line in output.splitlines()
+        and not (line.startswith(("c", "f")) and len(line) > 1 and line[1:].isprintable())
+        for line in lines
     ):
         raise DiagnosticError("invalid-holder-fields")
-    print(output, end="")
+    print("".join(line + "\n" for line in lines if line.startswith(("p", "c"))), end="")
 
 
 def detach_scratch(volume: str, image: str) -> int:

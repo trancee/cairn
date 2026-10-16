@@ -1073,3 +1073,22 @@ narrowing/FVP, native algorithm/importer and exact full assembled acceptance
 remain open. Source-ID inputs, equations, attacker/claims/rules/restrictions,
 options, deadlines, jobs and budgets are unchanged. Existing proof-only
 publication approval applies; no dispatch, merge or SDK/profile activation.
+
+2026-10-15 (published AC-unifier checkpoint and independent CI blocker):
+`bfff37f` passes all 19 lifecycle cells in
+[run `38770078384`](https://github.com/trancee/cairn/actions/runs/38770078384)
+and all 11 Rust jobs in `38770078237`. Actual lifecycle job `116543272613`
+contains 127 audits/25 axiom-free, 19 native/137 model/50 lifecycle cases
+and 43 projections. Both extracted native reports independently pass:
+full-export `38.223192488`/`41.712657755` seconds (`+9.129183%`);
+startup `0.122968961`/`0.138492166` seconds (`+15.523205` ms).
+Source/Linux executable identities and original limits are unchanged.
+CodeQL `38770078501` fails ordinary Apple scratch teardown with `Resource busy`
+after Kotlin queries, before integrity/result delivery; the proof checkpoint
+is not fully accepted. The separately reproduced mandatory-`f` holder-record
+diagnostic defect and owner-approved narrow fix are recorded in
+[issue 45](45-provision-isolated-build-runner.md).
+Actual busy-eject root cause, updated-source hosted acceptance and the
+independent unifier-generation/narrowing/FVP/importer/full-63 obligations
+remain open. No manual rerun, dispatch, force-detach, retry, budget change,
+merge or SDK/profile activation is implied.
