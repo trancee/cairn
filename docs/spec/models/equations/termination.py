@@ -156,6 +156,19 @@ QUERY_UNIFICATION_THEOREMS = (
     "native_natural_ac_unifier_representation",
     "native_kind_ac_unifier_iff", "native_kind_ac_unifier_representation",
 )
+QUERY_INSTANCE_THEOREMS = (
+    "native_substitution_assignment_ac_on", "native_ac_instance_reflexive",
+    "native_ac_instance_transitive", "native_ac_unifier_instance",
+)
+QUERY_TYPED_INSTANCE_THEOREMS = (
+    "native_query_composition", "native_query_ac_leaf",
+    "native_query_assignment_ac_on_iff", "native_query_ac_instance_iff",
+)
+QUERY_COMPLETENESS_THEOREMS = (
+    "native_singleton_complete_iff", "query_singleton_complete_iff",
+    "native_message_complete_unifiers_iff", "native_natural_complete_unifiers_iff",
+    "native_message_most_general_iff", "native_natural_most_general_iff",
+)
 
 
 def main() -> int:
@@ -209,6 +222,9 @@ def main() -> int:
                 ("QueryKindSubstitution", QUERY_KIND_SUBSTITUTION_THEOREMS),
                 ("QueryComposition", QUERY_COMPOSITION_THEOREMS),
                 ("QueryUnification", QUERY_UNIFICATION_THEOREMS),
+                ("QueryInstances", QUERY_INSTANCE_THEOREMS),
+                ("QueryTypedInstances", QUERY_TYPED_INSTANCE_THEOREMS),
+                ("QueryCompleteness", QUERY_COMPLETENESS_THEOREMS),
             ):
                 output = run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -225,6 +241,9 @@ def main() -> int:
                 "QuerySortedQuotientCases",
                 "QuerySortedSubstitutionCases",
                 "QueryUnificationCases",
+                "QueryInstanceCases",
+                "QueryTypedInstanceCases",
+                "QueryCompletenessCases",
             ):
                 run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -251,6 +270,8 @@ def main() -> int:
         print("PASS: guarded native quotient paths terminate and converge modulo structural AC.")
         print("PASS: sort-respecting substitutions preserve guarded paths and controlled-kind framing.")
         print("PASS: sorted AC-unifier solutions compose and transfer through compatible typed images.")
+        print("PASS: source-variable-scoped AC instances form a preorder and preserve sorted solutions.")
+        print("PASS: complete AC-unifier families and most-generality transfer on proper typed images.")
         print("Scope: typed image algebra + enforced native stream membership; not a native FVP certificate.")
         print("Trust boundary: Tamarin/Maude + Rust stream guard + Python evidence/signature/translation + Lean kernel.")
         return 0

@@ -57,6 +57,10 @@ The command:
 - kernel-checks `QueryComposition.lean` and `QueryUnification.lean`, audits
   13 reports and checks sorted composition, pointwise AC congruence and
   AC-unifier solution transport, including compatible kind shadows;
+- kernel-checks `QueryInstances.lean`, `QueryTypedInstances.lean` and
+  `QueryCompleteness.lean`, audits 14 reports and checks query-variable-scoped
+  factorization, its preorder/solution closure, all-five-sort typed
+  correspondence and conditional completeness/most-generality transport;
 - generates and kernel-checks a certificate translating every source equation
   to its exact `PrimitiveRewrite` constructor.
 
@@ -67,10 +71,11 @@ the existing `120`-second bound; version checks use `30` seconds.
 Invalid command-line syntax uses argparse's exit `2`; `--help` exits `0` without
 checking a proof.
 Only `propext`, `Classical.choice` and `Quot.sound` are permitted by the shared
-axiom audit. Twenty-five of the 127 audited theorems use no axioms. The three
+axiom audit. Twenty-five of the 141 audited theorems use no axioms. The three
 uniform normalization-bound theorems, assignment/shadow representation and
-closure/solution-representation audits depending on those witnesses use all
-three permitted axioms. Other audits use at most `propext` and `Quot.sound`.
+closure/solution-representation, sorted factorization and family/most-generality
+transport audits depending on those witnesses use all three permitted axioms.
+Other audits use at most `propext` and `Quot.sound`.
 Assignment witnesses use classical choice only in the mathematical proof,
 not an executable native fallback.
 No audited theorem uses `sorryAx` or a user-added axiom.
@@ -294,6 +299,43 @@ cannot be a compatible shadow. Actual pinned Maude controls confirm the
 cross-sort failures, including a mixed-kind sum, and a same-sort success.
 A separate negative control retains that plain `unify` does not use the
 ordinary `flip` equation. No solutions are filtered or grammar widened.
+
+`QueryInstances.lean` extracts the variable support of every raw query context.
+Rigid atoms contribute no variables; sort/index pairs stay distinct.
+`NativeAssignmentACOn` compares assigned values only at listed variables.
+`NativeACInstanceOn variables general specific` has a sorted postfactor whose
+composition with `general` is pointwise AC-equivalent to `specific` on that
+support. General/specific assignments are not themselves required sorted by
+this predicate. The relation is reflexive/transitive; if `general` solves a
+query and `specific` is sorted, factoring on both input supports makes
+`specific` a solution too. Duplicate support entries have no effect.
+
+`QueryTypedInstances.lean` independently defines ordered typed composition
+and scoped typed comparison: equality for public/fresh/node labels,
+`MessageAC` for messages and `NaturalAC` for naturals. Encoding commutes with
+composition and preserves/reflects scoped comparison and factorization.
+The AC leaf invariant retains constructor, sort and rigid/variable distinctions.
+Typed factor witnesses exist for every modeled sorted native factor.
+
+`QueryCompleteness.lean` defines sound complete families separately from
+individual solutions. Completeness covers every sorted solution by an instance
+of a family member, comparing only variables of the original two input terms.
+Most-generality requires a candidate solution covering every solution on that
+same support; a singleton family is complete exactly when its member is most
+general. On proper message/natural encoded inputs, mapping an existing finite
+typed family preserves/reflects completeness and candidate most-generality.
+These theorems quantify over given lists and total mathematical assignments.
+They do not construct a family for every query, prove irredundancy or finite
+support, verify a native generator/occurs check/fresh namespace, or transport
+arbitrary kind-shadow families.
+
+The three new kernel case modules retain all-five-sort support/composition,
+frozen same-index rigid labels, natural AC comparison and sorted-factor
+rejection. For `X = Y`, a variable-pair singleton is complete, but assigning
+both variables to `one` is sound and incomplete. An unrelated message binding
+does not affect the scoped MGU; adding that variable to the comparison would
+incorrectly reject it. Empty-family, cyclic finite-AST solution and positive
+natural/no-zero controls remain distinct from native algorithm verification.
 
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of

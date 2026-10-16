@@ -15,7 +15,7 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   for the six source equations in the typed algebra. It also checks structural
   frozen-index encoding round trips, independent raw AC/rewrite correspondence
   and typed substitution commutation, including free tuple/Node framing closure
-  and controlled Fresh/natural derivation-kind abstraction (127 audits).
+  and controlled Fresh/natural derivation-kind abstraction (141 audits).
   An independently guarded native-sorted relation inherits proper-message
   termination, B-coherence, convergence modulo AC and the template-only bound.
   Controlled-kind framing closure and decoded-kind termination also hold.
@@ -36,8 +36,14 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   Sorted assignments compose, preserve AC-unifier solutions and exactly
   transport proper message/natural solutions to/from the typed algebra.
   Kind solutions require compatible shadows; unrestricted natural shadows
-  have cross-sort false positives. Finite complete enumeration, most-generality,
-  narrowing and native algorithm/importer correctness are not proved.
+  have cross-sort false positives. Sorted postfactor instantiation now uses
+  only input-query variables and forms a preorder. Typed composition and
+  all-five-sort pointwise equality/AC preserve and reflect factorization.
+  Given a family on proper message/natural inputs, completeness and singleton
+  most-generality transfer in both directions. This neither constructs a
+  finite complete generator nor transfers arbitrary kind-shadow families.
+  Finite-support/native occurs-check/fresh-name correspondence, narrowing and
+  native algorithm/importer correctness remain unproved.
   Ratchet acceptance callers additionally enforce the approved
   [native stream boundary](equations/README.md#native-stream-boundary):
   pinned module, proper/controlled-kind queries, proper returned bindings/results,

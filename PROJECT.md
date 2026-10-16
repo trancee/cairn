@@ -2,7 +2,7 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation; SDK/application=not implemented.
 
-## Current typed equation convergence/image evidence (2026-10-15)
+## Current typed equation convergence/image evidence (2026-10-16)
 
 The [equation checker](docs/spec/models/equations/README.md) kernel-checks
 B-coherence, global matching confluence, quotient-path confluence modulo AC
@@ -16,7 +16,7 @@ are realizable by typed matching modulo AC. Sort-separated natural/message
 substitutions commute with encoding and preserve image membership while rigid
 indices stay frozen. Free tuple/Node framing is closed under AC, rewriting and
 typed substitution, including node assignments; framing remains excluded from
-message functions. All 127 theorem audits and the kernel
+message functions. All 141 theorem audits and the kernel
 regression cases run in the existing lifecycle cell, without a new job or
 larger ceiling. Twenty-five audits use no axioms; none uses `sorryAx`.
 
@@ -49,12 +49,23 @@ composition and preserve/reflect proper message/natural typed solutions.
 Kind solutions transfer only through compatible shadows: unrestricted natural
 shadows can solve a Fresh/natural equality that has no sorted original solution.
 Kernel and actual Maude controls retain this separation and distinguish AC
-unification from equality modulo rewrite equations. Finite complete unifier
-enumeration, most-generality, narrowing/FVP and importer correspondence remain open. The blocked error-kind
+unification from equality modulo rewrite equations.
+AC factorization now compares assignments only on input-query variables.
+Sorted factors give a preorder and preserve sorted solutions; independently
+defined typed composition and all-five-sort pointwise equality/AC preserve
+and reflect that relation. On proper message/natural inputs, a given finite
+family is sound and complete exactly when its typed counterpart is, and
+singleton completeness characterizes most-generality. Kernel cases distinguish
+the variable-pair MGU from a sound but incomplete ground singleton, and show
+that adding an unrelated variable would reject a valid scoped MGU.
+These are conditional completeness/most-generality transports, not a finite
+complete native generator or kind-shadow family transfer. Native algorithm,
+finite-support/occurs-check/fresh-namespace correspondence, narrowing/FVP and
+importer correctness remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
-fresh `scripts/check.sh` passes 19 native/137 model/50 lifecycle tests,
-43 projections and all 127 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
+the gate retains 19 native/137 model/50 lifecycle tests,
+43 projections and requires all 141 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
 record authoritative current-head hosted acceptance. This proof-only increment changes no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
 

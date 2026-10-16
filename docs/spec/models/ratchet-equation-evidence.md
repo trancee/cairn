@@ -15,6 +15,9 @@ Sort-respecting substitutions preserve guarded paths and controlled-kind
 framing; their compatible typed shadows are now derived rather than assumed.
 Sorted AC solutions now compose and transport exactly through the proper typed
 image and compatible kind shadows, not unrestricted shadow unification.
+Scoped sorted factorization now preserves/reflects completeness of a given
+finite family and candidate most-generality on proper message/natural inputs.
+It does not construct a complete family or verify a native generator.
 Native narrowing/unification and the remaining
 FVP hypotheses stay separate; this is not a native FVP certificate.
 
@@ -245,7 +248,7 @@ The theorem constructs a bounded normalizing derivation, rather than bounding
 all possible reduction orders. This is the quantifier order in the boundedness
 criterion, not a ground-term weight bound that grows with substitutions.
 The existing checker rebuilds these proofs, regression cases and all
-127 required theorem audits. The typed bound does not itself establish native
+141 required theorem audits. The typed bound does not itself establish native
 substitution/narrowing closure or complete sorted AC unification.
 
 ## Frozen-index encoding foundation
@@ -377,7 +380,7 @@ rewrite. That last case is outside the stream grammar, demonstrating why
 properness invariance cannot be assumed for arbitrary raw terms.
 Sorted narrowing, complete AC-unification/FVP transfer, the full imported
 NAT/kind-variable carrier and universal importer correspondence remain
-explicit obligations, not consequences of the 127-audit count.
+explicit obligations, not consequences of the 141-audit count.
 
 ## Why sorted substitution no longer needs an assumed shadow
 
@@ -433,9 +436,47 @@ grammar; it prevents treating all abstract unifiers as original solutions.
 Plain AC unification also does not use ordinary equations: `flip(roleA)` and
 `roleB` have no AC unifier despite their rewrite equality. The kernel count
 invariant and actual Maude agree. Variant unification/narrowing must account
-for those equations separately. A finite complete set, sorted most-generality,
-occurs-check/fresh-name correctness, native algorithm/importer correspondence
-and FVP remain unproved by these solution-transport theorems.
+for those equations separately. These solution-transport theorems alone do not
+establish a finite complete set or most-generality. The scoped extension below
+transports those properties when proved for a given family/candidate; native
+generation, occurs-check/fresh-name correctness, importer correspondence and
+FVP remain separate.
+
+## Why completeness transport still does not supply a generator
+
+Finding some solutions is weaker than covering all solutions. For `X = Y`,
+assigning both variables to `one` is sound but misses the solution in which
+both remain the same variable. A complete family must cover that solution
+through a sort-respecting postfactor, not simply contain valid answers.
+[`QueryCompletenessCases.lean`](equations/QueryCompletenessCases.lean) proves
+both a complete variable-pair singleton and the ground singleton's failure.
+
+Coverage must compare only variables of the original input query. An extra
+binding for an unrelated message variable cannot invalidate an MGU for this
+natural-variable problem. The same kernel control shows that adding that
+unrelated variable to the comparison incorrectly rejects the scoped MGU.
+[`QueryInstances.lean`](equations/QueryInstances.lean) therefore extracts exact
+query supports, proves scoped substitution congruence and gives sorted
+postfactor instantiation a reflexive/transitive order. Sorted instances of
+solutions remain solutions. It never assumes equality on all bindings.
+
+[`QueryTypedInstances.lean`](equations/QueryTypedInstances.lean) independently
+defines typed composition and scoped equality/AC at all five sorts. Encoding
+commutes with composition; the existing representation of every sorted native
+assignment supplies every factor witness in the reverse direction.
+[`QueryCompleteness.lean`](equations/QueryCompleteness.lean) then preserves
+and reflects complete given finite families and candidate most-generality on
+proper message/natural inputs. A complete singleton and a most-general member
+are equivalent claims, not evidence that every problem has a singleton.
+
+The quantifier is over a supplied family, not an algorithm producing a finite
+complete family for every query. Total mathematical assignments also do not
+verify native finite-support substitutions, freshness or an occurs check.
+The cyclic/no-zero controls concern finite-AST solution semantics only.
+Kind-solution compatibility does not by itself transfer family coverage or
+its postfactors; no unrestricted shadow-completeness claim is added.
+Native generation, narrowing/FVP and the complete source/importer boundary
+therefore remain open despite this stronger relational correspondence.
 
 ## Finite-variant rationale
 
@@ -453,7 +494,8 @@ EMS-FVP under its decomposition hypotheses. Convergence/B-coherence and the
 bound are checked in the typed algebra, with independent structural guarded
 convergence/boundedness and sort-respecting substitution closure on the
 frozen-index native AST. Sorted AC solutions now compose and transport through
-the proper typed image and compatible kind shadows, but complete sort/signature,
+the proper typed image and compatible kind shadows. Given proper-image families,
+scoped completeness/most-generality also transfer, but complete sort/signature,
 finite complete AC-unifier generation and native-image correspondence must still be
 reconciled before applying that theorem to Tamarin's backend.
 

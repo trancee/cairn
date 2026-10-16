@@ -58,6 +58,46 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Scoped AC factorization and conditional completeness (2026-10-16)
+
+Continue the approved proof-only phase by separating valid solutions from
+sound complete families. Define sorted postfactor instantiation modulo AC on
+the variables of the two original input queries, not on every assignment
+binding. A variable-pair MGU with an unrelated message binding demonstrates
+why the global alternative is too strong: extending its comparison scope
+would reject a valid scoped MGU. Grounding both query variables to `one`
+demonstrates the independent gap between soundness and completeness.
+
+Extract source supports through every raw context, excluding rigid atoms and
+retaining sort/index distinctions. Prove scoped substitution congruence,
+postfactor preorder laws and solution closure with an explicit sorted-specific
+premise. Independently define typed composition and all-five-sort scoped
+equality/AC. Encoding commutes with composition; preserve/reflect factor
+witnesses through the existing exact representation of sorted assignments.
+On proper message/natural inputs, transport completeness of a supplied finite
+family in both directions.
+Likewise transport candidate most-generality, with a separate singleton
+completeness equivalence. Do not infer general finite enumeration, irredundancy,
+finite-support/native occurs-check/fresh-name correctness, kind-shadow family
+transfer, narrowing/FVP or importer verification.
+
+Three vertical missing-report CLI reds (`0 != 1`) become rejecting greens.
+Fourteen mandatory reports bring the total to 141, retaining 25 axiom-free
+and no `sorryAx`. Three kernel case modules cover all-sort support/composition,
+order, frozen indices, natural AC, sorted-factor rejection, a complete singleton,
+incomplete/empty families, an unrelated-variable scope counterexample and
+cyclic/no-zero finite-AST solution controls. New proof/case files remain below
+300 lines; the cohesive independent CLI fixture remains below 500 under the
+preceding shared-fixture rationale.
+
+The owner's separate all-Actions request updates the three CodeQL Action pins
+to verified stable `v4.39.0`; see [ADR 0015](0015-build-backed-kotlin-codeql.md#action-release-refresh-2026-10-16).
+No equation, guard source-ID input, native grammar, attacker, claim, rule,
+restriction, strict option/deadline, job, numerical budget or runtime/API/wire
+change. Existing checkpoint publication approval applies; actual current-head
+hosted acceptance remains mandatory, with no manual dispatch, merge or
+SDK/profile activation.
+
 ### Sorted AC-unifier composition and image correspondence (2026-10-15)
 
 Continue the approved proof-only phase with simultaneous assignment composition

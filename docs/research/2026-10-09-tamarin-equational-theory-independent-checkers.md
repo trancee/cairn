@@ -138,7 +138,7 @@ The latest local [equation checker](../spec/models/equations/README.md)
 proves typed B-coherence, global matching confluence, quotient-path confluence
 modulo natural AC and a template-only normalization bound under normalized
 substitutions. Nonlinear key-copy overlaps are joined; normality is
-AC-invariant. All 127 required audits and kernel cases pass; 25 audits use no
+AC-invariant. All 141 required audits and kernel cases pass; 25 audits use no
 axioms. The checked boundedness quantifies over every template and normalized
 assignment, not sampled ground terms. Missing boundedness/confluence audit
 transcripts have fail-closed CLI red/green checks. Native query-image transfer,
@@ -176,8 +176,16 @@ natural shadow unification: the latter admits a Fresh/natural cross-sort
 solution forbidden by the original sorts. Kernel cases and actual pinned Maude
 controls retain that boundary, including mixed-kind sums and the difference
 between plain AC unification and ordinary rewrite equality.
-Finite complete unifier enumeration, sorted most-generality, narrowing/FVP and
-native algorithm/importer/fresh-namespace correctness remain open.
+Scoped AC factorization now compares only variables of the input query, with
+sorted postfactors forming a preorder and preserving solutions. Independent
+typed composition and all-five-sort equality/AC preserve/reflect factorization.
+For a given finite family on proper message/natural inputs, sound completeness
+and singleton most-generality now transfer in both directions. Kernel controls
+prove a variable-pair MGU, reject a sound but incomplete ground singleton and
+show why unrelated bindings must be excluded. No complete family is generated
+for arbitrary queries and no kind-shadow family correspondence is claimed.
+Finite-support/occurs-check/fresh-namespace and native generator/importer
+correctness, narrowing/FVP and full assembled acceptance remain open.
 Actual Maude controls distinguish a blocked kind projection from allowed inner
 rewriting and proper-message matching. This proof increment leaves native
 source/performance identities unchanged; the
@@ -196,7 +204,7 @@ Its envelope is wider than the printer's fixed tuple shape; it rejects
 relation deliberately omits sort guards, which decoder reflection validates
 only for encoded message inputs. These are algebraic representation proofs,
 not actual backend query/framing or substitution-provenance proofs, nor a
-verified importer. Solution composition/image correspondence is now checked;
+verified importer. Solution composition and scoped family/image correspondence are now checked;
 complete unifier generation and narrowing completeness remain open.
 The published termination checkpoint passed hosted acceptance
 at `70c1c19` in PR #9. The later 53-audit checkpoint at `3d5dd7c` has the

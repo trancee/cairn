@@ -1092,3 +1092,41 @@ Actual busy-eject root cause, updated-source hosted acceptance and the
 independent unifier-generation/narrowing/FVP/importer/full-63 obligations
 remain open. No manual rerun, dispatch, force-detach, retry, budget change,
 merge or SDK/profile activation is implied.
+
+2026-10-16 (scoped AC factorization and conditional completeness):
+[`QueryInstances.lean`](../../../docs/spec/models/equations/QueryInstances.lean)
+extracts source-query variables and proves scoped AC substitution congruence,
+sorted postfactor preorder laws and solution closure. Comparisons exclude
+unrelated bindings, not just rigid indices.
+[`QueryTypedInstances.lean`](../../../docs/spec/models/equations/QueryTypedInstances.lean)
+independently defines typed composition and equality/AC for all five sorts.
+Encoding commutes with composition and preserves/reflects scoped factorization.
+[`QueryCompleteness.lean`](../../../docs/spec/models/equations/QueryCompleteness.lean)
+transports sound completeness of given finite families and candidate
+most-generality on proper message/natural inputs in both directions.
+Singleton completeness is equivalent to its member's most-generality; no
+general complete finite generator or unrestricted kind-family transfer follows.
+
+Three public-CLI missing-report reds (`0 != 1`) become rejecting greens.
+All 141 required kernel audits and the complete transcript pass, with 25
+axiom-free and no `sorryAx`. The 38-case equation suite remains green.
+Kernel controls prove a variable-pair complete singleton, reject a sound ground
+singleton and an empty family, and show that adding an unrelated message
+variable would wrongly reject the scoped MGU. They also retain all-sort support/
+composition, frozen labels, natural AC, sorted-factor rejection and cyclic/
+no-zero finite-AST solution controls. These do not verify a native occurs check.
+Fresh `scripts/check.sh` passes 19 native/137 model/50 lifecycle cases,
+source projection and all 141 theorem audits at unchanged limits. All eight
+changed-document local-link checks, three Python ASTs, source line limits
+and whitespace checks pass. Existing warnings are not suppressed.
+
+Native finite-support/generator/namespace/importer correctness, narrowing/FVP,
+kind-family transfer and exact full 63-declaration acceptance remain open.
+The owner's intervening all-Actions request updates all three CodeQL Action
+references to verified stable `v4.39.0`; the other five upstream actions were
+already current. [ADR 0015](../../../docs/adr/0015-build-backed-kotlin-codeql.md#action-release-refresh-2026-10-16)
+records provenance/compatibility. All native source-ID inputs, equations,
+attacker/claims/rules/restrictions, options, deadlines, jobs and budgets remain
+unchanged. Existing checkpoint publication approval applies; current-head
+hosted acceptance remains separate, without dispatch, merge or SDK/profile
+activation.

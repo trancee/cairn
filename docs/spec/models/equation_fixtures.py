@@ -108,4 +108,17 @@ REPORT_GROUPS = {
     "kind-unifiers": (
         "native_kind_ac_unifier_iff", "native_kind_ac_unifier_representation",
     ),
+    "scoped-instances": (
+        "native_substitution_assignment_ac_on", "native_ac_instance_reflexive",
+        "native_ac_instance_transitive", "native_ac_unifier_instance",
+    ),
+    "typed-instances": (
+        "native_query_composition", "native_query_ac_leaf",
+        "native_query_assignment_ac_on_iff", "native_query_ac_instance_iff",
+    ),
+    "complete-unifiers": (
+        "native_singleton_complete_iff", "query_singleton_complete_iff",
+        "native_message_complete_unifiers_iff", "native_natural_complete_unifiers_iff",
+        "native_message_most_general_iff", "native_natural_most_general_iff",
+    ),
 }
