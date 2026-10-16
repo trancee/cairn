@@ -58,6 +58,59 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Native budget diagnostics (2026-10-16)
+
+Kind-family head `8c54f2b` passes actual hosted 169-audit kernel checks,
+18 lifecycle callers, all 11 Rust jobs and six required CodeQL jobs.
+Its lifecycle core cell nevertheless fails the unchanged full-export cap:
+three-pair medians `24.513057061`/`28.576567731` seconds give `+16.576923%`,
+above `10%`. Startup does not run. Final rollup is 36 successes, one failure
+and one intentional simulator skip. The native source/Linux binary match
+preceding accepted measurements; neither that identity nor local success
+establishes the cause or accepts the failed head.
+
+The owner selected `diagnose-and-fix-native-performance`, approving bounded
+native-performance diagnosis and a justified fix beyond the proof-only
+checkpoint. Preserve all equations, grammar, validation, strict gates,
+deadlines, jobs and budgets; no unchanged rerun, dispatch, merge or SDK/profile
+activation. Start with a distinguishing diagnostic, not speculative native
+algorithm, scheduler or signal-handling changes.
+
+An unchanged local three-pair baseline gives `+6.403659%`, so the Linux
+failure is not locally reproduced. The first process sample catches an idle
+worker and cannot locate active costs. A second sample selects an owned
+interactive worker with increasing CPU time and shows predominantly stdin/
+native-output poll waits. Python profiling charges `0.151` seconds to final
+journal reconciliation, not most of the added latency. These bounded local
+observations motivate separating waited-child CPU/context-switch changes
+from wall latency; they do not prove Linux scheduling or parser causation.
+
+Add per-sample `RUSAGE_CHILDREN` user/system seconds and voluntary/involuntary
+context-switch deltas to the existing benchmark report. Snapshot outside wall
+timing, preserving sample order, three alternating pairs, fixed digests and
+both budgets. Accounting covers reaped descendants only when intervening
+parents waited; it cannot isolate each guard or all host work. Keep older
+reports compatible, validate present diagnostics strictly, and never use
+diagnostic values as an acceptance fallback. This is additive internal
+proof-tool reporting, not a shipped SDK/wire/API change or performance fix.
+
+Alternatives were treating the previous pass as current acceptance, retrying
+unchanged CI, raising the cap, guessing an I/O optimization or adding new CI
+jobs. None supplies the missing native evidence under the approved bounds.
+Existing benchmark/native CLI seams cover a real screening report plus
+malformed diagnostics, compatible old/new reports and unchanged budget
+rejection. Both missing-report and malformed-report reds precede implementation.
+All 17 report tests and 20 native CLI/process/proof cases pass; the three
+changed Python files remain below 300 lines.
+
+Current local diagnostic three-pair medians are `24.282312`/`25.776653` seconds
+(`+6.154029%`) and `0.112028`/`0.148284` seconds (`+36.256333` ms) for
+full export/startup. All six exports per workload are fixed-identical; both
+reports independently pass their current-source/workload validators.
+The guard source and executable are unchanged. A new diagnostic head still
+requires actual own-head CI and actual resource evidence; even a passing
+measurement alone would not establish a fix for the earlier failure.
+
 ### Admissible kind-shadow factors and families (2026-10-16)
 
 Continue the approved proof-only phase with constructive assignment expansion,

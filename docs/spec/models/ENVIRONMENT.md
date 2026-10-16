@@ -105,8 +105,17 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   cutover and promotion commits/pushes/PR updates. Do not start Colima,
   manually dispatch, merge or activate SDK/profile behavior under that approval.
   Full assembled, full-proof/memory and native FVP acceptance remain separate.
+- Benchmark reports now include per-sample waited-child user/system CPU seconds
+  and voluntary/involuntary context-switch deltas. Collection is outside wall
+  timing; the existing `10%`/`50` ms gates and three-pair method are unchanged.
+  The counters cover only reaped children and descendants whose intervening
+  parents waited; they are not whole-host or per-guard attribution.
+  Legacy reports may omit diagnostics, but malformed present diagnostics fail.
+  The `8c54f2b` full-export failure (`+16.576923%`) remains a real blocker.
+  Local diagnostic reports pass (`+6.154029%`, `+36.256333` ms), not a Linux
+  reproduction, performance fix or later-head hosted acceptance.
 - `scripts/check.sh` builds the host guard with the root Rust pin, checks Rust
-  formatting/strict Clippy and 19 native CLI/process cases, then runs
+  formatting/strict Clippy and 20 native CLI/process cases, then runs
   whitespace, unit tests and `actionlint`,
   plus lifecycle/source-projection and equation convergence/boundedness proofs when pinned
   Lean is available. The pre-commit hook and CI both call it.

@@ -27,7 +27,7 @@ python3 docs/spec/models/equations/native-proxy/experiment.py \
   --proxy target/native-proxy/release/cairn-maude-proxy --workload startup
 ```
 
-`check.py --proxy <executable>` runs the 19 CLI/native-stream/process/proof
+`check.py --proxy <executable>` runs the 20 CLI/native-stream/process/proof
 checks. `scripts/check.sh` builds the guard, runs Rust formatting/strict Clippy
 and these checks, then the existing model/lifecycle/Lean gates.
 
@@ -68,6 +68,34 @@ Retained full-export digests are
 No runtime sample creates a new accepted digest, no output is normalized or
 filtered, and different retained digests cannot be mixed within a measurement.
 The cause of cross-host output differences remains unestablished.
+
+## Child-resource diagnostics
+
+New measurements include `waited_child_resources`, keyed by `baseline` and
+`compiled_guard`. Each list follows that label's timing-sample order and
+contains:
+
+| Field | Type and unit | Scope |
+|---|---|---|
+| `user_seconds` | Nonnegative finite number, CPU seconds | Delta of `RUSAGE_CHILDREN.ru_utime` |
+| `system_seconds` | Nonnegative finite number, CPU seconds | Delta of `RUSAGE_CHILDREN.ru_stime` |
+| `voluntary_context_switches` | Nonnegative integer | Delta of `RUSAGE_CHILDREN.ru_nvcsw` |
+| `involuntary_context_switches` | Nonnegative integer | Delta of `RUSAGE_CHILDREN.ru_nivcsw` |
+
+Snapshots bracket each command outside its measured wall interval. They cover
+reaped children and only those further descendants whose intervening parents
+waited for them. They do not identify per-guard costs, include all host work
+or guarantee complete descendant accounting. Counter interpretation is
+platform-specific; CPU time can exceed wall time for parallel work.
+
+Diagnostics impose no new acceptance threshold and cannot replace either
+wall-time budget. Older reports without this field remain compatible.
+If present in an acceptance report, it requires both labels, three samples
+per label, exactly these four fields and valid values; malformed diagnostics
+fail with `FAIL: malformed native guard child-resource diagnostics`.
+The one-pair screening mode reports one sample per label and still cannot
+claim budget acceptance. These fields do not attest that an untrusted
+report was actually measured.
 
 ## Default executable and source freshness
 

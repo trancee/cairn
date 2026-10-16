@@ -70,6 +70,72 @@ class NativePerformanceCommandTests(unittest.TestCase):
                 text=True, capture_output=True, timeout=5,
             )
 
+    def child_resources(self):
+        return {
+            label: [{
+                "user_seconds": 0.1, "system_seconds": 0.02,
+                "voluntary_context_switches": 32, "involuntary_context_switches": 3,
+            } for _ in range(3)]
+            for label in ("baseline", "compiled_guard")
+        }
+
+    def test_malformed_child_resource_diagnostics_cannot_claim_acceptance(self):
+        malformed = [
+            None, [], {}, {"baseline": [], "compiled_guard": []},
+            {"other": [], "compiled_guard": []},
+        ]
+        incomplete = self.child_resources()
+        incomplete["baseline"].pop()
+        malformed.append(incomplete)
+        for field, values in (
+            ("user_seconds", (True, "0.1", None, -1, float("nan"), float("inf"))),
+            ("system_seconds", (True, -1, float("inf"))),
+            ("voluntary_context_switches", (True, 0.5, -1, "32")),
+            ("involuntary_context_switches", (True, 0.5, -1, None)),
+        ):
+            for value in values:
+                resources = self.child_resources()
+                resources["baseline"][0][field] = value
+                malformed.append(resources)
+        missing = self.child_resources()
+        del missing["compiled_guard"][0]["system_seconds"]
+        malformed.append(missing)
+        for entry in (None, [], dict(self.child_resources()["baseline"][0], extra=0)):
+            resources = self.child_resources()
+            resources["compiled_guard"][0] = entry
+            malformed.append(resources)
+        for resources in malformed:
+            report = self.report()
+            report["waited_child_resources"] = resources
+            with self.subTest(resources=resources):
+                result = self.check_report(report)
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("child-resource diagnostics", result.stderr)
+                self.assertNotIn("Traceback", result.stderr)
+
+    def test_child_resource_diagnostics_do_not_replace_the_wall_time_budget(self):
+        report = self.report(guarded=0.170001)
+        report["waited_child_resources"] = self.child_resources()
+
+        result = self.check_report(report)
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("50 ms startup-only budget", result.stderr)
+
+    def test_well_formed_child_resources_retain_existing_report_acceptance(self):
+        report = self.report()
+        report["waited_child_resources"] = self.child_resources()
+        report["waited_child_resources"]["compiled_guard"][0] = {
+            "user_seconds": 0, "system_seconds": 0,
+            "voluntary_context_switches": 0, "involuntary_context_switches": 0,
+        }
+
+        result = self.check_report(report)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("PASS:", result.stdout)
+
     def test_startup_report_within_the_approved_additive_budget_is_accepted(self):
         result = self.check_report(self.report())
 

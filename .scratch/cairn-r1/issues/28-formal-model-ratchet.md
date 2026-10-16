@@ -1214,3 +1214,45 @@ No native source-ID, equation, grammar, rule/restriction/claim/attacker,
 protocol/API/wire/runtime, strict option/deadline, job or budget change.
 Existing proof-checkpoint publication approval applies, subject to actual
 new-head hosted acceptance; no dispatch, merge or SDK/profile activation.
+
+2026-10-16 (native performance blocker and bounded resource diagnosis):
+Published kind-family head `8c54f2b` completes actual lifecycle
+[38945725300](https://github.com/trancee/cairn/actions/runs/38945725300)
+with 18 successful callers and one failed core cell. That cell's actual log
+confirms all 169 audits, 25 axiom-free, no `sorryAx`, 19 native/137 model/
+50 lifecycle tests, 43 projections and both kind-shadow success reports.
+Its later full-export benchmark rejects `24.513057061`/`28.576567731` seconds,
+`+16.576923%` versus the unchanged `10%` cap. The owning report CLI rejects
+the extracted report for that exact reason; startup is not measured.
+Rust [38945725203](https://github.com/trancee/cairn/actions/runs/38945725203)
+passes all 11 jobs. CodeQL
+[38945725316](https://github.com/trancee/cairn/actions/runs/38945725316)
+passes six required jobs and the intentional simulator skip. Actual strict
+Kotlin compilation, all five positive compiled-LOC units, offline queries/
+mapped SARIF, empty UID, ordinary scratch ejection, all four integrity checks
+and database/results delivery are independently audited. Analysis artifact
+`12067048711` matches its API/download digest; raw/mapped CodeQL `2.27.2`
+execution succeeds with zero results for that scope, all three `v4.39.0`
+entry points execute, and Kotlin upload processing completes.
+Final rollup is 36 successes, one failure and one intentional skip.
+The head is not accepted; source/binary identity does not explain the failure.
+
+The owner selected `diagnose-and-fix-native-performance` with unchanged
+equations, grammar, validation, gates/deadlines/jobs/budgets and no dispatch,
+merge or SDK/profile activation. Unchanged local baseline overhead
+`+6.403659%` does not reproduce Linux. Active-worker sampling shows mostly
+pipe/poll waits; final Python journal reconciliation takes `0.151` profiled
+seconds. Neither establishes Linux causation.
+
+The first diagnostic increment adds per-sample waited-child user/system CPU
+seconds and context-switch deltas outside wall timing. This accounts only
+reaped descendants whose intervening parents waited, not per-guard or host
+totals. Legacy reports remain compatible; malformed present diagnostics
+reject and cannot replace the wall budget. Real native screening and public
+report-schema reds precede implementation. All 17 report cases and 20 native
+CLI/process/proof cases pass. Current local three-pair reports pass
+`+6.154029%` full export and `+36.256333` ms startup, with six fixed-identical
+exports each and independent current-source/workload report validation.
+No native source/executable change or performance fix is claimed.
+Actual own-head hosted evidence and diagnosis remain pending; no unchanged
+workflow is retried and the mathematical/FVP/importer/full-model gates remain.

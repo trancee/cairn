@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import resource
 import statistics
 import subprocess
 import sys
@@ -77,6 +78,29 @@ def check_budget(report: object, workload: str) -> None:
                 raise GuardError("invalid native guard elapsed time")
             elapsed.append(number)
         medians[label] = statistics.median(elapsed)
+    if "waited_child_resources" in report:
+        resources = report["waited_child_resources"]
+        if not isinstance(resources, dict) or set(resources) != set(samples):
+            raise GuardError("malformed native guard child-resource diagnostics")
+        for entries in resources.values():
+            if not isinstance(entries, list) or len(entries) != 3:
+                raise GuardError("malformed native guard child-resource diagnostics")
+            for entry in entries:
+                if not isinstance(entry, dict) or set(entry) != {
+                    "user_seconds", "system_seconds",
+                    "voluntary_context_switches", "involuntary_context_switches",
+                }:
+                    raise GuardError("malformed native guard child-resource diagnostics")
+                for field, value in entry.items():
+                    if field in ("user_seconds", "system_seconds"):
+                        valid = (
+                            type(value) in (int, float)
+                            and Decimal(str(value)).is_finite() and value >= 0
+                        )
+                    else:
+                        valid = type(value) is int and value >= 0
+                    if not valid:
+                        raise GuardError("malformed native guard child-resource diagnostics")
     baseline = medians["baseline"]
     maximum = baseline * Decimal("1.10") if workload == "full-export" else baseline + Decimal("0.050")
     if medians["compiled_guard"] > maximum:
@@ -110,16 +134,27 @@ def main() -> int:
         "--derivcheck-timeout=60", "--output-module=msr",
     ]
     timings: dict[str, list[float]] = {"baseline": [], "compiled_guard": []}
+    child_resources: dict[str, list[dict[str, float | int]]] = {
+        "baseline": [], "compiled_guard": [],
+    }
     digest = None
     for index in range(arguments.rounds):
         order = ("baseline", "compiled_guard") if index % 2 == 0 else ("compiled_guard", "baseline")
         for label in order:
+            before = resource.getrusage(resource.RUSAGE_CHILDREN)
             started = time.monotonic()
             output = (
                 run(command, 120) if label == "baseline"
                 else run_guarded_tamarin(command, 120, proxy=proxy)
             )
             timings[label].append(time.monotonic() - started)
+            after = resource.getrusage(resource.RUSAGE_CHILDREN)
+            child_resources[label].append({
+                "user_seconds": after.ru_utime - before.ru_utime,
+                "system_seconds": after.ru_stime - before.ru_stime,
+                "voluntary_context_switches": after.ru_nvcsw - before.ru_nvcsw,
+                "involuntary_context_switches": after.ru_nivcsw - before.ru_nivcsw,
+            })
             actual = hashlib.sha256(output.encode()).hexdigest()
             if actual not in expected_exports:
                 raise GuardError(
@@ -144,6 +179,7 @@ def main() -> int:
         "baseline": "unchanged committed replay.run, direct pinned Tamarin/Maude",
         "method": "three alternating paired runs" if arguments.rounds == 3 else "one screening pair, not acceptance",
         "seconds": timings,
+        "waited_child_resources": child_resources,
         "median_seconds": medians,
         "change_percent": 100 * (medians["compiled_guard"] / medians["baseline"] - 1),
         "additional_milliseconds": 1000 * (medians["compiled_guard"] - medians["baseline"]),

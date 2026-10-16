@@ -80,10 +80,35 @@ runtime finite-support/occurs-check/fresh-namespace correspondence, narrowing/FV
 importer correctness remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
-the gate retains 19 native/137 model/50 lifecycle tests,
+the gate retains 20 native/140 model/50 lifecycle tests,
 43 projections and requires all 169 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
-record authoritative current-head hosted acceptance. This proof-only increment changes no native guard source-ID input,
+record authoritative current-head hosted results. These equation proofs change no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
+
+## Native budget diagnosis (2026-10-16)
+
+The published kind-family head `8c54f2b` passes its actual 169-audit kernel,
+18 caller cells, all 11 Rust jobs and six required CodeQL jobs, but its
+lifecycle core cell rejects full-export medians of `24.513057061`/
+`28.576567731` seconds (`+16.576923%`, above `10%`). Its final rollup is
+36 successes, one failure and one intentional simulator skip. No startup
+measurement follows that failure; the head is not accepted.
+
+The owner selected `diagnose-and-fix-native-performance`, extending the
+proof-only scope to bounded diagnosis and a justified fix without changing
+the equations, grammar, validation, strict gates/deadlines or budgets.
+An unchanged local baseline passes at `+6.403659%`, not reproducing Linux.
+Active-worker sampling shows mainly pipe/poll waits; the final Python journal
+audit takes `0.151` profiled seconds. Neither establishes the Linux cause.
+The first diagnostic increment adds per-sample waited-child CPU/context-switch
+resources outside wall timing. Legacy reports remain compatible; malformed
+present diagnostics reject, and diagnostics never replace the wall budget.
+All 17 report cases and 20 real native CLI/process/proof cases pass.
+Current local three-pair reports pass at `+6.154029%` full export and
+`+36.256333` ms startup, with fixed-identical exports. These unchanged-binary
+observations are not a native performance fix or new-head hosted acceptance.
+See the [reference](docs/spec/models/equations/native-proxy/README.md#child-resource-diagnostics)
+and [decision](docs/adr/0010-compositional-lifecycle-verification.md#native-budget-diagnostics-2026-10-16).
 
 Published AC-unifier checkpoint `bfff37f` passes all 19 lifecycle cells,
 all 11 Rust jobs and both native budgets, but CodeQL `38770078501` fails
@@ -143,7 +168,7 @@ identity. No automatic build or fallback occurs inside proof commands.
 The temporary selector and obsolete Python validator/evidence/parser are
 deleted. All nine duplicate parser-test cases remain covered by the native CLI;
 the standalone framing and unsorted-Pub cases are explicitly retained.
-The current default fast gate passes 19 native checks, 131 model tests,
+The cutover's local fast gate passed 19 native checks, 131 model tests,
 50 lifecycle tests, 43 projections and 67 audits. The intended default-selection
 red precedes implementation; malformed lifecycle fixtures reach their intended
 failure rather than an earlier missing-identity check.

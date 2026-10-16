@@ -1,5 +1,7 @@
 """Maintained native guard process/proof checks at the CLI/native-stream seam."""
 
+import json
+import math
 import os
 from pathlib import Path
 import selectors
@@ -34,6 +36,38 @@ def read_until(descriptor: int, ending: bytes) -> bytes:
 
 class CompiledProcessTests(unittest.TestCase):
     proxy: Path
+
+    def test_screening_reports_waited_child_resources_without_acceptance(self):
+        environment = dict(os.environ)
+        environment.pop("CAIRN_MAUDE_BINARY", None)
+
+        result = subprocess.run(
+            [sys.executable, str(Path(__file__).with_name("experiment.py")),
+             "--proxy", str(self.proxy), "--workload", "startup", "--rounds", "1"],
+            text=True, capture_output=True, env=environment, timeout=30,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        report = json.loads(result.stdout)
+        self.assertFalse(report["budget_checked"])
+        self.assertFalse(report["budget_passed"])
+        self.assertIn("waited_child_resources", report)
+        self.assertEqual(set(report["waited_child_resources"]), {"baseline", "compiled_guard"})
+        for label, samples in report["waited_child_resources"].items():
+            with self.subTest(label=label):
+                self.assertEqual(len(samples), 1)
+                sample = samples[0]
+                self.assertEqual(set(sample), {
+                    "user_seconds", "system_seconds",
+                    "voluntary_context_switches", "involuntary_context_switches",
+                })
+                for field in ("user_seconds", "system_seconds"):
+                    self.assertIs(type(sample[field]), float)
+                    self.assertTrue(math.isfinite(sample[field]) and sample[field] >= 0)
+                for field in ("voluntary_context_switches", "involuntary_context_switches"):
+                    self.assertIs(type(sample[field]), int)
+                    self.assertGreaterEqual(sample[field], 0)
+                self.assertGreater(sample["user_seconds"] + sample["system_seconds"], 0)
 
     def test_closed_consumer_rejects_stream_with_controlled_io_failure(self):
         with tempfile.TemporaryDirectory() as temporary:
