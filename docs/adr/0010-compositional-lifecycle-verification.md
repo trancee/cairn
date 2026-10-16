@@ -77,8 +77,8 @@ accounting. Sampling misses activity and adds load. These observations
 justify testing kernel readiness-registration costs, not attributing all wall
 addition to them or declaring host scheduling the cause.
 
-Within the existing bounded native-performance authorization, trial persistent
-Linux backend `epoll` registration in place of rebuilding two-descriptor
+Within the existing bounded native-performance authorization, published
+`d4bbeac` trials persistent Linux backend `epoll` registration instead of two-descriptor
 `poll` waits per reply. Retain level-triggered reads, stderr-first validation,
 EOF/watch removal, the atomic-only signal handler, interruption checks,
 owned-child cleanup and checked queue closure before shutdown evidence.
@@ -86,25 +86,42 @@ Use Linux's exact event ABI, including x86-64 packing, and close-on-exec.
 Keep macOS and frontend/capture polling unchanged. No new production
 dependency, grammar/event change, equation, job, deadline or budget change.
 
-The existing CLI/native-stream seam adds closed-stderr repeated replies,
+Its existing CLI/native-stream seam adds closed-stderr repeated replies,
 stderr-diagnostic rejection and Linux loader injection for queue creation,
 registration, wait, malformed event tags, removal and close. The temporary
 test-only interposer uses the pinned Rust formatter/Clippy/compiler and never
-participates in performance measurements. Local macOS passes 24 cases with
-one explicit Linux-loader skip. Linux cross-target compilation/strict Clippy
-pass, not native execution. Local three-pair medians are
+participates in performance measurements. All 25 actual Linux native cases,
+141 model/50 lifecycle cases, 43 projections and 169 audits/25 axiom-free pass.
+Local three-pair medians are
 `23.899877416`/`25.488423166` seconds (`+6.646669%`) and
 `0.112134208`/`0.147888625` seconds (`+35.754417` ms), with fixed-identical
-exports. Current-head native Linux correctness, measured CPU/wall improvement
-and all hosted gates remain required before retaining the added platform code.
+exports.
+
+Actual Linux medians are `31.742089992`/`34.539670973` seconds (`+8.813474%`)
+and `0.103355035`/`0.119100708` seconds (`+15.745673` ms); both owning
+validators pass. The diagnostic pair is `32.317600362`/`35.310601548` seconds.
+Observed active guard CPU is `0.76` user/`1.68` system seconds (`2.44` total).
+However, direct export also becomes `22.1%` faster across these hosted runs,
+while normalized full-export overhead improves only `2.49%`.
+The `22.54%` raw guard CPU reduction therefore does not isolate this change.
+It misses the predeclared trial target of demonstrably lower CPU and at least
+`10%` lower normalized overhead; this target never replaces either budget.
+Reject the candidate and remove its additional platform code and obsolete
+loader fixture. Restore the exact original native source; retain only the two
+general CLI regressions for stderr EOF/repeated replies and diagnostics.
+All 19 lifecycle cells and 11 Rust jobs pass. CodeQL `38966139388` fails
+`Probe frozen tool startup inside the bounded cell` with exit `124`; compiled
+Kotlin analysis is skipped. This is not full hosted acceptance or an established
+cause, and no deadline, unchanged retry or isolation relaxation is authorized.
 
 Alternatives are the already rejected parser/LTO changes, changing pipe
 framing/batching, new platform dependencies, privileged scheduling changes or
 accepting a later green unchanged binary as a fix. The first lacks measured
 benefit; the others enlarge scope or fail to establish an improvement.
-ABI/resource/signal behavior is the principal added risk. Preserve every
-existing guard check and compare actual native observations to the committed
-profiling baseline; do not retain complexity on a passing budget alone.
+ABI/resource/signal behavior is the principal added risk; a passing budget
+alone does not justify it. Future optimization requires a controlled
+native-Linux baseline/candidate comparison, not further speculative changes
+or attribution of cross-run differences to host noise.
 No FVP/importer/full-carrier, SDK/profile or merge acceptance follows.
 
 ### Native Linux process profiling (2026-10-16)

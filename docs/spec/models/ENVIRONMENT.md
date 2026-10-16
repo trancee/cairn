@@ -128,18 +128,18 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   `+26.309800` ms. The active guard observation is `1.07` user/`2.08` system
   CPU seconds. Sampling is incomplete and perturbs the workload; the unchanged
   native source is not a fix. Three-pair budget commands remain unprofiled.
-- The next Linux-only readiness trial keeps a level-triggered backend `epoll`
-  queue instead of rebuilding backend poll registrations per reply. Frontend
-  input/capture polling and macOS stay unchanged. Stderr EOF removes its watch;
-  checked queue closure precedes successful shutdown evidence. The existing
-  native CLI suite covers pipe EOF/diagnostics and six loader-injected Linux
-  readiness failures. The latter requires native Linux and is explicitly
-  skipped locally; pinned Rust compiles/lints its temporary test-only library.
-  Cross-target compilation/Clippy and local budgets (`+6.646669%`,
-  `+35.754417` ms) pass, not Linux runtime or improvement proof. Current-head
-  actual Linux CPU/wall comparisons and all hosted gates remain required.
+- Readiness trial `d4bbeac` passes actual native Linux controls and budgets:
+  `+8.813474%` full export/`+15.745673` ms startup. Observed guard CPU is
+  `2.44` seconds versus `3.15`, but direct export is also `22.1%` faster
+  across runs; normalized overhead improves only `2.49%`. This does not
+  establish a worthwhile optimization or isolate its cause. Remove the
+  additional `epoll` queue and obsolete Linux-only fault injector; restore
+  the original native source. Keep the two general CLI pipe EOF/diagnostic
+  regressions, without introducing a native-host skip or altered budget.
+  Further optimization needs a controlled native-Linux comparison, not
+  another unmeasured kernel/parser/compiler change.
 - `scripts/check.sh` builds the host guard with the root Rust pin, checks Rust
-  formatting/strict Clippy and 25 native CLI/process cases, then runs
+  formatting/strict Clippy and 24 native CLI/process cases, then runs
   whitespace, unit tests and `actionlint`,
   plus lifecycle/source-projection and equation convergence/boundedness proofs when pinned
   Lean is available. The pre-commit hook and CI both call it.

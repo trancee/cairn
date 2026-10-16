@@ -80,7 +80,7 @@ runtime finite-support/occurs-check/fresh-namespace correspondence, narrowing/FV
 importer correctness remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
-the gate retains 25 native/141 model/50 lifecycle tests,
+the gate retains 24 native/141 model/50 lifecycle tests,
 43 projections and requires all 169 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
 record authoritative current-head hosted results. These equation proofs change no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
@@ -132,18 +132,20 @@ This unchanged-native checkpoint is diagnosis, not a performance fix.
 See the [reference](docs/spec/models/equations/native-proxy/README.md#native-linux-process-profiles)
 and [decision](docs/adr/0010-compositional-lifecycle-verification.md#native-linux-process-profiling-2026-10-16).
 
-The next one-variable trial reuses Linux backend readiness registrations with
-an owned, level-triggered `epoll` queue. macOS, frontend input polling,
-validation, stderr-first handling and shutdown deadlines are unchanged.
-Queue closure is checked before successful shutdown evidence. The existing
-CLI seam adds closed-stderr/repeated-reply and diagnostic controls plus
-Linux loader fault injection for creation, registration, wait, event tags,
-removal and close. Local macOS passes 24 cases with one explicit Linux-only
-skip; Linux cross-target compilation/strict Clippy pass, not runtime proof.
-Unprofiled local medians pass at `+6.646669%` and `+35.754417` ms.
-Actual new-head Linux correctness, CPU/wall improvement and all hosted
-gates remain required before retaining this additional platform code.
-No equations, runtime dependency, job, deadline or budget changes.
+Published readiness trial `d4bbeac` passes actual Linux 25 native/141 model/
+50 lifecycle cases, 43 projections, 169 audits and both budgets. Six loader
+faults check setup/wait/tag/removal/close failures. Full export is
+`31.742090`/`34.539671` seconds (`+8.813474%`), startup `+15.745673` ms.
+Observed guard CPU drops from `3.15` to `2.44` seconds, but direct export
+also becomes `22.1%` faster across hosted runs; normalized overhead improves
+only `2.49%`. This does not demonstrate a worthwhile native improvement.
+CodeQL preparation also fails its bounded frozen-tool-startup probe with
+exit `124`; compiled Kotlin analysis is skipped. This head is not accepted.
+Remove the additional `epoll` code and its now-obsolete fault injector.
+The original native source is restored; the two general CLI controls for
+closed stderr/repeated replies and diagnostic rejection remain (24 cases).
+All original validation, grammar/events, equations, dependencies, jobs,
+deadlines and budgets remain unchanged. No performance fix is established.
 See the [decision](docs/adr/0010-compositional-lifecycle-verification.md#native-linux-readiness-trial-2026-10-16).
 
 Published AC-unifier checkpoint `bfff37f` passes all 19 lifecycle cells,

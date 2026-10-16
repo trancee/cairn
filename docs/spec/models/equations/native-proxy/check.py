@@ -13,7 +13,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from equations.maude_native import source_identity
 from equations.maude_runner import boundary_complete
 from check_process import CompiledProcessTests
-from check_readiness import CompiledReadinessTests
 from test_maude_boundary import NATIVE_MODULE, native_stream
 
 
@@ -262,5 +261,4 @@ if __name__ == "__main__":
     arguments, remaining = parser.parse_known_args()
     PROXY = arguments.proxy.resolve(strict=True)
     CompiledProcessTests.proxy = PROXY
-    CompiledReadinessTests.proxy = PROXY
     unittest.main(argv=[sys.argv[0], *remaining])

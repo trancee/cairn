@@ -1323,15 +1323,24 @@ seconds, runqueue `0.157498119` seconds and timeslices `182127`. Sampler CPU
 is `0.539760791`/`1.690065925` seconds. Sampling remains incomplete and
 perturbing; do not attribute the full wall addition or blame host scheduling.
 
-The next bounded trial reuses level-triggered Linux backend `epoll`
+Published trial `d4bbeac` reuses level-triggered Linux backend `epoll`
 registrations, preserving stderr-first/EOF/interruption/child-cleanup checks,
 and checks queue closure before successful shutdown evidence. macOS and
 frontend/capture polling are unchanged. The existing CLI seam adds repeated
 replies after stderr EOF, diagnostic rejection, and six Linux loader-injected
-readiness failures. Local macOS passes 24 cases/one explicit Linux-only skip;
-Linux cross-target compilation/strict Clippy pass, not native runtime proof.
-Local three-pair budgets pass at `+6.646669%`/`+35.754417` ms with fixed exports.
-Actual new-head Linux correctness, CPU/wall improvement and all hosted gates
-remain required before retaining this platform code. No equations, grammar,
-events, runtime dependency, jobs, deadlines, budgets or implementation gate
-changes. No merge, service startup or SDK/profile activation.
+readiness failures. Actual Linux 25 native/141 model/50 lifecycle cases,
+43 projections, 169 audits/25 axiom-free and both budgets pass. Full export is
+`31.742089992`/`34.539670973` seconds (`+8.813474%`), startup `+15.745673` ms.
+Observed active guard CPU is `0.76` user/`1.68` system seconds (`2.44` total),
+but direct export also becomes `22.1%` faster across runs; normalized overhead
+improves only `2.49%`. These observations do not demonstrate a worthwhile
+improvement or isolate causation. Reject/remove the added `epoll` code and
+obsolete loader fixture; restore the original native source. Keep only the
+two general CLI regressions (24 cases). Future optimization requires a
+controlled native-Linux baseline/candidate comparison. No equations, grammar,
+events, dependencies, jobs, deadlines, budgets, implementation gate, merge,
+service startup or SDK/profile activation changes.
+All 19 lifecycle cells and 11 Rust jobs pass, but CodeQL `38966139388` fails
+its bounded frozen-tool-startup probe with exit `124`; compiled Kotlin
+analysis is skipped. The trial head is not accepted; the cause is unestablished,
+not a reason for a larger deadline or unchanged retry.
