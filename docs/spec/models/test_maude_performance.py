@@ -123,6 +123,15 @@ class NativePerformanceCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("50 ms startup-only budget", result.stderr)
 
+    def test_process_profiled_measurements_cannot_claim_budget_acceptance(self):
+        report = self.report()
+        report["native_process_profiles"] = {}
+
+        result = self.check_report(report)
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("process profiling is diagnostic only", result.stderr)
+
     def test_well_formed_child_resources_retain_existing_report_acceptance(self):
         report = self.report()
         report["waited_child_resources"] = self.child_resources()

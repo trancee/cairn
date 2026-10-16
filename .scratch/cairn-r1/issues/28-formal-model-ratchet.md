@@ -1256,3 +1256,50 @@ exports each and independent current-source/workload report validation.
 No native source/executable change or performance fix is claimed.
 Actual own-head hosted evidence and diagnosis remain pending; no unchanged
 workflow is retried and the mathematical/FVP/importer/full-model gates remain.
+
+2026-10-16 (actual resource-diagnostic failure and targeted Linux profiling):
+Published diagnostic head `c270c73` completes lifecycle
+[38954488896](https://github.com/trancee/cairn/actions/runs/38954488896):
+all 18 callers and actual 20 native/140 model/50 lifecycle cases,
+43 projections and 169 audits/25 axiom-free/no `sorryAx` pass, but full export
+rejects `43.772741808`/`48.885125646` seconds (`+11.679378%`). Its owning
+validator independently rejects the exact unchanged cap; startup does not run.
+Median waited-child total CPU is `60.750078`/`62.182511` seconds, with paired
+wall additions `4.883703`, `5.611963`, `5.015403` seconds. These partial
+aggregates do not establish per-guard CPU or Linux scheduling causation.
+Rust [38954488903](https://github.com/trancee/cairn/actions/runs/38954488903)
+passes all 11 jobs; CodeQL
+[38954488938](https://github.com/trancee/cairn/actions/runs/38954488938)
+passes six required jobs and the intentional simulator skip.
+Independent actual-log/artifact audits confirm strict compilation/five source
+units, offline queries, SARIF mapping, empty UID, ordinary ejection, all four
+integrity checks, both artifact deliveries and processed Kotlin upload.
+Artifact `12071051779`, SHA-256
+`27a8537cc28e7d502509cd3ecaa52d8a37cb27c6b18d5e2ccd5df75b25d3204e`,
+matches API/independent download/actual delivery. Raw/mapped CodeQL `2.27.2`
+execution succeeds with zero results for that scope. Final rollup is
+36 successes, one failure and one intentional skip, not acceptance.
+The original bounded observer finishes without dispatch or retry.
+
+Two one-variable local trials preserve release formatting/build/strict Clippy,
+all 20 native cases and fixed-identical exports but show no worthwhile wall
+improvement. Borrowed exact variable/rigid-index/fresh-namespace strings give
+`24.306639`/`25.804568` seconds (`+6.162631%`); thin LTO gives
+`24.271722`/`25.793324` seconds (`+6.269033%`), versus committed
+`24.282312`/`25.776653` seconds (`+6.154029%`). Both are surgically removed.
+Original native source/binary hashes are restored, both original local reports
+still validate and the actual Linux report still rejects. No fix is claimed.
+
+The next approved bounded probe adds diagnostic-only `--profile-linux`
+sampling at the existing benchmark CLI. Owned descendants and executable/
+PID-start identities isolate observed interactive guards; main-task CPU,
+runqueue/timeslice counters, sampler CPU and scheduler-statistics availability
+are explicit. Accounting remains incomplete and perturbs the workload.
+Only one-pair full export is allowed; profiled reports cannot claim either
+budget. Normal three-pair measurements remain unprofiled, with no native
+guard/equation/grammar/event/dependency/job/deadline change. The existing native
+CLI suite exercises the real Linux profile and explicit macOS rejection.
+The intended public-report acceptance red and actual missing-CLI-option red
+precede implementation. Native-Linux positive evidence remains pending.
+No Colima/service, unchanged workflow rerun, manual dispatch, merge or
+SDK/profile activation is authorized by this increment.

@@ -114,8 +114,19 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   The `8c54f2b` full-export failure (`+16.576923%`) remains a real blocker.
   Local diagnostic reports pass (`+6.154029%`, `+36.256333` ms), not a Linux
   reproduction, performance fix or later-head hosted acceptance.
+- Diagnostic head `c270c73` also rejects actual Linux full export at
+  `+11.679378%`; all other lifecycle callers, Rust and required CodeQL jobs
+  pass. Borrowed-provenance and thin-LTO trials show no worthwhile local
+  wall improvement and are removed. The existing native CLI suite now
+  exercises one diagnostic-only Linux full-export screening pair using
+  `--profile-linux`; macOS checks explicit unsupported-platform rejection.
+  This samples only owned, executable-matched interactive guards, reports
+  incomplete main-task CPU/runqueue counters and sampler CPU, and cannot
+  claim either budget. Kernel statistics may be disabled; zero runqueue
+  counters do not prove no scheduling delay. New-head Linux evidence is
+  pending. The separate three-pair budget commands remain unprofiled.
 - `scripts/check.sh` builds the host guard with the root Rust pin, checks Rust
-  formatting/strict Clippy and 20 native CLI/process cases, then runs
+  formatting/strict Clippy and 22 native CLI/process cases, then runs
   whitespace, unit tests and `actionlint`,
   plus lifecycle/source-projection and equation convergence/boundedness proofs when pinned
   Lean is available. The pre-commit hook and CI both call it.

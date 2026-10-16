@@ -80,7 +80,7 @@ runtime finite-support/occurs-check/fresh-namespace correspondence, narrowing/FV
 importer correctness remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
-the gate retains 20 native/140 model/50 lifecycle tests,
+the gate retains 22 native/141 model/50 lifecycle tests,
 43 projections and requires all 169 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
 record authoritative current-head hosted results. These equation proofs change no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
@@ -109,6 +109,24 @@ Current local three-pair reports pass at `+6.154029%` full export and
 observations are not a native performance fix or new-head hosted acceptance.
 See the [reference](docs/spec/models/equations/native-proxy/README.md#child-resource-diagnostics)
 and [decision](docs/adr/0010-compositional-lifecycle-verification.md#native-budget-diagnostics-2026-10-16).
+
+Diagnostic head `c270c73` also fails actual Linux full export:
+`43.772741808`/`48.885125646` seconds (`+11.679378%`). All 18 callers,
+11 Rust jobs and six required CodeQL jobs pass, with independently audited
+strict execution/result delivery. Partial waited-child CPU increases by
+about `1.43` median seconds, versus about `5.11` median wall seconds; these
+aggregates do not identify individual guards or establish a cause.
+Separate borrowed-provenance and thin-LTO trials preserve native tests and
+exports but show no worthwhile wall improvement; both are removed.
+The next diagnostic adds opt-in, one-pair native-Linux process sampling to
+the existing benchmark CLI. The existing native CLI suite exercises it on
+Linux and rejects unsupported profiling on macOS. It records observed guard
+CPU/runqueue counters and sampler CPU, not complete accounting or performance
+acceptance. Normal three-pair measurements remain unprofiled and unchanged.
+Actual new-head Linux profiling is pending. No native guard source,
+executable, equations, runtime dependency, job or resource ceiling changes.
+See the [reference](docs/spec/models/equations/native-proxy/README.md#native-linux-process-profiles)
+and [decision](docs/adr/0010-compositional-lifecycle-verification.md#native-linux-process-profiling-2026-10-16).
 
 Published AC-unifier checkpoint `bfff37f` passes all 19 lifecycle cells,
 all 11 Rust jobs and both native budgets, but CodeQL `38770078501` fails

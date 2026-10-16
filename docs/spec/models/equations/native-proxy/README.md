@@ -27,8 +27,10 @@ python3 docs/spec/models/equations/native-proxy/experiment.py \
   --proxy target/native-proxy/release/cairn-maude-proxy --workload startup
 ```
 
-`check.py --proxy <executable>` runs the 20 CLI/native-stream/process/proof
-checks. `scripts/check.sh` builds the guard, runs Rust formatting/strict Clippy
+`check.py --proxy <executable>` runs the 22 CLI/native-stream/process/proof
+checks. On native Linux it includes one diagnostic-only full-export screening
+pair with process sampling; macOS instead checks explicit unsupported-platform
+rejection. `scripts/check.sh` builds the guard, runs Rust formatting/strict Clippy
 and these checks, then the existing model/lifecycle/Lean gates.
 
 `experiment.py` requires exactly one of `--proxy <executable>` or
@@ -96,6 +98,63 @@ fail with `FAIL: malformed native guard child-resource diagnostics`.
 The one-pair screening mode reports one sample per label and still cannot
 claim budget acceptance. These fields do not attest that an untrusted
 report was actually measured.
+
+## Native Linux process profiles
+
+`--profile-linux` is opt-in and requires `--proxy`, `--rounds 1` and
+`--workload full-export`. It rejects report-checking, three-pair/startup modes
+and non-Linux hosts with `FAIL:` and exit `1`, before running the workload.
+For example, on native Linux:
+
+```bash
+python3 docs/spec/models/equations/native-proxy/experiment.py \
+  --proxy target/native-proxy/release/cairn-maude-proxy \
+  --workload full-export --rounds 1 --profile-linux
+```
+
+Output adds `native_process_profiles`, with one observation per label under
+`baseline` and `compiled_guard`. The sampler discovers descendants through
+all parent task lists every `100` ms and samples known guards every `10` ms.
+Only interactive processes matching the selected executable's device/inode
+are retained. PID plus process-start clock ticks distinguish PID reuse.
+The owned sampling thread is stopped and joined outside wall timing.
+
+| Observation field | Type and meaning |
+|---|---|
+| `accounting` | Explicit incomplete-accounting description |
+| `sampling_interval_seconds`, `discovery_interval_seconds` | Requested intervals, not timing guarantees |
+| `sampler_cpu_seconds` | CPU consumed by the sampling thread, excluding the main thread |
+| `scheduler_statistics_at_start` | `enabled`, `disabled` or `not-exposed` from the scheduler sysctl |
+| `clock_ticks_per_second` | Positive integer `SC_CLK_TCK` conversion for process CPU ticks |
+| `disappeared_reads` | Expected process/task-file disappearance count |
+| `processes` | Last observations of matching interactive guards |
+
+Each process has integer `pid`, `start_clock_ticks` and `samples`, plus
+`first_seen_seconds`/`last_seen_seconds` relative to sampling start.
+`last_observed_cpu_nanoseconds`, `last_observed_runqueue_nanoseconds` and
+`last_observed_timeslices` are the three main-task
+[`/proc/<pid>/schedstat` counters](https://docs.kernel.org/scheduler/sched-stats.html#proc-pid-schedstat).
+The guard is single-threaded; its Maude child is not included in these
+counters. They are lifetime counters at the last read, not complete totals
+or paired resource deltas. Short-lived processes and final activity can
+be missed. Linux can return zero for all three scheduler fields when
+[`sched_info_on()` is false](https://github.com/torvalds/linux/blob/v6.17/fs/proc/base.c).
+Independent `last_observed_user_clock_ticks` and
+`last_observed_system_clock_ticks` come from `/proc/<pid>/stat` fields 14/15,
+excluding children. Divide by `clock_ticks_per_second` for CPU seconds.
+Zero scheduler counters do not establish no CPU use or scheduling delay. Sampler activity can
+perturb the workload, so its wall times are diagnostic only.
+
+Missing observations of an interactive guard, unexpected I/O or malformed
+kernel data fail explicitly. Expected process disappearance is counted.
+No sysctl, affinity, service, native guard, proof option or deadline changes.
+Fixed export digests, current source/binary identities and complete native
+lifecycle evidence remain mandatory. Profiled reports retain
+`budget_checked: false`/`budget_passed: false`; any report containing
+`native_process_profiles` is rejected by `--check-report`, even if relabelled
+as three-pair evidence. Normal three-pair acceptance never enables sampling.
+The existing Linux CLI test prints its actual profile in the core CI log;
+local macOS checks do not establish native-Linux profiling success.
 
 ## Default executable and source freshness
 

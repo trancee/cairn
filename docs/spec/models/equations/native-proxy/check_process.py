@@ -37,6 +37,57 @@ def read_until(descriptor: int, ending: bytes) -> bytes:
 class CompiledProcessTests(unittest.TestCase):
     proxy: Path
 
+    def test_process_profiling_rejects_acceptance_and_other_workloads_before_execution(self):
+        for selection in (
+            ["--proxy", str(self.proxy), "--rounds", "3"],
+            ["--proxy", str(self.proxy), "--rounds", "1", "--workload", "startup"],
+            ["--check-report", "absent-report.json", "--rounds", "1"],
+        ):
+            with self.subTest(selection=selection):
+                result = subprocess.run(
+                    [sys.executable, str(Path(__file__).with_name("experiment.py")),
+                     *selection, "--profile-linux"],
+                    text=True, capture_output=True, timeout=5,
+                )
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("requires one full-export screening pair", result.stderr)
+
+    def test_linux_process_profile_is_diagnostic_and_observes_the_real_guard(self):
+        environment = dict(os.environ)
+        environment.pop("CAIRN_MAUDE_BINARY", None)
+
+        result = subprocess.run(
+            [sys.executable, str(Path(__file__).with_name("experiment.py")),
+             "--proxy", str(self.proxy), "--workload", "full-export",
+             "--rounds", "1", "--profile-linux"],
+            text=True, capture_output=True, env=environment, timeout=270,
+        )
+
+        if sys.platform != "linux":
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("process profiling requires native Linux", result.stderr)
+            return
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        report = json.loads(result.stdout)
+        self.assertFalse(report["budget_checked"])
+        self.assertFalse(report["budget_passed"])
+        profiles = report["native_process_profiles"]
+        self.assertEqual(set(profiles), {"baseline", "compiled_guard"})
+        self.assertEqual(profiles["baseline"][0]["processes"], [])
+        guarded, = profiles["compiled_guard"]
+        self.assertGreaterEqual(guarded["sampler_cpu_seconds"], 0)
+        self.assertTrue(guarded["processes"])
+        self.assertTrue(any(
+            process["last_observed_user_clock_ticks"]
+            + process["last_observed_system_clock_ticks"] > 0
+            for process in guarded["processes"]
+        ))
+        for process in guarded["processes"]:
+            self.assertGreaterEqual(process["last_observed_cpu_nanoseconds"], 0)
+            self.assertGreater(process["samples"], 0)
+        print("PASS: diagnostic-only native Linux process profile " + json.dumps(report))
+
     def test_screening_reports_waited_child_resources_without_acceptance(self):
         environment = dict(os.environ)
         environment.pop("CAIRN_MAUDE_BINARY", None)

@@ -1,6 +1,7 @@
 """Paired native-guard performance measurement against direct pinned execution."""
 
 import argparse
+from contextlib import nullcontext
 from decimal import Decimal
 import hashlib
 import json
@@ -19,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from equations.maude_runner import GuardError, run_guarded_tamarin, unique_fields
 from equations.maude_native import source_identity
 from replay import ReplayError, run
+from linux_profile import LinuxProcessProfile
 
 
 MODELS = Path(__file__).resolve().parents[2]
@@ -43,6 +45,8 @@ WORKLOADS = {
 def check_budget(report: object, workload: str) -> None:
     if not isinstance(report, dict):
         raise GuardError("malformed native guard performance report")
+    if "native_process_profiles" in report:
+        raise GuardError("native process profiling is diagnostic only")
     for field in ("platform", "architecture", "compiler", "baseline"):
         if not isinstance(report.get(field), str) or not report[field]:
             raise GuardError("missing native guard comparison environment")
@@ -115,7 +119,13 @@ def main() -> int:
     mode.add_argument("--check-report", type=Path)
     parser.add_argument("--workload", choices=tuple(WORKLOADS), default="full-export")
     parser.add_argument("--rounds", type=int, choices=(1, 3), default=3)
+    parser.add_argument("--profile-linux", action="store_true")
     arguments = parser.parse_args()
+    if arguments.profile_linux:
+        if arguments.proxy is None or arguments.rounds != 1 or arguments.workload != "full-export":
+            raise GuardError("native process profiling requires one full-export screening pair")
+        if sys.platform != "linux":
+            raise GuardError("native process profiling requires native Linux")
     if arguments.check_report is not None:
         try:
             report = json.loads(arguments.check_report.read_text(), object_pairs_hook=unique_fields)
@@ -137,18 +147,26 @@ def main() -> int:
     child_resources: dict[str, list[dict[str, float | int]]] = {
         "baseline": [], "compiled_guard": [],
     }
+    profiles: dict[str, list[dict[str, object]]] = {"baseline": [], "compiled_guard": []}
     digest = None
     for index in range(arguments.rounds):
         order = ("baseline", "compiled_guard") if index % 2 == 0 else ("compiled_guard", "baseline")
         for label in order:
-            before = resource.getrusage(resource.RUSAGE_CHILDREN)
-            started = time.monotonic()
-            output = (
-                run(command, 120) if label == "baseline"
-                else run_guarded_tamarin(command, 120, proxy=proxy)
-            )
-            timings[label].append(time.monotonic() - started)
-            after = resource.getrusage(resource.RUSAGE_CHILDREN)
+            profiler = LinuxProcessProfile(proxy) if arguments.profile_linux else nullcontext()
+            with profiler as profile:
+                before = resource.getrusage(resource.RUSAGE_CHILDREN)
+                started = time.monotonic()
+                output = (
+                    run(command, 120) if label == "baseline"
+                    else run_guarded_tamarin(command, 120, proxy=proxy)
+                )
+                timings[label].append(time.monotonic() - started)
+                after = resource.getrusage(resource.RUSAGE_CHILDREN)
+            if profile is not None:
+                observation = profile.report()
+                if label == "compiled_guard" and not observation["processes"]:
+                    raise GuardError("native Linux process profile did not observe an interactive guard")
+                profiles[label].append(observation)
             child_resources[label].append({
                 "user_seconds": after.ru_utime - before.ru_utime,
                 "system_seconds": after.ru_stime - before.ru_stime,
@@ -191,6 +209,8 @@ def main() -> int:
         "budget_checked": arguments.rounds == 3,
         "budget_passed": False,
     }
+    if arguments.profile_linux:
+        report["native_process_profiles"] = profiles
     if arguments.rounds == 3:
         try:
             check_budget(report, arguments.workload)

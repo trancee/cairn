@@ -58,6 +58,61 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Native Linux process profiling (2026-10-16)
+
+Diagnostic head `c270c73` passes all 18 lifecycle callers, 11 Rust jobs and
+six required CodeQL jobs, but full export again fails:
+`43.772741808`/`48.885125646` seconds (`+11.679378%`). Its owning validator
+independently rejects the unchanged `10%` cap. Startup does not run.
+Actual kernel/source and strict CodeQL execution, integrity, ordinary scratch
+teardown and processed result delivery are independently audited.
+Final rollup is 36 successes, one failure and one intentional simulator skip.
+
+Median waited-child total CPU is `60.750078`/`62.182511` seconds. Paired wall
+additions are `4.883703`, `5.611963`, `5.015403` seconds. Incomplete descendant
+accounting neither attributes individual guard CPU nor establishes scheduling
+or IPC causation. Two separately measured local candidates preserve all
+20 native cases and fixed exports but do not improve wall time: borrowed
+provenance gives `+6.162631%`, thin LTO `+6.269033%`, versus committed
+`+6.154029%`. Both are removed; original source/binary identities are restored.
+
+Continue the existing `diagnose-and-fix-native-performance` authorization
+with opt-in owned-process sampling in the existing benchmark CLI, not another
+speculative optimization. Native Linux `/proc` supplies executable identity,
+PID/start identity and observed main-task CPU/runqueue/timeslice counters.
+Discover through every owned parent task, retain only matching interactive
+guards, count expected disappearances, and fail unexpected/malformed reads.
+Record scheduler-statistics availability and sampler-thread CPU.
+Independent user/system CPU ticks from process `stat` remain available when
+Linux returns zero for disabled scheduler accounting; retain both observations
+and their units rather than inferring no CPU activity from zero `schedstat`.
+No native FFI, guard/evidence-format change, new dependency or service is
+needed. The existing CLI seam exercises one full-export screening pair on
+Linux; macOS explicitly rejects the unsupported mode. No job/deadline changes.
+
+Sampling can perturb scheduling, misses short-lived/final activity and is
+not complete accounting. All three scheduler counters can be disabled.
+Therefore restrict profiling to one-pair full-export screening and reject
+profiled reports as acceptance, regardless of their timing labels or math.
+The separate three-pair acceptance path remains unprofiled. Public-report
+acceptance and actual CLI missing-option reds precede implementation; local
+success proves the rejection/compatibility paths, not native Linux sampling.
+New-head actual Linux observations and all hosted gates remain required.
+
+Current unprofiled local three-pair medians are `24.319422`/`25.770936` seconds
+(`+5.968536%`) and `0.108405`/`0.147799` seconds (`+39.394291` ms).
+All six exports per workload are fixed-identical and both reports pass their
+own current-source validators. Native source/binary hashes are unchanged.
+These measurements preserve the existing local budgets, not demonstrate a
+native optimization, Linux profiling success or a fix for the real failures.
+
+Alternatives are another unmeasured parser/compiler change, native clock FFI,
+privileged scheduler changes, a local emulated x86-64 VM, new CI jobs or an
+unchanged rerun. They do not supply lower-risk distinguishing native evidence
+within the existing bounds. This diagnostic does not fix the native budget,
+establish FVP/importer/full-carrier correctness, waive a failure, authorize
+merge or activate SDK/profile behavior.
+
 ### Native budget diagnostics (2026-10-16)
 
 Kind-family head `8c54f2b` passes actual hosted 169-audit kernel checks,
