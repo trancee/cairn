@@ -1303,3 +1303,35 @@ The intended public-report acceptance red and actual missing-CLI-option red
 precede implementation. Native-Linux positive evidence remains pending.
 No Colima/service, unchanged workflow rerun, manual dispatch, merge or
 SDK/profile activation is authorized by this increment.
+
+2026-10-16 (actual Linux process observations and one-variable readiness trial):
+Published `fb1abf4` passes lifecycle
+[38960821574](https://github.com/trancee/cairn/actions/runs/38960821574)
+in all 19 cells, Rust `38960821743` in 11 jobs and CodeQL `38960821961` in
+six required jobs with one intentional simulator skip. Final PR rollup is
+37 successes/one skip. Independent actual strict execution, compiled Kotlin,
+teardown, integrity, SARIF/delivery and processed upload audits pass.
+Artifact `12074120930`, SHA-256
+`98b85cae8c8965cb60c0ed3b881433154f13bf7575fc2eee501476ef99cb9cce`,
+matches API/download/actual delivery. Both unprofiled Linux budgets validate:
+`+9.038921%` full export and `+26.309800` ms startup. Unchanged native source/
+binary and a later pass do not explain or repair either earlier failure.
+
+The diagnostic pair is `40.621470298`/`44.375184955` seconds. Observed active
+guard CPU is `1.07` user/`2.08` system seconds; scheduler CPU is `3.164645410`
+seconds, runqueue `0.157498119` seconds and timeslices `182127`. Sampler CPU
+is `0.539760791`/`1.690065925` seconds. Sampling remains incomplete and
+perturbing; do not attribute the full wall addition or blame host scheduling.
+
+The next bounded trial reuses level-triggered Linux backend `epoll`
+registrations, preserving stderr-first/EOF/interruption/child-cleanup checks,
+and checks queue closure before successful shutdown evidence. macOS and
+frontend/capture polling are unchanged. The existing CLI seam adds repeated
+replies after stderr EOF, diagnostic rejection, and six Linux loader-injected
+readiness failures. Local macOS passes 24 cases/one explicit Linux-only skip;
+Linux cross-target compilation/strict Clippy pass, not native runtime proof.
+Local three-pair budgets pass at `+6.646669%`/`+35.754417` ms with fixed exports.
+Actual new-head Linux correctness, CPU/wall improvement and all hosted gates
+remain required before retaining this platform code. No equations, grammar,
+events, runtime dependency, jobs, deadlines, budgets or implementation gate
+changes. No merge, service startup or SDK/profile activation.

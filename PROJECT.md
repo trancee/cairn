@@ -80,7 +80,7 @@ runtime finite-support/occurs-check/fresh-namespace correspondence, narrowing/FV
 importer correctness remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
-the gate retains 22 native/141 model/50 lifecycle tests,
+the gate retains 25 native/141 model/50 lifecycle tests,
 43 projections and requires all 169 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
 record authoritative current-head hosted results. These equation proofs change no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
@@ -123,10 +123,28 @@ the existing benchmark CLI. The existing native CLI suite exercises it on
 Linux and rejects unsupported profiling on macOS. It records observed guard
 CPU/runqueue counters and sampler CPU, not complete accounting or performance
 acceptance. Normal three-pair measurements remain unprofiled and unchanged.
-Actual new-head Linux profiling is pending. No native guard source,
-executable, equations, runtime dependency, job or resource ceiling changes.
+Published profiling head `fb1abf4` passes all 19 lifecycle cells, 11 Rust
+jobs and six required CodeQL jobs, with one intentional simulator skip.
+Independently validated Linux budgets are `+9.038921%` full export and
+`+26.309800` ms startup. The active guard observation has `1.07` user/
+`2.08` system CPU seconds, unlike the partial waited-child aggregates.
+This unchanged-native checkpoint is diagnosis, not a performance fix.
 See the [reference](docs/spec/models/equations/native-proxy/README.md#native-linux-process-profiles)
 and [decision](docs/adr/0010-compositional-lifecycle-verification.md#native-linux-process-profiling-2026-10-16).
+
+The next one-variable trial reuses Linux backend readiness registrations with
+an owned, level-triggered `epoll` queue. macOS, frontend input polling,
+validation, stderr-first handling and shutdown deadlines are unchanged.
+Queue closure is checked before successful shutdown evidence. The existing
+CLI seam adds closed-stderr/repeated-reply and diagnostic controls plus
+Linux loader fault injection for creation, registration, wait, event tags,
+removal and close. Local macOS passes 24 cases with one explicit Linux-only
+skip; Linux cross-target compilation/strict Clippy pass, not runtime proof.
+Unprofiled local medians pass at `+6.646669%` and `+35.754417` ms.
+Actual new-head Linux correctness, CPU/wall improvement and all hosted
+gates remain required before retaining this additional platform code.
+No equations, runtime dependency, job, deadline or budget changes.
+See the [decision](docs/adr/0010-compositional-lifecycle-verification.md#native-linux-readiness-trial-2026-10-16).
 
 Published AC-unifier checkpoint `bfff37f` passes all 19 lifecycle cells,
 all 11 Rust jobs and both native budgets, but CodeQL `38770078501` fails

@@ -27,10 +27,11 @@ python3 docs/spec/models/equations/native-proxy/experiment.py \
   --proxy target/native-proxy/release/cairn-maude-proxy --workload startup
 ```
 
-`check.py --proxy <executable>` runs the 22 CLI/native-stream/process/proof
+`check.py --proxy <executable>` runs the 25 CLI/native-stream/process/proof
 checks. On native Linux it includes one diagnostic-only full-export screening
-pair with process sampling; macOS instead checks explicit unsupported-platform
-rejection. `scripts/check.sh` builds the guard, runs Rust formatting/strict Clippy
+pair with process sampling and six readiness-failure injections; macOS
+checks explicit unsupported profiling and skips the Linux-loader test.
+`scripts/check.sh` builds the guard, runs Rust formatting/strict Clippy
 and these checks, then the existing model/lifecycle/Lean gates.
 
 `experiment.py` requires exactly one of `--proxy <executable>` or
@@ -147,7 +148,8 @@ perturb the workload, so its wall times are diagnostic only.
 
 Missing observations of an interactive guard, unexpected I/O or malformed
 kernel data fail explicitly. Expected process disappearance is counted.
-No sysctl, affinity, service, native guard, proof option or deadline changes.
+Profiling itself changes no sysctl, affinity, service, native guard, proof
+option or deadline.
 Fixed export digests, current source/binary identities and complete native
 lifecycle evidence remain mandatory. Profiled reports retain
 `budget_checked: false`/`budget_passed: false`; any report containing
@@ -155,6 +157,32 @@ lifecycle evidence remain mandatory. Profiled reports retain
 as three-pair evidence. Normal three-pair acceptance never enables sampling.
 The existing Linux CLI test prints its actual profile in the core CI log;
 local macOS checks do not establish native-Linux profiling success.
+
+## Backend readiness
+
+On Linux, the current trial keeps one owned, close-on-exec `epoll` queue per
+interactive backend. It registers stderr/stdout once with level-triggered
+input readiness. Error/hangup notifications still lead to checked pipe reads;
+stderr is processed before stdout, and stderr EOF removes that watch.
+The atomic interruption check and interrupted-wait handling are unchanged.
+Successful shutdown requires checked queue closure after child/output
+reconciliation and before shutdown evidence. Failure paths retain owned-child
+teardown. Frontend input, capture/shutdown polling and macOS remain unchanged.
+
+The event structure follows Linux's
+[`eventpoll.h`](https://github.com/torvalds/linux/blob/v6.17/include/uapi/linux/eventpoll.h):
+packed C layout on x86-64, ordinary C layout elsewhere. Invalid returned tags
+reject with `native process: invalid readiness event`; syscall/close failures
+use the existing controlled I/O error. The Linux CLI failure test builds a
+temporary loader interposer with pinned Rust/rustfmt/Clippy, then injects
+creation, registration, wait, invalid-tag, removal and checked-close failures.
+It is not linked into the guard or enabled for measurements.
+
+This is a one-variable performance trial, not an established fix.
+Actual Linux correctness, representative CPU/wall improvement and the
+unchanged unprofiled budgets remain required; cross-target checks and
+macOS measurements do not establish those outcomes. See the
+[decision](../../../../adr/0010-compositional-lifecycle-verification.md#native-linux-readiness-trial-2026-10-16).
 
 ## Default executable and source freshness
 

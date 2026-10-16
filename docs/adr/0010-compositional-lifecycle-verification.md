@@ -58,6 +58,55 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Native Linux readiness trial (2026-10-16)
+
+Profiling head `fb1abf4` passes all 19 lifecycle cells, 11 Rust jobs and six
+required CodeQL jobs, with one intentional simulator skip. Actual strict
+execution, five compiled Kotlin units, scratch teardown, integrity, SARIF
+delivery and processed upload are independently audited. Both unprofiled
+Linux budgets validate: `40.729475119`/`44.410980215` seconds (`+9.038921%`)
+and `0.124232297`/`0.150542097` seconds (`+26.309800` ms). The native source
+and binary are unchanged, so this is not a fix for the previous failures.
+
+The diagnostic pair is `40.621470298`/`44.375184955` seconds. An active owned
+guard has observed `1.07` user/`2.08` system CPU seconds, scheduler CPU
+`3.164645410` seconds, runqueue `0.157498119` seconds and `182127` timeslices.
+Sampler CPU is `0.539760791`/`1.690065925` seconds. Availability says disabled
+despite nonzero per-process scheduler counters; it does not attest complete
+accounting. Sampling misses activity and adds load. These observations
+justify testing kernel readiness-registration costs, not attributing all wall
+addition to them or declaring host scheduling the cause.
+
+Within the existing bounded native-performance authorization, trial persistent
+Linux backend `epoll` registration in place of rebuilding two-descriptor
+`poll` waits per reply. Retain level-triggered reads, stderr-first validation,
+EOF/watch removal, the atomic-only signal handler, interruption checks,
+owned-child cleanup and checked queue closure before shutdown evidence.
+Use Linux's exact event ABI, including x86-64 packing, and close-on-exec.
+Keep macOS and frontend/capture polling unchanged. No new production
+dependency, grammar/event change, equation, job, deadline or budget change.
+
+The existing CLI/native-stream seam adds closed-stderr repeated replies,
+stderr-diagnostic rejection and Linux loader injection for queue creation,
+registration, wait, malformed event tags, removal and close. The temporary
+test-only interposer uses the pinned Rust formatter/Clippy/compiler and never
+participates in performance measurements. Local macOS passes 24 cases with
+one explicit Linux-loader skip. Linux cross-target compilation/strict Clippy
+pass, not native execution. Local three-pair medians are
+`23.899877416`/`25.488423166` seconds (`+6.646669%`) and
+`0.112134208`/`0.147888625` seconds (`+35.754417` ms), with fixed-identical
+exports. Current-head native Linux correctness, measured CPU/wall improvement
+and all hosted gates remain required before retaining the added platform code.
+
+Alternatives are the already rejected parser/LTO changes, changing pipe
+framing/batching, new platform dependencies, privileged scheduling changes or
+accepting a later green unchanged binary as a fix. The first lacks measured
+benefit; the others enlarge scope or fail to establish an improvement.
+ABI/resource/signal behavior is the principal added risk. Preserve every
+existing guard check and compare actual native observations to the committed
+profiling baseline; do not retain complexity on a passing budget alone.
+No FVP/importer/full-carrier, SDK/profile or merge acceptance follows.
+
 ### Native Linux process profiling (2026-10-16)
 
 Diagnostic head `c270c73` passes all 18 lifecycle callers, 11 Rust jobs and

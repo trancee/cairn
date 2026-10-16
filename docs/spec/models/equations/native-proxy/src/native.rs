@@ -15,6 +15,8 @@ pub const PROMPT: &[u8] = b"Maude> ";
 pub struct Native {
     child: Child,
     errors_open: bool,
+    #[cfg(target_os = "linux")]
+    readiness: Option<crate::linux::Readiness>,
 }
 
 impl Native {
@@ -27,6 +29,8 @@ impl Native {
                 .stderr(Stdio::piped())
                 .spawn()?,
             errors_open: true,
+            #[cfg(target_os = "linux")]
+            readiness: None,
         })
     }
 
@@ -69,6 +73,9 @@ impl Native {
                     revents: 0,
                 },
             ];
+            #[cfg(target_os = "linux")]
+            self.readiness(&fds)?.wait(&mut fds)?;
+            #[cfg(target_os = "macos")]
             unix::ready(&mut fds, -1, true)?;
             let mut buffer = [0; 8096];
             if fds[0].revents != 0 {
@@ -81,6 +88,8 @@ impl Native {
                 if count != 0 {
                     return Err(Rejected("native process: stderr diagnostic"));
                 }
+                #[cfg(target_os = "linux")]
+                self.readiness(&fds)?.remove(fds[0].fd)?;
                 self.errors_open = false;
             }
             if fds[1].revents != 0 {
@@ -99,6 +108,16 @@ impl Native {
                     return Ok(output);
                 }
             }
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    fn readiness(&mut self, descriptors: &[PollFd; 2]) -> Result<&mut crate::linux::Readiness> {
+        match self.readiness {
+            Some(ref mut readiness) => Ok(readiness),
+            None => Ok(self
+                .readiness
+                .insert(crate::linux::Readiness::new(descriptors)?)),
         }
     }
 
@@ -205,6 +224,10 @@ impl Native {
             || !errors.is_empty()
         {
             return Err(Rejected("native shutdown: unexpected exit or diagnostic"));
+        }
+        #[cfg(target_os = "linux")]
+        if let Some(readiness) = self.readiness.take() {
+            readiness.close()?;
         }
         Ok(())
     }

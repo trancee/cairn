@@ -1,5 +1,7 @@
 mod error;
 mod evidence;
+#[cfg(target_os = "linux")]
+mod linux;
 mod native;
 mod query;
 mod reply;

@@ -13,7 +13,7 @@ import unittest
 
 from equations.maude_native import source_identity
 from equations.maude_runner import GuardError, boundary_complete, run_guarded_tamarin
-from test_maude_boundary import NATIVE_MODULE
+from test_maude_boundary import NATIVE_MODULE, native_stream
 
 FLAGS = ["-interactive", "-no-tecla", "-no-banner", "-no-wrap", "-batch"]
 
@@ -36,6 +36,27 @@ def read_until(descriptor: int, ending: bytes) -> bytes:
 
 class CompiledProcessTests(unittest.TestCase):
     proxy: Path
+
+    def test_closed_backend_stderr_preserves_repeated_replies_and_teardown(self):
+        result = native_stream(
+            NATIVE_MODULE + "reduce tamXCroleA .\n" * 3,
+            "result Msg: tamXCroleA\nMaude> ", proxy=self.proxy, close_errors=True,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+        self.assertEqual(result.stdout.count("result Msg: tamXCroleA"), 3)
+
+    def test_backend_stderr_diagnostic_cannot_forward_an_otherwise_valid_reply(self):
+        result = native_stream(
+            NATIVE_MODULE + "reduce tamXCroleA .\n",
+            "result Msg: tamXCroleA\nMaude> ", proxy=self.proxy,
+            startup_error="fixture backend diagnostic",
+        )
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("native process: stderr diagnostic", result.stderr)
+        self.assertNotIn("result Msg:", result.stdout)
 
     def test_process_profiling_rejects_acceptance_and_other_workloads_before_execution(self):
         for selection in (

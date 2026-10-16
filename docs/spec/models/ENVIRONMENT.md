@@ -123,10 +123,23 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   This samples only owned, executable-matched interactive guards, reports
   incomplete main-task CPU/runqueue counters and sampler CPU, and cannot
   claim either budget. Kernel statistics may be disabled; zero runqueue
-  counters do not prove no scheduling delay. New-head Linux evidence is
-  pending. The separate three-pair budget commands remain unprofiled.
+  counters do not prove no scheduling delay. At `fb1abf4`, all hosted gates
+  pass; independently validated Linux budgets are `+9.038921%` and
+  `+26.309800` ms. The active guard observation is `1.07` user/`2.08` system
+  CPU seconds. Sampling is incomplete and perturbs the workload; the unchanged
+  native source is not a fix. Three-pair budget commands remain unprofiled.
+- The next Linux-only readiness trial keeps a level-triggered backend `epoll`
+  queue instead of rebuilding backend poll registrations per reply. Frontend
+  input/capture polling and macOS stay unchanged. Stderr EOF removes its watch;
+  checked queue closure precedes successful shutdown evidence. The existing
+  native CLI suite covers pipe EOF/diagnostics and six loader-injected Linux
+  readiness failures. The latter requires native Linux and is explicitly
+  skipped locally; pinned Rust compiles/lints its temporary test-only library.
+  Cross-target compilation/Clippy and local budgets (`+6.646669%`,
+  `+35.754417` ms) pass, not Linux runtime or improvement proof. Current-head
+  actual Linux CPU/wall comparisons and all hosted gates remain required.
 - `scripts/check.sh` builds the host guard with the root Rust pin, checks Rust
-  formatting/strict Clippy and 22 native CLI/process cases, then runs
+  formatting/strict Clippy and 25 native CLI/process cases, then runs
   whitespace, unit tests and `actionlint`,
   plus lifecycle/source-projection and equation convergence/boundedness proofs when pinned
   Lean is available. The pre-commit hook and CI both call it.

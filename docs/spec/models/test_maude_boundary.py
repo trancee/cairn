@@ -58,13 +58,18 @@ endfm
 
 def native_stream(
     command: str, reply: str, *, shutdown_error: bool = False, proxy: Path | None = None,
+    close_errors: bool = False, startup_error: str = "",
 ) -> subprocess.CompletedProcess[str]:
-    final_action = "continue" if shutdown_error else "raise SystemExit(0)"
+    final_action = "continue" if shutdown_error or close_errors else "raise SystemExit(0)"
     fake = f"""#!{sys.executable}
-import signal, sys
+import os, signal, sys
 if '--version' in sys.argv:
     print('3.5.1')
     raise SystemExit(0)
+if {close_errors!r}:
+    os.close(2)
+if {startup_error!r}:
+    print({startup_error!r}, file=sys.stderr, flush=True)
 def shutdown(number, frame):
     print('fixture shutdown diagnostic', file=sys.stderr, flush=True)
     raise SystemExit(1)
