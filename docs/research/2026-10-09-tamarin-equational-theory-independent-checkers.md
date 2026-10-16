@@ -138,7 +138,7 @@ The latest local [equation checker](../spec/models/equations/README.md)
 proves typed B-coherence, global matching confluence, quotient-path confluence
 modulo natural AC and a template-only normalization bound under normalized
 substitutions. Nonlinear key-copy overlaps are joined; normality is
-AC-invariant. All 155 required audits and kernel cases pass; 25 audits use no
+AC-invariant. All 169 required audits and kernel cases pass; 25 audits use no
 axioms. The checked boundedness quantifies over every template and normalized
 assignment, not sampled ground terms. Missing boundedness/confluence audit
 transcripts have fail-closed CLI red/green checks. Native query-image transfer,
@@ -183,7 +183,8 @@ For a given finite family on proper message/natural inputs, sound completeness
 and singleton most-generality now transfer in both directions. Kernel controls
 prove a variable-pair MGU, reject a sound but incomplete ground singleton and
 show why unrelated bindings must be excluded. No complete family is generated
-for arbitrary queries and no kind-shadow family correspondence is claimed.
+for arbitrary queries; these proper-image results do not cover unrestricted
+kind-shadow families.
 Finite binding-list representatives now preserve exact input substitutions
 for every sorted solution. Scoped postfactors also have finite witnesses,
 supported on variables in candidate values, including residual variables absent
@@ -194,6 +195,18 @@ Kernel controls require residual index `7` in a factor and reject input-only
 factor restriction; restriction cannot justify accepting an invalid original
 assignment. These mathematical finite-support laws do not generate a complete
 family or verify native finite binding lookup/duplicate behavior.
+Kind abstraction now has a constructive assignment inverse, exact composition
+and input-support transport. Admissibility requires sorted expansion and exact
+reabstraction. Requiring it of candidate solutions, compared solutions and
+postfactors preserves/reflects scoped factorization, family completeness and
+most-generality across the frozen-index AST. The kernel rejects unrestricted
+shadow factorization even between sorted original candidates: a natural shadow
+factor can map a Fresh residual to `one`, unlike any sorted original factor.
+A sorted off-image lift and empty-family Fresh/natural counterexample retain
+both sides of the admissibility boundary. This is a mathematical constraint,
+not native result filtering or an executable decision procedure. The 14 new
+audits use at most `propext`/`Quot.sound`, except composition, which inherits
+classical choice from the existing sorted composition theorem.
 Runtime finite-support/occurs-check/fresh-namespace and native generator/importer
 correctness, narrowing/FVP and full assembled acceptance remain open.
 Actual Maude controls distinguish a blocked kind projection from allowed inner

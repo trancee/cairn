@@ -16,7 +16,7 @@ are realizable by typed matching modulo AC. Sort-separated natural/message
 substitutions commute with encoding and preserve image membership while rigid
 indices stay frozen. Free tuple/Node framing is closed under AC, rewriting and
 typed substitution, including node assignments; framing remains excluded from
-message functions. All 155 theorem audits and the kernel
+message functions. All 169 theorem audits and the kernel
 regression cases run in the existing lifecycle cell, without a new job or
 larger ceiling. Twenty-five audits use no axioms; none uses `sorryAx`.
 
@@ -59,20 +59,29 @@ singleton completeness characterizes most-generality. Kernel cases distinguish
 the variable-pair MGU from a sound but incomplete ground singleton, and show
 that adding an unrelated variable would reject a valid scoped MGU.
 These are conditional completeness/most-generality transports, not a finite
-complete native generator or kind-shadow family transfer. Every sorted solution
+complete native generator. Every sorted solution
 now has a finite binding-list representative agreeing exactly on the input
 variables. Scoped postfactors also have finite representatives, supported on
 variables in candidate values, including residual variables absent from the
 input. Completeness and most-generality can quantify over input-supported
 finite solutions without loss. Restricting a given family's candidates
 preserves/reflects completeness only with their original sortedness retained;
-it does not repair invalid bindings or generate a family. Native algorithm,
+it does not repair invalid bindings or generate a family. Kind assignment
+abstraction now has an explicit expansion inverse, with exact composition and
+input-support transport. Admissible shadows must expand to sorted original
+assignments and reabstract exactly. Requiring this of both solutions and
+postfactors preserves/reflects scoped factorization, family completeness and
+most-generality across the frozen-index AST, including controlled-kind/framing.
+Unrestricted shadow factoring is unsound even between two sorted original
+candidates: it can instantiate a Fresh residual to natural `one`. This is a
+mathematical constraint, not native result filtering or an executable
+admissibility decision procedure. Native algorithm,
 runtime finite-support/occurs-check/fresh-namespace correspondence, narrowing/FVP and
 importer correctness remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
 the gate retains 19 native/137 model/50 lifecycle tests,
-43 projections and requires all 155 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
+43 projections and requires all 169 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
 record authoritative current-head hosted acceptance. This proof-only increment changes no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
 

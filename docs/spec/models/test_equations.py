@@ -374,6 +374,8 @@ class EquationCommandTests(unittest.TestCase):
         self.assertIn("PASS: complete AC-unifier families and most-generality transfer", result.stdout)
         self.assertIn("PASS: finite input restriction preserves exact substitutions", result.stdout)
         self.assertIn("PASS: finite solution and residual-variable postfactor witnesses", result.stdout)
+        self.assertIn("PASS: admissible kind-shadow factors lift constructively", result.stdout)
+        self.assertIn("PASS: complete kind-shadow families and most-generality transfer", result.stdout)
         self.assertNotIn("FAIL:", result.stderr)
 
     def test_sorted_query_bound_axiom_reports_are_required_before_success(self):
@@ -402,6 +404,8 @@ class EquationCommandTests(unittest.TestCase):
             ("complete-unifiers", "native_message_complete_unifiers_iff"),
             ("finite-support", "native_restriction_substitution"),
             ("finite-unifiers", "native_ac_instance_finite_factor_iff"),
+            ("kind-instances", "native_kind_ac_instance_iff"),
+            ("kind-families", "native_kind_complete_unifiers_iff"),
         ):
             with self.subTest(group=group):
                 result = self.run_with_axiom_reports(*(

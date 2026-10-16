@@ -133,4 +133,16 @@ REPORT_GROUPS = {
         "native_complete_unifiers_restriction_iff", "native_complete_unifiers_finite_solutions_iff",
         "native_most_general_finite_solutions_iff",
     ),
+    "kind-instances": (
+        "native_kind_assignment_round_trip", "native_kind_assignment_injective",
+        "native_kind_composition", "native_kind_admissible_iff",
+        "native_kind_admissible_sorted", "native_kind_admissible_composition",
+        "native_kind_assignment_lookup", "native_kind_query_variables",
+        "native_kind_assignment_ac_on_iff",
+        "native_kind_ac_instance_iff", "native_kind_admissible_unifier_iff",
+    ),
+    "kind-families": (
+        "native_kind_singleton_complete_iff", "native_kind_complete_unifiers_iff",
+        "native_kind_most_general_iff",
+    ),
 }

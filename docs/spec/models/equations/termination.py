@@ -181,6 +181,18 @@ QUERY_FINITE_UNIFICATION_THEOREMS = (
     "native_complete_unifiers_restriction_iff", "native_complete_unifiers_finite_solutions_iff",
     "native_most_general_finite_solutions_iff",
 )
+QUERY_KIND_INSTANCE_THEOREMS = (
+    "native_kind_assignment_round_trip", "native_kind_assignment_injective",
+    "native_kind_composition", "native_kind_admissible_iff",
+    "native_kind_admissible_sorted", "native_kind_admissible_composition",
+    "native_kind_assignment_lookup", "native_kind_query_variables",
+    "native_kind_assignment_ac_on_iff",
+    "native_kind_ac_instance_iff", "native_kind_admissible_unifier_iff",
+)
+QUERY_KIND_COMPLETENESS_THEOREMS = (
+    "native_kind_singleton_complete_iff", "native_kind_complete_unifiers_iff",
+    "native_kind_most_general_iff",
+)
 
 
 def main() -> int:
@@ -239,6 +251,8 @@ def main() -> int:
                 ("QueryCompleteness", QUERY_COMPLETENESS_THEOREMS),
                 ("QuerySupport", QUERY_SUPPORT_THEOREMS),
                 ("QueryFiniteUnification", QUERY_FINITE_UNIFICATION_THEOREMS),
+                ("QueryKindInstances", QUERY_KIND_INSTANCE_THEOREMS),
+                ("QueryKindCompleteness", QUERY_KIND_COMPLETENESS_THEOREMS),
             ):
                 output = run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -260,6 +274,8 @@ def main() -> int:
                 "QueryCompletenessCases",
                 "QuerySupportCases",
                 "QueryFiniteUnificationCases",
+                "QueryKindInstanceCases",
+                "QueryKindCompletenessCases",
             ):
                 run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -290,6 +306,8 @@ def main() -> int:
         print("PASS: complete AC-unifier families and most-generality transfer on proper typed images.")
         print("PASS: finite input restriction preserves exact substitutions and sorted assignments.")
         print("PASS: finite solution and residual-variable postfactor witnesses preserve AC completeness.")
+        print("PASS: admissible kind-shadow factors lift constructively and preserve scoped AC instances.")
+        print("PASS: complete kind-shadow families and most-generality transfer with admissible factors.")
         print("Scope: typed image algebra + enforced native stream membership; not a native FVP certificate.")
         print("Trust boundary: Tamarin/Maude + Rust stream guard + Python evidence/signature/translation + Lean kernel.")
         return 0

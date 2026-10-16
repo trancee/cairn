@@ -58,6 +58,40 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Admissible kind-shadow factors and families (2026-10-16)
+
+Continue the approved proof-only phase with constructive assignment expansion,
+exact abstraction/expansion round trips, ordered composition and mapped input
+supports. A shadow is admissible only if its expansion is sorted in every
+original sort and reabstraction equals the shadow exactly. The inverse
+constructs the original; this predicate is not an executable validator.
+
+Require admissibility of both solutions and postfactors. Sorted shadow factors
+alone are too broad: two sorted original message candidates, respectively
+mapping to a Fresh residual and `one`, have an unrestricted shadow factor but
+no sorted original factor. A sorted off-image lift also shows why expansion
+sortedness cannot replace exact reabstraction. Preserve/reflect scoped
+factorization, supplied-family sound completeness and most-generality under
+the full constraint. A mixed-kind commutative MGU and empty-family
+Fresh/natural equality distinguish admissible coverage from unrestricted
+shadow coverage. Do not filter native replies or weaken original sortedness.
+
+Two intended missing-report CLI reds (`0 != 1`) become rejecting greens.
+Fourteen new reports bring the total to 169, retaining 25 axiom-free and no
+`sorryAx`. Only admissible-shadow composition inherits classical choice from
+existing sorted composition; other new audits use at most `propext` and
+`Quot.sound`. All four proof/case modules remain below 300 lines. The central
+audit registry (320 lines) and shared CLI fixture (422) remain cohesive,
+avoiding duplicated inventory/process setup, below the mandatory 500 limit.
+
+This closes mathematical constrained kind-family transport, not finite
+complete native generation, runtime lookup/occurs-check/fresh-namespace/
+importer correctness, narrowing/FVP, the full imported carrier or exact
+assembled acceptance. Native source-ID inputs, equations, grammar, protocol/
+API/wire/runtime, strict options/deadlines, jobs and numeric budgets are
+unchanged. Existing proof-checkpoint publication approval applies, subject
+to actual new-head hosted acceptance; no dispatch, merge or activation.
+
 ### Finite solution support and residual postfactors (2026-10-16)
 
 Continue the approved proof-only phase by connecting total mathematical

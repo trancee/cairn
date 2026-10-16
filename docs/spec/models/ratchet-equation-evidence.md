@@ -248,7 +248,7 @@ The theorem constructs a bounded normalizing derivation, rather than bounding
 all possible reduction orders. This is the quantifier order in the boundedness
 criterion, not a ground-term weight bound that grows with substitutions.
 The existing checker rebuilds these proofs, regression cases and all
-155 required theorem audits. The typed bound does not itself establish native
+169 required theorem audits. The typed bound does not itself establish native
 substitution/narrowing closure or complete sorted AC unification.
 
 ## Frozen-index encoding foundation
@@ -380,7 +380,7 @@ rewrite. That last case is outside the stream grammar, demonstrating why
 properness invariance cannot be assumed for arbitrary raw terms.
 Sorted narrowing, complete AC-unification/FVP transfer, the full imported
 NAT/kind-variable carrier and universal importer correspondence remain
-explicit obligations, not consequences of the 155-audit count.
+explicit obligations, not consequences of the 169-audit count.
 
 ## Why sorted substitution no longer needs an assumed shadow
 
@@ -509,6 +509,40 @@ checks, fresh-variable namespaces and query-builder/importer correspondence
 remain separate. Kind-family transfer, narrowing/FVP and exact assembled
 acceptance are not consequences of these finite-support laws.
 
+## Why kind-shadow factors must lift too
+
+Corresponding individual solutions do not make unrestricted shadow factoring
+sound. Suppose a message candidate assigns `M -> F`, where `F` is Fresh, and
+a ground candidate assigns `M -> one`. Both are sorted original assignments.
+The abstraction represents `F` as an odd-indexed natural variable, so a
+sorted natural shadow factor can instantiate it to `one`. No sorted original
+postfactor can do that: Fresh variables can only become Fresh atoms or
+variables. [`QueryKindInstanceCases.lean`](equations/QueryKindInstanceCases.lean)
+proves this failure even though both candidates themselves are valid.
+
+[`QueryKindInstances.lean`](equations/QueryKindInstances.lean) therefore
+constructs an assignment expansion inverse and requires two properties of
+admissible shadows: expansion has all original sorts, and reabstraction
+recovers the shadow exactly. Sorted expansion alone is insufficient; the
+kernel cases retain an off-image shadow with a sorted lift. These constraints
+are mathematical, not a proposal to discard native solutions or a runtime
+admissibility decision procedure.
+
+Exact composition and variable-support correspondence then preserve and
+reflect scoped factorization using admissible postfactors.
+[`QueryKindCompleteness.lean`](equations/QueryKindCompleteness.lean) applies
+the same constraint to family members and compared solutions. It proves
+that a supplied original family is sound and complete exactly when its
+abstracted family is complete for admissible kind shadows and factors.
+Most-generality transfers too. For Fresh/natural equality, the original
+empty family is complete; the admissible shadow family is also empty and
+complete, whereas unrestricted shadow solutions make it incomplete.
+
+This closes constrained kind-family transport without replacing original
+sort obligations by natural shadow sortedness. It supplies neither a finite
+complete family generator nor native algorithm/importer, narrowing/FVP or
+full imported-carrier/assembled acceptance.
+
 ## Finite-variant rationale
 
 The KEM equation has the same term-rewrite shape as Tamarin's documented
@@ -526,7 +560,9 @@ bound are checked in the typed algebra, with independent structural guarded
 convergence/boundedness and sort-respecting substitution closure on the
 frozen-index native AST. Sorted AC solutions now compose and transport through
 the proper typed image and compatible kind shadows. Given proper-image families,
-scoped completeness/most-generality also transfer, but complete sort/signature,
+scoped completeness/most-generality also transfer. Admissible kind-shadow
+families and postfactors now preserve/reflect their original counterparts,
+but complete sort/signature,
 finite complete AC-unifier generation and native-image correspondence must still be
 reconciled before applying that theorem to Tamarin's backend.
 

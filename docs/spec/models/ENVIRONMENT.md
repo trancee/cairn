@@ -15,7 +15,7 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   for the six source equations in the typed algebra. It also checks structural
   frozen-index encoding round trips, independent raw AC/rewrite correspondence
   and typed substitution commutation, including free tuple/Node framing closure
-  and controlled Fresh/natural derivation-kind abstraction (155 audits).
+  and controlled Fresh/natural derivation-kind abstraction (169 audits).
   An independently guarded native-sorted relation inherits proper-message
   termination, B-coherence, convergence modulo AC and the template-only bound.
   Controlled-kind framing closure and decoded-kind termination also hold.
@@ -48,7 +48,15 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   can quantify over input-supported finite solutions without loss; restricting
   an existing family's candidates retains an explicit original-sortedness
   premise. This finite mathematical representation neither generates a family
-  nor changes native lookup/duplicate policy. Runtime finite-support/native
+  nor changes native lookup/duplicate policy. Kind abstraction now has a
+  constructive assignment inverse and exact composition/input-support laws.
+  Admissibility requires a sorted expanded assignment and exact reabstraction;
+  both candidate solutions and postfactors retain that constraint. Scoped
+  factorization, completeness and most-generality preserve/reflect between
+  originals and admissible kind shadows. Unrestricted sorted shadow factors
+  can still map Fresh residuals to `one` and are not covered. This is a
+  mathematical constraint, not an executable validator or native filtering.
+  Runtime finite-support/native
   occurs-check/fresh-name correspondence, narrowing and
   native algorithm/importer correctness remain unproved.
   Ratchet acceptance callers additionally enforce the approved

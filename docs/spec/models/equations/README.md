@@ -65,6 +65,10 @@ The command:
   14 reports and checks finite binding-list representations, exact input
   restriction, finite residual-variable postfactors and finite-solution
   completeness/most-generality equivalences;
+- kernel-checks `QueryKindInstances.lean` and `QueryKindCompleteness.lean`,
+  audits 14 reports and checks constructive assignment lifting, exact kind
+  composition/support, admissible postfactors and constrained family/MGU
+  correspondence, including unrestricted-shadow counterexamples;
 - generates and kernel-checks a certificate translating every source equation
   to its exact `PrimitiveRewrite` constructor.
 
@@ -75,11 +79,14 @@ the existing `120`-second bound; version checks use `30` seconds.
 Invalid command-line syntax uses argparse's exit `2`; `--help` exits `0` without
 checking a proof.
 Only `propext`, `Classical.choice` and `Quot.sound` are permitted by the shared
-axiom audit. Twenty-five of the 155 audited theorems use no axioms. The three
+axiom audit. Twenty-five of the 169 audited theorems use no axioms. The three
 uniform normalization-bound theorems, assignment/shadow representation and
-closure/solution-representation, sorted factorization and family/most-generality
+closure/solution-representation, sorted factorization, admissible-shadow
+composition and family/most-generality
 transport audits depending on those witnesses use all three permitted axioms.
 The finite-support and finite-unifier audits use at most `propext` and `Quot.sound`.
+The new kind-instance/family audits also use at most those two, except
+admissible-shadow composition, which inherits classical choice from sorted composition.
 Other audits use at most `propext` and `Quot.sound`.
 Assignment witnesses use classical choice only in the mathematical proof,
 not an executable native fallback.
@@ -373,6 +380,42 @@ original variables to residual variable `7`: a factor fixing `7` to `one`
 works, while every factor supported only on the original variables fails.
 The restricted singleton remains complete; an invalid original assignment
 and its well-sorted restriction remain separate.
+
+`QueryKindInstances.lean` maps variable keys with `kindVariableKey`: original
+Fresh index `i` becomes natural index `2*i+1`, natural index `i` becomes
+`2*i`, and the public/message/node keys remain unchanged.
+`expandKindAssignment` reads the mapped key and applies `kindExpansion`.
+Expansion after abstraction is exactly the original assignment; abstraction
+is injective, commutes with ordered simultaneous composition and maps every
+raw input's variable support exactly, including controlled-kind/free framing.
+
+`NativeKindAdmissibleAssignment shadow` requires both
+`NativeSortedAssignment (expandKindAssignment shadow)` and
+`abstractKindAssignment (expandKindAssignment shadow) = shadow`.
+It is equivalent to being the exact abstraction of a sorted original assignment;
+the inverse supplies that original constructively. Admissibility implies shadow
+sortedness and is closed under composition. It is a mathematical predicate,
+not an executable admissibility decision procedure or native reply filter.
+Sorted expansion alone does not establish the exact-image condition.
+
+`NativeKindACInstanceOn` uses an admissible postfactor, not just a sorted
+shadow postfactor. It preserves/reflects original scoped AC factorization on
+the mapped input support. `QueryKindCompleteness.lean` defines
+`NativeKindCompleteACUnifiers` and `NativeKindMostGeneralACUnifier`, requiring
+admissible candidate solutions, compared solutions and postfactors. Mapping
+any supplied original family by `abstractKindAssignment` preserves/reflects
+sound completeness; candidate most-generality and singleton completeness
+correspond as well. All original sortedness obligations survive the inverse.
+No family is generated and no unrestricted shadow family theorem is asserted.
+
+`QueryKindInstanceCases.lean` checks parity-separated keys, rigid labels,
+all five sorts and framing. It separates a sorted lift outside the exact image
+from an admissible shadow. Two sorted original candidates can be related by
+an ordinary shadow factor that maps a Fresh residual to `one`, while no sorted
+original factor exists; the admissible relation excludes it.
+`QueryKindCompletenessCases.lean` checks a mixed-kind commutative MGU and the
+empty complete family for Fresh/natural equality. That same empty family is
+not complete for unrestricted shadow solutions.
 
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of

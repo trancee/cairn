@@ -1171,3 +1171,46 @@ options, deadlines, jobs, budgets and protocol/API/wire/runtime behavior stay
 unchanged. Existing proof-checkpoint publication approval applies, subject to
 actual current-head hosted acceptance; no dispatch, merge or SDK/profile
 activation is authorized.
+
+2026-10-16 (admissible kind-shadow factors and families):
+The preceding finite-support head `8bd13e2` completes its own authoritative
+acceptance: lifecycle
+[38938892545](https://github.com/trancee/cairn/actions/runs/38938892545),
+Rust [38938892539](https://github.com/trancee/cairn/actions/runs/38938892539)
+and four-language CodeQL
+[38938892831](https://github.com/trancee/cairn/actions/runs/38938892831) pass;
+PR #9 has 37 successful checks and one intentional functional-simulator skip.
+Both actual native reports pass their owning current-source/workload validators:
+full export `+8.292378%`, startup `+26.107905` ms, within unchanged `10%` and
+`50` ms limits. This does not accept the new proof increment.
+
+[`QueryKindInstances.lean`](../../../docs/spec/models/equations/QueryKindInstances.lean)
+constructs an assignment expansion inverse, exact composition and input-support
+transport. Admissibility requires sorted expansion and exact reabstraction;
+the latter cannot be dropped even when expansion is sorted.
+Admissible shadow postfactors preserve/reflect scoped original factorization.
+Two sorted original candidates can have an unrestricted shadow factor mapping
+a Fresh residual to `one`, but no sorted original factor.
+[`QueryKindCompleteness.lean`](../../../docs/spec/models/equations/QueryKindCompleteness.lean)
+requires admissible family members, compared solutions and postfactors;
+supplied-family completeness, candidate most-generality and singleton coverage
+then correspond in both directions. Mixed-kind commutative and empty-family
+Fresh/natural controls distinguish this from unrestricted shadow coverage.
+This is a mathematical constraint, not native filtering or a decision procedure.
+
+Both vertical missing-report reds (`0 != 1`) become rejecting greens. All 38
+public equation tests and fresh `scripts/check.sh` pass, retaining 19 native/
+137 model/50 lifecycle cases, all 43 projections and 169 distinct required
+audits, 25 axiom-free, with no `sorryAx`. All four new proof/case modules stay
+below 300 lines. One new composition audit inherits existing classical choice;
+the other 13 use at most `propext`/`Quot.sound`. Original full sortedness,
+frozen indices, parity-separated labels, framing and both admissibility
+conditions remain explicit.
+
+Constrained kind-family transport is now proved, not finite complete native
+generation, runtime finite lookup/occurs-check/fresh-namespace/importer,
+narrowing/FVP or full carrier/63-declaration assembled acceptance.
+No native source-ID, equation, grammar, rule/restriction/claim/attacker,
+protocol/API/wire/runtime, strict option/deadline, job or budget change.
+Existing proof-checkpoint publication approval applies, subject to actual
+new-head hosted acceptance; no dispatch, merge or SDK/profile activation.
