@@ -15,7 +15,7 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   for the six source equations in the typed algebra. It also checks structural
   frozen-index encoding round trips, independent raw AC/rewrite correspondence
   and typed substitution commutation, including free tuple/Node framing closure
-  and controlled Fresh/natural derivation-kind abstraction (141 audits).
+  and controlled Fresh/natural derivation-kind abstraction (155 audits).
   An independently guarded native-sorted relation inherits proper-message
   termination, B-coherence, convergence modulo AC and the template-only bound.
   Controlled-kind framing closure and decoded-kind termination also hold.
@@ -42,7 +42,14 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   Given a family on proper message/natural inputs, completeness and singleton
   most-generality transfer in both directions. This neither constructs a
   finite complete generator nor transfers arbitrary kind-shadow families.
-  Finite-support/native occurs-check/fresh-name correspondence, narrowing and
+  Every sorted solution has a finite binding-list representative agreeing
+  exactly on input variables. Finite postfactors need only variables in scoped
+  candidate values, not merely input variables. Completeness/most-generality
+  can quantify over input-supported finite solutions without loss; restricting
+  an existing family's candidates retains an explicit original-sortedness
+  premise. This finite mathematical representation neither generates a family
+  nor changes native lookup/duplicate policy. Runtime finite-support/native
+  occurs-check/fresh-name correspondence, narrowing and
   native algorithm/importer correctness remain unproved.
   Ratchet acceptance callers additionally enforce the approved
   [native stream boundary](equations/README.md#native-stream-boundary):

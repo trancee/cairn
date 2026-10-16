@@ -248,7 +248,7 @@ The theorem constructs a bounded normalizing derivation, rather than bounding
 all possible reduction orders. This is the quantifier order in the boundedness
 criterion, not a ground-term weight bound that grows with substitutions.
 The existing checker rebuilds these proofs, regression cases and all
-141 required theorem audits. The typed bound does not itself establish native
+155 required theorem audits. The typed bound does not itself establish native
 substitution/narrowing closure or complete sorted AC unification.
 
 ## Frozen-index encoding foundation
@@ -380,7 +380,7 @@ rewrite. That last case is outside the stream grammar, demonstrating why
 properness invariance cannot be assumed for arbitrary raw terms.
 Sorted narrowing, complete AC-unification/FVP transfer, the full imported
 NAT/kind-variable carrier and universal importer correspondence remain
-explicit obligations, not consequences of the 141-audit count.
+explicit obligations, not consequences of the 155-audit count.
 
 ## Why sorted substitution no longer needs an assumed shadow
 
@@ -477,6 +477,37 @@ Kind-solution compatibility does not by itself transfer family coverage or
 its postfactors; no unrestricted shadow-completeness claim is added.
 Native generation, narrowing/FVP and the complete source/importer boundary
 therefore remain open despite this stronger relational correspondence.
+
+## Why finite support still does not supply a complete generator
+
+A finite query observes only finitely many assignment entries. Keeping those
+entries and using identity elsewhere preserves the substituted inputs exactly,
+even when the original mathematical assignment changes infinitely many other
+variables. [`QuerySupport.lean`](equations/QuerySupport.lean) proves that
+restriction is sorted when the original is, and represents it by an explicit
+finite binding list. Lookup is simultaneous; inserted values are not repeatedly
+substituted. This is a mathematical representation, not a runtime import policy.
+
+Postfactors need a different support. If a candidate for `X = Y` maps both
+variables to a residual `Z`, reaching the ground solution requires `Z -> one`.
+Although `Z` is absent from the original input, dropping its binding destroys
+factorization. [`QueryFiniteUnificationCases.lean`](equations/QueryFiniteUnificationCases.lean)
+checks this with residual index `7`, including impossibility for every
+input-only supported factor. The correct finite range is the variables in
+the candidate's values at input variables.
+
+[`QueryFiniteUnification.lean`](equations/QueryFiniteUnification.lean) proves
+finite factor witnesses on that range, finite representatives for every
+sorted solution, and equivalence between covering all solutions and covering
+only input-supported finite solutions. Restricting a supplied family preserves
+and reflects completeness only with the original candidates sorted. An invalid
+unrelated binding must not become accepted merely because restriction erases it.
+
+Neither finite representability nor this coverage equivalence constructs a
+finite complete family for an arbitrary query. Native enumeration, occurs
+checks, fresh-variable namespaces and query-builder/importer correspondence
+remain separate. Kind-family transfer, narrowing/FVP and exact assembled
+acceptance are not consequences of these finite-support laws.
 
 ## Finite-variant rationale
 

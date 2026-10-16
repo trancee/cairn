@@ -138,7 +138,7 @@ The latest local [equation checker](../spec/models/equations/README.md)
 proves typed B-coherence, global matching confluence, quotient-path confluence
 modulo natural AC and a template-only normalization bound under normalized
 substitutions. Nonlinear key-copy overlaps are joined; normality is
-AC-invariant. All 141 required audits and kernel cases pass; 25 audits use no
+AC-invariant. All 155 required audits and kernel cases pass; 25 audits use no
 axioms. The checked boundedness quantifies over every template and normalized
 assignment, not sampled ground terms. Missing boundedness/confluence audit
 transcripts have fail-closed CLI red/green checks. Native query-image transfer,
@@ -184,7 +184,17 @@ and singleton most-generality now transfer in both directions. Kernel controls
 prove a variable-pair MGU, reject a sound but incomplete ground singleton and
 show why unrelated bindings must be excluded. No complete family is generated
 for arbitrary queries and no kind-shadow family correspondence is claimed.
-Finite-support/occurs-check/fresh-namespace and native generator/importer
+Finite binding-list representatives now preserve exact input substitutions
+for every sorted solution. Scoped postfactors also have finite witnesses,
+supported on variables in candidate values, including residual variables absent
+from the original query. Completeness and most-generality can quantify over
+input-supported finite solutions without loss. Restricting a supplied family's
+candidates preserves/reflects completeness with original sortedness retained.
+Kernel controls require residual index `7` in a factor and reject input-only
+factor restriction; restriction cannot justify accepting an invalid original
+assignment. These mathematical finite-support laws do not generate a complete
+family or verify native finite binding lookup/duplicate behavior.
+Runtime finite-support/occurs-check/fresh-namespace and native generator/importer
 correctness, narrowing/FVP and full assembled acceptance remain open.
 Actual Maude controls distinguish a blocked kind projection from allowed inner
 rewriting and proper-message matching. This proof increment leaves native

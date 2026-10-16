@@ -16,7 +16,7 @@ are realizable by typed matching modulo AC. Sort-separated natural/message
 substitutions commute with encoding and preserve image membership while rigid
 indices stay frozen. Free tuple/Node framing is closed under AC, rewriting and
 typed substitution, including node assignments; framing remains excluded from
-message functions. All 141 theorem audits and the kernel
+message functions. All 155 theorem audits and the kernel
 regression cases run in the existing lifecycle cell, without a new job or
 larger ceiling. Twenty-five audits use no axioms; none uses `sorryAx`.
 
@@ -59,13 +59,20 @@ singleton completeness characterizes most-generality. Kernel cases distinguish
 the variable-pair MGU from a sound but incomplete ground singleton, and show
 that adding an unrelated variable would reject a valid scoped MGU.
 These are conditional completeness/most-generality transports, not a finite
-complete native generator or kind-shadow family transfer. Native algorithm,
-finite-support/occurs-check/fresh-namespace correspondence, narrowing/FVP and
+complete native generator or kind-shadow family transfer. Every sorted solution
+now has a finite binding-list representative agreeing exactly on the input
+variables. Scoped postfactors also have finite representatives, supported on
+variables in candidate values, including residual variables absent from the
+input. Completeness and most-generality can quantify over input-supported
+finite solutions without loss. Restricting a given family's candidates
+preserves/reflects completeness only with their original sortedness retained;
+it does not repair invalid bindings or generate a family. Native algorithm,
+runtime finite-support/occurs-check/fresh-namespace correspondence, narrowing/FVP and
 importer correctness remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
 the gate retains 19 native/137 model/50 lifecycle tests,
-43 projections and requires all 141 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
+43 projections and requires all 155 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
 record authoritative current-head hosted acceptance. This proof-only increment changes no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
 

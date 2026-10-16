@@ -58,6 +58,41 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Finite solution support and residual postfactors (2026-10-16)
+
+Continue the approved proof-only phase by connecting total mathematical
+assignments to explicit finite binding lists. Restrict assignments to input
+variables with identity elsewhere, preserving sortedness and exact substituted
+inputs. Mathematical lookup is first-binding and simultaneous; it is not a
+change to the native parser/importer or its duplicate policy.
+
+Postfactors must instead retain variables in candidate values. A variable-pair
+MGU maps both inputs to residual variable `7`; reaching `one` needs a binding
+for `7`, absent from the original support. Kernel controls reject every
+input-only supported factor. Prove finite range-supported factor witnesses,
+finite representatives for all sorted solutions, and equivalence of complete
+coverage/most-generality with input-supported finite solutions. Restricting an
+existing family preserves/reflects completeness only when its original
+candidates are sorted; erasing an invalid binding cannot justify acceptance.
+
+Two vertical missing-report CLI reds (`0 != 1`) become rejecting greens.
+Fourteen reports bring the total to 155, retaining 25 axiom-free and no
+`sorryAx`; the new audits use at most `propext` and `Quot.sound`.
+Two kernel case modules retain all five sorts, framing, simultaneous lookup,
+frozen indices, duplicates/empty lists, residual factors and invalid-original
+versus valid-restriction separation. New proof/case modules stay below 300
+lines. The central audit registry (302 lines) and shared CLI fixture (418)
+remain cohesive rather than duplicating their inventories/process setup;
+both remain below the mandatory 500-line limit.
+
+This closes mathematical finite representability, not finite complete family
+generation, native occurs-check/fresh-namespace/importer correctness,
+kind-family transport, narrowing/FVP or exact assembled acceptance.
+No equation, native source-ID input, grammar, protocol/API/wire/runtime,
+option/deadline, job or numeric budget changes. Existing proof-checkpoint
+publication approval applies, with actual new-head hosted acceptance required;
+no dispatch, merge or SDK/profile activation is authorized.
+
 ### Scoped AC factorization and conditional completeness (2026-10-16)
 
 Continue the approved proof-only phase by separating valid solutions from

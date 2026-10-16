@@ -61,6 +61,10 @@ The command:
   `QueryCompleteness.lean`, audits 14 reports and checks query-variable-scoped
   factorization, its preorder/solution closure, all-five-sort typed
   correspondence and conditional completeness/most-generality transport;
+- kernel-checks `QuerySupport.lean` and `QueryFiniteUnification.lean`, audits
+  14 reports and checks finite binding-list representations, exact input
+  restriction, finite residual-variable postfactors and finite-solution
+  completeness/most-generality equivalences;
 - generates and kernel-checks a certificate translating every source equation
   to its exact `PrimitiveRewrite` constructor.
 
@@ -71,10 +75,11 @@ the existing `120`-second bound; version checks use `30` seconds.
 Invalid command-line syntax uses argparse's exit `2`; `--help` exits `0` without
 checking a proof.
 Only `propext`, `Classical.choice` and `Quot.sound` are permitted by the shared
-axiom audit. Twenty-five of the 141 audited theorems use no axioms. The three
+axiom audit. Twenty-five of the 155 audited theorems use no axioms. The three
 uniform normalization-bound theorems, assignment/shadow representation and
 closure/solution-representation, sorted factorization and family/most-generality
 transport audits depending on those witnesses use all three permitted axioms.
+The finite-support and finite-unifier audits use at most `propext` and `Quot.sound`.
 Other audits use at most `propext` and `Quot.sound`.
 Assignment witnesses use classical choice only in the mathematical proof,
 not an executable native fallback.
@@ -336,6 +341,38 @@ both variables to `one` is sound and incomplete. An unrelated message binding
 does not affect the scoped MGU; adding that variable to the comparison would
 incorrectly reject it. Empty-family, cyclic finite-AST solution and positive
 natural/no-zero controls remain distinct from native algorithm verification.
+
+`QuerySupport.lean` defines `restrictNativeAssignment variables assignment`
+to keep the listed assignments and use identity elsewhere.
+`NativeAssignmentSupportedOn` requires identity outside a given finite list.
+`nativeBindingAssignment` interprets a finite list of sort/index/value bindings
+by first-binding, simultaneous lookup, with identity for unbound variables.
+`NativeFiniteAssignment` requires representation by such a list. Restriction
+has that representation, preserves sortedness and leaves substitutions exactly
+unchanged when the list contains the input's variables. Rigid atoms stay frozen;
+duplicate support entries and different sorts at the same index remain distinct.
+This mathematical lookup definition does not change the runtime parser or
+certify its duplicate handling.
+
+`QueryFiniteUnification.lean` defines `nativeAssignmentVariables variables
+assignment` as the variables occurring in the values assigned to the listed
+variables. Every scoped sorted postfactor has a finite binding-list witness
+supported on that range. The range can contain residual variables absent from
+the original query. Every sorted AC solution also has a finite representative
+supported on the two inputs, agreeing exactly at those variables.
+Completeness and most-generality are equivalent to covering only those
+input-supported finite solutions. Restricting an existing finite family's
+candidates preserves/reflects completeness with an explicit premise that the
+original candidates are sorted. Unsound original bindings cannot be accepted
+by erasing them. These results do not construct a complete family.
+
+`QuerySupportCases.lean` retains all five sorts, free framing, simultaneous
+insertion, rigid/sort distinctions, empty/duplicate finite lookup and invalid
+sorted values. `QueryFiniteUnificationCases.lean` uses the MGU mapping both
+original variables to residual variable `7`: a factor fixing `7` to `one`
+works, while every factor supported only on the original variables fails.
+The restricted singleton remains complete; an invalid original assignment
+and its well-sorted restriction remain separate.
 
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of

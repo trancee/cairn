@@ -121,4 +121,16 @@ REPORT_GROUPS = {
         "native_message_complete_unifiers_iff", "native_natural_complete_unifiers_iff",
         "native_message_most_general_iff", "native_natural_most_general_iff",
     ),
+    "finite-support": (
+        "native_substitution_eq_on", "native_restriction_supported",
+        "native_restriction_sorted", "native_restriction_substitution",
+        "native_bindings_restriction", "native_bindings_supported",
+        "native_restriction_finite",
+    ),
+    "finite-unifiers": (
+        "native_ac_instance_finite_factor_iff", "native_ac_instance_restriction_iff",
+        "native_ac_unifier_restriction_iff", "native_ac_unifier_finite_representation",
+        "native_complete_unifiers_restriction_iff", "native_complete_unifiers_finite_solutions_iff",
+        "native_most_general_finite_solutions_iff",
+    ),
 }

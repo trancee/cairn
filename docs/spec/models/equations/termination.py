@@ -169,6 +169,18 @@ QUERY_COMPLETENESS_THEOREMS = (
     "native_message_complete_unifiers_iff", "native_natural_complete_unifiers_iff",
     "native_message_most_general_iff", "native_natural_most_general_iff",
 )
+QUERY_SUPPORT_THEOREMS = (
+    "native_substitution_eq_on", "native_restriction_supported",
+    "native_restriction_sorted", "native_restriction_substitution",
+    "native_bindings_restriction", "native_bindings_supported",
+    "native_restriction_finite",
+)
+QUERY_FINITE_UNIFICATION_THEOREMS = (
+    "native_ac_instance_finite_factor_iff", "native_ac_instance_restriction_iff",
+    "native_ac_unifier_restriction_iff", "native_ac_unifier_finite_representation",
+    "native_complete_unifiers_restriction_iff", "native_complete_unifiers_finite_solutions_iff",
+    "native_most_general_finite_solutions_iff",
+)
 
 
 def main() -> int:
@@ -225,6 +237,8 @@ def main() -> int:
                 ("QueryInstances", QUERY_INSTANCE_THEOREMS),
                 ("QueryTypedInstances", QUERY_TYPED_INSTANCE_THEOREMS),
                 ("QueryCompleteness", QUERY_COMPLETENESS_THEOREMS),
+                ("QuerySupport", QUERY_SUPPORT_THEOREMS),
+                ("QueryFiniteUnification", QUERY_FINITE_UNIFICATION_THEOREMS),
             ):
                 output = run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -244,6 +258,8 @@ def main() -> int:
                 "QueryInstanceCases",
                 "QueryTypedInstanceCases",
                 "QueryCompletenessCases",
+                "QuerySupportCases",
+                "QueryFiniteUnificationCases",
             ):
                 run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -272,6 +288,8 @@ def main() -> int:
         print("PASS: sorted AC-unifier solutions compose and transfer through compatible typed images.")
         print("PASS: source-variable-scoped AC instances form a preorder and preserve sorted solutions.")
         print("PASS: complete AC-unifier families and most-generality transfer on proper typed images.")
+        print("PASS: finite input restriction preserves exact substitutions and sorted assignments.")
+        print("PASS: finite solution and residual-variable postfactor witnesses preserve AC completeness.")
         print("Scope: typed image algebra + enforced native stream membership; not a native FVP certificate.")
         print("Trust boundary: Tamarin/Maude + Rust stream guard + Python evidence/signature/translation + Lean kernel.")
         return 0

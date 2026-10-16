@@ -1130,3 +1130,44 @@ attacker/claims/rules/restrictions, options, deadlines, jobs and budgets remain
 unchanged. Existing checkpoint publication approval applies; current-head
 hosted acceptance remains separate, without dispatch, merge or SDK/profile
 activation.
+
+2026-10-16 (finite solution support and residual postfactors):
+The preceding scoped-completeness/Actions head `4a64029` completes its own
+authoritative acceptance: lifecycle
+[38932226575](https://github.com/trancee/cairn/actions/runs/38932226575),
+Rust [38932226561](https://github.com/trancee/cairn/actions/runs/38932226561)
+and four-language CodeQL
+[38932226955](https://github.com/trancee/cairn/actions/runs/38932226955) pass;
+PR #9 has 37 successful checks and one intentional functional-simulator skip.
+That acceptance does not accept this new proof increment.
+
+[`QuerySupport.lean`](../../../docs/spec/models/equations/QuerySupport.lean)
+defines finite binding lookup and input restriction with identity elsewhere,
+proving exact substitution, sortedness and finite representation. Lookup is
+simultaneous and first-binding; no native parser/duplicate policy is changed.
+[`QueryFiniteUnification.lean`](../../../docs/spec/models/equations/QueryFiniteUnification.lean)
+proves that every scoped sorted factor has a finite representative on variables
+in candidate values, including residual variables absent from the input.
+Every sorted solution has a finite representative agreeing exactly at input
+variables. Completeness/most-generality can quantify over input-supported
+finite solutions without loss. Restricting an existing family's candidates
+preserves/reflects completeness only with original sortedness retained.
+
+Two missing-report CLI reds (`0 != 1`) become rejecting greens. All 155
+distinct required audits pass, 25 axiom-free, with no `sorryAx`; the new audits
+use at most `propext` and `Quot.sound`. The 38-case equation suite and fresh
+`scripts/check.sh` pass, retaining 19 native/137 model/50 lifecycle cases and
+43 projections. Kernel controls cover all five sorts, framing, simultaneous
+insertion, frozen indices and duplicate/empty mathematical binding lists.
+The residual-variable MGU requires factor index `7`; every input-only supported
+factor fails. Restricting that singleton preserves completeness; an invalid
+original assignment is not accepted because its restriction is sorted.
+
+This closes mathematical finite representability, not native complete
+generation/occurs-check/fresh-namespace/importer correspondence, kind-family
+transport, narrowing/FVP or full 63-declaration assembled acceptance.
+Native source-ID inputs, equations, grammar, rules/restrictions/claims/attacker,
+options, deadlines, jobs, budgets and protocol/API/wire/runtime behavior stay
+unchanged. Existing proof-checkpoint publication approval applies, subject to
+actual current-head hosted acceptance; no dispatch, merge or SDK/profile
+activation is authorized.
