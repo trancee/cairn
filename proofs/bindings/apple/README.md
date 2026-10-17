@@ -49,6 +49,54 @@ Its recorded revision matches the run and Mach-O inspection reports
 deterministic first-attempt reliability remain unproven; this is real generated
 simulator execution, not strict runtime containment or hardware evidence.
 
+## Scratch teardown
+
+The hosted resource fixture's exit trap uses `detach-scratch.py` for ordinary
+verbose ejection of its owned `/private/tmp/cairn-resource-<suffix>/scratch`
+volume and the current owned `scratch.dmg` or `build-scratch.dmg` image passed
+by the caller. Noncanonical or mismatched paths fail before any native command.
+Successful ejection returns zero without querying optional disk state or open-file holders.
+Prior workload/account-cleanup failures remain failures in the caller.
+
+Failed or unavailable ejection returns nonzero. Only then collect the five
+device/mount/ejectability fields with `diskutil info -plist` and identify the
+exact owned image through `hdiutil info -plist`. Both metadata commands share
+one five-second monotonic deadline. Filter the inventory before logging:
+only validated devices belonging to that image and its reported assigned
+mount points are emitted, never unrelated image records. Missing or ambiguous
+inventory is explicit; missing mount records are not proof of successful unmount.
+
+Filesystem holders (`lsof -Fpc +f --`) and exact image/device holders
+(`lsof -Fpc --`) share one 15-second deadline. Only validated PID/command
+fields are emitted. Native `lsof -Fpc` also produces mandatory `f` descriptor
+records; validate their nonempty printable values but do not log them.
+Empty/control-bearing descriptors, malformed PID/command records and
+unselected field types still reject with `invalid-holder-fields`, without
+logging their values. Partial valid results remain visible when a query
+returns nonzero, with an explicit diagnostic error.
+Unavailable, malformed or timed-out diagnostics remain explicitly observable
+and cannot turn failed ejection into success. If unmount already succeeded,
+the mount-path query may be unavailable; no whole-disk state is inferred.
+No retry, forced detach, unrelated process termination or limit/permission
+change is included. This fixes a success-path diagnostic dependency, not
+intermittent busy-eject reliability or strict runtime acceptance.
+
+The existing benign-preflight test discovery includes the OS-boundary
+regressions. The focused command is:
+
+```sh
+xcrun python3 -B -m unittest discover -s proofs/bindings/apple \
+  -p 'test_scratch*.py'
+```
+
+These simulations establish failure propagation and diagnostic behavior,
+not native disk-ejection reliability. The macOS-only holder regression also
+reads actual `lsof` records for one temporary file owned by the current test
+process, then exercises failed-ejection diagnostics through the OS boundary.
+It requires PID/command retention and descriptor omission; it neither mounts
+nor ejects a native disk. See
+[the decision and observed regression](../../../docs/adr/0014-hosted-apple-isolation-probes.md#failure-only-scratch-detach-diagnostics).
+
 ## Frozen-input manifest generation
 
 The four `freeze-*.sh` entry points create their existing SHA-256 manifests

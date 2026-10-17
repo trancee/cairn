@@ -201,6 +201,8 @@ EXISTENTIAL_TARGETS = (
 
 
 def main() -> int:
+    from equations.maude_runner import GuardError, run_guarded_tamarin
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--timeout", type=int, default=300, help="proof-run limit in seconds")
     parser.add_argument(
@@ -232,7 +234,7 @@ def main() -> int:
         with tempfile.TemporaryDirectory(prefix="cairn-witness-") as temporary:
             build = Path(temporary)
             exported = build / "assembled.spthy"
-            run([
+            run_guarded_tamarin([
                 "tamarin-prover", str(here / "ratchet.spthy"),
                 "--quit-on-warning", "--derivcheck-timeout=60", "--output-module=msr",
                 f"--output={exported}",
@@ -243,14 +245,14 @@ def main() -> int:
             theory = build / "ratchet-witness.spthy"
             theory.write_text(selected)
             roundtrip = build / "roundtrip.spthy"
-            run([
+            run_guarded_tamarin([
                 "tamarin-prover", str(theory), "--quit-on-warning", "--derivcheck-timeout=60",
                 "--output-module=msr", f"--output={roundtrip}",
             ], 120)
             canonical = roundtrip.read_text()
             compare_replay(source, canonical, target, trace_kind, uses)
             if arguments.disclosure_sources:
-                precomputation = run([
+                precomputation = run_guarded_tamarin([
                     "tamarin-prover", str(theory), "--quit-on-warning",
                     "--derivcheck-timeout=60", "--precompute-only",
                 ], arguments.timeout)
@@ -267,14 +269,14 @@ def main() -> int:
                 f"{rules} rules, {restrictions} restrictions; all non-lemma declarations identical",
                 flush=True,
             )
-            output = run([
+            output = run_guarded_tamarin([
                 "tamarin-prover", str(theory), "--quit-on-warning", "--derivcheck-timeout=60",
             ], arguments.timeout)
             check_result(output, retained)
             summary = output[output.rfind("summary of summaries:"):]
             print(summary.strip())
         return 0
-    except (OSError, ReplayError) as error:
+    except (OSError, ReplayError, GuardError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1
 

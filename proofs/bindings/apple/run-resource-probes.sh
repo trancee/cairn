@@ -33,30 +33,8 @@ finish() {
     if ! dscl . -delete "/Users/$user"; then result=1; fi
   fi
   if [ "$mounted" -eq 1 ]; then
-    disk_device=$("$python" -I -c '
-import plistlib, subprocess, sys
-result = subprocess.run(["/usr/sbin/diskutil", "info", "-plist", sys.argv[1]],
-                        check=True, capture_output=True, timeout=5)
-print("/dev/" + plistlib.loads(result.stdout)["ParentWholeDisk"])
-' "$volume") || result=1
-    if ! hdiutil detach -verbose "$volume"; then
+    if ! "$python" -I "$scripts/detach-scratch.py" "$volume" "$image"; then
       result=1
-      "$python" -I -c '
-import json, plistlib, subprocess, sys
-result = subprocess.run(["/usr/sbin/diskutil", "info", "-plist", sys.argv[1]],
-                        capture_output=True, timeout=5)
-if result.returncode:
-    raise SystemExit("DIAGNOSTIC: scratch volume info unavailable after failed detach")
-info = plistlib.loads(result.stdout)
-print("DIAGNOSTIC: scratch detach state " + json.dumps({
-    key: info.get(key) for key in
-    ("DeviceIdentifier", "ParentWholeDisk", "Mounted", "MountPoint", "Ejectable")
-}))
-' "${disk_device:-$volume}" || echo 'DIAGNOSTIC: scratch detach state collection failed'
-      echo 'DIAGNOSTIC: failed scratch detach; open-file holder PIDs and command names only'
-      "$python" -I -c \
-        'import subprocess, sys; subprocess.run(["/usr/sbin/lsof", "-nP", "-Fpc", "+f", "--", sys.argv[1]], timeout=15, check=True)' \
-        "$volume" || echo 'DIAGNOSTIC: open-file holder collection failed'
     fi
   fi
   echo "DIAGNOSTIC: hosted-only resource fixture retained at $work"

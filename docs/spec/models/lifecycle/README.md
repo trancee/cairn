@@ -28,6 +28,9 @@ The runner executes mutation regressions, expands the current assembled
 `ratchet.spthy` with Tamarin, validates every rule and all three target
 formulas, and compiles the Lean proofs and source-derived rule certificates
 in a fresh temporary directory. Compilation warnings are errors.
+Expansion uses the mandatory
+[native stream boundary](../equations/README.md#native-stream-boundary);
+unsupported complete operations or missing lifecycle evidence fail closed.
 It prints the expanded-theory SHA-256 and audits theorem axioms.
 The only permitted axioms are Lean's standard `propext`, `Classical.choice`
 and `Quot.sound`; `sorryAx` or any custom assumption fails the command.
@@ -122,7 +125,9 @@ with mismatched cryptographic payload may finish in the abstraction.
 The Lean kernel checks the induction, token simulation, event recording,
 interleaving invariants and generated schema equalities. The connection from
 the Tamarin source to those schemas **also trusts Tamarin's canonical export
-and the Python parser/projection checker**. Python is regression-tested, not
+and the Python native-boundary/parser/projection checkers**. The pinned Maude
+operations are checked for image membership, not algorithm correctness or a
+kernel-verified importer. Python is regression-tested, not
 formally verified. Lean does not parse Tamarin or mechanize its complete
 equational/MSR semantics. In particular, freshness of `Fr(~pid)`, isolation of
 linear fact names, and the interpretation of the reviewed natural-number and

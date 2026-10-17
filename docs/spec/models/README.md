@@ -21,7 +21,9 @@ Run commands from the repository root; setup and limits are in [`ENVIRONMENT.md`
 | Replay tooling selects and compares certificates correctly | `test_replay.py` | `python3 -m unittest discover -s docs/spec/models -p 'test_replay.py'` |
 | Certificates are finished and every include file is wired in | `check_certificates.py`, `test_check_certificates.py` | `python3 docs/spec/models/check_certificates.py` |
 | Branch driver parses methods and picks the closing priority | `test_branch.py` | `python3 -m unittest discover -s docs/spec/models -p 'test_branch.py'` |
-| Ratchet equation evidence: internal termination/FVP rationale and independent CRC local-confluence check on the reduced message theory | [`ratchet-equation-evidence.md`](ratchet-equation-evidence.md), [checker research](../../research/2026-10-09-tamarin-equational-theory-independent-checkers.md) | Independent combined-theory/FVP acceptance open |
+| Ratchet equation evidence: typed convergence/B-coherence/boundedness, structural image/free framing closure and controlled derivation-kind abstraction; enforced native stream membership; conditional FVP criteria | [`equations/`](equations/README.md), [`ratchet-equation-evidence.md`](ratchet-equation-evidence.md), [checker research](../../research/2026-10-09-tamarin-equational-theory-independent-checkers.md) | `python3 docs/spec/models/equations/termination.py --lean <lean>`; 67 audits; kind raw relations do not certify native matching; full importer/sorted-unification/FVP acceptance open |
+| Ratchet native command/reply boundary rejects complete unsupported operations and reconciles every batched lifecycle record | [`equations/`](equations/README.md#native-stream-boundary), `test_maude_boundary.py` | Build first with `scripts/check.sh`; `python3 -m unittest discover -s docs/spec/models -p 'test_maude_boundary.py'` uses the maintained compiled default and pinned Maude |
+| Maintained compiled ratchet acceptance default | [`native-proxy`](equations/native-proxy/README.md), `test_maude_native.py`, `test_maude_performance.py` | Current source identity always required; staging `38721189200` passes all 19 cells, permitting conditional cutover; default source at `2fa6d16` passes actual native budgets (`+8.3650%` full / `+25.785370` ms startup) and 18/19 cells, with `initial_ck_secret` blocked by its unchanged strict derivation timeout before proof; require all current-head CI gates; obsolete Python validator/selector removed |
 | All fast gates | `scripts/check.sh` | pre-commit hook and CI |
 
 ## Tooling
@@ -458,8 +460,8 @@ lemmas and four existential witnesses, and does not establish assembled or
 full-profile completion. Exact commands, hashes, and exclusions are
 recorded in the [source evidence](ratchet-source-evidence.md#combined-safety-only-context).
 Earlier bulk regeneration timed out at 240 seconds.
-The [equation argument](ratchet-equation-evidence.md) records termination,
-the repeated-key confluence caveat and the subterm/ground FVP rationale
+The [equation explanation](ratchet-equation-evidence.md) records checked typed
+convergence, nonlinear repeated-key joins and substitution-independent boundedness
 for the exact six message equations. Independent convergence
 and finite-variant evidence for the custom equations is also still
 required, including acceptance of their sorted natural-number combination.

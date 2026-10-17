@@ -271,3 +271,29 @@ speedup and was removed after measurement; see
 Checksum-verified download reuse and
 avoiding repeated export/precomputation are separate potential optimizations,
 not implemented or measured improvements here.
+
+## Action release refresh (2026-10-16)
+
+The owner requested updating all GitHub Actions to their latest versions.
+Official stable-release metadata and release-tag commits were checked for
+all six upstream repositories used by the five maintained workflows.
+Only the CodeQL Action requires an update:
+[`v4.39.0`](https://github.com/github/codeql-action/releases/tag/v4.39.0),
+published on 2026-10-15, resolves to immutable commit
+`6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee`. Replace all three `init`,
+`analyze` and `upload-sarif` references together, with matching version comments.
+This supersedes the initial `v4.38.3` action pin above, not its historical evidence.
+
+`actions/checkout` `v7.0.1`, `actions/cache` `v6.1.0`,
+`actions/setup-python` `v7.0.0`, `actions/upload-artifact` `v7.0.2` and
+`actions/download-artifact` `v8.0.2` already match their latest stable releases
+and exact release commits; retain those pins. Same-repository reusable
+workflows continue to follow the checked-out revision.
+
+The new CodeQL release raises its minimum CLI version to `2.20.7`; the
+strict Kotlin lane's checksum-pinned CLI `2.27.2` remains compatible.
+All configured inputs remain supported, including `tools: linked` and
+the default workspace-root checkout. No workflow trigger, permission,
+language, query suite, upload policy, resource limit or Kotlin isolation
+setting changes. This is a CI dependency refresh, not a runtime/API/wire
+change or new hosted extraction/processed-scan evidence.
