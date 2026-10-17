@@ -1429,3 +1429,51 @@ remains in steady CI. The exact reproducer remains committed at `bbf115c`.
 Cleanup requires its own hosted gates; earlier native failures remain real
 and their cause unresolved. No unchanged rerun, waiver, merge or SDK/profile
 activation follows.
+
+2026-10-17 (owner-selected constructive proof-only work):
+The diagnostic checkpoint `29d4cb8` passes all 19 lifecycle/11 Rust/six
+required CodeQL jobs, with one intentional simulator skip. Its actual Linux
+budgets independently pass at `+9.696999%` full export and `+25.693921` ms
+startup. No failure artifact is produced because the normal step succeeds;
+the intermittent native failure and its cause remain unresolved. Instrumented
+phase/driver evidence is diagnostic only, not budget acceptance or a fix.
+
+The owner explicitly selects `resume-proof-only` rather than supplying a
+reproducible failing Linux environment or pausing. Continue mathematical
+finite-generation prerequisites independently; do not unblock native
+performance, general generation/FVP/importer/full-carrier, assembled-model
+or SDK acceptance. Existing proof-checkpoint publication approval remains,
+without merge, unchanged workflow retries, dispatch or activation.
+
+`QueryOccurs.lean` proves generic finite-AST proper-occurrence count growth,
+AC-unsatisfiability and complete empty families. `QueryVariableBindings.lean`
+constructs finite, supported, idempotent sort-compatible occurs-free bindings,
+global sorted AC factorization, most-generality and complete singleton
+families in either orientation. `QueryVariableGeneration.lean` computes
+explicit finite binding-list families on proof-carrying sort-compatible
+targets: empty binding for identity, no candidate for proper cycles, one
+binding otherwise. Its completeness/finite-representation proofs require no
+assumed complete family. The shared identity-sorted theorem replaces
+duplicated proofs in existing callers.
+
+Kernel controls cover all five sorts, sort/index and rigid distinctions,
+proper/repeated/framed/kind occurrences, residual variables, genuine AC
+reordering, reversed valid orientation, incompatible bindings and cyclic
+simultaneous substitution versus idempotence/unification. A source projection
+removes an occurs cycle modulo equations despite pure AC rejection.
+Three intended missing-audit reds become rejecting greens. All 38 public
+equation tests and the fresh source-bound pinned-Lean gate pass: 187 distinct
+required audits, 27 axiom-free, none using `sorryAx`; new audits use at most
+`propext` and `Quot.sound`. The canonical export digest is unchanged.
+
+Reference, explanation, environment, project profile and ADR 0010 agree on
+the bounded solver and remaining obligations. New proof/case files stay
+below 300 lines; the cohesive registry (344) and independent CLI fixture
+(428) retain their documented SHOULD-300 deviation below the mandatory 500.
+No native source-ID input, equation, grammar/validation, protocol/API/wire/
+crypto/dependency, job, deadline or budget changes. Canonical local
+`LEAN=<pinned Lean> scripts/check.sh` passes 28 native CLI cases (three
+Linux-only skips), 180 model/50 lifecycle cases, native unit tests and both
+fresh kernel/source gates. `bash scripts/check-rust.sh` and all six changed
+Markdown local-link checks pass. Published-head hosted outcomes are recorded
+in PR #9; local success is not hosted acceptance.

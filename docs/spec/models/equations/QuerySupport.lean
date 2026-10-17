@@ -70,12 +70,7 @@ theorem native_restriction_sorted (variables : List (QuerySort × Nat))
   unfold restrictNativeAssignment
   split
   · exact sorted sort index
-  · cases sort
-    · exact .publicVariable
-    · exact .freshVariable
-    · exact .message rfl
-    · exact .natural rfl
-    · exact .nodeVariable
+  · exact native_identity_assignment_sorted sort index
 
 theorem native_restriction_substitution
     (contains : ∀ sort index, (sort, index) ∈ nativeQueryVariables term →

@@ -58,6 +58,52 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Constructive variable-equation generation (2026-10-17)
+
+The completed native CPU diagnostic checkpoint passes its ordinary hosted
+gates but captures no failing budget window and establishes no causal fix.
+The owner explicitly selects `resume-proof-only`: continue independent
+mathematical work while retaining the native-performance, general
+generation/FVP/importer, assembled-model and SDK acceptance blockers.
+Supplying a reproducible failing Linux environment or pausing were the scope
+alternatives; another unchanged retry or speculative runtime optimization is
+not authorized by this choice.
+
+Prove generic finite-AST proper-occurrence count growth and derive complete
+empty AC-unifier families. Construct explicit finite, supported, idempotent
+one-binding MGUs and complete singleton families for sort-compatible
+occurs-free variable equations in either orientation. Reuse the existing
+sort/index keys, simultaneous first-binding representation, sorted factorization
+and AC count invariant. Share the identity-sorted proof with existing callers.
+
+Add a constructive solver whose target carries its sort-compatibility proof:
+identical variables produce the empty binding, proper cycles no candidate,
+and occurs-free targets one binding. Kernel proofs establish completeness and
+finite representation of its returned candidates. This avoids adding an
+unverified runtime classifier or treating an incompatible orientation as
+unsatisfiable; reversing a suitable message-variable binding can solve it.
+An unconditional raw-term solver would need further sort/orientation
+reasoning. Rational trees, AC identity/zero and equality modulo the six
+rewrite equations are different problems, not alternatives silently admitted.
+The projection-cycle case retains the AC/equational distinction explicitly.
+
+Three intended missing-audit reds become rejecting greens at the existing
+public CLI seam. The fresh pinned-Lean checker passes 187 distinct audits,
+27 axiom-free and none using `sorryAx`; new audits use at most `propext` and
+`Quot.sound`. All new proof/case files stay below 300 lines. The cohesive
+central audit registry (344 lines) and independent CLI process fixture (428)
+retain the written SHOULD-300 deviation: splitting their shared inventory/
+process setup adds coupling or duplication without a new responsibility.
+Both remain below the mandatory 500-line limit.
+
+This migrates only internal proof tooling/docs. It does not verify general
+finite sorted AC generation, native lookup/occurs-check/fresh namespaces,
+query builders/importing, narrowing/FVP or the full carrier. Equations,
+native guard source-ID inputs, grammar/validation, protocol/API/wire/crypto,
+dependencies, 19 jobs, ceilings, deadlines and numeric budgets are unchanged.
+The retained proof-checkpoint publication approval applies subject to required
+gates and ordinary changed-head CI; no merge or SDK/profile activation.
+
 ### Same-pair native-phase and driver CPU accounting (2026-10-17)
 
 The ordinary `46d38fa` CI budget failed at `+10.417850%`; its bounded capture

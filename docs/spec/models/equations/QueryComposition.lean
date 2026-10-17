@@ -7,6 +7,16 @@ def composeNativeAssignments (first second : QuerySort → Nat → NativeQueryTe
     QuerySort → Nat → NativeQueryTerm :=
   fun sort index => substituteNativeQuery second (first sort index)
 
+theorem native_identity_assignment_sorted :
+    NativeSortedAssignment NativeQueryTerm.queryVariable := by
+  intro sort index
+  cases sort
+  · exact .publicVariable
+  · exact .freshVariable
+  · exact .message rfl
+  · exact .natural rfl
+  · exact .nodeVariable
+
 theorem native_substitution_identity (term : NativeQueryTerm) :
     substituteNativeQuery NativeQueryTerm.queryVariable term = term := by
   induction term <;> simp_all [substituteNativeQuery]
@@ -63,6 +73,7 @@ theorem native_substitution_assignment_ac (equivalent : NativeAssignmentAC first
   | list _ child => exact .list child
   | cons _ _ first rest => exact .cons first rest
 
+#print axioms native_identity_assignment_sorted
 #print axioms native_substitution_identity
 #print axioms native_substitution_composition
 #print axioms native_sorted_value_substitution

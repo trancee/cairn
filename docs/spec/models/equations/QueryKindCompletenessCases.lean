@@ -2,15 +2,6 @@ import QueryKindCompleteness
 
 namespace Cairn.Equations
 
-private theorem identity_sorted : NativeSortedAssignment NativeQueryTerm.queryVariable := by
-  intro sort index
-  cases sort
-  · exact .publicVariable
-  · exact .freshVariable
-  · exact .message rfl
-  · exact .natural rfl
-  · exact .nodeVariable
-
 private def first : NativeQueryTerm :=
   .naturalAdd (.queryVariable .freshAtom 0) (.queryVariable .natural 0)
 
@@ -19,7 +10,7 @@ private def second : NativeQueryTerm :=
 
 private theorem kind_identity_mgu :
     NativeMostGeneralACUnifier first second NativeQueryTerm.queryVariable := by
-  refine ⟨⟨identity_sorted, .commutative⟩, ?_⟩
+  refine ⟨⟨native_identity_assignment_sorted, .commutative⟩, ?_⟩
   intro solution solved
   refine ⟨solution, solved.1, ?_⟩
   intro sort index _

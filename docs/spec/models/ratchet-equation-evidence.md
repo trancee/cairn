@@ -17,7 +17,13 @@ Sorted AC solutions now compose and transport exactly through the proper typed
 image and compatible kind shadows, not unrestricted shadow unification.
 Scoped sorted factorization now preserves/reflects completeness of a given
 finite family and candidate most-generality on proper message/natural inputs.
-It does not construct a complete family or verify a native generator.
+Those transport results do not construct a complete family or verify a native
+generator. A subsequent constructive solver now generates complete finite
+families for variable equations whose chosen orientation has a sort-compatible
+target: identity, proper cycles and occurs-free bindings. Generic finite-AST
+occurs rejection and one-binding factorization justify these branches.
+This is a base case for general AC generation, not that general generator
+or a native-runtime correspondence proof.
 Native narrowing/unification and the remaining
 FVP hypotheses stay separate; this is not a native FVP certificate.
 

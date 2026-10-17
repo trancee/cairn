@@ -55,7 +55,7 @@ The command:
   path preservation and controlled-kind framing substitution closure with a
   derived, not assumed, compatible shadow;
 - kernel-checks `QueryComposition.lean` and `QueryUnification.lean`, audits
-  13 reports and checks sorted composition, pointwise AC congruence and
+  14 reports and checks sorted composition, pointwise AC congruence and
   AC-unifier solution transport, including compatible kind shadows;
 - kernel-checks `QueryInstances.lean`, `QueryTypedInstances.lean` and
   `QueryCompleteness.lean`, audits 14 reports and checks query-variable-scoped
@@ -69,6 +69,11 @@ The command:
   audits 14 reports and checks constructive assignment lifting, exact kind
   composition/support, admissible postfactors and constrained family/MGU
   correspondence, including unrestricted-shadow counterexamples;
+- kernel-checks `QueryOccurs.lean`, audits four reports and checks proper
+  finite-AST occurrence rejection, including controlled-kind/free framing;
+- kernel-checks `QueryVariableBindings.lean` and `QueryVariableGeneration.lean`,
+  audits 13 reports and checks finite, supported, idempotent one-binding MGUs
+  and complete generated families for sort-compatible variable equations;
 - generates and kernel-checks a certificate translating every source equation
   to its exact `PrimitiveRewrite` constructor.
 
@@ -79,7 +84,7 @@ the existing `120`-second bound; version checks use `30` seconds.
 Invalid command-line syntax uses argparse's exit `2`; `--help` exits `0` without
 checking a proof.
 Only `propext`, `Classical.choice` and `Quot.sound` are permitted by the shared
-axiom audit. Twenty-five of the 169 audited theorems use no axioms. The three
+axiom audit. Twenty-seven of the 187 audited theorems use no axioms. The three
 uniform normalization-bound theorems, assignment/shadow representation and
 closure/solution-representation, sorted factorization, admissible-shadow
 composition and family/most-generality
@@ -416,6 +421,46 @@ original factor exists; the admissible relation excludes it.
 `QueryKindCompletenessCases.lean` checks a mixed-kind commutative MGU and the
 empty complete family for Fresh/natural equality. That same empty family is
 not complete for unrestricted shadow solutions.
+
+### Constructive variable equations
+
+`QueryOccurs.lean` proves that substituting a proper occurrence of a variable
+strictly increases function count over its assigned value. Structural AC
+preserves that count, so `X = term` has no finite-AST AC unifier when `X`
+occurs properly in `term`. The empty family is then sound and complete.
+The weak occurrence bound includes identity; the strict bound excludes it.
+Variable keys include both sort and index; rigid atoms are not occurrences.
+
+`QueryVariableBindings.lean` constructs the explicit binding
+`nativeBindingAssignment [((sort, index), value)]`. It is finite, supported on
+that key and sorted exactly when `NativeSortedValue sort value` holds.
+If the key is absent from `value`, substitution fixes `value` and the binding
+is idempotent. Every sorted solution factors through it pointwise modulo AC,
+using that solution itself as the sorted postfactor. This proves most-generality
+and singleton completeness in both equation orientations.
+
+`QueryVariableGeneration.lean` defines `nativeVariableBindingFamily sort index
+value`, where `value` carries a proof of `NativeSortedValue sort value.val`.
+It returns explicit finite binding lists: `[[]]` for the identical variable,
+`[]` for a proper cycle, or `[[((sort, index), value.val)]]` when the key is
+absent. Mapping these lists through `nativeBindingAssignment` gives a sound
+complete family for `queryVariable sort index = value.val`; every candidate
+has a finite representation. This is a constructive solver on that
+proof-carrying domain, not a runtime sort classifier or a general sorted AC
+generator. An incompatible orientation is outside the domain, not a verdict
+that the equation has no solutions.
+
+`QueryOccursCases.lean` and `QueryVariableBindingCases.lean` check all five
+sorts, same-index sort/rigid distinctions, identity/proper/repeated occurrences,
+all enclosing AST constructors, natural AC reordering and residual variables,
+finite support/idempotence, invalid sorted bindings and a valid reversed
+cross-sort orientation. Computed families cover identity, a proper cycle and
+an occurs-free residual binding. A sorted cyclic binding still executes
+simultaneously but is neither idempotent nor an AC unifier. AC rejection
+does not imply equational rejection: `X = fst(pair(X, roleA))` has a complete
+empty AC family, while the source projection rewrites its right side to `X`.
+These mathematical results do not verify the native occurs check, fresh-name
+allocation, finite-family generation, importer or narrowing.
 
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of

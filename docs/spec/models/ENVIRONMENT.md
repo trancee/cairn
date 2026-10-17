@@ -15,7 +15,8 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   for the six source equations in the typed algebra. It also checks structural
   frozen-index encoding round trips, independent raw AC/rewrite correspondence
   and typed substitution commutation, including free tuple/Node framing closure
-  and controlled Fresh/natural derivation-kind abstraction (169 audits).
+  and controlled Fresh/natural derivation-kind abstraction (187 audits,
+  27 axiom-free, none using `sorryAx`).
   An independently guarded native-sorted relation inherits proper-message
   termination, B-coherence, convergence modulo AC and the template-only bound.
   Controlled-kind framing closure and decoded-kind termination also hold.
@@ -56,6 +57,15 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   originals and admissible kind shadows. Unrestricted sorted shadow factors
   can still map Fresh residuals to `one` and are not covered. This is a
   mathematical constraint, not an executable validator or native filtering.
+  Proper finite-AST occurrence strictly increases substituted function count,
+  excluding AC unifiers and constructing complete empty families. An
+  occurs-free sort-compatible binding is finite, supported, idempotent and
+  most general in either orientation. A proof-carrying variable-equation
+  solver now generates complete explicit binding-list families for identity,
+  proper cycles and occurs-free bindings. Incompatible orientations are outside
+  that solver's domain, not unsatisfiable; a reversed message binding can work.
+  This is not general sorted AC generation or native occurs-check verification.
+  Pure AC rejection also does not reject equality modulo the source equations.
   Runtime finite-support/native
   occurs-check/fresh-name correspondence, narrowing and
   native algorithm/importer correctness remain unproved.

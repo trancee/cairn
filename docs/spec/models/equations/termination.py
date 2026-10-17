@@ -146,6 +146,7 @@ QUERY_KIND_SUBSTITUTION_THEOREMS = (
     "native_kind_sorted_framed_substitution",
 )
 QUERY_COMPOSITION_THEOREMS = (
+    "native_identity_assignment_sorted",
     "native_substitution_identity", "native_substitution_composition",
     "native_sorted_value_substitution", "native_sorted_composition",
     "native_composition_associative", "native_substitution_assignment_ac",
@@ -192,6 +193,21 @@ QUERY_KIND_INSTANCE_THEOREMS = (
 QUERY_KIND_COMPLETENESS_THEOREMS = (
     "native_kind_singleton_complete_iff", "native_kind_complete_unifiers_iff",
     "native_kind_most_general_iff",
+)
+QUERY_OCCURS_THEOREMS = (
+    "native_occurrence_substitution_count", "native_proper_occurrence_substitution_count",
+    "native_ac_unifier_occurs_check", "native_occurs_complete_empty_family",
+)
+QUERY_VARIABLE_BINDING_THEOREMS = (
+    "native_single_binding_sorted_iff", "native_single_binding_finite",
+    "native_single_binding_supported", "native_single_binding_fixes_value",
+    "native_single_binding_idempotent", "native_single_binding_unifier",
+    "native_single_binding_factorization", "native_single_binding_most_general",
+    "native_single_binding_complete_family", "native_single_binding_reversed_complete_family",
+)
+QUERY_VARIABLE_GENERATION_THEOREMS = (
+    "native_reflexive_complete_family", "native_variable_binding_family_complete",
+    "native_variable_binding_family_finite",
 )
 
 
@@ -253,6 +269,9 @@ def main() -> int:
                 ("QueryFiniteUnification", QUERY_FINITE_UNIFICATION_THEOREMS),
                 ("QueryKindInstances", QUERY_KIND_INSTANCE_THEOREMS),
                 ("QueryKindCompleteness", QUERY_KIND_COMPLETENESS_THEOREMS),
+                ("QueryOccurs", QUERY_OCCURS_THEOREMS),
+                ("QueryVariableBindings", QUERY_VARIABLE_BINDING_THEOREMS),
+                ("QueryVariableGeneration", QUERY_VARIABLE_GENERATION_THEOREMS),
             ):
                 output = run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -276,6 +295,8 @@ def main() -> int:
                 "QueryFiniteUnificationCases",
                 "QueryKindInstanceCases",
                 "QueryKindCompletenessCases",
+                "QueryOccursCases",
+                "QueryVariableBindingCases",
             ):
                 run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -308,6 +329,9 @@ def main() -> int:
         print("PASS: finite solution and residual-variable postfactor witnesses preserve AC completeness.")
         print("PASS: admissible kind-shadow factors lift constructively and preserve scoped AC instances.")
         print("PASS: complete kind-shadow families and most-generality transfer with admissible factors.")
+        print("PASS: proper finite-AST occurrences exclude AC-unifiers and have complete empty families.")
+        print("PASS: sort-compatible occurs-free variable bindings construct finite complete AC-unifier families.")
+        print("PASS: proof-carrying variable equations generate complete finite binding families.")
         print("Scope: typed image algebra + enforced native stream membership; not a native FVP certificate.")
         print("Trust boundary: Tamarin/Maude + Rust stream guard + Python evidence/signature/translation + Lean kernel.")
         return 0

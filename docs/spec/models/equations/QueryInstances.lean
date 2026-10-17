@@ -60,17 +60,10 @@ def NativeACInstanceOn (variables : List (QuerySort × Nat))
 theorem native_ac_instance_reflexive (variables : List (QuerySort × Nat))
     (assignment : QuerySort → Nat → NativeQueryTerm) :
     NativeACInstanceOn variables assignment assignment := by
-  refine ⟨NativeQueryTerm.queryVariable, ?_, ?_⟩
-  · intro sort index
-    cases sort
-    · exact .publicVariable
-    · exact .freshVariable
-    · exact .message rfl
-    · exact .natural rfl
-    · exact .nodeVariable
-  · intro sort index _
-    rw [composeNativeAssignments, native_substitution_identity]
-    exact .reflexive
+  refine ⟨NativeQueryTerm.queryVariable, native_identity_assignment_sorted, ?_⟩
+  intro sort index _
+  rw [composeNativeAssignments, native_substitution_identity]
+  exact .reflexive
 
 theorem native_ac_instance_transitive
     (first : NativeACInstanceOn variables general middle)

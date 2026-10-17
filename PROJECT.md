@@ -2,7 +2,7 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation; SDK/application=not implemented.
 
-## Current typed equation convergence/image evidence (2026-10-16)
+## Current typed equation convergence/image evidence (2026-10-17)
 
 The [equation checker](docs/spec/models/equations/README.md) kernel-checks
 B-coherence, global matching confluence, quotient-path confluence modulo AC
@@ -16,9 +16,9 @@ are realizable by typed matching modulo AC. Sort-separated natural/message
 substitutions commute with encoding and preserve image membership while rigid
 indices stay frozen. Free tuple/Node framing is closed under AC, rewriting and
 typed substitution, including node assignments; framing remains excluded from
-message functions. All 169 theorem audits and the kernel
+message functions. All 187 theorem audits and the kernel
 regression cases run in the existing lifecycle cell, without a new job or
-larger ceiling. Twenty-five audits use no axioms; none uses `sorryAx`.
+larger ceiling. Twenty-seven audits use no axioms; none uses `sorryAx`.
 
 The new independent native-sorted relation requires proper-`Msg` equation
 variables and AC-equivalent repeated keys instead of using unguarded shadow
@@ -75,13 +75,23 @@ most-generality across the frozen-index AST, including controlled-kind/framing.
 Unrestricted shadow factoring is unsound even between two sorted original
 candidates: it can instantiate a Fresh residual to natural `one`. This is a
 mathematical constraint, not native result filtering or an executable
-admissibility decision procedure. Native algorithm,
+admissibility decision procedure. The owner explicitly selected
+`resume-proof-only` despite the unresolved native budget diagnosis.
+Generic finite-AST occurs rejection now constructs complete empty AC families.
+An occurs-free sort-compatible one-binding substitution is finite, supported,
+idempotent and most general in either orientation. A proof-carrying
+variable-equation solver generates complete explicit binding-list families
+for identity, proper cycles and occurs-free targets. An incompatible
+orientation is outside its domain, not an unsatisfiability verdict; pure AC
+rejection does not reject equality modulo the six rewrite equations.
+This is constructive variable elimination, not a general sorted AC generator.
+Native algorithm,
 runtime finite-support/occurs-check/fresh-namespace correspondence, narrowing/FVP and
 importer correctness remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
 the current gates run 28 native CLI/180 model/50 lifecycle tests plus native
-clock unit tests, 43 projections and all 169 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
+clock unit tests, 43 projections and all 187 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
 record authoritative current-head hosted results. These equation proofs change no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
 

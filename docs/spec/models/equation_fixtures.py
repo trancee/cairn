@@ -96,6 +96,7 @@ REPORT_GROUPS = {
         "native_kind_sorted_framed_substitution",
     ),
     "assignment-algebra": (
+        "native_identity_assignment_sorted",
         "native_substitution_identity", "native_substitution_composition",
         "native_sorted_value_substitution", "native_sorted_composition",
         "native_composition_associative", "native_substitution_assignment_ac",
@@ -144,5 +145,20 @@ REPORT_GROUPS = {
     "kind-families": (
         "native_kind_singleton_complete_iff", "native_kind_complete_unifiers_iff",
         "native_kind_most_general_iff",
+    ),
+    "occurs-check": (
+        "native_occurrence_substitution_count", "native_proper_occurrence_substitution_count",
+        "native_ac_unifier_occurs_check", "native_occurs_complete_empty_family",
+    ),
+    "variable-bindings": (
+        "native_single_binding_sorted_iff", "native_single_binding_finite",
+        "native_single_binding_supported", "native_single_binding_fixes_value",
+        "native_single_binding_idempotent", "native_single_binding_unifier",
+        "native_single_binding_factorization", "native_single_binding_most_general",
+        "native_single_binding_complete_family", "native_single_binding_reversed_complete_family",
+    ),
+    "variable-generation": (
+        "native_reflexive_complete_family", "native_variable_binding_family_complete",
+        "native_variable_binding_family_finite",
     ),
 }

@@ -376,6 +376,9 @@ class EquationCommandTests(unittest.TestCase):
         self.assertIn("PASS: finite solution and residual-variable postfactor witnesses", result.stdout)
         self.assertIn("PASS: admissible kind-shadow factors lift constructively", result.stdout)
         self.assertIn("PASS: complete kind-shadow families and most-generality transfer", result.stdout)
+        self.assertIn("PASS: proper finite-AST occurrences exclude AC-unifiers", result.stdout)
+        self.assertIn("PASS: sort-compatible occurs-free variable bindings", result.stdout)
+        self.assertIn("PASS: proof-carrying variable equations generate complete finite binding families", result.stdout)
         self.assertNotIn("FAIL:", result.stderr)
 
     def test_sorted_query_bound_axiom_reports_are_required_before_success(self):
@@ -406,6 +409,9 @@ class EquationCommandTests(unittest.TestCase):
             ("finite-unifiers", "native_ac_instance_finite_factor_iff"),
             ("kind-instances", "native_kind_ac_instance_iff"),
             ("kind-families", "native_kind_complete_unifiers_iff"),
+            ("occurs-check", "native_ac_unifier_occurs_check"),
+            ("variable-bindings", "native_single_binding_most_general"),
+            ("variable-generation", "native_variable_binding_family_complete"),
         ):
             with self.subTest(group=group):
                 result = self.run_with_axiom_reports(*(
