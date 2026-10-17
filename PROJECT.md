@@ -155,11 +155,18 @@ rejects actual full export: `43.565964908`/`48.308937965` seconds
 pass. Strict compilation/five Kotlin units, cleanup, integrity and processed
 delivery are independently verified. Final rollup is 36 successes/one failure/
 one intentional skip, not a native fix or acceptance.
-The owner selects a bounded same-run Linux comparison of frozen `fb1abf4`
-and `d4bbeac`, each using its own committed benchmark CLI and source-identified
-build in an owned detached worktree. One profiled pair each is diagnostic only;
-shared inputs/environment and cleanup reconcile. No maintained native change,
-extra job, raised deadline or replacement of either three-pair budget.
+The owner-selected same-run Linux comparison at `bbf115c` validates frozen
+`fb1abf4`/`d4bbeac` through their own source-identified builds/CLIs, shared
+inputs/environment and owned-worktree cleanup. Original/candidate observed
+CPU is `2.44`/`2.43` seconds, while profiled overhead is `+8.964051%`/
+`+9.022732%`: only `0.4098%` lower CPU and `0.6546%` worse normalized overhead,
+with direct rate differing `0.4132%`. No worthwhile gain is established.
+All 19 lifecycle/11 Rust/six required CodeQL jobs and both normal budgets
+(`+9.562037%`, `+14.648994` ms) pass, with independently audited strict delivery.
+Final rollup is 37 successes/one intentional skip, not a native fix.
+Remove the one-shot driver/mode, scheduled step and extra history fetch;
+keep the diagnostic-report rejection/regression. Original native source/binary,
+19 jobs, deadlines and budgets remain unchanged; cleanup needs its own gates.
 See the [reference](docs/spec/models/equations/native-proxy/README.md#same-run-native-linux-comparison)
 and [decision](docs/adr/0010-compositional-lifecycle-verification.md#same-run-native-linux-comparison-2026-10-16).
 

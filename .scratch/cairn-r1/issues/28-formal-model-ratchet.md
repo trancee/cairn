@@ -1374,3 +1374,34 @@ intended false-acceptance red (`0 != 1`). Both become rejecting greens at the
 existing public CLI seam. Sampling remains incomplete/perturbing, and same-host
 order/time variation remains possible; this is not stable benefit, causation,
 a native fix, FVP/full-model acceptance, merge or SDK/profile activation.
+
+2026-10-17 (actual same-run result and one-shot cleanup):
+Published `bbf115c` passes all 19 lifecycle cells in
+[39015809767](https://github.com/trancee/cairn/actions/runs/39015809767),
+all 11 Rust jobs (`39015809796`) and six required CodeQL jobs (`39015809718`),
+with one intentional simulator skip. Actual 24/141/50 cases, 43 projections,
+169 audits/25 axiom-free/no `sorryAx` and both ordinary budgets independently
+validate: `36.332190018`/`39.806287558` seconds (`+9.562037%`) and
+`0.112941701`/`0.127590695` seconds (`+14.648994` ms).
+Actual strict execution/five compiled Kotlin units/teardown/integrity/mapped
+SARIF/processed delivery audits pass. Analysis artifact `12095267273`, SHA-256
+`f91766105207dbd230912bcf10b4a2b8be10cda6ac8841c08df201032a888066`,
+matches API, independent download and actual delivery. Final rollup is
+37 successes/one intentional skip; native source/Linux binary remain originals.
+
+The actual controlled step and independent audit validate both frozen
+source/build/CLI identities, 13 shared inputs, fixed exports, matched
+environment, sample math and owned-worktree cleanup. Original `fb1abf4` gives
+`36.916707345`/`40.225939800` seconds (`+8.964051%`), observed CPU `2.44` seconds;
+candidate `d4bbeac` gives `37.069251875`/`40.413911118` seconds (`+9.022732%`),
+CPU `2.43` seconds. Direct rate differs `0.4132%`; CPU improves only `0.4098%`
+and normalized overhead worsens `0.6546%`. This screening sample establishes
+no worthwhile gain, stable benefit, cause or fix. Aggregate acceptance rejects.
+
+After all runs finish, remove the one-shot controller/mode, scheduled step and
+extra core-only history fetch. Retain aggregate-report rejection and its
+public regression; no historical-source execution or maintained native change
+remains in steady CI. The exact reproducer remains committed at `bbf115c`.
+Cleanup requires its own hosted gates; earlier native failures remain real
+and their cause unresolved. No unchanged rerun, waiver, merge or SDK/profile
+activation follows.

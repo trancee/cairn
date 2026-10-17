@@ -4,7 +4,6 @@ import json
 import math
 import os
 from pathlib import Path
-import platform
 import selectors
 import subprocess
 import sys
@@ -60,31 +59,20 @@ class CompiledProcessTests(unittest.TestCase):
         self.assertNotIn("result Msg:", result.stdout)
 
     def test_process_profiling_rejects_acceptance_and_other_workloads_before_execution(self):
-        selections = [
+        for selection in (
             ["--proxy", str(self.proxy), "--rounds", "3"],
             ["--proxy", str(self.proxy), "--rounds", "1", "--workload", "startup"],
             ["--check-report", "absent-report.json", "--rounds", "1"],
-            ["--compare-linux", "--rounds", "3"],
-            ["--compare-linux", "--rounds", "1", "--workload", "startup"],
-        ]
-        cases = [(selection + ["--profile-linux"], "requires one full-export screening pair")
-                 for selection in selections]
-        cases.append((["--compare-linux", "--rounds", "1"], "requires one full-export screening pair"))
-        if sys.platform != "linux" or platform.machine() != "x86_64":
-            cases.append((
-                ["--compare-linux", "--rounds", "1", "--profile-linux"],
-                "comparison requires native Linux x86-64",
-            ))
-        for selection, reason in cases:
+        ):
             with self.subTest(selection=selection):
                 result = subprocess.run(
                     [sys.executable, str(Path(__file__).with_name("experiment.py")),
-                     *selection],
+                     *selection, "--profile-linux"],
                     text=True, capture_output=True, timeout=5,
                 )
 
                 self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-                self.assertIn(reason, result.stderr)
+                self.assertIn("requires one full-export screening pair", result.stderr)
 
     def test_linux_process_profile_is_diagnostic_and_observes_the_real_guard(self):
         environment = dict(os.environ)

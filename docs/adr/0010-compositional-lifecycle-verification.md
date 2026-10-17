@@ -98,6 +98,30 @@ Actual own-head Linux evidence and every ordinary hosted gate remain required.
 No readiness adoption, budget waiver, unchanged retry, dispatch, merge,
 SDK/profile activation or advancement of the blocked mathematical gates follows.
 
+Published `bbf115c` completes the bounded comparison in actual Linux
+`39015809767`. Both frozen source/build/CLI identities, 13 shared inputs,
+fixed exports, environment, sample math and owned-view cleanup independently
+validate. Original direct/guarded times are `36.916707345`/`40.225939800`
+seconds (`+8.964051%`), observed guard CPU `2.44` seconds; candidate times are
+`37.069251875`/`40.413911118` seconds (`+9.022732%`), CPU `2.43` seconds.
+Direct rate differs `0.4132%`; observed CPU improves only `0.4098%` and
+normalized overhead worsens `0.6546%`. No worthwhile benefit is established.
+The aggregate independently rejects as acceptance through the public CLI.
+All 19 lifecycle cells, 11 Rust jobs and six required CodeQL jobs pass.
+Independent strict compilation/five Kotlin units/teardown/integrity/processed
+delivery audits pass; final rollup is 37 successes/one intentional skip.
+Both separate unprofiled budgets validate (`+9.562037%`, `+14.648994` ms).
+Native source and actual Linux binary remain exact originals, so this later
+green is not a fix or acceptance of any failed predecessor.
+
+Remove the one-shot driver/mode, scheduled step and core-only history fetch
+after all runs are terminal. Retain only the aggregate-report rejection and
+its public regression, preserving diagnostic safety without ongoing execution
+of historical code. The complete reproducer remains committed at `bbf115c`.
+No native optimization, new default behavior, permanent job cost or SDK/API
+change is retained. Cleanup requires its own authoritative current-head gates;
+the cause and reliable resolution of the native budget failures remain open.
+
 ### Native Linux readiness trial (2026-10-16)
 
 Profiling head `fb1abf4` passes all 19 lifecycle cells, 11 Rust jobs and six

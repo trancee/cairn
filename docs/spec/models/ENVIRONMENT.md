@@ -141,13 +141,16 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
 - Removal `84d6267` still fails actual unchanged-source Linux full export at
   `+10.886877%`; startup does not run. All other callers/Rust/required CodeQL
   jobs pass, including independently verified strict result delivery.
-  The owner now approves `experiment.py --compare-linux --rounds 1 --profile-linux`:
-  one existing-CLI screening pair each from frozen `fb1abf4`/`d4bbeac`, with
-  separate owned worktrees/builds and source freshness enforced in each view.
-  The core cell fetches history and runs this bounded diagnostic before normal
-  budgets, retaining all 19 jobs and the 15-minute ceiling. Worktree inventory
-  must reconcile before success. It changes no maintained guard and does not
-  establish stable improvement/causation or replace either acceptance budget.
+  The owner-approved same-run comparison completes at `bbf115c`: each frozen
+  `fb1abf4`/`d4bbeac` runs its own source-validating CLI/build, with matched
+  inputs/environment and verified Git cleanup. Observed CPU is `2.44`/`2.43`
+  seconds (`0.4098%` lower), but normalized overhead worsens `0.6546%`;
+  direct rate differs `0.4132%`. It establishes no worthwhile gain.
+  All actual gates/ordinary budgets pass, not a native fix.
+  Remove its one-shot controller/mode/step and extra history fetch; retain
+  comparison-report rejection/regression. The reproducer is committed at
+  `bbf115c`, not part of the maintained CLI. No original guard, 19-job matrix,
+  deadline or budget changes; cleanup still requires its own hosted gates.
   See the [reference](equations/native-proxy/README.md#same-run-native-linux-comparison).
 - `scripts/check.sh` builds the host guard with the root Rust pin, checks Rust
   formatting/strict Clippy and 24 native CLI/process cases, then runs

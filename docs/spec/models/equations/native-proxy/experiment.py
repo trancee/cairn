@@ -119,20 +119,10 @@ def main() -> int:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--proxy", type=Path)
     mode.add_argument("--check-report", type=Path)
-    mode.add_argument("--compare-linux", action="store_true")
     parser.add_argument("--workload", choices=tuple(WORKLOADS), default="full-export")
     parser.add_argument("--rounds", type=int, choices=(1, 3), default=3)
     parser.add_argument("--profile-linux", action="store_true")
     arguments = parser.parse_args()
-    if arguments.compare_linux:
-        if not arguments.profile_linux or arguments.rounds != 1 or arguments.workload != "full-export":
-            raise GuardError("native Linux comparison requires one full-export screening pair with profiling")
-        if sys.platform != "linux" or platform.machine() != "x86_64":
-            raise GuardError("native Linux comparison requires native Linux x86-64")
-        from linux_compare import compare
-
-        print(json.dumps(compare(), indent=2))
-        return 0
     if arguments.profile_linux:
         if arguments.proxy is None or arguments.rounds != 1 or arguments.workload != "full-export":
             raise GuardError("native process profiling requires one full-export screening pair")

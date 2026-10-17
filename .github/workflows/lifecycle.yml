@@ -71,7 +71,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: ${{ matrix.name == 'lifecycle' && '0' || '1' }}
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -124,11 +123,6 @@ jobs:
       - name: Check fast gates, lifecycle proofs, equation convergence/image and source projection
         if: matrix.name == 'lifecycle'
         run: scripts/check.sh
-      - name: Diagnose frozen native revisions on the same Linux host
-        if: matrix.name == 'lifecycle'
-        run: |
-          python3 docs/spec/models/equations/native-proxy/experiment.py \
-            --compare-linux --workload full-export --rounds 1 --profile-linux
       - name: Check representative and startup-only native guard budgets
         if: matrix.name == 'lifecycle'
         run: |

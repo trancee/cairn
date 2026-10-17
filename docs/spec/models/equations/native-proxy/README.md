@@ -159,45 +159,54 @@ local macOS checks do not establish native-Linux profiling success.
 
 ## Same-run native Linux comparison
 
-The owner-approved diagnostic compares frozen `fb1abf4` (original guard) and
-`d4bbeac` (rejected readiness trial) on the existing native Linux x86-64 cell:
+The bounded diagnostic at `bbf115c` compares frozen `fb1abf4` (original guard)
+and `d4bbeac` (rejected readiness trial) on one native Linux x86-64 cell.
+The temporary controller, `--compare-linux` mode, scheduled comparison step
+and core-only full-history fetch are now removed. The command below exists
+only in a Git checkout of committed `bbf115c`, with its pinned prerequisites:
 
 ```bash
 python3 docs/spec/models/equations/native-proxy/experiment.py \
   --compare-linux --workload full-export --rounds 1 --profile-linux
 ```
 
-`--compare-linux` is mutually exclusive with `--proxy`/`--check-report`.
-It requires one profiled full-export pair per revision and Linux x86-64;
-invalid modes/platforms and `CAIRN_MAUDE_BINARY` overrides fail before work.
-The repository must contain both exact commits; the core CI checkout fetches
-history, while the other 18 cells retain shallow checkouts.
+At that revision, `--compare-linux` is mutually exclusive with `--proxy`/
+`--check-report` and requires one profiled full-export pair per revision,
+Linux x86-64 and both exact Git commits. Invalid modes/platforms/backend
+overrides reject. Both owned worktrees/builds precede measurement; each runs
+its own committed CLI with its own source-identified binary.
 
-Both owned detached worktrees are populated and their separate locked release
-binaries built before measurement. Common model, benchmark, profiling,
-runner, inventory, Cargo and Rust-pin inputs must match byte-for-byte.
-Each revision then runs its own committed `experiment.py`, from its own
-worktree, with its own explicit executable. Normal source freshness, complete
-guard evidence, fixed Linux export digest and `120`/`60`/`5`-second
-export/derivation/shutdown limits remain mandatory. Builds are bounded at
-`120` seconds, each two-export CLI at `270`, and Git commands at `30`.
-The existing workflow remains 19 jobs with the unchanged 15-minute ceiling;
-this diagnostic runs before, not instead of, both normal three-pair budgets.
+Thirteen shared model/benchmark/runner/inventory/Cargo/Rust-pin inputs match
+byte-for-byte. Source freshness, complete evidence, fixed Linux export and
+`120`/`60`/`5`-second export/derivation/shutdown limits stay mandatory.
+Builds are bounded at `120` seconds, each two-export CLI at `270`, Git at `30`.
+The one-shot step precedes, never replaces, both normal three-pair budgets
+within the same 19 jobs and 15-minute ceiling.
 
-Output records both original reports under `native_linux_comparison`,
-observed guard CPU seconds, measurement spans and a shared-input digest.
-Frozen revision/source identities, built executable/model hashes, one-pair
-timings, overhead math and matching comparison environments are checked.
-Owned views are removed before success, and the original Git worktree
-inventory must reconcile. No historical source replaces the maintained guard.
-Missing/stale/malformed evidence or failed cleanup rejects explicitly.
+Actual run `39015809767` independently validates both frozen revision/source
+identities, built binary/model/export hashes, one-pair math, matched environment,
+shared-input digest and owned-worktree cleanup:
+
+| Revision | Direct / guarded seconds | Profiled overhead | Observed guard CPU |
+|---|---|---|---|
+| Original `fb1abf4` | `36.916707345` / `40.225939800` | `+8.964051%` | `2.44` s |
+| Trial `d4bbeac` | `37.069251875` / `40.413911118` | `+9.022732%` | `2.43` s |
+
+Direct rate differs `0.4132%`; observed CPU drops only `0.4098%`, while
+normalized overhead worsens `0.6546%`. This establishes no worthwhile gain.
+The rejected readiness code remains absent from the maintained guard.
 
 The order is baseline then candidate, with one direct/guarded pair each.
 Sampling adds load, CPU observations are incomplete, and order/time variation
 remains possible even on one host. This is screening, not causal proof,
 stable improvement or either budget. Both acceptance flags remain false;
 `--check-report` rejects any `native_linux_comparison` field even if relabelled.
-Current-head ordinary gates remain required. See
+Both actual ordinary budgets pass (`+9.562037%`, `+14.648994` ms), as do all
+19 lifecycle/11 Rust/six required CodeQL jobs: 37 PR successes/one intentional
+simulator skip. That accepts this diagnostic checkpoint, not a fix for earlier
+unchanged-binary failures. The live report checker retains the additive
+comparison rejection and its regression. Current-head ordinary gates remain
+required after cleanup. See
 [the decision](../../../../adr/0010-compositional-lifecycle-verification.md#same-run-native-linux-comparison-2026-10-16).
 
 ## Default executable and source freshness
