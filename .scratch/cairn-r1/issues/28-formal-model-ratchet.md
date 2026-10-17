@@ -15,6 +15,18 @@ Put the model under `docs/spec/models/`. A failing lemma reopens the relevant AD
 
 ## Comments
 
+2026-10-17: the owner-approved failure-only CI increment preserves the actual
+unprofiled native-budget rejection and permits one separately marked RTS/CPU
+full-export screening only when enough of the existing cell ceiling remains.
+Original reports, bounded numeric statistics and explicit skipped/failed
+capture status are separate from acceptance. Intended report-rejection and
+normal-progress-stderr reds precede their fixes; local process/parser/clock/
+eligibility/replay controls and real macOS execution do not establish a hosted
+Linux trigger or resolve the budget cause. All native source-ID inputs,
+19 jobs, deadlines, thresholds and formal/SDK blockers remain unchanged.
+See the [reference](../../../docs/spec/models/equations/native-proxy/README.md#failure-only-ci-capture)
+and [decision](../../../docs/adr/0010-compositional-lifecycle-verification.md#failure-triggered-tamarin-runtime-accounting-2026-10-17).
+
 2026-10-14 (published 53-audit checkpoint; see the derivation-kind follow-up
 at the end): the owner-approved `guarded-maude-boundary` is wired into all
 ratchet acceptance callers. It rejects altered modules, improperly sorted

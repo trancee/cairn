@@ -87,6 +87,23 @@ equation, protocol, API, wire, runtime dependency or resource ceiling.
 
 ## Native budget diagnosis (2026-10-16)
 
+The next increment adds
+[failure-only RTS/CPU capture](docs/spec/models/equations/native-proxy/README.md#failure-only-ci-capture)
+to the existing lifecycle core cell. The unprofiled budget step remains
+authoritative and failing; a separate one-pair diagnostic requires five minutes
+remaining plus a one-minute retention reserve within the existing 15-minute
+ceiling. Original reports and separately marked numeric evidence have a
+failure-only seven-day artifact. No job, native source-ID input, equation,
+validation, export deadline, budget, acceptance retry or PMU dependency changes.
+Local parser/process/control-flow tests and real macOS RTS execution are not
+hosted Linux failure-trigger proof or a fix for the intermittent native budget.
+`LEAN=<pinned Lean> scripts/check.sh` passes 24 native, 166 model and 50
+lifecycle tests plus both kernel/source gates. Separate unprofiled local
+three-pair budgets pass at `+6.419572%` full export and `+43.645208` ms startup;
+the new RTS pair retains both false budget flags and rejects at the public
+acceptance checker. These are local results, not current-head hosted acceptance.
+See [ADR 0010](docs/adr/0010-compositional-lifecycle-verification.md#failure-triggered-tamarin-runtime-accounting-2026-10-17).
+
 The published kind-family head `8c54f2b` passes its actual 169-audit kernel,
 18 caller cells, all 11 Rust jobs and six required CodeQL jobs, but its
 lifecycle core cell rejects full-export medians of `24.513057061`/

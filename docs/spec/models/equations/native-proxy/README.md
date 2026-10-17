@@ -99,6 +99,57 @@ The one-pair screening mode reports one sample per label and still cannot
 claim budget acceptance. These fields do not attest that an untrusted
 report was actually measured.
 
+## Tamarin RTS profiles
+
+`--profile-tamarin` is opt-in and requires `--proxy`, `--rounds 1` and
+`--workload full-export`. It can accompany `--profile-linux`; it cannot
+accompany report-checking, startup or three-pair acceptance. For example:
+
+```bash
+python3 docs/spec/models/equations/native-proxy/experiment.py \
+  --proxy target/native-proxy/release/cairn-maude-proxy \
+  --workload full-export --rounds 1 --profile-tamarin
+```
+
+The selected Tamarin runs with `+RTS -t<private-file> --machine-readable -RTS`.
+No capabilities, heap, collector, affinity or environment tuning is added;
+nonempty `GHCRTS` rejects. Metadata subprocesses have a diagnostic-only
+`5`-second timeout. Export/derivation/shutdown limits remain `120`/`60`/`5`
+seconds. The private launcher and its Tamarin child share the original
+runner's bounded process group. Launcher startup and stderr validation
+contribute to observed wall/child CPU time, not Tamarin's RTS totals.
+
+Output adds `tamarin_runtime_profiles`, with one entry per label:
+
+| Field | Meaning |
+|---|---|
+| `accounting` | Final Tamarin aggregates, not complete descendant CPU |
+| `executable_sha256` | Actual Tamarin binary hash, checked before/after and across both samples |
+| `numeric_fields` | Unique bounded field names and finite nonnegative numeric **strings**, preserving decimal precision |
+
+Required fields include `allocated_bytes`, `max_live_bytes`, `n_capabilities`,
+`task_count` and the actual pinned `init_*`, `mut_*`, `GC_*`, `exit_*`,
+`total_*` CPU/wall seconds. The pinned runtime uses `mut_cpu_seconds` and
+`mut_wall_seconds`, not `mutator_*`; names such as `sparks_dud ` retain their
+trailing space. Unsupported, malformed, duplicated, truncated, oversized or
+incomplete statistics reject. Only numeric fields survive; command headers,
+arguments and raw stderr are not retained. Temporary statistics are removed
+on normal completion and handled errors, including the original export timeout.
+
+The launcher accepts the exact successful Maude `3.5.1` banner and the four
+fixed load/translation/derivation progress messages for the two owned theories,
+verified against pinned Tamarin `1.12.0`
+[`Console.hs`](https://github.com/tamarin-prover/tamarin-prover/blob/1.12.0/src/Main/Console.hs)
+and [`TheoryLoader.hs`](https://github.com/tamarin-prover/tamarin-prover/blob/1.12.0/src/Main/TheoryLoader.hs).
+Unknown stderr or a nonzero process exit rejects without copying its payload.
+RTS totals exclude Maude/native-guard/launcher CPU and have different boundaries
+from `waited_child_resources`; their subtraction is not exact native attribution.
+
+These reports retain `budget_checked: false`/`budget_passed: false`.
+`--check-report` rejects `tamarin_runtime_profiles` even when timing samples
+and method labels are changed to resemble acceptance. Unprofiled three-pair
+acceptance remains the only budget gate.
+
 ## Native Linux process profiles
 
 `--profile-linux` is opt-in and requires `--proxy`, `--rounds 1` and
@@ -156,6 +207,44 @@ lifecycle evidence remain mandatory. Profiled reports retain
 as three-pair evidence. Normal three-pair acceptance never enables sampling.
 The existing Linux CLI test prints its actual profile in the core CI log;
 local macOS checks do not establish native-Linux profiling success.
+
+## Failure-only CI capture
+
+The existing core lifecycle cell records a monotonic clock in its first step.
+Its normal, unprofiled budget step still runs full export then startup, each
+with three alternating pairs. `pipefail` preserves the actual failing exit
+through `tee`; stdout reports are retained separately as
+`normal-full-export.json` and, if reached, `normal-startup.json`.
+
+Only failure of that budget step enables `capture_failure.py`, in a distinct
+step that cannot change the already-failed outcome. It validates the selected
+failed report with the owning checker, including current source/model/export,
+the actual proxy hash and failed acceptance flags. Passing, incompatible,
+profiled or incomplete reports never launch diagnostic work.
+
+One full-export RTS/CPU screening pair is permitted only when at least `300`
+seconds remain after a `60`-second retention reserve, measured against the
+first-step clock plus the existing `900` seconds. The original GitHub
+`15`-minute job timeout remains authoritative, including runner startup.
+The diagnostic step also has a `5`-minute cap. No normal-path diagnostic,
+acceptance retry, new job, larger deadline, threshold change or PMU dependency
+is introduced. Existing Linux process-profile test coverage reuses its sole
+pair with both profile flags rather than adding another full-export pair.
+
+`failure-capture.json` is created exclusively before work; an existing record
+prevents replay. Its `status` is `captured`, `skipped` for insufficient time,
+or `failed` with an explicit reason/error kind. An interrupted `started`
+record is incomplete, never success. Successful capture records the original
+report hash, verifies its bytes are unchanged and writes a separate
+`diagnostic-full-export.json`. Diagnostic budget flags remain false.
+
+The failure-only upload retains these JSON files for `7` days as
+`native-budget-failure-<run-id>-<attempt>`, including explicit skip/failure
+status when available. Raw statistics, queries, model output, argument headers
+and environment dumps are not uploaded. Hard job cancellation/time exhaustion
+can prevent retention; it must not be reported as complete evidence.
+The capture is additional diagnostic evidence, not resolution of the
+intermittent native budget failure.
 
 ## Same-run native Linux comparison
 

@@ -81,7 +81,7 @@ class CompiledProcessTests(unittest.TestCase):
         result = subprocess.run(
             [sys.executable, str(Path(__file__).with_name("experiment.py")),
              "--proxy", str(self.proxy), "--workload", "full-export",
-             "--rounds", "1", "--profile-linux"],
+             "--rounds", "1", "--profile-linux", "--profile-tamarin"],
             text=True, capture_output=True, env=environment, timeout=270,
         )
 
@@ -93,6 +93,13 @@ class CompiledProcessTests(unittest.TestCase):
         report = json.loads(result.stdout)
         self.assertFalse(report["budget_checked"])
         self.assertFalse(report["budget_passed"])
+        runtime_profiles = report["tamarin_runtime_profiles"]
+        self.assertEqual(set(runtime_profiles), {"baseline", "compiled_guard"})
+        for samples in runtime_profiles.values():
+            runtime, = samples
+            self.assertEqual(len(runtime["executable_sha256"]), 64)
+            self.assertGreater(int(runtime["numeric_fields"]["n_capabilities"]), 0)
+            self.assertGreater(float(runtime["numeric_fields"]["total_cpu_seconds"]), 0)
         profiles = report["native_process_profiles"]
         self.assertEqual(set(profiles), {"baseline", "compiled_guard"})
         self.assertEqual(profiles["baseline"][0]["processes"], [])

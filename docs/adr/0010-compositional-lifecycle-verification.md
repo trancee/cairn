@@ -58,6 +58,48 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Failure-triggered Tamarin runtime accounting (2026-10-17)
+
+The bounded controlled-host RTS/PMU investigations did not reproduce the
+earlier slow regime or establish a native fix; historical host state cannot
+be reconstructed. The owner approved capture on the next ordinary failing
+lifecycle budget step rather than more unchanged-host repetitions.
+
+Keep the original unprofiled three-pair acceptance step and its failure.
+Preserve its report, then permit at most one separately marked full-export
+RTS/CPU pair in the same cell, only if the remaining first-step-clock allowance
+can cover five minutes plus a one-minute retention reserve. The existing
+15-minute job ceiling is authoritative. Insufficient time produces an explicit
+skip, not a new run or larger deadline. Upload only the original structured
+report, status and separately marked numeric diagnostic report.
+The [reference](../spec/models/equations/native-proxy/README.md#failure-only-ci-capture)
+defines the CLI/report boundary.
+
+Built-in RTS accounting avoids new PMU dependencies or permissions.
+A private bounded launcher validates pinned successful stderr and collects
+numeric final statistics, without changing native source-ID inputs or shared
+runner semantics. It rejects unknown diagnostics instead of silently ignoring
+them. Normal model loading also emits four reviewed progress lines; a
+benign `--version` banner alone is not a valid full-export stderr fixture.
+The real full-export red exposed this distinction, then a focused process
+regression reproduced it before the source-backed allowlist correction.
+
+Always-on profiling would perturb acceptance; rerunning a failed gate would
+replace rather than explain the failure. Another Fedora-only block would
+still lack the earlier host state. Reject all three alternatives. RTS and
+waited-child CPU have different scopes, and instrumentation adds overhead;
+neither favorable timing nor diagnostic success establishes causation.
+Missing/incomplete statistics, unknown stderr, stale reports and insufficient
+time remain visible. Abrupt job termination can prevent artifact upload.
+
+This additive internal-tool/report migration rejects RTS-marked reports at
+the existing acceptance CLI, including relabelled evidence. Native equations,
+validation, source identity, all 19 jobs, `120`/`60`/`5` deadlines and
+`10%`/`50` ms budgets stay unchanged. No public API/wire/runtime dependency,
+constant-time, SDK/profile, FVP or assembled-proof acceptance changes.
+Own-head hosted controls and a real failure-trigger observation remain distinct
+from local fixtures and macOS runtime evidence.
+
 ### Same-run native Linux comparison (2026-10-16)
 
 Removal head `84d6267` restores the original native Linux source and binary

@@ -21,6 +21,7 @@ from equations.maude_runner import GuardError, run_guarded_tamarin, unique_field
 from equations.maude_native import source_identity
 from replay import ReplayError, run
 from linux_profile import LinuxProcessProfile
+from tamarin_profile import TamarinRuntimeProfile
 
 
 MODELS = Path(__file__).resolve().parents[2]
@@ -42,6 +43,10 @@ WORKLOADS = {
 }
 
 
+class BudgetExceeded(GuardError):
+    """A structurally valid current-source report exceeds its approved budget."""
+
+
 def check_budget(report: object, workload: str) -> None:
     if not isinstance(report, dict):
         raise GuardError("malformed native guard performance report")
@@ -49,6 +54,8 @@ def check_budget(report: object, workload: str) -> None:
         raise GuardError("native process profiling is diagnostic only")
     if "native_linux_comparison" in report:
         raise GuardError("native Linux comparison is diagnostic only")
+    if "tamarin_runtime_profiles" in report:
+        raise GuardError("Tamarin RTS profiling is diagnostic only")
     for field in ("platform", "architecture", "compiler", "baseline"):
         if not isinstance(report.get(field), str) or not report[field]:
             raise GuardError("missing native guard comparison environment")
@@ -111,36 +118,28 @@ def check_budget(report: object, workload: str) -> None:
     maximum = baseline * Decimal("1.10") if workload == "full-export" else baseline + Decimal("0.050")
     if medians["compiled_guard"] > maximum:
         threshold = "10% full-export" if workload == "full-export" else "50 ms startup-only"
-        raise GuardError(f"native guard exceeds approved {threshold} budget")
+        raise BudgetExceeded(f"native guard exceeds approved {threshold} budget")
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    mode = parser.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--proxy", type=Path)
-    mode.add_argument("--check-report", type=Path)
-    parser.add_argument("--workload", choices=tuple(WORKLOADS), default="full-export")
-    parser.add_argument("--rounds", type=int, choices=(1, 3), default=3)
-    parser.add_argument("--profile-linux", action="store_true")
-    arguments = parser.parse_args()
-    if arguments.profile_linux:
-        if arguments.proxy is None or arguments.rounds != 1 or arguments.workload != "full-export":
-            raise GuardError("native process profiling requires one full-export screening pair")
-        if sys.platform != "linux":
-            raise GuardError("native process profiling requires native Linux")
-    if arguments.check_report is not None:
-        try:
-            report = json.loads(arguments.check_report.read_text(), object_pairs_hook=unique_fields)
-        except (ValueError, RecursionError) as error:
-            raise GuardError("malformed native guard performance report") from error
-        check_budget(report, arguments.workload)
-        print(f"PASS: native guard {arguments.workload} median meets its approved budget")
-        return 0
-    proxy = arguments.proxy.resolve(strict=True)
-    model, expected_exports = WORKLOADS[arguments.workload]
+def measure(
+    proxy: Path, workload: str, rounds: int, *,
+    profile_linux: bool = False, profile_tamarin: bool = False,
+) -> dict[str, object]:
+    if workload not in WORKLOADS or rounds not in (1, 3):
+        raise GuardError("unsupported native guard measurement")
+    if (profile_linux or profile_tamarin) and (rounds != 1 or workload != "full-export"):
+        raise GuardError("native profiling requires one full-export screening pair")
+    if profile_linux and sys.platform != "linux":
+        raise GuardError("native process profiling requires native Linux")
+    proxy = proxy.resolve(strict=True)
+    model, expected_exports = WORKLOADS[workload]
     identity = source_identity()
     proxy_digest = hashlib.sha256(proxy.read_bytes()).hexdigest()
-    subprocess.run(["git", "diff", "--quiet", "HEAD", "--", "docs/spec/models/replay.py"], check=True)
+    metadata_timeout = 5 if profile_tamarin else None
+    subprocess.run(
+        ["git", "diff", "--quiet", "HEAD", "--", "docs/spec/models/replay.py"],
+        check=True, timeout=metadata_timeout,
+    )
     command = [
         "tamarin-prover", str(model), "--quit-on-warning",
         "--derivcheck-timeout=60", "--output-module=msr",
@@ -150,20 +149,28 @@ def main() -> int:
         "baseline": [], "compiled_guard": [],
     }
     profiles: dict[str, list[dict[str, object]]] = {"baseline": [], "compiled_guard": []}
+    runtime_profiles: dict[str, list[dict[str, object]]] = {"baseline": [], "compiled_guard": []}
     digest = None
-    for index in range(arguments.rounds):
+    for index in range(rounds):
         order = ("baseline", "compiled_guard") if index % 2 == 0 else ("compiled_guard", "baseline")
         for label in order:
-            profiler = LinuxProcessProfile(proxy) if arguments.profile_linux else nullcontext()
-            with profiler as profile:
+            profiler = LinuxProcessProfile(proxy) if profile_linux else nullcontext()
+            runtime_profiler = (
+                TamarinRuntimeProfile(proxy if label == "compiled_guard" else None)
+                if profile_tamarin else nullcontext()
+            )
+            with profiler as profile, runtime_profiler as runtime_profile:
+                measured_command = command if runtime_profile is None else runtime_profile.command(command)
                 before = resource.getrusage(resource.RUSAGE_CHILDREN)
                 started = time.monotonic()
                 output = (
-                    run(command, 120) if label == "baseline"
-                    else run_guarded_tamarin(command, 120, proxy=proxy)
+                    run(measured_command, 120) if label == "baseline"
+                    else run_guarded_tamarin(measured_command, 120, proxy=proxy)
                 )
                 timings[label].append(time.monotonic() - started)
                 after = resource.getrusage(resource.RUSAGE_CHILDREN)
+                if runtime_profile is not None:
+                    runtime_profiles[label].append(runtime_profile.report())
             if profile is not None:
                 observation = profile.report()
                 if label == "compiled_guard" and not observation["processes"]:
@@ -185,19 +192,26 @@ def main() -> int:
             digest = actual
     if source_identity() != identity or hashlib.sha256(proxy.read_bytes()).hexdigest() != proxy_digest:
         raise GuardError("native guard source or executable changed during measurement")
+    if profile_tamarin and (
+        runtime_profiles["baseline"][0]["executable_sha256"]
+        != runtime_profiles["compiled_guard"][0]["executable_sha256"]
+    ):
+        raise GuardError("Tamarin RTS profiling executable changed between samples")
     medians = {label: statistics.median(values) for label, values in timings.items()}
     report = {
         "scope": "native guard performance evidence, not default cutover or native FVP acceptance",
-        "workload_name": arguments.workload,
+        "workload_name": workload,
         "workload": [command[0], str(model.relative_to(MODELS)), *command[2:]],
         "platform": platform.platform(),
         "python": platform.python_version(),
         "architecture": platform.machine(),
         "logical_cpus": os.cpu_count(),
         "physical_memory_bytes": os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE"),
-        "baseline_revision": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+        "baseline_revision": subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], text=True, timeout=metadata_timeout,
+        ).strip(),
         "baseline": "unchanged committed replay.run, direct pinned Tamarin/Maude",
-        "method": "three alternating paired runs" if arguments.rounds == 3 else "one screening pair, not acceptance",
+        "method": "three alternating paired runs" if rounds == 3 else "one screening pair, not acceptance",
         "seconds": timings,
         "waited_child_resources": child_resources,
         "median_seconds": medians,
@@ -207,12 +221,49 @@ def main() -> int:
         "model_sha256": hashlib.sha256(model.read_bytes()).hexdigest(),
         "export_sha256": digest,
         "proxy_sha256": proxy_digest,
-        "compiler": subprocess.check_output(["rustc", "--version"], text=True).strip(),
-        "budget_checked": arguments.rounds == 3,
+        "compiler": subprocess.check_output(
+            ["rustc", "--version"], text=True, timeout=metadata_timeout,
+        ).strip(),
+        "budget_checked": rounds == 3,
         "budget_passed": False,
     }
-    if arguments.profile_linux:
+    if profile_linux:
         report["native_process_profiles"] = profiles
+    if profile_tamarin:
+        report["tamarin_runtime_profiles"] = runtime_profiles
+    return report
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--proxy", type=Path)
+    mode.add_argument("--check-report", type=Path)
+    parser.add_argument("--workload", choices=tuple(WORKLOADS), default="full-export")
+    parser.add_argument("--rounds", type=int, choices=(1, 3), default=3)
+    parser.add_argument("--profile-linux", action="store_true")
+    parser.add_argument("--profile-tamarin", action="store_true")
+    arguments = parser.parse_args()
+    for enabled, name in (
+        (arguments.profile_linux, "native process"),
+        (arguments.profile_tamarin, "Tamarin RTS"),
+    ):
+        if enabled and (
+            arguments.proxy is None or arguments.rounds != 1 or arguments.workload != "full-export"
+        ):
+            raise GuardError(f"{name} profiling requires one full-export screening pair")
+    if arguments.check_report is not None:
+        try:
+            report = json.loads(arguments.check_report.read_text(), object_pairs_hook=unique_fields)
+        except (ValueError, RecursionError) as error:
+            raise GuardError("malformed native guard performance report") from error
+        check_budget(report, arguments.workload)
+        print(f"PASS: native guard {arguments.workload} median meets its approved budget")
+        return 0
+    report = measure(
+        arguments.proxy, arguments.workload, arguments.rounds,
+        profile_linux=arguments.profile_linux, profile_tamarin=arguments.profile_tamarin,
+    )
     if arguments.rounds == 3:
         try:
             check_budget(report, arguments.workload)
@@ -230,6 +281,6 @@ if __name__ == "__main__":
     except (GuardError, ReplayError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         sys.exit(1)
-    except (OSError, ValueError, subprocess.CalledProcessError):
+    except (OSError, ValueError, subprocess.SubprocessError):
         print("FAIL: native guard benchmark tool, source, report or baseline unavailable", file=sys.stderr)
         sys.exit(1)

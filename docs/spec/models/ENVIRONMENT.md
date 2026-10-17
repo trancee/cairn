@@ -114,6 +114,15 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   The `8c54f2b` full-export failure (`+16.576923%`) remains a real blocker.
   Local diagnostic reports pass (`+6.154029%`, `+36.256333` ms), not a Linux
   reproduction, performance fix or later-head hosted acceptance.
+- `--profile-tamarin` enables only a one-pair full-export screening, adding
+  numeric final RTS allocation/MUT/GC/task/capability evidence and rejecting
+  nonempty `GHCRTS`. It can accompany `--profile-linux`; neither profile can
+  establish budget acceptance. The existing Linux CLI profile test reuses its
+  one pair with both flags. The core CI budget step remains unprofiled; only
+  its failure can enable a separate RTS/CPU pair, with sufficient remaining
+  time and unchanged job ceiling. A seven-day failure artifact preserves the
+  original report and explicit capture/skip/failure status.
+  See the [reference](equations/native-proxy/README.md#failure-only-ci-capture).
 - Diagnostic head `c270c73` also rejects actual Linux full export at
   `+11.679378%`; all other lifecycle callers, Rust and required CodeQL jobs
   pass. Borrowed-provenance and thin-LTO trials show no worthwhile local
