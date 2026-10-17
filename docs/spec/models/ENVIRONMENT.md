@@ -117,9 +117,14 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
 - `--profile-tamarin` enables only a one-pair full-export screening, adding
   numeric final RTS allocation/MUT/GC/task/capability evidence and rejecting
   nonempty `GHCRTS`. It can accompany `--profile-linux`; neither profile can
-  establish budget acceptance. The existing Linux CLI profile test reuses its
-  one pair with both flags. The core CI budget step remains unprofiled; only
-  its failure can enable a separate RTS/CPU pair, with sufficient remaining
+  establish budget acceptance. `--profile-native` additionally records bounded
+  numeric native-phase CPU/wall counters and main-driver-thread CPU on 64-bit
+  native Linux. It retains complete validation, a source-identified rebuild,
+  owned private reports and diagnostic-only rejection. Inherited nonempty
+  `CAIRN_MAUDE_PHASE_REPORT` rejects rather than silently enabling profiling.
+  The existing Linux CLI profile test reuses its one pair with all three flags.
+  The core CI budget step remains unprofiled; only
+  its failure can enable a separate RTS/process/phase/driver CPU pair, with sufficient remaining
   time and unchanged job ceiling. A seven-day failure artifact preserves the
   original report and explicit capture/skip/failure status.
   See the [reference](equations/native-proxy/README.md#failure-only-ci-capture).
@@ -162,7 +167,7 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   deadline or budget changes; cleanup still requires its own hosted gates.
   See the [reference](equations/native-proxy/README.md#same-run-native-linux-comparison).
 - `scripts/check.sh` builds the host guard with the root Rust pin, checks Rust
-  formatting/strict Clippy and 24 native CLI/process cases, then runs
+  formatting/all-target strict Clippy, native clock unit tests and 28 native CLI/process cases, then runs
   whitespace, unit tests and `actionlint`,
   plus lifecycle/source-projection and equation convergence/boundedness proofs when pinned
   Lean is available. The pre-commit hook and CI both call it.

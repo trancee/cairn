@@ -128,6 +128,7 @@ class NativePerformanceCommandTests(unittest.TestCase):
             ("native_process_profiles", "process profiling is diagnostic only"),
             ("native_linux_comparison", "Linux comparison is diagnostic only"),
             ("tamarin_runtime_profiles", "Tamarin RTS profiling is diagnostic only"),
+            ("native_phase_profiles", "native phase profiling is diagnostic only"),
         ):
             report = self.report()
             report[field] = {}

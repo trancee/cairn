@@ -8,10 +8,8 @@ use std::{
 
 use crate::error::{Error::Rejected, Result};
 
-fn open() -> Result<Option<File>> {
-    let Some(destination) =
-        env::var_os("CAIRN_MAUDE_GUARD_REPORT").filter(|value| !value.is_empty())
-    else {
+pub(crate) fn open(variable: &str) -> Result<Option<File>> {
+    let Some(destination) = env::var_os(variable).filter(|value| !value.is_empty()) else {
         return Ok(None);
     };
     if !Path::new(&destination).is_absolute() {
@@ -38,7 +36,7 @@ fn open() -> Result<Option<File>> {
     Ok(Some(file))
 }
 
-fn write(file: &mut File, bytes: &[u8]) -> Result<()> {
+pub(crate) fn write(file: &mut File, bytes: &[u8]) -> Result<()> {
     let count = file
         .write(bytes)
         .map_err(|_| Rejected("native evidence report: I/O failure"))?;
@@ -58,7 +56,7 @@ fn encoded(event: &str, field: Option<(&str, &str)>) -> Vec<u8> {
 }
 
 pub fn record(event: &str, field: Option<(&str, &str)>) -> Result<()> {
-    if let Some(mut file) = open()? {
+    if let Some(mut file) = open("CAIRN_MAUDE_GUARD_REPORT")? {
         let written = write(&mut file, &encoded(event, field));
         let closed = crate::unix::close_file(file)
             .map_err(|_| Rejected("native evidence report: I/O failure"));
@@ -82,7 +80,7 @@ impl Journal {
 
     pub fn record(&mut self, event: &str, kind: &str) -> Result<()> {
         if self.file.is_none() {
-            self.file = open()?;
+            self.file = open("CAIRN_MAUDE_GUARD_REPORT")?;
         }
         if self.file.is_none() {
             return Ok(());

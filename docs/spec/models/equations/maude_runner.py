@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import json
+import os
 import re
 import tempfile
 import time
@@ -99,6 +100,7 @@ def boundary_complete(report: Path, *, source_id: str) -> bool:
 
 def run_guarded_tamarin(
     command: list[str], timeout: int, *, proxy: Path | None = None,
+    phase_report: Path | None = None,
 ) -> str:
     from .maude_native import select_proxy
     from replay import ReplayError, run
@@ -107,12 +109,17 @@ def run_guarded_tamarin(
         argument.startswith("--with-maude") for argument in command[1:]
     ):
         raise GuardError("unsupported guarded Tamarin invocation")
+    if os.environ.get("CAIRN_MAUDE_PHASE_REPORT"):
+        raise GuardError("native CPU profiling requires an owned explicit report")
+    if phase_report is not None and not phase_report.is_absolute():
+        raise GuardError("native CPU profiling requires an absolute report path")
     proxy, source_id = select_proxy(proxy)
     with tempfile.TemporaryDirectory(prefix="cairn-maude-boundary-") as temporary:
         report = Path(temporary) / "events.jsonl"
         try:
             output = run([
                 "env", f"CAIRN_MAUDE_GUARD_REPORT={report}",
+                *([] if phase_report is None else [f"CAIRN_MAUDE_PHASE_REPORT={phase_report}"]),
                 *command, f"--with-maude={proxy}",
             ], timeout)
         except (OSError, ReplayError) as error:

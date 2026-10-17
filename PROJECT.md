@@ -80,14 +80,25 @@ runtime finite-support/occurs-check/fresh-namespace correspondence, narrowing/FV
 importer correctness remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
-the gate retains 24 native/141 model/50 lifecycle tests,
-43 projections and requires all 169 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
+the current gates run 28 native CLI/180 model/50 lifecycle tests plus native
+clock unit tests, 43 projections and all 169 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
 record authoritative current-head hosted results. These equation proofs change no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
 
 ## Native budget diagnosis (2026-10-16)
 
-The next increment adds
+The approved phase-accounting follow-up reuses the existing failure-only pair
+for numeric native-phase CPU/wall, driver-thread CPU, Linux guard observations
+and final Tamarin RTS statistics. No new full-export pair is added to the
+existing CLI test or failure capture. Native profiling is opt-in and Linux-only,
+requires owned bounded reports before shutdown evidence and a source-identified
+rebuild, and rejects at acceptance even when relabelled. All ordinary validation,
+19 jobs, deadlines and budgets remain unchanged. Actual current-head Linux
+execution and a causal fix require evidence; instrumentation does not establish
+either or activate SDK/formal acceptance.
+See [ADR 0010](docs/adr/0010-compositional-lifecycle-verification.md#same-pair-native-phase-and-driver-cpu-accounting-2026-10-17).
+
+The preceding increment adds
 [failure-only RTS/CPU capture](docs/spec/models/equations/native-proxy/README.md#failure-only-ci-capture)
 to the existing lifecycle core cell. The unprofiled budget step remains
 authoritative and failing; a separate one-pair diagnostic requires five minutes

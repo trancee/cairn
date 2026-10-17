@@ -1,6 +1,8 @@
 mod error;
 mod evidence;
+mod input;
 mod native;
+mod profile;
 mod query;
 mod reply;
 mod syntax;
@@ -11,12 +13,14 @@ mod inventory {
 }
 
 use error::{Error, Error::Rejected, Result};
+use input::Input;
 use native::{Native, PROMPT};
+use profile::{Phase, Profile};
 use std::{
     collections::BTreeSet,
     env,
     fs::File,
-    io::{Read, Write},
+    io::Write,
     os::unix::fs::{MetadataExt, PermissionsExt},
     path::PathBuf,
     process::ExitCode,
@@ -34,47 +38,6 @@ const SETUP: [&str; 3] = [
     "set show timing off .",
     "set show stats off .",
 ];
-
-struct Input {
-    pending: Vec<u8>,
-    eof: bool,
-}
-
-impl Input {
-    fn new() -> Self {
-        Self {
-            pending: Vec::new(),
-            eof: false,
-        }
-    }
-    fn line(&mut self) -> Result<Option<Vec<u8>>> {
-        loop {
-            if unix::interrupted_now() {
-                return Err(Error::Interrupted);
-            }
-            if let Some(end) = self.pending.iter().position(|byte| *byte == b'\n') {
-                return Ok(Some(self.pending.drain(..=end).collect()));
-            }
-            if self.eof {
-                return Ok(if self.pending.is_empty() {
-                    None
-                } else {
-                    Some(std::mem::take(&mut self.pending))
-                });
-            }
-            let mut fds = [unix::PollFd {
-                fd: 0,
-                events: 1,
-                revents: 0,
-            }];
-            unix::ready(&mut fds, -1, true)?;
-            let mut buffer = [0; 8096];
-            let count = std::io::stdin().read(&mut buffer)?;
-            self.eof = count == 0;
-            self.pending.extend_from_slice(&buffer[..count]);
-        }
-    }
-}
 
 fn forward(output: &mut impl Write, mut reply: Vec<u8>) -> Result<()> {
     reply.extend_from_slice(PROMPT);
@@ -134,6 +97,7 @@ fn stream(
     ready: &mut bool,
     pending: &mut bool,
     consumer: &mut File,
+    profile: &mut Profile,
 ) -> Result<()> {
     let greeting = native.reply()?;
     if greeting.iter().any(|byte| !syntax::space(*byte)) {
@@ -143,7 +107,7 @@ fn stream(
     let mut input = Input::new();
     let mut setup = BTreeSet::new();
     let mut module = Vec::new();
-    while let Some(line) = input.line()? {
+    while let Some(line) = profile.measure(Phase::Input, || input.line())? {
         if !line.is_ascii() {
             return Err(Rejected("native command: non-ASCII syntax"));
         }
@@ -189,17 +153,23 @@ fn stream(
         if !*ready {
             return Err(Rejected("native command: missing reviewed module"));
         }
-        let query = query::validate(command)?;
-        journal.record("begin", query.kind.name())?;
+        let query = profile.measure(Phase::QueryValidation, || query::validate(command))?;
+        profile.measure(Phase::Journal, || {
+            journal.record("begin", query.kind.name())
+        })?;
         *pending = true;
-        native.write(&line)?;
-        let output = native.reply()?;
+        let output = profile.measure(Phase::NativeIo, || {
+            native.write(&line)?;
+            native.reply()
+        })?;
         let text =
             std::str::from_utf8(&output).map_err(|_| Rejected("native reply: non-ASCII syntax"))?;
-        reply::validate(&query, text)?;
-        journal.record("accepted", query.kind.name())?;
+        profile.measure(Phase::ReplyValidation, || reply::validate(&query, text))?;
+        profile.measure(Phase::Journal, || {
+            journal.record("accepted", query.kind.name())
+        })?;
         *pending = false;
-        forward(consumer, output)?;
+        profile.measure(Phase::Forwarding, || forward(consumer, output))?;
     }
     if !module.is_empty() {
         return Err(Rejected("native module: truncated declaration"));
@@ -256,17 +226,26 @@ fn run(journal: &mut evidence::Journal, consumer: &mut File) -> Result<()> {
     if arguments.len() != FLAGS.len() || flags != FLAGS.into_iter().collect() {
         return Err(Rejected("native process: unsupported invocation"));
     }
+    let mut profile = Profile::new()?;
     let mut native = Native::spawn(&executable, &arguments)?;
     evidence::record("start", None)?;
     let mut ready = false;
     let mut pending = false;
-    match stream(&mut native, journal, &mut ready, &mut pending, consumer) {
+    match stream(
+        &mut native,
+        journal,
+        &mut ready,
+        &mut pending,
+        consumer,
+        &mut profile,
+    ) {
         Ok(()) => {}
         Err(Error::Interrupted) if ready && !pending => {}
         Err(error) => return Err(error),
     }
     native.shutdown()?;
     journal.close()?;
+    profile.finish()?;
     evidence::record("shutdown", None)
 }
 

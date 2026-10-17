@@ -15,6 +15,7 @@ from experiment import BudgetExceeded, WORKLOADS, check_budget, measure
 from equations.maude_runner import GuardError, unique_fields
 from replay import ReplayError
 from tamarin_profile import MAXIMUM_STATISTICS_BYTES, RuntimeProfileError
+from native_profile import NativeProfileError
 
 
 JOB_SECONDS = 900
@@ -83,7 +84,10 @@ def capture_failure(
                 if (output / "diagnostic-full-export.json").exists():
                     raise GuardError("native diagnostic evidence already exists")
                 result["status"] = "running"
-                diagnostic = measure(proxy, "full-export", 1, profile_tamarin=True)
+                diagnostic = measure(
+                    proxy, "full-export", 1,
+                    profile_linux=True, profile_tamarin=True, profile_native=True,
+                )
                 retained, _ = read_failed_report(report_path, workload, proxy)
                 if retained != original:
                     raise GuardError("original failed budget report changed during diagnostic")
@@ -100,6 +104,8 @@ def capture_failure(
             )
             if isinstance(error, RuntimeProfileError):
                 result["runtime_error"] = str(error)
+            elif isinstance(error, NativeProfileError):
+                result["native_error"] = str(error)
         status.seek(0)
         json.dump(result, status, indent=2, allow_nan=False)
         status.write("\n")

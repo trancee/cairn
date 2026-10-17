@@ -15,6 +15,18 @@ Put the model under `docs/spec/models/`. A failing lemma reopens the relevant AD
 
 ## Comments
 
+2026-10-17: after the real `46d38fa` CI rejection/capture, offline reconciliation
+confirms incomplete native/driver CPU attribution, not a performance fix.
+The owner approved bounded same-pair native-phase/driver accounting. Opt-in
+Linux thread-CPU and monotonic counters retain numeric-only private reports,
+every native validator and final lifecycle evidence. Enabled phase output must
+precede successful shutdown evidence. Reuse the existing CLI and failure-only
+pairs; keep all jobs, deadlines, budgets and original failure. New native source
+identity requires rebuilding; no retry, PMU dependency, raw payload, host tuning,
+formal acceptance or SDK activation is authorized.
+See the [reference](../../../docs/spec/models/equations/native-proxy/README.md#native-phase-and-driver-cpu-profiles)
+and [decision](../../../docs/adr/0010-compositional-lifecycle-verification.md#same-pair-native-phase-and-driver-cpu-accounting-2026-10-17).
+
 2026-10-17: the owner-approved failure-only CI increment preserves the actual
 unprofiled native-budget rejection and permits one separately marked RTS/CPU
 full-export screening only when enough of the existing cell ceiling remains.

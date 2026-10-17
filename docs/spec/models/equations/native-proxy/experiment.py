@@ -21,6 +21,7 @@ from equations.maude_runner import GuardError, run_guarded_tamarin, unique_field
 from equations.maude_native import source_identity
 from replay import ReplayError, run
 from linux_profile import LinuxProcessProfile
+from native_profile import NativePhaseProfile
 from tamarin_profile import TamarinRuntimeProfile
 
 
@@ -56,6 +57,8 @@ def check_budget(report: object, workload: str) -> None:
         raise GuardError("native Linux comparison is diagnostic only")
     if "tamarin_runtime_profiles" in report:
         raise GuardError("Tamarin RTS profiling is diagnostic only")
+    if "native_phase_profiles" in report:
+        raise GuardError("native phase profiling is diagnostic only")
     for field in ("platform", "architecture", "compiler", "baseline"):
         if not isinstance(report.get(field), str) or not report[field]:
             raise GuardError("missing native guard comparison environment")
@@ -123,19 +126,23 @@ def check_budget(report: object, workload: str) -> None:
 
 def measure(
     proxy: Path, workload: str, rounds: int, *,
-    profile_linux: bool = False, profile_tamarin: bool = False,
+    profile_linux: bool = False, profile_tamarin: bool = False, profile_native: bool = False,
 ) -> dict[str, object]:
     if workload not in WORKLOADS or rounds not in (1, 3):
         raise GuardError("unsupported native guard measurement")
-    if (profile_linux or profile_tamarin) and (rounds != 1 or workload != "full-export"):
+    if (profile_linux or profile_tamarin or profile_native) and (rounds != 1 or workload != "full-export"):
         raise GuardError("native profiling requires one full-export screening pair")
     if profile_linux and sys.platform != "linux":
         raise GuardError("native process profiling requires native Linux")
+    if profile_native and (sys.platform != "linux" or sys.maxsize <= 2**32):
+        raise GuardError("native CPU profiling requires 64-bit native Linux")
+    if os.environ.get("CAIRN_MAUDE_PHASE_REPORT"):
+        raise GuardError("native CPU profiling requires an owned explicit report")
     proxy = proxy.resolve(strict=True)
     model, expected_exports = WORKLOADS[workload]
     identity = source_identity()
     proxy_digest = hashlib.sha256(proxy.read_bytes()).hexdigest()
-    metadata_timeout = 5 if profile_tamarin else None
+    metadata_timeout = 5 if profile_tamarin or profile_native else None
     subprocess.run(
         ["git", "diff", "--quiet", "HEAD", "--", "docs/spec/models/replay.py"],
         check=True, timeout=metadata_timeout,
@@ -150,6 +157,7 @@ def measure(
     }
     profiles: dict[str, list[dict[str, object]]] = {"baseline": [], "compiled_guard": []}
     runtime_profiles: dict[str, list[dict[str, object]]] = {"baseline": [], "compiled_guard": []}
+    phase_profiles: dict[str, list[dict[str, object]]] = {"baseline": [], "compiled_guard": []}
     digest = None
     for index in range(rounds):
         order = ("baseline", "compiled_guard") if index % 2 == 0 else ("compiled_guard", "baseline")
@@ -159,16 +167,24 @@ def measure(
                 TamarinRuntimeProfile(proxy if label == "compiled_guard" else None)
                 if profile_tamarin else nullcontext()
             )
-            with profiler as profile, runtime_profiler as runtime_profile:
+            phase_profiler = NativePhaseProfile(label == "compiled_guard") if profile_native else nullcontext()
+            with profiler as profile, runtime_profiler as runtime_profile, phase_profiler as phase_profile:
                 measured_command = command if runtime_profile is None else runtime_profile.command(command)
                 before = resource.getrusage(resource.RUSAGE_CHILDREN)
+                driver_started = time.thread_time_ns() if phase_profile is not None else 0
                 started = time.monotonic()
                 output = (
                     run(measured_command, 120) if label == "baseline"
-                    else run_guarded_tamarin(measured_command, 120, proxy=proxy)
+                    else run_guarded_tamarin(
+                        measured_command, 120, proxy=proxy,
+                        phase_report=None if phase_profile is None else phase_profile.path,
+                    )
                 )
                 timings[label].append(time.monotonic() - started)
+                driver_cpu = time.thread_time_ns() - driver_started if phase_profile is not None else 0
                 after = resource.getrusage(resource.RUSAGE_CHILDREN)
+                if phase_profile is not None:
+                    phase_profiles[label].append(phase_profile.report(driver_cpu))
                 if runtime_profile is not None:
                     runtime_profiles[label].append(runtime_profile.report())
             if profile is not None:
@@ -231,6 +247,8 @@ def measure(
         report["native_process_profiles"] = profiles
     if profile_tamarin:
         report["tamarin_runtime_profiles"] = runtime_profiles
+    if profile_native:
+        report["native_phase_profiles"] = phase_profiles
     return report
 
 
@@ -243,10 +261,12 @@ def main() -> int:
     parser.add_argument("--rounds", type=int, choices=(1, 3), default=3)
     parser.add_argument("--profile-linux", action="store_true")
     parser.add_argument("--profile-tamarin", action="store_true")
+    parser.add_argument("--profile-native", action="store_true")
     arguments = parser.parse_args()
     for enabled, name in (
         (arguments.profile_linux, "native process"),
         (arguments.profile_tamarin, "Tamarin RTS"),
+        (arguments.profile_native, "native phase"),
     ):
         if enabled and (
             arguments.proxy is None or arguments.rounds != 1 or arguments.workload != "full-export"
@@ -263,6 +283,7 @@ def main() -> int:
     report = measure(
         arguments.proxy, arguments.workload, arguments.rounds,
         profile_linux=arguments.profile_linux, profile_tamarin=arguments.profile_tamarin,
+        profile_native=arguments.profile_native,
     )
     if arguments.rounds == 3:
         try:

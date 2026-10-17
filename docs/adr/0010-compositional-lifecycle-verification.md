@@ -58,6 +58,43 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Same-pair native-phase and driver CPU accounting (2026-10-17)
+
+The ordinary `46d38fa` CI budget failed at `+10.417850%`; its bounded capture
+preserved that failure. Offline hash/identity/Decimal reconciliation confirms
+that RTS and waited-child subtraction does not account for native or driver
+work. A different pair in that same job directly observed `3.84` seconds of
+guard CPU, not the failure-triggered pair's phase costs. No fast deterministic
+runtime reproduction or causal performance fix was established.
+
+The owner approved `bounded-phase-driver-cpu`: add opt-in numeric native
+phase/driver CPU accounting and reuse the existing sole failure-only screening
+pair in one ordinary changed-head CI execution. The existing Linux CLI pair
+also reuses its execution with all three profile flags. Normal unprofiled
+acceptance, the original failing report/outcome, 19 jobs, 15-minute ceiling,
+three alternating pairs, budgets and export/derivation/shutdown limits remain.
+The [reference](../spec/models/equations/native-proxy/README.md#native-phase-and-driver-cpu-profiles)
+defines the schema, clock scopes, bounds and CLI.
+
+Reject another unchanged retry, speculative optimization, raw query/argument/
+environment capture, new PMU dependencies or permissions and host tuning.
+Using only the old RTS subtraction omits known work; observing different pairs
+cannot establish same-window attribution. Pausing or supplying a reproducible
+Linux environment were the explicit alternatives.
+
+Linux thread-CPU/monotonic instrumentation changes diagnostic cost and does
+not give pure phase costs or whole-tree accounting. Native phase evidence must
+be written before mandatory shutdown evidence; unavailable clocks, invalid
+reports and write failures reject. Final query journals and all validation
+remain mandatory. Private reports are bounded, numeric-only and cleaned on
+handled exits; abrupt termination can still lose evidence. A passing normal
+step may leave the failure-triggered observation unavailable; do not retry it.
+
+The native source identity changes and must be rebuilt. Additive internal
+report/runner parameters have no public SDK/API, wire, crypto, constant-time,
+dependency or formal-acceptance impact. A diagnostic success is not a fix,
+and all mathematical/importer/FVP and assembled-model gates stay closed.
+
 ### Failure-triggered Tamarin runtime accounting (2026-10-17)
 
 The bounded controlled-host RTS/PMU investigations did not reproduce the

@@ -18,6 +18,7 @@ sys.path.insert(0, str(NATIVE_DIRECTORY))
 
 import capture_failure
 from tamarin_profile import RuntimeProfileError
+from native_profile import NativeProfileError
 
 
 class FailureCaptureTests(unittest.TestCase):
@@ -69,7 +70,10 @@ class FailureCaptureTests(unittest.TestCase):
         self.assertFalse(result["budget_passed"])
         self.assertEqual(json.loads((output / "diagnostic-full-export.json").read_text()), self.diagnostic)
         self.assertEqual(json.loads((output / "failure-capture.json").read_text()), result)
-        self.measurement.assert_called_once_with(self.proxy, "full-export", 1, profile_tamarin=True)
+        self.measurement.assert_called_once_with(
+            self.proxy, "full-export", 1,
+            profile_linux=True, profile_tamarin=True, profile_native=True,
+        )
 
     def test_exact_remaining_time_boundary_includes_the_retention_reserve(self):
         for started, expected in ((459.999, "skipped"), (460, "captured"), (460.001, "captured")):
@@ -103,6 +107,7 @@ class FailureCaptureTests(unittest.TestCase):
             {"seconds": {"baseline": [20] * 3, "compiled_guard": [21] * 3}},
             {"method": "one screening pair, not acceptance"},
             {"tamarin_runtime_profiles": {}}, {"native_process_profiles": {}},
+            {"native_phase_profiles": {}},
             {"budget_checked": False}, {"budget_passed": True},
             {"source_id": "0" * 64}, {"proxy_sha256": "0" * 64},
         )
@@ -128,7 +133,10 @@ class FailureCaptureTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "captured", result)
         self.assertEqual(result["failed_workload"], "startup")
-        self.measurement.assert_called_once_with(self.proxy, "full-export", 1, profile_tamarin=True)
+        self.measurement.assert_called_once_with(
+            self.proxy, "full-export", 1,
+            profile_linux=True, profile_tamarin=True, profile_native=True,
+        )
 
     def test_truncated_duplicate_or_missing_failure_reports_never_start_diagnostics(self):
         for data in ("", "{", "[]", '{"seconds":{},"seconds":{}}', "x" * 200_001):
@@ -148,6 +156,7 @@ class FailureCaptureTests(unittest.TestCase):
     def test_runtime_or_tool_failure_is_explicit_without_copying_payloads(self):
         for error in (
             RuntimeProfileError("incomplete Tamarin RTS statistics"),
+            NativeProfileError("incomplete native CPU profiles"),
             GuardError("omitted fixture process output"),
             subprocess.TimeoutExpired(["omitted fixture argument"], 5),
             OSError("omitted fixture path"),

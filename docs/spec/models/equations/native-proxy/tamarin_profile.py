@@ -15,6 +15,7 @@ from types import TracebackType
 
 from equations.maude_runner import GuardError
 from replay import ReplayError
+from native_profile import NativeProfileError
 
 
 MAXIMUM_STATISTICS_BYTES = 200_000
@@ -131,7 +132,9 @@ class TamarinRuntimeProfile:
         error: BaseException | None, traceback: TracebackType | None,
     ) -> None:
         self.temporary.cleanup()
-        if isinstance(error, (GuardError, ReplayError)) and not isinstance(error, RuntimeProfileError):
+        if isinstance(error, (GuardError, ReplayError)) and not isinstance(
+            error, (RuntimeProfileError, NativeProfileError),
+        ):
             raise RuntimeProfileError(
                 "Tamarin RTS process failed, timed out or emitted unexpected stderr",
             ) from error

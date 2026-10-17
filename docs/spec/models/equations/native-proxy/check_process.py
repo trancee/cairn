@@ -74,48 +74,6 @@ class CompiledProcessTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
                 self.assertIn("requires one full-export screening pair", result.stderr)
 
-    def test_linux_process_profile_is_diagnostic_and_observes_the_real_guard(self):
-        environment = dict(os.environ)
-        environment.pop("CAIRN_MAUDE_BINARY", None)
-
-        result = subprocess.run(
-            [sys.executable, str(Path(__file__).with_name("experiment.py")),
-             "--proxy", str(self.proxy), "--workload", "full-export",
-             "--rounds", "1", "--profile-linux", "--profile-tamarin"],
-            text=True, capture_output=True, env=environment, timeout=270,
-        )
-
-        if sys.platform != "linux":
-            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-            self.assertIn("process profiling requires native Linux", result.stderr)
-            return
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        report = json.loads(result.stdout)
-        self.assertFalse(report["budget_checked"])
-        self.assertFalse(report["budget_passed"])
-        runtime_profiles = report["tamarin_runtime_profiles"]
-        self.assertEqual(set(runtime_profiles), {"baseline", "compiled_guard"})
-        for samples in runtime_profiles.values():
-            runtime, = samples
-            self.assertEqual(len(runtime["executable_sha256"]), 64)
-            self.assertGreater(int(runtime["numeric_fields"]["n_capabilities"]), 0)
-            self.assertGreater(float(runtime["numeric_fields"]["total_cpu_seconds"]), 0)
-        profiles = report["native_process_profiles"]
-        self.assertEqual(set(profiles), {"baseline", "compiled_guard"})
-        self.assertEqual(profiles["baseline"][0]["processes"], [])
-        guarded, = profiles["compiled_guard"]
-        self.assertGreaterEqual(guarded["sampler_cpu_seconds"], 0)
-        self.assertTrue(guarded["processes"])
-        self.assertTrue(any(
-            process["last_observed_user_clock_ticks"]
-            + process["last_observed_system_clock_ticks"] > 0
-            for process in guarded["processes"]
-        ))
-        for process in guarded["processes"]:
-            self.assertGreaterEqual(process["last_observed_cpu_nanoseconds"], 0)
-            self.assertGreater(process["samples"], 0)
-        print("PASS: diagnostic-only native Linux process profile " + json.dumps(report))
-
     def test_screening_reports_waited_child_resources_without_acceptance(self):
         environment = dict(os.environ)
         environment.pop("CAIRN_MAUDE_BINARY", None)

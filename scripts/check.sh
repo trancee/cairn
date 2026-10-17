@@ -10,7 +10,8 @@ native_manifest="docs/spec/models/equations/native-proxy/Cargo.toml"
 native_target="${CARGO_TARGET_DIR-$PWD/target/native-proxy}"
 export CARGO_TARGET_DIR="$native_target"
 cargo fmt --manifest-path "$native_manifest" --check
-cargo clippy --locked --manifest-path "$native_manifest" --target-dir "$native_target" -- -D warnings
+cargo clippy --locked --all-targets --manifest-path "$native_manifest" --target-dir "$native_target" -- -D warnings
+cargo test --quiet --locked --manifest-path "$native_manifest" --target-dir "$native_target"
 cargo build --locked --release --manifest-path "$native_manifest" --target-dir "$native_target"
 python3 docs/spec/models/equations/native-proxy/check.py \
   --proxy "$native_target/release/cairn-maude-proxy"

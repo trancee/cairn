@@ -27,11 +27,13 @@ python3 docs/spec/models/equations/native-proxy/experiment.py \
   --proxy target/native-proxy/release/cairn-maude-proxy --workload startup
 ```
 
-`check.py --proxy <executable>` runs the 24 CLI/native-stream/process/proof
+`check.py --proxy <executable>` runs the 28 CLI/native-stream/process/proof
 checks. On native Linux it includes one diagnostic-only full-export screening
 pair with process sampling; macOS instead checks explicit unsupported-platform
 rejection. `scripts/check.sh` builds the guard, runs Rust formatting/strict Clippy
-and these checks, then the existing model/lifecycle/Lean gates.
+and these checks, native clock unit tests, then the existing model/lifecycle/Lean gates.
+Three Linux-only phase process controls are skipped on macOS, which instead
+exercises explicit unsupported-platform rejection.
 
 `experiment.py` requires exactly one of `--proxy <executable>` or
 `--check-report <JSON file>`. `--workload {full-export,startup}` defaults to
@@ -208,6 +210,66 @@ as three-pair evidence. Normal three-pair acceptance never enables sampling.
 The existing Linux CLI test prints its actual profile in the core CI log;
 local macOS checks do not establish native-Linux profiling success.
 
+## Native phase and driver CPU profiles
+
+`--profile-native` requires `--proxy`, `--rounds 1`, `--workload full-export`
+and 64-bit native Linux. It can accompany both existing profile flags:
+
+```bash
+python3 docs/spec/models/equations/native-proxy/experiment.py \
+  --proxy target/native-proxy/release/cairn-maude-proxy \
+  --workload full-export --rounds 1 \
+  --profile-linux --profile-tamarin --profile-native
+```
+
+`native_phase_profiles` has one entry per label. Each contains
+`driver_thread_cpu_nanoseconds`, `processes` and an explicit incomplete-accounting
+description. The driver clock brackets the timed runner, including its final
+boundary audit, but excludes subsequent diagnostic parsing and the separate
+sampler thread. These snapshots are outside wall timing; no CPU value corrects
+or replaces that timing.
+
+The direct baseline has no guard records. Every enabled interactive guard
+writes one numeric record **before** its required shutdown evidence:
+
+| Field | Meaning |
+|---|---|
+| `pid` | Positive process identifier, unique within this private report |
+| `interactive_cpu_nanoseconds` | Calling-thread CPU from before interactive backend startup through backend shutdown and operation-journal closure |
+| `interactive_wall_nanoseconds` | Monotonic duration of that interactive scope |
+| `phases` | Closed map of `input`, `query_validation`, `journal`, `native_io`, `reply_validation`, `forwarding` |
+
+Each phase has nonnegative integer `calls`, `cpu_nanoseconds` and
+`wall_nanoseconds`. `journal` counts begin/accepted operations; the other query
+phases each count one successful query. Input includes command/module lines and
+the final EOF or handled interruption. Native I/O wall time includes backend
+waits; its CPU excludes the Maude child. Setup, framing checks, final journal
+flush, shutdown and measurement bookkeeping are not all phase-attributed;
+phase sums are not the complete interactive total. Native clocks use Linux
+[`CLOCK_THREAD_CPUTIME_ID`](https://github.com/torvalds/linux/blob/v6.17/include/uapi/linux/time.h)
+and Rust monotonic time. Instrumentation and clock
+calls perturb measured work; these are not pure, uninstrumented phase costs.
+
+Private reports require regular no-symlink files, a final newline, at most
+`16,384` bytes and one to eight records. Unknown/duplicate fields, repeated PIDs,
+missing phases, invalid/overflowing integers, nonzero clocks for uncalled phases,
+inconsistent operation counts or
+phase sums above their interactive totals reject with a typed, redacted error.
+Files are removed on handled completion/failure. No raw queries, replies,
+argument headers or environment dumps are retained. Abrupt termination can
+prevent cleanup or capture.
+
+The owned report is passed explicitly as `CAIRN_MAUDE_PHASE_REPORT`; inherited
+nonempty values reject at both benchmark and shared-runner boundaries. Missing,
+malformed or unwritable enabled evidence fails rather than silently disabling
+profiling. The native source identity includes this instrumentation and requires
+a rebuild; old native source/binary identities are not current evidence.
+Every ordinary grammar, validation and lifecycle check remains mandatory.
+The flag is never enabled by normal three-pair acceptance.
+`--check-report` rejects `native_phase_profiles`, even if relabelled.
+RTS, driver, sampler, interactive guard and waited-child scopes differ; they
+cannot be combined into exact whole-tree attribution.
+
 ## Failure-only CI capture
 
 The existing core lifecycle cell records a monotonic clock in its first step.
@@ -222,14 +284,15 @@ failed report with the owning checker, including current source/model/export,
 the actual proxy hash and failed acceptance flags. Passing, incompatible,
 profiled or incomplete reports never launch diagnostic work.
 
-One full-export RTS/CPU screening pair is permitted only when at least `300`
+One full-export RTS/process/phase/driver CPU screening pair is permitted only when at least `300`
 seconds remain after a `60`-second retention reserve, measured against the
 first-step clock plus the existing `900` seconds. The original GitHub
 `15`-minute job timeout remains authoritative, including runner startup.
 The diagnostic step also has a `5`-minute cap. No normal-path diagnostic,
 acceptance retry, new job, larger deadline, threshold change or PMU dependency
 is introduced. Existing Linux process-profile test coverage reuses its sole
-pair with both profile flags rather than adding another full-export pair.
+pair with all three profile flags rather than adding another full-export pair.
+The failure-only pair also collects all three, never a second diagnostic pair.
 
 `failure-capture.json` is created exclusively before work; an existing record
 prevents replay. Its `status` is `captured`, `skipped` for insufficient time,
