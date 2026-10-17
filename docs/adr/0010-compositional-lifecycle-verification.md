@@ -58,6 +58,46 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Same-run native Linux comparison (2026-10-16)
+
+Removal head `84d6267` restores the original native Linux source and binary
+exactly. Actual lifecycle `38968696215` passes 24 native/141 model/50 lifecycle
+cases, 43 projections and 169 audits/25 axiom-free/no `sorryAx`, then rejects
+full export at `43.565964908`/`48.308937965` seconds (`+10.886877%`).
+Startup does not run. All 18 callers, 11 Rust jobs and six required CodeQL
+jobs pass; actual strict compilation, five source units, teardown, integrity
+and processed artifact delivery are independently audited. Final PR rollup
+is 36 successes/one failure/one intentional skip. This is not acceptance.
+
+The owner selects `same-run-linux-comparison` instead of a supplied Linux
+host or stopping with findings. Compare only published original `fb1abf4`
+and rejected readiness candidate `d4bbeac` within one existing Linux cell.
+Use separate owned detached Git worktrees and separate locked release builds;
+execute each revision's existing public benchmark CLI from its own checkout.
+This preserves its source-identity checks instead of passing an old binary
+to a current runner or using an archive without required Git metadata.
+Verify shared measurement inputs, frozen revision/source IDs, actual binary/
+model/export hashes, sample math and equal environment fields.
+Remove both views and reconcile the original Git inventory before success.
+
+Run one profiled direct/guarded screening pair per revision, baseline then
+candidate. It adds bounded work and full history only to the existing core
+cell; all 19 jobs, the 15-minute ceiling and ordinary unprofiled three-pair
+budgets remain unchanged. The extra diagnostic can exhaust that ceiling;
+failure is not grounds to increase it. The maintained native source/default,
+equations, validation, grammar, events and dependencies remain unchanged.
+
+This reduces cross-host confounding, not all order/time variation. Sampling
+perturbs execution and incompletely observes CPU, so even a favorable sample
+cannot establish stable improvement, causation or a fix. The new aggregate is
+explicitly diagnostic-only and rejected by the existing acceptance-report CLI,
+including relabelled reports. Intended missing-mode and false-acceptance reds
+precede implementation. macOS verifies explicit rejection and both frozen
+public CLI/source/cleanup prerequisites, not native Linux comparison.
+Actual own-head Linux evidence and every ordinary hosted gate remain required.
+No readiness adoption, budget waiver, unchanged retry, dispatch, merge,
+SDK/profile activation or advancement of the blocked mathematical gates follows.
+
 ### Native Linux readiness trial (2026-10-16)
 
 Profiling head `fb1abf4` passes all 19 lifecycle cells, 11 Rust jobs and six

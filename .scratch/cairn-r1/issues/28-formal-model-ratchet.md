@@ -1344,3 +1344,33 @@ All 19 lifecycle cells and 11 Rust jobs pass, but CodeQL `38966139388` fails
 its bounded frozen-tool-startup probe with exit `124`; compiled Kotlin
 analysis is skipped. The trial head is not accepted; the cause is unestablished,
 not a reason for a larger deadline or unchanged retry.
+
+2026-10-16 (restored-source rejection and approved same-run comparison):
+Removal `84d6267` restores the exact original Linux source `96295e1` and
+binary `af8d464`. Actual lifecycle
+[38968696215](https://github.com/trancee/cairn/actions/runs/38968696215)
+passes 24 native/141 model/50 lifecycle cases, 43 projections and 169 audits/
+25 axiom-free/no `sorryAx`, then full export rejects `43.565964908`/
+`48.308937965` seconds (`+10.886877%`). The owning validator independently
+rejects; startup does not run. All 18 callers, Rust `38968696299` (11 jobs)
+and CodeQL `38968696679` (six required jobs/one intentional skip) pass.
+Independent strict execution/five compiled Kotlin units/teardown/integrity/
+mapped SARIF/processed delivery checks pass. Analysis artifact `12077255819`,
+SHA-256 `a06ea7871865f83e9e1641ce8eb24c55741754faa820cc6d4acfd88261d17aa2`,
+matches API, independent download and actual delivery. Final rollup is
+36 successes/one failure/one skip. Publish/read back these results in PR #9;
+no native performance fix or full-head acceptance is established.
+
+The owner selects `same-run-linux-comparison`: compare frozen `fb1abf4` and
+`d4bbeac` within one existing native Linux core cell, each through its own
+committed benchmark CLI/source-identified build in an owned detached worktree.
+Build both first, verify shared inputs and frozen identities, then measure
+one profiled full-export pair each, baseline then candidate. Preserve the
+fixed Linux export, complete evidence, strict options, 19 jobs, 15-minute
+ceiling and both unprofiled three-pair budgets. Remove the owned views and
+reconcile Git inventory before success. The maintained guard stays unchanged.
+The missing-mode CLI red is `2 != 1`; relabelled aggregate evidence gives an
+intended false-acceptance red (`0 != 1`). Both become rejecting greens at the
+existing public CLI seam. Sampling remains incomplete/perturbing, and same-host
+order/time variation remains possible; this is not stable benefit, causation,
+a native fix, FVP/full-model acceptance, merge or SDK/profile activation.

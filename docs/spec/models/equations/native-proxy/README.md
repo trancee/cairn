@@ -157,6 +157,49 @@ as three-pair evidence. Normal three-pair acceptance never enables sampling.
 The existing Linux CLI test prints its actual profile in the core CI log;
 local macOS checks do not establish native-Linux profiling success.
 
+## Same-run native Linux comparison
+
+The owner-approved diagnostic compares frozen `fb1abf4` (original guard) and
+`d4bbeac` (rejected readiness trial) on the existing native Linux x86-64 cell:
+
+```bash
+python3 docs/spec/models/equations/native-proxy/experiment.py \
+  --compare-linux --workload full-export --rounds 1 --profile-linux
+```
+
+`--compare-linux` is mutually exclusive with `--proxy`/`--check-report`.
+It requires one profiled full-export pair per revision and Linux x86-64;
+invalid modes/platforms and `CAIRN_MAUDE_BINARY` overrides fail before work.
+The repository must contain both exact commits; the core CI checkout fetches
+history, while the other 18 cells retain shallow checkouts.
+
+Both owned detached worktrees are populated and their separate locked release
+binaries built before measurement. Common model, benchmark, profiling,
+runner, inventory, Cargo and Rust-pin inputs must match byte-for-byte.
+Each revision then runs its own committed `experiment.py`, from its own
+worktree, with its own explicit executable. Normal source freshness, complete
+guard evidence, fixed Linux export digest and `120`/`60`/`5`-second
+export/derivation/shutdown limits remain mandatory. Builds are bounded at
+`120` seconds, each two-export CLI at `270`, and Git commands at `30`.
+The existing workflow remains 19 jobs with the unchanged 15-minute ceiling;
+this diagnostic runs before, not instead of, both normal three-pair budgets.
+
+Output records both original reports under `native_linux_comparison`,
+observed guard CPU seconds, measurement spans and a shared-input digest.
+Frozen revision/source identities, built executable/model hashes, one-pair
+timings, overhead math and matching comparison environments are checked.
+Owned views are removed before success, and the original Git worktree
+inventory must reconcile. No historical source replaces the maintained guard.
+Missing/stale/malformed evidence or failed cleanup rejects explicitly.
+
+The order is baseline then candidate, with one direct/guarded pair each.
+Sampling adds load, CPU observations are incomplete, and order/time variation
+remains possible even on one host. This is screening, not causal proof,
+stable improvement or either budget. Both acceptance flags remain false;
+`--check-report` rejects any `native_linux_comparison` field even if relabelled.
+Current-head ordinary gates remain required. See
+[the decision](../../../../adr/0010-compositional-lifecycle-verification.md#same-run-native-linux-comparison-2026-10-16).
+
 ## Default executable and source freshness
 
 Every guarded ratchet caller resolves

@@ -138,6 +138,17 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   regressions, without introducing a native-host skip or altered budget.
   Further optimization needs a controlled native-Linux comparison, not
   another unmeasured kernel/parser/compiler change.
+- Removal `84d6267` still fails actual unchanged-source Linux full export at
+  `+10.886877%`; startup does not run. All other callers/Rust/required CodeQL
+  jobs pass, including independently verified strict result delivery.
+  The owner now approves `experiment.py --compare-linux --rounds 1 --profile-linux`:
+  one existing-CLI screening pair each from frozen `fb1abf4`/`d4bbeac`, with
+  separate owned worktrees/builds and source freshness enforced in each view.
+  The core cell fetches history and runs this bounded diagnostic before normal
+  budgets, retaining all 19 jobs and the 15-minute ceiling. Worktree inventory
+  must reconcile before success. It changes no maintained guard and does not
+  establish stable improvement/causation or replace either acceptance budget.
+  See the [reference](equations/native-proxy/README.md#same-run-native-linux-comparison).
 - `scripts/check.sh` builds the host guard with the root Rust pin, checks Rust
   formatting/strict Clippy and 24 native CLI/process cases, then runs
   whitespace, unit tests and `actionlint`,

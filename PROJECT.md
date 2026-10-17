@@ -148,6 +148,21 @@ All original validation, grammar/events, equations, dependencies, jobs,
 deadlines and budgets remain unchanged. No performance fix is established.
 See the [decision](docs/adr/0010-compositional-lifecycle-verification.md#native-linux-readiness-trial-2026-10-16).
 
+Removal `84d6267` restores the exact original Linux source/binary but again
+rejects actual full export: `43.565964908`/`48.308937965` seconds
+(`+10.886877%`); startup does not run. Actual 24/141/50 cases, 43 projections,
+169 audits/25 axiom-free, all 18 callers, 11 Rust and six required CodeQL jobs
+pass. Strict compilation/five Kotlin units, cleanup, integrity and processed
+delivery are independently verified. Final rollup is 36 successes/one failure/
+one intentional skip, not a native fix or acceptance.
+The owner selects a bounded same-run Linux comparison of frozen `fb1abf4`
+and `d4bbeac`, each using its own committed benchmark CLI and source-identified
+build in an owned detached worktree. One profiled pair each is diagnostic only;
+shared inputs/environment and cleanup reconcile. No maintained native change,
+extra job, raised deadline or replacement of either three-pair budget.
+See the [reference](docs/spec/models/equations/native-proxy/README.md#same-run-native-linux-comparison)
+and [decision](docs/adr/0010-compositional-lifecycle-verification.md#same-run-native-linux-comparison-2026-10-16).
+
 Published AC-unifier checkpoint `bfff37f` passes all 19 lifecycle cells,
 all 11 Rust jobs and both native budgets, but CodeQL `38770078501` fails
 ordinary Apple scratch ejection with `Resource busy` after Kotlin queries,
