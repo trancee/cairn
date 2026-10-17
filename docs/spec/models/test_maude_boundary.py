@@ -57,10 +57,10 @@ endfm
 """
 
 def native_stream(
-    command: str, reply: str, *, shutdown_error: bool = False, proxy: Path | None = None,
+    command: str, reply: str | tuple[str, ...], *, shutdown_error: bool = False, proxy: Path | None = None,
     close_errors: bool = False, startup_error: str = "",
 ) -> subprocess.CompletedProcess[str]:
-    final_action = "continue" if shutdown_error or close_errors else "raise SystemExit(0)"
+    final_action = "continue" if shutdown_error or close_errors or isinstance(reply, tuple) else "raise SystemExit(0)"
     fake = f"""#!{sys.executable}
 import os, signal, sys
 if '--version' in sys.argv:
@@ -77,6 +77,7 @@ if {shutdown_error!r}:
     signal.signal(signal.SIGTERM, shutdown)
 print('Maude> ', end='', flush=True)
 module = False
+replies = list({reply!r}) if {isinstance(reply, tuple)!r} else None
 for line in sys.stdin:
     if line.startswith('fmod'):
         module = True
@@ -87,7 +88,9 @@ for line in sys.stdin:
     elif line.startswith('set'):
         print('Maude> ', end='', flush=True)
     else:
-        print({reply!r}, end='', flush=True)
+        print(replies.pop(0) if replies is not None else {reply!r}, end='', flush=True)
+        if replies == []:
+            raise SystemExit(0)
         {final_action}
 """
     with tempfile.TemporaryDirectory() as temporary:

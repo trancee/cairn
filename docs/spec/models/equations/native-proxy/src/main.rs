@@ -7,6 +7,7 @@ mod query;
 mod reply;
 mod syntax;
 mod unix;
+mod validation;
 
 mod inventory {
     include!(concat!(env!("OUT_DIR"), "/inventory.rs"));
@@ -107,6 +108,7 @@ fn stream(
     let mut input = Input::new();
     let mut setup = BTreeSet::new();
     let mut module = Vec::new();
+    let mut validator = validation::Validator::default();
     while let Some(line) = profile.measure(Phase::Input, || input.line(profile))? {
         if !line.is_ascii() {
             return Err(Rejected("native command: non-ASCII syntax"));
@@ -153,9 +155,9 @@ fn stream(
         if !*ready {
             return Err(Rejected("native command: missing reviewed module"));
         }
-        let query = profile.measure(Phase::QueryValidation, || query::validate(command))?;
+        let kind = profile.measure(Phase::QueryValidation, || validator.query(command))?;
         profile.measure(Phase::Journal, || {
-            journal.record(evidence::OperationEvent::Begin, query.kind)
+            journal.record(evidence::OperationEvent::Begin, kind)
         })?;
         *pending = true;
         let output = profile.measure(Phase::NativeIo, || {
@@ -164,9 +166,9 @@ fn stream(
         })?;
         let text =
             std::str::from_utf8(&output).map_err(|_| Rejected("native reply: non-ASCII syntax"))?;
-        profile.measure(Phase::ReplyValidation, || reply::validate(&query, text))?;
+        profile.measure(Phase::ReplyValidation, || validator.reply(text))?;
         profile.measure(Phase::Journal, || {
-            journal.record(evidence::OperationEvent::Accepted, query.kind)
+            journal.record(evidence::OperationEvent::Accepted, kind)
         })?;
         *pending = false;
         profile.measure(Phase::Forwarding, || forward(consumer, output))?;

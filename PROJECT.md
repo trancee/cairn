@@ -103,12 +103,28 @@ runtime finite-support/occurs-check/fresh-namespace correspondence, narrowing/FV
 importer correctness remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
-the current gates run 29 native CLI/197 model/50 lifecycle tests plus native
-clock unit tests, 43 projections and all 201 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
+the current gates run 37 native CLI/197 model/50 lifecycle tests plus native
+clock/validation unit tests, 43 projections and all 201 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
 record authoritative current-head hosted results. These equation proofs change no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
 
 ## Native budget diagnosis (2026-10-16)
+
+Actual `29b7270` CI still rejects full export at `+10.512366%`, about
+`165.558` ms over budget; startup is not reached. All other lifecycle/Rust/
+required CodeQL jobs pass, including compiled Kotlin coverage and result
+delivery. A numeric-only diagnostic suggests `99.915170%` immediate identical
+query/reply pairs in the dominant stream. A bounded single-entry validator
+therefore reuses only exact complete command/reply certificates within one
+reviewed module. Every operation still executes in Maude with unchanged whole
+reply rejection and journals; inputs beyond cache admission use full validation.
+The public adversarial controls are green before/after, with exact journal
+counts preserved. Controlled ordinary Linux full-export overhead is
+`+2.530129%`, versus committed `29b7270` at `+2.734670%` (`7.479539%` lower
+normalized overhead; direct medians differ `0.083727%`), and startup adds
+`13.899814` ms. Current-source macOS budgets are `+5.443887%` and
+`37.992875` ms. Own-head hosted acceptance remains required.
+See [ADR 0010](docs/adr/0010-compositional-lifecycle-verification.md#exact-repeated-exchange-validation-2026-10-18).
 
 The measured operation-evidence refactor retains the complete journal/schema
 and validator state machine. Identical complete canonical cycles are compacted
@@ -118,8 +134,8 @@ audit uses `86.775464%` less CPU and producer caching separately reduces guard
 CPU `12.745850%`. Ordinary full-export overhead is `+3.628018%` at committed
 `2cffb27`, `+2.891542%` verifier-only and `+2.949324%` combined, with comparable
 direct medians. The composition's startup addition is `13.815699` ms.
-Current-source macOS budgets pass at `+3.407211%` and `35.330875` ms.
-The actual preceding hosted `+10.495555%` failure remains; these controlled
+That source's macOS budgets pass at `+3.407211%` and `35.330875` ms.
+The preceding hosted `+10.495555%` failure remains historical; these controlled
 results require ordinary own-head CI and do not authorize merge or activation.
 See [ADR 0010](docs/adr/0010-compositional-lifecycle-verification.md#amortized-native-operation-evidence-2026-10-17).
 

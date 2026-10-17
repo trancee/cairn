@@ -27,12 +27,12 @@ python3 docs/spec/models/equations/native-proxy/experiment.py \
   --proxy target/native-proxy/release/cairn-maude-proxy --workload startup
 ```
 
-`check.py --proxy <executable>` runs the 29 CLI/native-stream/process/proof
+`check.py --proxy <executable>` runs the 37 CLI/native-stream/process/proof
 checks. On native Linux it includes one diagnostic-only full-export screening
 pair with process sampling; macOS instead checks explicit unsupported-platform
 rejection. `scripts/check.sh` builds the guard, runs Rust formatting/strict Clippy
-and these checks, native clock unit tests, then the existing model/lifecycle/Lean gates.
-Three Linux-only phase process controls are skipped on macOS, which instead
+and these checks, native clock/validation unit tests, then the existing model/lifecycle/Lean gates.
+Linux-only phase process controls are skipped on macOS, which instead
 exercises explicit unsupported-platform rejection.
 
 `experiment.py` requires exactly one of `--proxy <executable>` or
@@ -72,6 +72,26 @@ Retained full-export digests are
 No runtime sample creates a new accepted digest, no output is normalized or
 filtered, and different retained digests cannot be mixed within a measurement.
 The cause of cross-host output differences remains unestablished.
+
+## Repeated-exchange validation
+
+One process-local entry can reuse parsed metadata for an exact complete
+validator-input command and successful validation for that query's exact
+complete reply. Comparison uses full text equality, not hashes or prefixes.
+The existing command ASCII check and outer trimming remain unchanged.
+Changing the command replaces the entry and clears its reply certificate;
+changing the reply runs the complete validator before replacement.
+
+Cache admission is limited to `16` KiB each for command and reply text, plus
+the parsed query metadata. Larger commands/replies retain the same grammar
+and use the ordinary full validators; this is not an input-size restriction.
+Uncacheable query metadata is released after the reply. The entry never
+crosses a guard process or reviewed module.
+
+Every command still executes in Maude and every whole reply is collected
+before validation and forwarding. No native result is replayed, no solution
+is filtered, and operation journals, cancellation and shutdown remain
+unchanged. See the [decision and evidence limits](../../../../adr/0010-compositional-lifecycle-verification.md#exact-repeated-exchange-validation-2026-10-18).
 
 ## Complete operation evidence
 

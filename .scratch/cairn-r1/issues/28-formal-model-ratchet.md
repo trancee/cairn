@@ -15,6 +15,25 @@ Put the model under `docs/spec/models/`. A failing lemma reopens the relevant AD
 
 ## Comments
 
+2026-10-18: actual `29b7270` hosted full export still fails at `+10.512366%`,
+about `165.558` ms beyond the unchanged limit; startup is not reached.
+The other 18 lifecycle cells, 11 Rust jobs and six required CodeQL jobs pass,
+including actual compiled Kotlin coverage and result delivery. Retain the
+failure and its numeric diagnostic artifact, without an unchanged retry.
+A fresh aggregate-only probe suggests `90693/90770` immediate repeated
+query/reply pairs in the dominant stream. Add one bounded exact-text validation
+entry within a reviewed module, never a native-result cache: every operation
+still executes in Maude, with complete reply rejection and journal counts.
+The public adversarial controls pass before/after. Controlled ordinary Linux
+full-export overhead is `+2.734670%` before/`+2.530129%` after (`7.479539%`
+lower normalized overhead; direct medians differ `0.083727%`); startup adds
+`13.899814` ms. macOS ordinary budgets pass at `+5.443887%` and `37.992875`
+ms. This modest measured improvement does not establish hosted acceptance;
+ordinary own-head CI remains required.
+No equations, API/wire, dependency, jobs, deadlines, budgets, merge approval
+or formal/SDK activation change.
+See the [decision](../../../docs/adr/0010-compositional-lifecycle-verification.md#exact-repeated-exchange-validation-2026-10-18).
+
 2026-10-17: the renewed native-budget work rejects three new standalone parser/
 buffer trials, then measures complete-operation evidence amortization.
 Preserve every journal record/schema and the existing lifecycle validator.

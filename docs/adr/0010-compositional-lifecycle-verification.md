@@ -58,6 +58,66 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Exact repeated-exchange validation (2026-10-18)
+
+The operation-evidence change at `29b7270` still fails its actual hosted
+full-export budget at `+10.512366%`, about `165.558` ms beyond the unchanged
+limit. Startup is not reached; the other 18 lifecycle cells, 11 Rust jobs and
+all six required CodeQL jobs pass. Its retained failure capture remains
+diagnostic, not acceptance.
+
+A fresh numeric-only full-workload probe suggests `90693` immediate repeated
+query/reply pairs among the dominant stream's `90770` operations (`99.915170%`).
+A 64-entry cache would find only 37 more potential hits. The diagnostic uses
+in-memory digests for aggregate counts, never for production acceptance, and
+retains no query/reply payload or per-query digest.
+
+Use one process-local validation entry within the already reviewed module.
+Reuse parsed query metadata only when the entire command supplied to the
+existing validator is byte-identical, including kind and all terms. The
+existing outer ASCII check and trimming are unchanged. Reuse successful reply
+validation only when that same query's entire newly received complete reply
+is byte-identical. Changed queries clear the reply certificate; changed
+replies pass the unchanged full validator before replacing it. No hash,
+prefix, term summary, sort alone or previously forwarded result certifies a
+different exchange.
+
+Admit at most `16` KiB each of command and reply text, plus the parsed query
+metadata. Larger inputs follow the original full validators without a new
+grammar or payload limit; uncacheable query metadata is released after its
+reply. Every query still executes in Maude, every complete reply is collected
+before validation, and every begin/accepted record and owned-child teardown
+remains. There is no backend-result cache, solution filtering or stale-module
+reuse. A missing query context has an explicit tested rejection.
+
+The public repeated-exchange controls pass on the committed binary before
+implementation and on the candidate afterward. They cover changed rigid
+indices, original variables, sorts, operation kinds, generated namespaces,
+later malformed bindings/suffixes, truncated replies, entry replacement,
+different valid generated names and admission boundaries/oversized inputs.
+Exact repeated mixed-kind journal bytes, order and counts remain checked.
+Extending the existing 392-line fixture avoids a second fake-backend
+convention; this narrow test-only deviation from the 300-line recommendation
+remains below the 500-line maximum.
+
+A three-pair real-Maude CPU screen observes `6.087511%` less guard CPU for
+repeated reductions and `3.277290%` less for alternating operations. Ordinary
+controlled Linux three-pair full-export overhead falls from `+2.734670%`
+at committed `29b7270` to `+2.530129%`: `7.479539%` lower normalized overhead,
+with direct medians differing by `0.083727%`. Median direct/guarded seconds
+are `18.033710645`/`18.526873113` before and
+`18.018611603`/`18.474505768` afterward. Candidate startup adds `13.899814`
+ms, versus `12.838349` ms before. Current macOS ordinary budgets pass at
+`+5.443887%` and `37.992875` ms. The measured gain is modest; it does not prove
+the hosted blocker is resolved. Rebuild the source identity and require its
+one ordinary own-head CI execution. The cache remains trusted runtime Rust,
+not a kernel-checked validator proof.
+
+An LRU, hash-only acceptance, cached native results, a larger journal/transport
+change and another unchanged CI retry are unnecessary or alter the evidence
+contract. No equation, wire/API, runtime dependency, diagnostic schema, job,
+deadline, budget, merge approval or formal/SDK activation changes.
+
 ### Amortized native operation evidence (2026-10-17)
 
 The owner requests continuing until the native budget blocker is resolved.

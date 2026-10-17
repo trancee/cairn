@@ -108,8 +108,17 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   The historical Python `+22.5%` path is deleted.
 - Budgets remain three alternating pairs, six identical fixed-digest exports,
   full export at most `+10%`, startup at most `+50` ms. Current default-source
-  local overhead is `+3.407211%` and `+35.330875` ms, respectively.
-  The operation-evidence refactor's controlled Linux three-pair full-export
+  local overhead is `+5.443887%` and `+37.992875` ms, respectively.
+  Exact repeated-command/reply validation is bounded to one process-local
+  entry, with `16` KiB text admission per side and full validation beyond it.
+  Every operation still executes in Maude and retains complete evidence;
+  there is no native-result replay. The actual preceding `29b7270` hosted
+  `+10.512366%` failure remains, with startup unreached and all other required
+  jobs passing. See the [decision](../../adr/0010-compositional-lifecycle-verification.md#exact-repeated-exchange-validation-2026-10-18).
+  Controlled ordinary Linux full-export overhead is `+2.530129%`, versus
+  `+2.734670%` for committed `29b7270`; direct medians differ by `0.083727%`.
+  Startup adds `13.899814` ms. This modest measured gain does not establish
+  hosted acceptance. The earlier operation-evidence refactor's controlled Linux three-pair full-export
   overhead is `+2.949324%`, versus `+3.628018%` for committed `2cffb27`;
   startup adds `13.815699` ms. These are not current-head hosted acceptance.
   Journals/schema/counts and the validator state machine remain unchanged;
@@ -196,7 +205,7 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   deadline or budget changes; cleanup still requires its own hosted gates.
   See the [reference](equations/native-proxy/README.md#same-run-native-linux-comparison).
 - `scripts/check.sh` builds the host guard with the root Rust pin, checks Rust
-  formatting/all-target strict Clippy, native clock unit tests and 29 native CLI/process cases, then runs
+  formatting/all-target strict Clippy, native clock/validation unit tests and 37 native CLI/process cases, then runs
   whitespace, unit tests and `actionlint`,
   plus lifecycle/source-projection and equation convergence/boundedness proofs when pinned
   Lean is available. The pre-commit hook and CI both call it.

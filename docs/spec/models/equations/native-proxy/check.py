@@ -15,6 +15,7 @@ from equations.maude_native import source_identity
 from equations.maude_runner import boundary_complete
 from check_process import CompiledProcessTests
 from check_profile import CompiledProfileTests
+from check_validation import CompiledValidationTests
 from test_maude_boundary import NATIVE_MODULE, native_stream
 
 
@@ -186,10 +187,10 @@ class CompiledStreamTests(unittest.TestCase):
 
     def test_full_operation_evidence_reconciles_before_success(self):
         queries = (
-            "reduce tamXCflip(tamXCroleA) .\n"
-            "unify in MSG : tamXCpair(x0:Msg,p(0)) =? tamXCpair(t(0),x1:Pub) .\n"
-            "match in MSG : list(cons(x0:Msg,nil)) <=? list(cons(tamXCroleA,nil)) .\n"
-            "get variants in MSG : tamXCflip(x0:Msg) .\n"
+            "reduce tamXCflip(tamXCroleA) .\n",
+            "unify in MSG : tamXCpair(x0:Msg,p(0)) =? tamXCpair(t(0),x1:Pub) .\n",
+            "match in MSG : list(cons(x0:Msg,nil)) <=? list(cons(tamXCroleA,nil)) .\n",
+            "get variants in MSG : tamXCflip(x0:Msg) .\n",
         )
         with tempfile.TemporaryDirectory() as temporary:
             report = Path(temporary) / "events"
@@ -198,7 +199,7 @@ class CompiledStreamTests(unittest.TestCase):
 
             result = subprocess.run(
                 [str(PROXY), "-interactive", "-no-tecla", "-no-banner", "-no-wrap", "-batch"],
-                input=NATIVE_MODULE + queries * 128,
+                input=NATIVE_MODULE + "".join(query * 32 for query in queries) * 4,
                 text=True, capture_output=True, env=environment, timeout=30,
             )
 
@@ -214,7 +215,8 @@ class CompiledStreamTests(unittest.TestCase):
             ]
             expected = [
                 json.dumps({"event": event, "pid": pid, "kind": kind}) + "\n"
-                for _ in range(128) for kind in ("reduce", "unify", "match", "variants")
+                for _ in range(4) for kind in ("reduce", "unify", "match", "variants")
+                for _ in range(32)
                 for event in ("begin", "accepted")
             ]
             self.assertEqual(operations, expected)
@@ -282,4 +284,5 @@ if __name__ == "__main__":
     PROXY = arguments.proxy.resolve(strict=True)
     CompiledProcessTests.proxy = PROXY
     CompiledProfileTests.proxy = PROXY
+    CompiledValidationTests.proxy = PROXY
     unittest.main(argv=[sys.argv[0], *remaining])
