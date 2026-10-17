@@ -108,7 +108,12 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   The historical Python `+22.5%` path is deleted.
 - Budgets remain three alternating pairs, six identical fixed-digest exports,
   full export at most `+10%`, startup at most `+50` ms. Current default-source
-  local overhead is `+6.1498%` and `+41.960417` ms (`+37.3660%`), respectively.
+  local overhead is `+3.407211%` and `+35.330875` ms, respectively.
+  The operation-evidence refactor's controlled Linux three-pair full-export
+  overhead is `+2.949324%`, versus `+3.628018%` for committed `2cffb27`;
+  startup adds `13.815699` ms. These are not current-head hosted acceptance.
+  Journals/schema/counts and the validator state machine remain unchanged;
+  see the [decision](../../adr/0010-compositional-lifecycle-verification.md#amortized-native-operation-evidence-2026-10-17).
   At `2fa6d16`, actual native budgets also pass: `+8.3650%` full export,
   `+25.785370` ms (`+20.7876%`) startup. Its lifecycle cell and 17/18 callers
   pass; `initial_ck_secret` fails its unchanged strict `60`-second derivation

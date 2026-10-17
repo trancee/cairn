@@ -6,7 +6,10 @@ use std::{
     path::Path,
 };
 
-use crate::error::{Error::Rejected, Result};
+use crate::{
+    error::{Error::Rejected, Result},
+    query::Kind,
+};
 
 pub(crate) fn open(variable: &str) -> Result<Option<File>> {
     let Some(destination) = env::var_os(variable).filter(|value| !value.is_empty()) else {
@@ -65,9 +68,15 @@ pub fn record(event: &str, field: Option<(&str, &str)>) -> Result<()> {
     Ok(())
 }
 
+pub enum OperationEvent {
+    Begin,
+    Accepted,
+}
+
 pub struct Journal {
     file: Option<File>,
     pending: Vec<u8>,
+    records: [[Option<Vec<u8>>; 4]; 2],
 }
 
 impl Journal {
@@ -75,18 +84,30 @@ impl Journal {
         Self {
             file: None,
             pending: Vec::new(),
+            records: Default::default(),
         }
     }
 
-    pub fn record(&mut self, event: &str, kind: &str) -> Result<()> {
+    pub fn record(&mut self, event: OperationEvent, kind: Kind) -> Result<()> {
         if self.file.is_none() {
             self.file = open("CAIRN_MAUDE_GUARD_REPORT")?;
         }
         if self.file.is_none() {
             return Ok(());
         }
-        self.pending
-            .extend_from_slice(&encoded(event, Some(("kind", kind))));
+        let (name, event_index) = match event {
+            OperationEvent::Begin => ("begin", 0),
+            OperationEvent::Accepted => ("accepted", 1),
+        };
+        let kind_index = match kind {
+            Kind::Reduce => 0,
+            Kind::Unify => 1,
+            Kind::Match => 2,
+            Kind::Variants => 3,
+        };
+        let record = self.records[event_index][kind_index]
+            .get_or_insert_with(|| encoded(name, Some(("kind", kind.name()))));
+        self.pending.extend_from_slice(record);
         if self.pending.len() >= 16_384 {
             self.flush()?;
         }

@@ -27,7 +27,7 @@ python3 docs/spec/models/equations/native-proxy/experiment.py \
   --proxy target/native-proxy/release/cairn-maude-proxy --workload startup
 ```
 
-`check.py --proxy <executable>` runs the 28 CLI/native-stream/process/proof
+`check.py --proxy <executable>` runs the 29 CLI/native-stream/process/proof
 checks. On native Linux it includes one diagnostic-only full-export screening
 pair with process sampling; macOS instead checks explicit unsupported-platform
 rejection. `scripts/check.sh` builds the guard, runs Rust formatting/strict Clippy
@@ -72,6 +72,23 @@ Retained full-export digests are
 No runtime sample creates a new accepted digest, no output is normalized or
 filtered, and different retained digests cannot be mixed within a measurement.
 The cause of cross-host output differences remains unestablished.
+
+## Complete operation evidence
+
+Every operation retains its begin/accepted JSON records, process ID, kind
+and order. The guard lazily caches the eight encoded event/kind combinations
+per process and copies each record into the same checked `16` KiB buffer,
+flushed and closed before successful shutdown evidence. Lifecycle/failure
+records remain immediate.
+
+The parent validator may compact consecutive byte-identical complete canonical
+cycles in its in-memory copy before running the existing lifecycle state
+machine. It first probes a producer-sized prefix for a repeat; otherwise it
+uses the ordinary record path. The file and operation counts are unchanged.
+Different kinds/PIDs, partial cycles and noncanonical JSON retain ordinary
+validation. Missing/duplicate/unknown fields, invalid states, malformed data
+and incomplete shutdown still fail under the existing rules.
+See the [decision and measurement limits](../../../../adr/0010-compositional-lifecycle-verification.md#amortized-native-operation-evidence-2026-10-17).
 
 ## Child-resource diagnostics
 

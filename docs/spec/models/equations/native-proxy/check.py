@@ -1,6 +1,7 @@
 """Maintained native guard CLI/native-stream checks."""
 
 import argparse
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -184,6 +185,12 @@ class CompiledStreamTests(unittest.TestCase):
                 self.assertIn(reason, result.stderr)
 
     def test_full_operation_evidence_reconciles_before_success(self):
+        queries = (
+            "reduce tamXCflip(tamXCroleA) .\n"
+            "unify in MSG : tamXCpair(x0:Msg,p(0)) =? tamXCpair(t(0),x1:Pub) .\n"
+            "match in MSG : list(cons(x0:Msg,nil)) <=? list(cons(tamXCroleA,nil)) .\n"
+            "get variants in MSG : tamXCflip(x0:Msg) .\n"
+        )
         with tempfile.TemporaryDirectory() as temporary:
             report = Path(temporary) / "events"
             environment = dict(os.environ, CAIRN_MAUDE_GUARD_REPORT=str(report))
@@ -191,14 +198,26 @@ class CompiledStreamTests(unittest.TestCase):
 
             result = subprocess.run(
                 [str(PROXY), "-interactive", "-no-tecla", "-no-banner", "-no-wrap", "-batch"],
-                input=NATIVE_MODULE + "reduce tamXCroleA .\n" * 512,
+                input=NATIVE_MODULE + queries * 128,
                 text=True, capture_output=True, env=environment, timeout=30,
             )
 
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertEqual(result.stdout.count("result Msg: tamXCroleA"), 512)
+            self.assertEqual(result.stdout.count("result Msg: tamXCroleB"), 128)
             self.assertTrue(boundary_complete(report, source_id=source_identity()))
-            self.assertEqual(report.read_text().count('"event": "accepted"'), 512)
+            lines = report.read_text().splitlines(keepends=True)
+            events = [json.loads(line) for line in lines]
+            pid = next(event["pid"] for event in events if event["event"] == "start")
+            operations = [
+                line for line, event in zip(lines, events)
+                if event["event"] in {"begin", "accepted"}
+            ]
+            expected = [
+                json.dumps({"event": event, "pid": pid, "kind": kind}) + "\n"
+                for _ in range(128) for kind in ("reduce", "unify", "match", "variants")
+                for event in ("begin", "accepted")
+            ]
+            self.assertEqual(operations, expected)
 
     def test_non_regular_evidence_destination_fails_without_blocking(self):
         with tempfile.TemporaryDirectory() as temporary:

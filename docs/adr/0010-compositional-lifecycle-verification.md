@@ -58,6 +58,55 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Amortized native operation evidence (2026-10-17)
+
+The owner requests continuing until the native budget blocker is resolved.
+The actual `2cffb27` full-export gate still fails at `+10.495555%`; its
+diagnostic pair attributes about `166` ms of additional parent-driver CPU.
+Fresh standalone argument-stack, generated-lookup and backend-buffer trials
+do not establish worthwhile full-workload gains and are withdrawn.
+
+Keep the full journal and its JSON schema. Lazily encode the eight closed
+begin/accepted-by-kind records once per guard process, copying the same bytes
+into the existing checked buffer for every operation. Typed exhaustive event/
+kind matches replace string-valued operation calls; lifecycle records remain
+immediate. PID reuse is safe within this single process: spawning Maude does
+not change the parent's PID.
+
+Before the unchanged parent lifecycle state machine, fold only consecutive,
+byte-identical complete canonical begin/accepted cycles in the in-memory
+copy. Every repeated record is checked against that exact grammar and the
+first complete cycle remains subject to the original state transition.
+A complete cycle is an identity on the ready state; at every other state,
+its first begin still rejects. Different kinds/PIDs, partial cycles, unknown
+fields and noncanonical JSON are not folded. Probe only the first producer-sized
+`16` KiB for a repeat before paying for a whole-file pass; absence of a repeat
+retains ordinary validation, not weaker validation. The on-disk journal and
+all independently checked operation counts remain unchanged.
+
+On the same controlled Fedora host with pinned tools and owned four-core
+affinity, the actual `181760`-record journal audit drops from `84.472349` to
+`11.171076` ms CPU. All `2000` seeded differential cases retain the committed
+validator's exact complete/incomplete/error verdicts. Producer caching separately
+reduces real public-stream guard CPU by `12.745850%` with identical replies and
+complete evidence. Three-pair full-export overhead is `+3.628018%` before,
+`+2.891542%` for verifier-only and `+2.949324%` for the composition: the latter
+is `18.706996%` lower normalized overhead than the committed baseline, with
+direct medians differing by `0.302408%`. Caching has a measured guard-CPU
+benefit, not a demonstrated incremental wall benefit over verifier-only.
+The composition's startup addition is `13.815699` ms. Current-source macOS
+budgets pass at `+3.407211%` and `35.330875` ms. These controlled/local results
+do not establish hosted acceptance.
+
+This replaces neither journals nor the validator and introduces no schema,
+equation, API, wire, dependency, deadline, CI-job or budget change. General
+record filtering, a new journal format, another unchanged CI retry and
+retaining unmeasured runtime candidates are rejected. Compaction's benefit
+depends on operation runs; the verifier remains trusted, not kernel-proved.
+Rebuild the source-identified native guard, reconcile all callers/tests/docs,
+and require its ordinary own-head CI, including the same three uninstrumented
+pairs and `10%`/`50` ms limits. No merge or SDK/formal activation is authorized.
+
 ### Same-pair nested native I/O attribution (2026-10-17)
 
 The two actual `b523dce` attempts fail the unchanged full-export limit at

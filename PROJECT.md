@@ -103,12 +103,25 @@ runtime finite-support/occurs-check/fresh-namespace correspondence, narrowing/FV
 importer correctness remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
-the current gates run 29 native CLI/189 model/50 lifecycle tests plus native
+the current gates run 29 native CLI/197 model/50 lifecycle tests plus native
 clock unit tests, 43 projections and all 201 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
 record authoritative current-head hosted results. These equation proofs change no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
 
 ## Native budget diagnosis (2026-10-16)
+
+The measured operation-evidence refactor retains the complete journal/schema
+and validator state machine. Identical complete canonical cycles are compacted
+only in memory; the producer separately caches eight fixed records while
+retaining every checked write. On controlled native Linux, the actual journal
+audit uses `86.775464%` less CPU and producer caching separately reduces guard
+CPU `12.745850%`. Ordinary full-export overhead is `+3.628018%` at committed
+`2cffb27`, `+2.891542%` verifier-only and `+2.949324%` combined, with comparable
+direct medians. The composition's startup addition is `13.815699` ms.
+Current-source macOS budgets pass at `+3.407211%` and `35.330875` ms.
+The actual preceding hosted `+10.495555%` failure remains; these controlled
+results require ordinary own-head CI and do not authorize merge or activation.
+See [ADR 0010](docs/adr/0010-compositional-lifecycle-verification.md#amortized-native-operation-evidence-2026-10-17).
 
 The owner-approved `bounded-ci-io-attribution` increment adds numeric nested
 consumer/backend I/O regions to the existing diagnostic pair, retaining the

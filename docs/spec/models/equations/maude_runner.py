@@ -12,6 +12,13 @@ OPERATION_RECORD = re.compile(
     r'\{"event": "(begin|accepted)", "pid": ([1-9][0-9]{0,9}), '
     r'"kind": "(reduce|variants|unify|match)"\}'
 )
+OPERATION_CYCLES = re.compile(
+    r'^(?P<cycle>\{"event": "begin", "pid": (?P<pid>[1-9][0-9]{0,9}), '
+    r'"kind": "(?P<kind>reduce|variants|unify|match)"\}\n'
+    r'\{"event": "accepted", "pid": (?P=pid), "kind": "(?P=kind)"\}\n)'
+    r'(?P=cycle)+',
+    re.MULTILINE,
+)
 
 
 class GuardError(RuntimeError):
@@ -34,6 +41,10 @@ def boundary_complete(report: Path, *, source_id: str) -> bool:
         raise GuardError("missing native boundary records") from error
     if not text or not text.endswith("\n"):
         raise GuardError("truncated native boundary records")
+    # Avoid a full compaction pass without a repeat in the first producer-sized batch.
+    if OPERATION_CYCLES.search(text, 0, 16_384) is not None:
+        # Identical complete cycles preserve every initial lifecycle verdict.
+        text = OPERATION_CYCLES.sub(r"\g<cycle>", text)
     states: dict[int, tuple[str, str | None]] = {}
     versions: set[int] = set()
     installations: set[int] = set()

@@ -155,7 +155,7 @@ fn stream(
         }
         let query = profile.measure(Phase::QueryValidation, || query::validate(command))?;
         profile.measure(Phase::Journal, || {
-            journal.record("begin", query.kind.name())
+            journal.record(evidence::OperationEvent::Begin, query.kind)
         })?;
         *pending = true;
         let output = profile.measure(Phase::NativeIo, || {
@@ -166,7 +166,7 @@ fn stream(
             std::str::from_utf8(&output).map_err(|_| Rejected("native reply: non-ASCII syntax"))?;
         profile.measure(Phase::ReplyValidation, || reply::validate(&query, text))?;
         profile.measure(Phase::Journal, || {
-            journal.record("accepted", query.kind.name())
+            journal.record(evidence::OperationEvent::Accepted, query.kind)
         })?;
         *pending = false;
         profile.measure(Phase::Forwarding, || forward(consumer, output))?;

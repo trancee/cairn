@@ -15,6 +15,23 @@ Put the model under `docs/spec/models/`. A failing lemma reopens the relevant AD
 
 ## Comments
 
+2026-10-17: the renewed native-budget work rejects three new standalone parser/
+buffer trials, then measures complete-operation evidence amortization.
+Preserve every journal record/schema and the existing lifecycle validator.
+Fold only repeated identical complete canonical cycles in memory and cache
+the producer's eight fixed records per process. The actual Linux journal
+audit uses `86.775464%` less CPU; independent producer CPU falls `12.745850%`.
+Ordinary controlled full-export overhead falls from `+3.628018%` at `2cffb27`
+to `+2.949324%` combined; verifier-only measures `+2.891542%`, so no incremental
+wall advantage is claimed for caching. Startup adds `13.815699` ms.
+macOS budgets also pass at `+3.407211%` and `35.330875` ms.
+All `2000` seeded verdicts match the committed validator; eight maintained
+adversarial journal cases supplement exact mixed-kind byte/PID/order checks.
+The actual preceding hosted `+10.495555%` failure remains authoritative until
+ordinary changed-head CI. No jobs, deadlines, budgets, equations or formal/SDK
+gates change; no merge is authorized.
+See the [decision](../../../docs/adr/0010-compositional-lifecycle-verification.md#amortized-native-operation-evidence-2026-10-17).
+
 2026-10-17: `bounded-ci-io-attribution` is explicitly approved after both actual
 `b523dce` failures and withdrawal of three unproven Ubuntu input/buffering
 candidates. Add nested numeric consumer/backend write/wait/read regions to the
