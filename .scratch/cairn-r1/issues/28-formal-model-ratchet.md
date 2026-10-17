@@ -1477,3 +1477,44 @@ Linux-only skips), 180 model/50 lifecycle cases, native unit tests and both
 fresh kernel/source gates. `bash scripts/check-rust.sh` and all six changed
 Markdown local-link checks pass. Published-head hosted outcomes are recorded
 in PR #9; local success is not hosted acceptance.
+
+2026-10-17 (scoped equation-system elimination):
+Continue the approved proof-only route after accepted `f8ab32b`. Two intended
+missing-report reds expose false success for missing equation-system and
+system-elimination audits. `QuerySystems.lean` defines finite term-pair lists,
+original support, simultaneous substitution, sorted system solutions and
+explicitly scoped complete families. It proves singleton agreement, empty/
+reflexive cases, reversal, substitution/composition and prefix-factor lifting.
+`QuerySystemBindings.lean` constructs explicit finite composition with
+second-list substitution into first-list values before append, then proves
+variable elimination and reversed elimination lift supplied residual complete
+families; proper occurs cycles reject any tail.
+
+Residual coverage must include variables in prefix values on the original
+scope. A ground binding complete on empty remaining-equation support can
+still yield an incomplete family for `X = Y`; the retained scope prevents it.
+Kernel controls also cover all five sorts/rigid labels, shared-variable
+propagation, genuine AC residuals, finite witnesses, composition direction,
+overlapping/duplicate precedence and reversed Fresh/message elimination.
+A sorted composition can hide an invalid second binding; the substitution
+law deliberately retains both sortedness premises.
+
+The fresh source-bound pinned-Lean gate passes 201 distinct audits, 28
+axiom-free, none using `sorryAx`; existing 38 public equation tests pass.
+System substitution/elimination inherit existing classical choice, not new
+axioms or an executable fallback. Four proof/case files are below 300 lines;
+the cohesive registry (361) and CLI fixture (432) retain their written
+SHOULD-300 deviation below the mandatory 500. Reference/explanation/environment/
+project/ADR agree. This is conditional family composition, not an automatic
+general system solver, constructor decomposition, natural-AC generation,
+native/importer/narrowing/FVP or assembled acceptance. Native source-ID
+inputs, equations, grammar/validation, API/wire/crypto/dependencies, jobs,
+deadlines and budgets are unchanged; current published-head outcomes belong
+in PR #9, and the native-performance root/SDK acceptance stay blocked.
+
+Canonical local `LEAN=<pinned Lean> scripts/check.sh` passes two macOS native
+clock tests, 28 native CLI cases (three Linux-only skips), 180 model/50 lifecycle
+cases, static checks and both fresh Lean/source gates. `bash scripts/check-rust.sh`
+and all six changed Markdown local-link checks pass. The canonical export
+digest and native source identity are unchanged. New-head hosted execution
+and its ordinary unprofiled budgets remain pending, not inherited from `f8ab32b`.

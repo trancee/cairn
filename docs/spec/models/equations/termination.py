@@ -209,6 +209,17 @@ QUERY_VARIABLE_GENERATION_THEOREMS = (
     "native_reflexive_complete_family", "native_variable_binding_family_complete",
     "native_variable_binding_family_finite",
 )
+QUERY_SYSTEM_THEOREMS = (
+    "native_system_cons_iff", "native_system_singleton_complete_iff",
+    "native_system_substitution_iff", "native_system_assignment_ac",
+    "native_system_empty_complete", "native_system_reflexive_complete_iff",
+    "native_ac_instance_prefix", "native_system_swap_complete_iff",
+)
+QUERY_SYSTEM_BINDING_THEOREMS = (
+    "native_bindings_composition", "native_finite_assignment_composition",
+    "native_system_variable_elimination", "native_system_reversed_variable_elimination",
+    "native_system_single_binding_complete", "native_system_occurs_complete_empty_family",
+)
 
 
 def main() -> int:
@@ -272,6 +283,8 @@ def main() -> int:
                 ("QueryOccurs", QUERY_OCCURS_THEOREMS),
                 ("QueryVariableBindings", QUERY_VARIABLE_BINDING_THEOREMS),
                 ("QueryVariableGeneration", QUERY_VARIABLE_GENERATION_THEOREMS),
+                ("QuerySystems", QUERY_SYSTEM_THEOREMS),
+                ("QuerySystemBindings", QUERY_SYSTEM_BINDING_THEOREMS),
             ):
                 output = run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -297,6 +310,8 @@ def main() -> int:
                 "QueryKindCompletenessCases",
                 "QueryOccursCases",
                 "QueryVariableBindingCases",
+                "QuerySystemCases",
+                "QuerySystemBindingCases",
             ):
                 run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -332,6 +347,8 @@ def main() -> int:
         print("PASS: proper finite-AST occurrences exclude AC-unifiers and have complete empty families.")
         print("PASS: sort-compatible occurs-free variable bindings construct finite complete AC-unifier families.")
         print("PASS: proof-carrying variable equations generate complete finite binding families.")
+        print("PASS: finite equation systems preserve scoped AC solutions and residual factorization.")
+        print("PASS: finite binding composition and variable elimination preserve complete system families.")
         print("Scope: typed image algebra + enforced native stream membership; not a native FVP certificate.")
         print("Trust boundary: Tamarin/Maude + Rust stream guard + Python evidence/signature/translation + Lean kernel.")
         return 0

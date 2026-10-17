@@ -15,8 +15,8 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   for the six source equations in the typed algebra. It also checks structural
   frozen-index encoding round trips, independent raw AC/rewrite correspondence
   and typed substitution commutation, including free tuple/Node framing closure
-  and controlled Fresh/natural derivation-kind abstraction (187 audits,
-  27 axiom-free, none using `sorryAx`).
+  and controlled Fresh/natural derivation-kind abstraction (201 audits,
+  28 axiom-free, none using `sorryAx`).
   An independently guarded native-sorted relation inherits proper-message
   termination, B-coherence, convergence modulo AC and the template-only bound.
   Controlled-kind framing closure and decoded-kind termination also hold.
@@ -66,6 +66,15 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   that solver's domain, not unsatisfiable; a reversed message binding can work.
   This is not general sorted AC generation or native occurs-check verification.
   Pure AC rejection also does not reject equality modulo the source equations.
+  Finite equation systems now have sorted solution and explicitly scoped
+  complete-family predicates. Variable elimination propagates its binding
+  through all remaining pairs and lifts supplied residual complete families,
+  retaining variables in prefix values even when no equation remains.
+  Explicit finite binding composition substitutes second-list values into
+  first-list values before appending the second list, preserving first lookup.
+  Empty/reflexive systems, reversed orientations and proper-cycle rejection
+  retain their scope. This is conditional system composition, not a general
+  solver, constructor decomposition or sorted natural-AC generation.
   Runtime finite-support/native
   occurs-check/fresh-name correspondence, narrowing and
   native algorithm/importer correctness remain unproved.

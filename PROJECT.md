@@ -16,9 +16,9 @@ are realizable by typed matching modulo AC. Sort-separated natural/message
 substitutions commute with encoding and preserve image membership while rigid
 indices stay frozen. Free tuple/Node framing is closed under AC, rewriting and
 typed substitution, including node assignments; framing remains excluded from
-message functions. All 187 theorem audits and the kernel
+message functions. All 201 theorem audits and the kernel
 regression cases run in the existing lifecycle cell, without a new job or
-larger ceiling. Twenty-seven audits use no axioms; none uses `sorryAx`.
+larger ceiling. Twenty-eight audits use no axioms; none uses `sorryAx`.
 
 The new independent native-sorted relation requires proper-`Msg` equation
 variables and AC-equivalent repeated keys instead of using unguarded shadow
@@ -85,13 +85,26 @@ for identity, proper cycles and occurs-free targets. An incompatible
 orientation is outside its domain, not an unsatisfiability verdict; pure AC
 rejection does not reject equality modulo the six rewrite equations.
 This is constructive variable elimination, not a general sorted AC generator.
+Finite equation systems now have sorted solution and explicitly scoped
+complete-family predicates. Variable elimination substitutes its binding
+through the remainder and lifts supplied complete families using prefix-value
+support, including residual variables absent from remaining equations.
+Empty/reflexive systems, orientation reversal and proper-cycle rejection
+retain that scope. Explicit binding-list composition substitutes second-list
+values into first-list values before appending, preserving first lookup and
+finite representation. Kernel controls reject empty-remainder false coverage
+and hidden unsorted postfactors, and exercise shared variables, AC residuals
+and reversed Fresh/message elimination. This closes a conditional composition
+layer, not automatic system solving, constructor decomposition or natural-AC
+generation. System substitution/elimination inherit existing classical choice
+through sorted composition; the binding-list construction does not need it.
 Native algorithm,
 runtime finite-support/occurs-check/fresh-namespace correspondence, narrowing/FVP and
 importer correctness remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
 the current gates run 28 native CLI/180 model/50 lifecycle tests plus native
-clock unit tests, 43 projections and all 187 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
+clock unit tests, 43 projections and all 201 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
 record authoritative current-head hosted results. These equation proofs change no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
 

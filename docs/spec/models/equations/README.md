@@ -74,6 +74,9 @@ The command:
 - kernel-checks `QueryVariableBindings.lean` and `QueryVariableGeneration.lean`,
   audits 13 reports and checks finite, supported, idempotent one-binding MGUs
   and complete generated families for sort-compatible variable equations;
+- kernel-checks `QuerySystems.lean` and `QuerySystemBindings.lean`, audits
+  14 reports and checks finite equation systems, explicit coverage scopes,
+  residual-factor lifting, finite binding composition and variable elimination;
 - generates and kernel-checks a certificate translating every source equation
   to its exact `PrimitiveRewrite` constructor.
 
@@ -84,7 +87,7 @@ the existing `120`-second bound; version checks use `30` seconds.
 Invalid command-line syntax uses argparse's exit `2`; `--help` exits `0` without
 checking a proof.
 Only `propext`, `Classical.choice` and `Quot.sound` are permitted by the shared
-axiom audit. Twenty-seven of the 187 audited theorems use no axioms. The three
+axiom audit. Twenty-eight of the 201 audited theorems use no axioms. The three
 uniform normalization-bound theorems, assignment/shadow representation and
 closure/solution-representation, sorted factorization, admissible-shadow
 composition and family/most-generality
@@ -92,6 +95,8 @@ transport audits depending on those witnesses use all three permitted axioms.
 The finite-support and finite-unifier audits use at most `propext` and `Quot.sound`.
 The new kind-instance/family audits also use at most those two, except
 admissible-shadow composition, which inherits classical choice from sorted composition.
+System substitution and elimination also inherit classical choice from sorted
+composition; their explicit binding-list construction is executable without it.
 Other audits use at most `propext` and `Quot.sound`.
 Assignment witnesses use classical choice only in the mathematical proof,
 not an executable native fallback.
@@ -461,6 +466,54 @@ does not imply equational rejection: `X = fst(pair(X, roleA))` has a complete
 empty AC family, while the source projection rewrites its right side to `X`.
 These mathematical results do not verify the native occurs check, fresh-name
 allocation, finite-family generation, importer or narrowing.
+
+### Finite systems and variable elimination
+
+`QuerySystems.lean` defines `NativeEquationSystem` as a finite list of term
+pairs. `nativeSystemVariables` collects both sides' variable keys, preserving
+sort/index distinctions and ignoring rigid atoms. `substituteNativeSystem`
+applies one simultaneous assignment to every pair. `NativeACSystemUnifier`
+requires a sorted assignment solving every pair modulo structural AC.
+
+`NativeCompleteACSystemOn equations variables family` requires soundness on
+all equations and coverage on the explicitly supplied variable scope.
+Use `nativeSystemVariables` of the original system for full input coverage.
+The scope is not implicitly recomputed after simplification. Single-equation
+completeness on its input support agrees with `NativeCompleteACUnifiers`;
+empty systems have the identity singleton on any scope. Reflexive-head
+removal and equation reversal retain that same scope.
+
+System substitution corresponds exactly to ordered assignment composition,
+with sortedness of both assignments retained explicitly. Sorted composition
+alone does not establish sortedness of its second assignment: the first can
+hide an invalid binding. Pointwise AC-equivalent sorted assignments preserve
+system solutions. Prefix composition lifts scoped factorization only when
+the residual scope includes `nativeAssignmentVariables variables prefix`,
+including variables in prefix values that no residual equation mentions.
+
+`QuerySystemBindings.lean` defines `composeNativeBindings first second` by
+substituting `second` into every value of `first`, then appending `second`.
+Its interpreted assignment equals `composeNativeAssignments`; finite
+assignments are closed under this operation. Lookup remains simultaneous
+and first-binding. Raw concatenation is not composition, and reversing the
+lists changes its meaning. This does not change native duplicate handling.
+
+For a sort-compatible occurs-free head `X = value`, eliminate that binding
+from every remaining equation. A family complete for the residual system
+on the prefix-value scope lifts to a complete family for the original system
+by prefix composition. The proof constructs the factorization, not just
+solution soundness. The reversed equation orientation has the same result.
+A proper occurs cycle has a complete empty family regardless of the tail.
+These are conditional family-composition rules, not an automatic general
+equation-system solver or a complete natural-addition AC generator.
+
+`QuerySystemCases.lean` and `QuerySystemBindingCases.lean` retain all-five-sort
+support, rigid labels, empty/reflexive/singleton systems, sortedness premises,
+shared-variable propagation, genuine AC residual solving, composition order,
+overlapping/duplicate binding precedence, finite witnesses and reversed
+Fresh/message elimination. A ground residual binding is complete on the
+empty remaining-equation support but yields an incomplete family for `X = Y`;
+retaining the prefix-value scope excludes that false completeness claim.
 
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of

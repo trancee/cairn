@@ -161,4 +161,15 @@ REPORT_GROUPS = {
         "native_reflexive_complete_family", "native_variable_binding_family_complete",
         "native_variable_binding_family_finite",
     ),
+    "equation-systems": (
+        "native_system_cons_iff", "native_system_singleton_complete_iff",
+        "native_system_substitution_iff", "native_system_assignment_ac",
+        "native_system_empty_complete", "native_system_reflexive_complete_iff",
+        "native_ac_instance_prefix", "native_system_swap_complete_iff",
+    ),
+    "system-bindings": (
+        "native_bindings_composition", "native_finite_assignment_composition",
+        "native_system_variable_elimination", "native_system_reversed_variable_elimination",
+        "native_system_single_binding_complete", "native_system_occurs_complete_empty_family",
+    ),
 }

@@ -23,7 +23,13 @@ families for variable equations whose chosen orientation has a sort-compatible
 target: identity, proper cycles and occurs-free bindings. Generic finite-AST
 occurs rejection and one-binding factorization justify these branches.
 This is a base case for general AC generation, not that general generator
-or a native-runtime correspondence proof.
+or a native-runtime correspondence proof. Finite equation-system elimination
+now propagates those bindings through every remaining constraint and lifts a
+supplied residual complete family. Coverage must retain variables in prefix
+values, not just those in the remaining equations: an empty remainder can
+otherwise make a ground family appear complete. Explicit finite binding
+composition preserves the existing ordered, simultaneous first-binding
+semantics. This is a proved composition layer, not a general system solver.
 Native narrowing/unification and the remaining
 FVP hypotheses stay separate; this is not a native FVP certificate.
 

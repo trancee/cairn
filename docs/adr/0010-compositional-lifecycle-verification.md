@@ -58,6 +58,51 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Scoped equation-system elimination (2026-10-17)
+
+Continue the owner's approved proof-only route after accepted variable-equation
+checkpoint `f8ab32b`. Define finite equation lists, sorted simultaneous
+solutions and sound complete families with an explicit comparison scope.
+The original system's variable list supplies full input coverage; dropping
+or reversing a head equation does not silently shrink that scope.
+
+Variable elimination substitutes a sort-compatible occurs-free binding into
+every remaining equation, then prefixes every supplied residual candidate.
+Require residual coverage on variables in the prefix's original scoped values,
+not merely in the remaining equations. A ground residual binding can be
+complete on an empty equation support yet lose valid solutions of `X = Y`.
+The selected scope reuses existing residual-factor support and global
+one-binding factorization, avoiding a parallel completeness convention.
+Forcing global agreement would overconstrain unrelated variables; silently
+reusing tail-only completeness is unsound. Restricting every candidate and
+proving a separate frame-extension construction is a larger alternative.
+
+Construct finite binding composition by substituting second-list values into
+first-list values before appending the second list. Prove interpretation
+equals ordered assignment composition, including overlapping/duplicate keys.
+Naive append leaves stale references; reversing composition changes solutions.
+Keep first-binding simultaneous semantics without changing native policy.
+System substitution requires both assignments sorted; composition can hide an
+invalid second binding, so its sortedness cannot be inferred backwards.
+
+Two intended missing-report public CLI reds become rejecting greens.
+Fresh pinned Lean checks 201 distinct audits, 28 axiom-free, none using
+`sorryAx`. System substitution/elimination inherit classical choice from
+existing sorted composition; finite binding construction introduces none.
+Four new proof/case files stay below 300 lines. The cohesive central registry
+(361 lines) and independent CLI fixture (432) retain the documented SHOULD-300
+deviation: splitting the shared inventory/process seam adds coupling without
+a separate responsibility; both remain below the mandatory 500 limit.
+
+This closes conditional finite-system composition, not a general solver,
+constructor decomposition, complete sorted natural-AC generation, native
+lookup/fresh-name/importer/narrowing/FVP or assembled-model acceptance.
+No native source-ID input, equation, validation/grammar, API/wire/crypto,
+dependency, job, deadline or budget changes. Existing proof-checkpoint
+publication approval remains subject to required gates and own-head ordinary
+CI. The intermittent native-performance blocker remains; no retry, dispatch,
+merge or SDK/profile activation is authorized by a mathematical checkpoint.
+
 ### Constructive variable-equation generation (2026-10-17)
 
 The completed native CPU diagnostic checkpoint passes its ordinary hosted
