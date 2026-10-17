@@ -103,12 +103,25 @@ runtime finite-support/occurs-check/fresh-namespace correspondence, narrowing/FV
 importer correctness remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
-the current gates run 28 native CLI/180 model/50 lifecycle tests plus native
+the current gates run 29 native CLI/189 model/50 lifecycle tests plus native
 clock unit tests, 43 projections and all 201 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
 record authoritative current-head hosted results. These equation proofs change no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
 
 ## Native budget diagnosis (2026-10-16)
+
+The owner-approved `bounded-ci-io-attribution` increment adds numeric nested
+consumer/backend I/O regions to the existing diagnostic pair, retaining the
+six coarse phases. Wrapper counts distinguish writes/readiness/reads, not
+exact kernel syscalls; independent clock-family bounds prevent double counting.
+Three bounded Ubuntu input/buffering candidates were rejected and withdrawn;
+neither their stream CPU gains nor passing controlled-host screens resolve
+the actual `b523dce` failures (`+11.449226%`/`+11.037917%`). A native source
+rebuild and one ordinary changed-head CI execution are required. If normal
+acceptance passes and failure capture skips, do not retry. All unprofiled
+acceptance pairs, 19 jobs, ceilings, deadlines, validators and budgets remain;
+no performance fix, merge or SDK/formal activation is claimed.
+See [ADR 0010](docs/adr/0010-compositional-lifecycle-verification.md#same-pair-nested-native-io-attribution-2026-10-17).
 
 The approved phase-accounting follow-up reuses the existing failure-only pair
 for numeric native-phase CPU/wall, driver-thread CPU, Linux guard observations

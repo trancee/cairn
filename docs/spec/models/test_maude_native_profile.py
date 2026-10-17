@@ -32,6 +32,14 @@ def record(identifier=123):
             }
             for phase in PHASES
         },
+        "io_phases": {
+            "input_wait": {"calls": 2, "cpu_nanoseconds": 3, "wall_nanoseconds": 5},
+            "input_read": {"calls": 2, "cpu_nanoseconds": 4, "wall_nanoseconds": 7},
+            "native_write": {"calls": 6, "cpu_nanoseconds": 10, "wall_nanoseconds": 20},
+            "native_wait": {"calls": 7, "cpu_nanoseconds": 10, "wall_nanoseconds": 20},
+            "native_stdout_read": {"calls": 7, "cpu_nanoseconds": 10, "wall_nanoseconds": 20},
+            "native_stderr_read": {"calls": 0, "cpu_nanoseconds": 0, "wall_nanoseconds": 0},
+        },
     }
 
 

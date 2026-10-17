@@ -15,6 +15,19 @@ Put the model under `docs/spec/models/`. A failing lemma reopens the relevant AD
 
 ## Comments
 
+2026-10-17: `bounded-ci-io-attribution` is explicitly approved after both actual
+`b523dce` failures and withdrawal of three unproven Ubuntu input/buffering
+candidates. Add nested numeric consumer/backend write/wait/read regions to the
+existing opt-in profile, retaining coarse phases and independently validating
+overlapping clock families. Reuse the same Linux CLI and sole failure-only
+full-export pairs. Rebuild the native source identity, retain all ordinary
+validation/cancellation/teardown and the unchanged 19 jobs, ceilings, deadlines
+and budgets. One ordinary changed-head CI execution is authorized; a passing
+normal gate with skipped capture must stop without retry. No performance fix,
+merge or formal/SDK activation is claimed.
+See the [reference](../../../docs/spec/models/equations/native-proxy/README.md#native-phase-and-driver-cpu-profiles)
+and [decision](../../../docs/adr/0010-compositional-lifecycle-verification.md#same-pair-nested-native-io-attribution-2026-10-17).
+
 2026-10-17: after the real `46d38fa` CI rejection/capture, offline reconciliation
 confirms incomplete native/driver CPU attribution, not a performance fix.
 The owner approved bounded same-pair native-phase/driver accounting. Opt-in

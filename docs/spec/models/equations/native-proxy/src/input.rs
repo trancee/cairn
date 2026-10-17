@@ -2,6 +2,7 @@ use std::io::Read;
 
 use crate::{
     error::{Error, Result},
+    profile::{Phase, Profile},
     unix,
 };
 
@@ -18,7 +19,7 @@ impl Input {
         }
     }
 
-    pub(crate) fn line(&mut self) -> Result<Option<Vec<u8>>> {
+    pub(crate) fn line(&mut self, profile: &Profile) -> Result<Option<Vec<u8>>> {
         loop {
             if unix::interrupted_now() {
                 return Err(Error::Interrupted);
@@ -38,9 +39,10 @@ impl Input {
                 events: 1,
                 revents: 0,
             }];
-            unix::ready(&mut fds, -1, true)?;
+            profile.measure(Phase::InputWait, || unix::ready(&mut fds, -1, true))?;
             let mut buffer = [0; 8096];
-            let count = std::io::stdin().read(&mut buffer)?;
+            let count =
+                profile.measure(Phase::InputRead, || Ok(std::io::stdin().read(&mut buffer)?))?;
             self.eof = count == 0;
             self.pending.extend_from_slice(&buffer[..count]);
         }

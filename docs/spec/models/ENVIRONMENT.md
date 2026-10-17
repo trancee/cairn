@@ -138,8 +138,13 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   nonempty `GHCRTS`. It can accompany `--profile-linux`; neither profile can
   establish budget acceptance. `--profile-native` additionally records bounded
   numeric native-phase CPU/wall counters and main-driver-thread CPU on 64-bit
-  native Linux. It retains complete validation, a source-identified rebuild,
-  owned private reports and diagnostic-only rejection. Inherited nonempty
+  native Linux. Nested `io_phases` distinguish consumer wait/read and native
+  write/wait/stdout-read/stderr-read wrappers, including interactive setup but
+  excluding version/installation probes and shutdown capture. They overlap
+  the coarse phases and must not be added to them or called exact syscall
+  counts. Each clock family is independently bounded. It retains complete
+  validation, a source-identified rebuild, owned private reports and
+  diagnostic-only rejection. Inherited nonempty
   `CAIRN_MAUDE_PHASE_REPORT` rejects rather than silently enabling profiling.
   The existing Linux CLI profile test reuses its one pair with all three flags.
   The core CI budget step remains unprofiled; only
@@ -186,7 +191,7 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   deadline or budget changes; cleanup still requires its own hosted gates.
   See the [reference](equations/native-proxy/README.md#same-run-native-linux-comparison).
 - `scripts/check.sh` builds the host guard with the root Rust pin, checks Rust
-  formatting/all-target strict Clippy, native clock unit tests and 28 native CLI/process cases, then runs
+  formatting/all-target strict Clippy, native clock unit tests and 29 native CLI/process cases, then runs
   whitespace, unit tests and `actionlint`,
   plus lifecycle/source-projection and equation convergence/boundedness proofs when pinned
   Lean is available. The pre-commit hook and CI both call it.

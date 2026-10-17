@@ -97,9 +97,9 @@ fn stream(
     ready: &mut bool,
     pending: &mut bool,
     consumer: &mut File,
-    profile: &mut Profile,
+    profile: &Profile,
 ) -> Result<()> {
-    let greeting = native.reply()?;
+    let greeting = native.reply(profile)?;
     if greeting.iter().any(|byte| !syntax::space(*byte)) {
         return Err(Rejected("native process: unexpected greeting"));
     }
@@ -107,7 +107,7 @@ fn stream(
     let mut input = Input::new();
     let mut setup = BTreeSet::new();
     let mut module = Vec::new();
-    while let Some(line) = profile.measure(Phase::Input, || input.line())? {
+    while let Some(line) = profile.measure(Phase::Input, || input.line(profile))? {
         if !line.is_ascii() {
             return Err(Rejected("native command: non-ASCII syntax"));
         }
@@ -123,8 +123,8 @@ fn stream(
                 std::str::from_utf8(&module)
                     .map_err(|_| Rejected("native command: non-ASCII syntax"))?,
             )?;
-            native.write(&module)?;
-            let reply = native.reply()?;
+            profile.measure(Phase::NativeWrite, || native.write(&module))?;
+            let reply = native.reply(profile)?;
             if reply.iter().any(|byte| !syntax::space(*byte)) {
                 return Err(Rejected("native module: unexpected reply"));
             }
@@ -138,8 +138,8 @@ fn stream(
             if !setup.insert(command.to_owned()) {
                 return Err(Rejected("native setup: duplicate command"));
             }
-            native.write(&line)?;
-            let reply = native.reply()?;
+            profile.measure(Phase::NativeWrite, || native.write(&line))?;
+            let reply = native.reply(profile)?;
             if reply.iter().any(|byte| !syntax::space(*byte)) {
                 return Err(Rejected("native setup: unexpected reply"));
             }
@@ -159,8 +159,8 @@ fn stream(
         })?;
         *pending = true;
         let output = profile.measure(Phase::NativeIo, || {
-            native.write(&line)?;
-            native.reply()
+            profile.measure(Phase::NativeWrite, || native.write(&line))?;
+            native.reply(profile)
         })?;
         let text =
             std::str::from_utf8(&output).map_err(|_| Rejected("native reply: non-ASCII syntax"))?;
@@ -203,9 +203,10 @@ fn run(journal: &mut evidence::Journal, consumer: &mut File) -> Result<()> {
         return Ok(());
     }
     if arguments.is_empty() {
+        let profile = Profile::default();
         let mut input = Input::new();
         let mut command = Vec::new();
-        while let Some(line) = input.line()? {
+        while let Some(line) = input.line(&profile)? {
             command.extend_from_slice(&line);
         }
         if command != b"quit\n" {
@@ -226,7 +227,7 @@ fn run(journal: &mut evidence::Journal, consumer: &mut File) -> Result<()> {
     if arguments.len() != FLAGS.len() || flags != FLAGS.into_iter().collect() {
         return Err(Rejected("native process: unsupported invocation"));
     }
-    let mut profile = Profile::new()?;
+    let profile = Profile::new()?;
     let mut native = Native::spawn(&executable, &arguments)?;
     evidence::record("start", None)?;
     let mut ready = false;
@@ -237,7 +238,7 @@ fn run(journal: &mut evidence::Journal, consumer: &mut File) -> Result<()> {
         &mut ready,
         &mut pending,
         consumer,
-        &mut profile,
+        &profile,
     ) {
         Ok(()) => {}
         Err(Error::Interrupted) if ready && !pending => {}

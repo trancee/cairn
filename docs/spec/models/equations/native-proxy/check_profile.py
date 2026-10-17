@@ -53,6 +53,12 @@ class CompiledProfileTests(unittest.TestCase):
             process["phases"]["query_validation"]["calls"] > 0
             for process in phases["compiled_guard"][0]["processes"]
         ))
+        for process in phases["compiled_guard"][0]["processes"]:
+            queries = process["phases"]["query_validation"]["calls"]
+            self.assertEqual(process["io_phases"]["native_write"]["calls"], queries + 4)
+            self.assertGreaterEqual(
+                process["io_phases"]["native_stdout_read"]["calls"], queries + 5,
+            )
         profiles = report["native_process_profiles"]
         self.assertEqual(set(profiles), {"baseline", "compiled_guard"})
         self.assertEqual(profiles["baseline"][0]["processes"], [])
@@ -97,6 +103,34 @@ class CompiledProfileTests(unittest.TestCase):
             self.assertGreater(profile["interactive_cpu_nanoseconds"], 0)
             self.assertEqual(profile["phases"]["query_validation"]["calls"], 128)
             self.assertEqual(profile["phases"]["journal"]["calls"], 256)
+            io_phases = profile["io_phases"]
+            self.assertGreater(io_phases["input_read"]["calls"], 0)
+            self.assertEqual(
+                io_phases["input_wait"]["calls"], io_phases["input_read"]["calls"],
+            )
+            self.assertEqual(io_phases["native_write"]["calls"], 132)
+            self.assertGreaterEqual(io_phases["native_stdout_read"]["calls"], 133)
+            self.assertGreaterEqual(
+                io_phases["native_wait"]["calls"], io_phases["native_stdout_read"]["calls"],
+            )
+            self.assertEqual(io_phases["native_stderr_read"]["calls"], 0)
+
+    @unittest.skipUnless(sys.platform == "linux", "native CPU profiling is Linux-only")
+    def test_profiled_closed_stderr_preserves_replies_and_records_only_one_eof(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            report = Path(temporary) / "phases"
+            with patch.dict(os.environ, CAIRN_MAUDE_PHASE_REPORT=str(report)):
+                result = native_stream(
+                    NATIVE_MODULE + "reduce tamXCroleA .\n" * 3,
+                    "result Msg: tamXCroleA\nMaude> ",
+                    proxy=self.proxy, close_errors=True,
+                )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(result.stdout.count("result Msg: tamXCroleA"), 3)
+            profile, = phase_records(report.read_bytes())
+            self.assertEqual(profile["io_phases"]["native_write"]["calls"], 7)
+            self.assertEqual(profile["io_phases"]["native_stderr_read"]["calls"], 1)
 
     @unittest.skipUnless(sys.platform == "linux", "native CPU profiling is Linux-only")
     def test_bad_phase_destinations_reject_without_blocking_or_overwriting(self):

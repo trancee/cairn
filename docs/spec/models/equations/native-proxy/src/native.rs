@@ -7,6 +7,7 @@ use std::{
 
 use crate::{
     error::{Error::Rejected, Result},
+    profile::{Phase, Profile},
     unix::{self, PollFd},
 };
 
@@ -41,7 +42,7 @@ impl Native {
         Ok(())
     }
 
-    pub fn reply(&mut self) -> Result<Vec<u8>> {
+    pub fn reply(&mut self, profile: &Profile) -> Result<Vec<u8>> {
         let mut output = Vec::new();
         loop {
             let mut fds = [
@@ -69,27 +70,31 @@ impl Native {
                     revents: 0,
                 },
             ];
-            unix::ready(&mut fds, -1, true)?;
+            profile.measure(Phase::NativeWait, || unix::ready(&mut fds, -1, true))?;
             let mut buffer = [0; 8096];
             if fds[0].revents != 0 {
-                let count = self
-                    .child
-                    .stderr
-                    .as_mut()
-                    .ok_or(Rejected("native process: missing output pipe"))?
-                    .read(&mut buffer)?;
+                let count = profile.measure(Phase::NativeStderrRead, || {
+                    Ok(self
+                        .child
+                        .stderr
+                        .as_mut()
+                        .ok_or(Rejected("native process: missing output pipe"))?
+                        .read(&mut buffer)?)
+                })?;
                 if count != 0 {
                     return Err(Rejected("native process: stderr diagnostic"));
                 }
                 self.errors_open = false;
             }
             if fds[1].revents != 0 {
-                let count = self
-                    .child
-                    .stdout
-                    .as_mut()
-                    .ok_or(Rejected("native process: missing output pipe"))?
-                    .read(&mut buffer)?;
+                let count = profile.measure(Phase::NativeStdoutRead, || {
+                    Ok(self
+                        .child
+                        .stdout
+                        .as_mut()
+                        .ok_or(Rejected("native process: missing output pipe"))?
+                        .read(&mut buffer)?)
+                })?;
                 if count == 0 {
                     return Err(Rejected("native process: premature EOF"));
                 }

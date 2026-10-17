@@ -58,6 +58,45 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Same-pair nested native I/O attribution (2026-10-17)
+
+The two actual `b523dce` attempts fail the unchanged full-export limit at
+`+11.449226%` and `+11.037917%`. A bounded Ubuntu comparison rejects three
+input/buffering candidates: their small public-stream CPU gains do not
+demonstrate worthwhile full-workload improvement. All candidates are withdrawn.
+The existing coarse phase report cannot distinguish native writes, readiness
+waits and reads; blocked wall time alone is not active CPU or a causal fix.
+
+The owner selects `bounded-ci-io-attribution`: extend the existing opt-in
+numeric report with separate `io_phases`, retaining all six coarse phases.
+Distinguish consumer wait/read and backend write/wait/stdout-read/stderr-read
+regions. Shared, single-threaded `Cell` counters permit nested measurements
+without locks or allocation per observation. Disabled regions call through
+without diagnostic clock reads. Native regions include the interactive
+greeting/setup/module, unlike query-only `native_io`; probe/shutdown capture
+is not newly instrumented. Wrapper counts are not exact syscall tracing.
+The [reference](../spec/models/equations/native-proxy/README.md#native-phase-and-driver-cpu-profiles)
+defines independent clock-family bounds and operation-count constraints.
+
+Reuse the existing Linux CLI full-export pair and sole failure-only CI pair.
+No new benchmark pair, normal instrumentation, unchanged retry, dependency,
+PMU permission or host tuning is introduced. Another speculative runtime fix
+would lack causal evidence; summing nested and enclosing regions would double
+count; process-wide syscall tracing would add unrelated data and privileges.
+Clock overhead still perturbs the diagnostic pair, and its success never
+establishes either budget or complete process-tree attribution.
+
+This is an additive internal diagnostic field, not a released SDK/API or wire
+format change. Existing field meanings remain intact; current-source raw
+reports require all I/O regions and reject missing/malformed data. Historical
+acceptance-report handling is unchanged, including rejection of all
+phase-profiled reports. Rebuild the changed native source identity. Preserve
+all validation, journals, cancellation and teardown, the 19 jobs, 15-minute
+ceiling, three alternating acceptance pairs, `120`/`60`/`5`-second limits and
+`10%`/`50` ms budgets. Observe one ordinary changed-head CI execution; if normal
+acceptance passes and capture skips, stop without farming another failure.
+No causal fix, merge, formal acceptance or SDK activation is authorized.
+
 ### Scoped equation-system elimination (2026-10-17)
 
 Continue the owner's approved proof-only route after accepted variable-equation

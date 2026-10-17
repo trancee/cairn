@@ -17,6 +17,11 @@ MAXIMUM_INTEGER = 2**64 - 1
 PHASES = {
     "input", "query_validation", "journal", "native_io", "reply_validation", "forwarding",
 }
+INPUT_IO_PHASES = {"input_wait", "input_read"}
+NATIVE_IO_PHASES = {
+    "native_write", "native_wait", "native_stdout_read", "native_stderr_read",
+}
+IO_PHASES = INPUT_IO_PHASES | NATIVE_IO_PHASES
 
 
 class NativeProfileError(GuardError):
@@ -43,6 +48,7 @@ def phase_records(data: bytes) -> list[dict[str, object]]:
     for record in records:
         if not isinstance(record, dict) or set(record) != {
             "pid", "interactive_cpu_nanoseconds", "interactive_wall_nanoseconds", "phases",
+            "io_phases",
         }:
             raise NativeProfileError("malformed native CPU profile fields")
         identifier = record["pid"]
@@ -57,19 +63,20 @@ def phase_records(data: bytes) -> list[dict[str, object]]:
         )):
             raise NativeProfileError("invalid native CPU profile clock")
         phases = record["phases"]
-        if not isinstance(phases, dict) or set(phases) != PHASES:
-            raise NativeProfileError("incomplete native CPU profile phases")
-        for counters in phases.values():
-            if (
-                not isinstance(counters, dict)
-                or set(counters) != {"calls", "cpu_nanoseconds", "wall_nanoseconds"}
-                or not all(integer(value) for value in counters.values())
-            ):
-                raise NativeProfileError("invalid native CPU profile counters")
-            if counters["calls"] == 0 and (
-                counters["cpu_nanoseconds"] != 0 or counters["wall_nanoseconds"] != 0
-            ):
-                raise NativeProfileError("native CPU profile has time for an uncalled phase")
+        for field, names in (("phases", PHASES), ("io_phases", IO_PHASES)):
+            if not isinstance(record[field], dict) or set(record[field]) != names:
+                raise NativeProfileError("incomplete native CPU profile phases")
+            for counters in record[field].values():
+                if (
+                    not isinstance(counters, dict)
+                    or set(counters) != {"calls", "cpu_nanoseconds", "wall_nanoseconds"}
+                    or not all(integer(value) for value in counters.values())
+                ):
+                    raise NativeProfileError("invalid native CPU profile counters")
+                if counters["calls"] == 0 and (
+                    counters["cpu_nanoseconds"] != 0 or counters["wall_nanoseconds"] != 0
+                ):
+                    raise NativeProfileError("native CPU profile has time for an uncalled phase")
         queries = phases["query_validation"]["calls"]
         if (
             phases["journal"]["calls"] != 2 * queries
@@ -79,11 +86,28 @@ def phase_records(data: bytes) -> list[dict[str, object]]:
             ))
         ):
             raise NativeProfileError("inconsistent native CPU profile operation counts")
+        io_phases = record["io_phases"]
+        input_reads = io_phases["input_read"]["calls"]
+        if (
+            input_reads == 0
+            or io_phases["input_wait"]["calls"] not in (input_reads, input_reads + 1)
+            or io_phases["native_write"]["calls"] != queries + 4
+            or io_phases["native_stdout_read"]["calls"] < queries + 5
+            or io_phases["native_wait"]["calls"] < io_phases["native_stdout_read"]["calls"]
+            or io_phases["native_stderr_read"]["calls"] > 1
+        ):
+            raise NativeProfileError("inconsistent native CPU profile I/O operation counts")
         for clock in ("cpu", "wall"):
-            if sum(phase[f"{clock}_nanoseconds"] for phase in phases.values()) > record[
-                f"interactive_{clock}_nanoseconds"
-            ]:
+            field = f"{clock}_nanoseconds"
+            total = record[f"interactive_{clock}_nanoseconds"]
+            if sum(phase[field] for phase in phases.values()) > total:
                 raise NativeProfileError("inconsistent native CPU profile clock totals")
+            if (
+                sum(io_phases[name][field] for name in INPUT_IO_PHASES)
+                > phases["input"][field]
+                or sum(io_phases[name][field] for name in NATIVE_IO_PHASES) > total
+            ):
+                raise NativeProfileError("inconsistent native CPU profile I/O clock totals")
     return records
 
 

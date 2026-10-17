@@ -238,6 +238,7 @@ writes one numeric record **before** its required shutdown evidence:
 | `interactive_cpu_nanoseconds` | Calling-thread CPU from before interactive backend startup through backend shutdown and operation-journal closure |
 | `interactive_wall_nanoseconds` | Monotonic duration of that interactive scope |
 | `phases` | Closed map of `input`, `query_validation`, `journal`, `native_io`, `reply_validation`, `forwarding` |
+| `io_phases` | Closed map of the six nested I/O regions below, using the same counter fields |
 
 Each phase has nonnegative integer `calls`, `cpu_nanoseconds` and
 `wall_nanoseconds`. `journal` counts begin/accepted operations; the other query
@@ -250,11 +251,34 @@ phase sums are not the complete interactive total. Native clocks use Linux
 and Rust monotonic time. Instrumentation and clock
 calls perturb measured work; these are not pure, uninstrumented phase costs.
 
+| I/O region | Measured operation |
+|---|---|
+| `input_wait` | Consumer-input readiness call inside line acquisition |
+| `input_read` | Buffered Rust stdin read inside line acquisition |
+| `native_write` | Interactive backend write-all and flush |
+| `native_wait` | Interactive backend stdout/stderr readiness call |
+| `native_stdout_read` | Interactive backend stdout read |
+| `native_stderr_read` | Interactive backend stderr read |
+
+These count wrapper invocations, **not exact kernel syscall counts**. Native
+regions include the greeting, three setup exchanges, module and queries;
+version/installation probes and shutdown capture are excluded. For `N` queries,
+there are `N + 4` writes and at least `N + 5` stdout reads; fragmentation can add
+reads/waits. Successful profiles have at most one stderr read (EOF), because
+nonempty diagnostics reject. Input reads include EOF; one interrupted readiness
+call without a read is permitted on handled ready-state cancellation.
+
+The I/O regions overlap their existing enclosing phases: **do not add the two
+maps together**. Input-region CPU/wall sums cannot exceed `input`; native-region
+sums cannot exceed the interactive total. Native sums are not bounded by
+query-only `native_io`, because they also include greeting/setup/module work.
+Disabled profiling performs no diagnostic clock reads.
+
 Private reports require regular no-symlink files, a final newline, at most
 `16,384` bytes and one to eight records. Unknown/duplicate fields, repeated PIDs,
-missing phases, invalid/overflowing integers, nonzero clocks for uncalled phases,
-inconsistent operation counts or
-phase sums above their interactive totals reject with a typed, redacted error.
+missing phases or I/O regions, invalid/overflowing integers, nonzero clocks for
+uncalled regions, inconsistent operation counts or clock-family sums above
+their enclosing scope reject with a typed, redacted error.
 Files are removed on handled completion/failure. No raw queries, replies,
 argument headers or environment dumps are retained. Abrupt termination can
 prevent cleanup or capture.

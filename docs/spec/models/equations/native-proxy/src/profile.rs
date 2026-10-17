@@ -1,4 +1,4 @@
-use std::{env, fs::File, time::Instant};
+use std::{cell::Cell, env, fs::File, time::Instant};
 
 use crate::{
     error::{Error::Rejected, Result},
@@ -13,6 +13,12 @@ pub(crate) enum Phase {
     NativeIo,
     ReplyValidation,
     Forwarding,
+    InputWait,
+    InputRead,
+    NativeWrite,
+    NativeWait,
+    NativeStdoutRead,
+    NativeStderrRead,
 }
 
 const PHASES: [Phase; 6] = [
@@ -24,6 +30,15 @@ const PHASES: [Phase; 6] = [
     Phase::Forwarding,
 ];
 
+const IO_PHASES: [Phase; 6] = [
+    Phase::InputWait,
+    Phase::InputRead,
+    Phase::NativeWrite,
+    Phase::NativeWait,
+    Phase::NativeStdoutRead,
+    Phase::NativeStderrRead,
+];
+
 impl Phase {
     fn name(self) -> &'static str {
         match self {
@@ -33,6 +48,12 @@ impl Phase {
             Self::NativeIo => "native_io",
             Self::ReplyValidation => "reply_validation",
             Self::Forwarding => "forwarding",
+            Self::InputWait => "input_wait",
+            Self::InputRead => "input_read",
+            Self::NativeWrite => "native_write",
+            Self::NativeWait => "native_wait",
+            Self::NativeStdoutRead => "native_stdout_read",
+            Self::NativeStderrRead => "native_stderr_read",
         }
     }
 }
@@ -48,9 +69,10 @@ struct Capture {
     file: File,
     cpu_started: u64,
     wall_started: Instant,
-    phases: [Counters; PHASES.len()],
+    counters: [Cell<Counters>; PHASES.len() + IO_PHASES.len()],
 }
 
+#[derive(Default)]
 pub(crate) struct Profile {
     capture: Option<Capture>,
 }
@@ -118,7 +140,7 @@ impl Profile {
                 file,
                 cpu_started,
                 wall_started,
-                phases: [Counters::default(); PHASES.len()],
+                counters: std::array::from_fn(|_| Cell::default()),
             })
         } else {
             None
@@ -126,12 +148,8 @@ impl Profile {
         Ok(Self { capture })
     }
 
-    pub(crate) fn measure<T>(
-        &mut self,
-        phase: Phase,
-        action: impl FnOnce() -> Result<T>,
-    ) -> Result<T> {
-        let Some(capture) = self.capture.as_mut() else {
+    pub(crate) fn measure<T>(&self, phase: Phase, action: impl FnOnce() -> Result<T>) -> Result<T> {
+        let Some(capture) = self.capture.as_ref() else {
             return action();
         };
         let cpu_started = cpu_time()?;
@@ -141,16 +159,17 @@ impl Profile {
             .checked_sub(cpu_started)
             .ok_or(Rejected("native CPU profile: nonmonotonic clock"))?;
         let wall_nanoseconds = wall_time(wall_started)?;
-        let previous = capture.phases[phase as usize];
+        let counters = &capture.counters[phase as usize];
+        let previous = counters.get();
         let add = |left: u64, right| {
             left.checked_add(right)
                 .ok_or(Rejected("native CPU profile: counter overflow"))
         };
-        capture.phases[phase as usize] = Counters {
+        counters.set(Counters {
             calls: add(previous.calls, 1)?,
             cpu_nanoseconds: add(previous.cpu_nanoseconds, cpu_nanoseconds)?,
             wall_nanoseconds: add(previous.wall_nanoseconds, wall_nanoseconds)?,
-        };
+        });
         result
     }
 
@@ -162,23 +181,29 @@ impl Profile {
             .checked_sub(capture.cpu_started)
             .ok_or(Rejected("native CPU profile: nonmonotonic clock"))?;
         let wall = wall_time(capture.wall_started)?;
-        let phases = PHASES
-            .into_iter()
-            .map(|phase| {
-                let counters = capture.phases[phase as usize];
-                format!(
-                    "\"{}\":{{\"calls\":{},\"cpu_nanoseconds\":{},\"wall_nanoseconds\":{}}}",
-                    phase.name(),
-                    counters.calls,
-                    counters.cpu_nanoseconds,
-                    counters.wall_nanoseconds,
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(",");
+        let encode = |phases: &[Phase]| {
+            phases
+                .iter()
+                .copied()
+                .map(|phase| {
+                    let counters = capture.counters[phase as usize].get();
+                    format!(
+                        "\"{}\":{{\"calls\":{},\"cpu_nanoseconds\":{},\"wall_nanoseconds\":{}}}",
+                        phase.name(),
+                        counters.calls,
+                        counters.cpu_nanoseconds,
+                        counters.wall_nanoseconds,
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(",")
+        };
+        let phases = encode(&PHASES);
+        let io_phases = encode(&IO_PHASES);
         let record = format!(
             "{{\"pid\":{},\"interactive_cpu_nanoseconds\":{cpu},\
-             \"interactive_wall_nanoseconds\":{wall},\"phases\":{{{phases}}}}}\n",
+             \"interactive_wall_nanoseconds\":{wall},\"phases\":{{{phases}}},\
+             \"io_phases\":{{{io_phases}}}}}\n",
             std::process::id(),
         );
         let written = evidence::write(&mut capture.file, record.as_bytes());
