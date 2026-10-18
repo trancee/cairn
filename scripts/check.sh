@@ -6,6 +6,16 @@ cd "$(dirname "$0")/.."
 git diff --check
 git diff --cached --check
 
+native_manifest="docs/spec/models/equations/native-proxy/Cargo.toml"
+native_target="${CARGO_TARGET_DIR-$PWD/target/native-proxy}"
+export CARGO_TARGET_DIR="$native_target"
+cargo fmt --manifest-path "$native_manifest" --check
+cargo clippy --locked --all-targets --manifest-path "$native_manifest" --target-dir "$native_target" -- -D warnings
+cargo test --quiet --locked --manifest-path "$native_manifest" --target-dir "$native_target"
+cargo build --locked --release --manifest-path "$native_manifest" --target-dir "$native_target"
+python3 docs/spec/models/equations/native-proxy/check.py \
+  --proxy "$native_target/release/cairn-maude-proxy"
+
 python3 docs/spec/models/check_certificates.py
 python3 -m unittest discover -s docs/spec/models -p 'test_*.py'
 python3 -m unittest discover -s docs/spec/models/lifecycle -p 'test_*.py'
@@ -19,8 +29,9 @@ fi
 lean="${LEAN:-$(command -v lean || true)}"
 if [ -n "$lean" ]; then
   python3 docs/spec/models/lifecycle/check.py --lean "$lean"
+  python3 docs/spec/models/equations/termination.py --lean "$lean"
 else
-  echo "skip: set LEAN=<path to pinned lean> to run the lifecycle gate" >&2
+  echo "skip: set LEAN=<path to pinned lean> to run lifecycle/equation convergence/image gates" >&2
 fi
 
 if [ "${REPLAY:-0}" = 1 ]; then

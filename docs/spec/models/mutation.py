@@ -8,6 +8,7 @@ import sys
 import tempfile
 
 from replay import ReplayError, export_parts, lexical_views, run
+from equations.maude_runner import GuardError, run_guarded_tamarin
 
 
 TARGETS = {
@@ -122,7 +123,7 @@ def main() -> int:
                 ("default", []), (arguments.mutation, [f"--defines={arguments.mutation}"]),
             ):
                 exported = build / f"{name}.spthy"
-                run([
+                run_guarded_tamarin([
                     "tamarin-prover", str(here / "ratchet.spthy"),
                     "--quit-on-warning", "--derivcheck-timeout=60", *definitions,
                     "--output-module=msr", f"--output={exported}",
@@ -147,11 +148,11 @@ def main() -> int:
                     "all non-lemma declarations retained; no helper lemmas",
                     flush=True,
                 )
-                output = run(["tamarin-prover", str(theory), *OPTIONS], arguments.timeout)
+                output = run_guarded_tamarin(["tamarin-prover", str(theory), *OPTIONS], arguments.timeout)
                 check_outcome(output, "verified" if name == "default" else "falsified", target)
                 print(output[output.rfind("summary of summaries:"):].strip(), flush=True)
         return 0
-    except (OSError, ReplayError) as error:
+    except (OSError, ReplayError, GuardError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1
 

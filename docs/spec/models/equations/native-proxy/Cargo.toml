@@ -1,0 +1,10 @@
+[package]
+name = "cairn-maude-proxy"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+license = "Unlicense"
+publish = false
+
+[lints.clippy]
+all = "deny"

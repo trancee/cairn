@@ -1,0 +1,8 @@
+theory CairnNaturalDerivationProbe
+begin
+builtins: hashing, symmetric-encryption, natural-numbers
+functions: kdf/3, ext/2, mac/2, kem/2, kdec/2, pk/1, roleA/0, roleB/0, flip/1
+equations: kdec(kem(ss,pk(dk)),dk) = ss, flip(roleA) = roleB, flip(roleB) = roleA
+rule Natural_Input:
+  [In(<%counter, %counter %+ %1>)] --> [Out(%counter)]
+end

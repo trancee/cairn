@@ -8,11 +8,327 @@ Scope is bounded to the exact equation theory in
 natural-numbers`; `functions: kdf/3, ext/2, mac/2, kem/2, kdec/2, pk/1, roleA/0, roleB/0, flip/1`;
 `equations: kdec(kem(ss, pk(dk)), dk) = ss, flip(roleA) = roleB, flip(roleB) = roleA`) and to tool
 applicability for checking convergence, confluence and the finite variant property (FVP) of that
-theory as used by Tamarin 1.12.0. It does not touch protocol rules, lemmas, workflows or any other
-doc, and does not re-litigate the equations themselves (see the linked evidence doc for that
-argument).
+theory as used by Tamarin 1.12.0. No protocol rule, lemma, equation or runtime
+behavior is changed. The original investigation was read-only; the update below
+adds typed convergence/boundedness proofs and directly related local/CI/docs.
 
-No model equations, rules, source lemmas or workflows were changed; the evidence index and project
+## Update: source-guarded termination and the flat-pattern criterion (2026-10-14)
+
+The owner-selected guarded native boundary is now wired into all repository
+ratchet acceptance callers. It checks the entire pinned module and each query/
+complete reply, with mandatory private lifecycle records. Bad solutions are
+not filtered; any unsupported operation rejects the proof invocation.
+Pinned `Types.hs` distinguishes original `MaudeVar` from generated `FreshVar`;
+its fresh/free substitution importers require different namespaces. The guard
+enforces those constraints and rejects per-solution `#`/`%` collisions that the
+pinned reply parser would conflate. This is runtime membership/provenance
+evidence under trusted Python/tool code, not a verified variable-renaming/
+importer or algorithm proof. Real native reduction, unification, matching,
+variants and guarded Tamarin parse pass. Parse-only exports are byte-identical
+with initial `+2.7%` median overhead. Actual complete-export measurement
+was `24.178`/`35.385` seconds direct/guarded (`+46.3%`), blocking merge under
+Constitution P4. A diagnostic profile observes 90,874 native operations and
+181,760 report calls opening/writing/closing the journal; report handling
+consumes `8.619` instrumented seconds. This is a whole-guard cost, not an
+isolated kind-parser regression.
+
+The owner subsequently chose `optimize-evidence-io`. Bounded operation
+journaling preserves every event while reusing one validated descriptor per
+process; it closes before successful shutdown evidence. Selector reuse and
+conservative leaf/canonical-record fast paths preserve the original validation.
+Final-source medians improve to `24.303`/`29.761` seconds (`+22.5%`), with
+identical bytes, unchanged deadlines and 117 model tests/67 audits passing.
+Bulk-record reconciliation and real report-capacity failures have regressions.
+A streamed-token experiment did not materially improve performance and was
+removed. At that checkpoint P4 still blocked the default path; no budget
+exception or compiled/upstream default replacement was approved. Full-proof-search/memory costs
+remain unmeasured.
+
+The subsequently approved bounded
+[compiled prototype](../spec/models/equations/native-proxy/README.md)
+uses the shared reviewed inventory and retains all stream/evidence checks.
+All 18 opt-in cases and the unchanged default fast gate pass. Three alternating
+full-export pairs give `24.281`/`25.931` seconds (`+6.80%`) with identical bytes,
+below the representative `10%` limit. A separate one-rule fixture still adds
+`39.93` ms (`+33.76%`). The owner subsequently approved maintained promotion
+with a startup-only `50` ms cap, retaining `10%` for the full export.
+Linux/caller/CI criteria had to precede cutover; staging retained Python.
+The maintained candidate embedded a source identity, shared the acceptance
+runner and has rejecting workload-specific budget gates. Clean local fast
+checks pass; the existing 19-cell workflow is wired for pre-cutover native
+Linux validation. Run `38710117729` passes all 18 caller cells and fast gates,
+but rejects an unreviewed benchmark export before any budget verdict.
+Diagnostic run `38712391261` identifies the direct baseline: its pinned Linux
+digest was missing from the macOS-only inventory. Both fixed outputs are now
+retained, but all six samples must still be byte-identical on the measured
+host. No normalization/filtering or budget change is permitted; full native
+acceptance remains incomplete. Run `38714285780` at `67584ea` then genuinely
+fails full export at `+10.5601%` (`35.220242`/`38.939536` seconds), despite
+six identical exports and passing callers/fast gates; startup does not run.
+An active Rust sample motivates one checked raw write per complete validated
+reply/prompt. That intermediate source passes local full export but fails
+startup at `+52.560041` ms. An isolated profile identifies `13` ms in one
+final-evidence sleep, motivating a `1` ms poll instead of `10` ms, with the
+same `5`-second grace and complete audits. Current local paired medians are
+`24.248549`/`25.807651` seconds for full export (`+6.4297%`) and
+`0.110541`/`0.147073` seconds for startup (`+36.531959` ms, `+33.0482%`),
+passing the separate approved limits with identical bytes.
+Final compiled recovery, all 56 safety certificates and both mutation
+regressions also pass at original caps. Fresh native acceptance of these
+optimizations remains pending. Those four local contexts are not all
+native Linux CI cells, full assembled acceptance or memory-performance proof;
+source identity does not establish algorithm or FVP correctness.
+Follow-up run `38719650091` at `2b642e2` passes all 18 native caller/fast gates
+and full export (`37.767068`/`40.976767` seconds, `+8.4987%`). Startup rejects
+its direct baseline before a timing verdict because its fixture inventory was
+also macOS-only. Retain the exact observed Linux startup digest alongside
+macOS without relaxing byte identity or the `50` ms cap; native startup
+acceptance remained pending at that checkpoint. No missing mathematical hypothesis is discharged.
+Native staging `38721189200` at `71168a1` subsequently passes all 19 cells and
+both actual budgets (`+9.6594%` full export, `+15.871115` ms startup).
+That permits the owner-authorized conditional default cutover. The shared
+runner now selects only the maintained compiled guard, with mandatory source
+identity; the temporary route and obsolete Python validator/evidence/parser are
+removed. All nine private parser-test groups retain native CLI counterparts.
+Current default-source local budgets are `+6.1498%` and `+41.960417` ms,
+respectively. Native cutover `2fa6d16` passes both actual budgets (`+8.3650%`,
+`+25.785370` ms) and 18/19 cells; `initial_ck_secret` times out in its unchanged
+strict `60`-second assembled-export derivation check before proof. The exact
+local caller passes, not establishing a native fix. The failed run is retained;
+all current-head hosted gates remain required. None of this
+establishes native FVP, universal importer correspondence or full assembled
+acceptance.
+This performance experiment does not supply any missing native FVP hypothesis.
+See the [boundary reference](../spec/models/equations/README.md#native-stream-boundary).
+Sorted AC-unification and full theorem/FVP transfer remain open.
+The pinned
+[`Console.hs`](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/src/Main/Console.hs)
+also invokes a no-argument installation probe with exactly `quit\n`. A real
+tiny exact-signature normalization-witness test exposed its initial rejection.
+The proxy now executes and checks only that probe; arbitrary no-argument
+commands still fail. The witness verifies through genuine guarded
+precomputation/proof streams, not just `--parse-only`.
+
+Hosted formal run
+[`38622779805`](https://github.com/trancee/cairn/actions/runs/38622779805)
+at published `3d5dd7c` then exposed a real image gap, not a Linux discrepancy:
+the lifecycle cell passed, but all 18 replay/mutation cells rejected
+`tamtplus(x0:Fresh,tamXCtone)` during derivation checking. Pinned
+[`MessageDerivationChecks.hs`](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/lib/theory/src/Theory/Tools/MessageDerivationChecks.hs)
+applies `natToFreshVars` to premise terms recursively. The owner selected
+`extend-derivation-kind-image`, retaining derivation checks and all proof
+budgets. The new real one-rule regression and guarded default recovery/
+56-certificate refined safety contexts pass locally; current-source hosted
+acceptance remains pending.
+
+The extension encodes Fresh/natural leaves injectively as disjoint natural
+shadows without changing native syntax or protocol sorts. Raw AC/rewrite
+transfer, image closure, a substitution square and decoded-kind termination
+are kernel-checked. Framed substitution closure has an explicit compatible
+typed-shadow premise. Raw rules lack native message-sort guards; the
+abstraction can therefore admit steps impossible for actual proper-sort
+matching. It does not transfer native confluence, normalizing-path existence,
+narrowing completeness or FVP. See the
+[counterexample and scope](../spec/models/ratchet-equation-evidence.md#what-the-new-kind-abstraction-does-not-transfer).
+The runtime grammar admits only required Fresh/natural sum leaves and enclosing
+contexts, while still rejecting kind variables and returned kind-valued
+bindings/results. This is not admission of the entire error-kind carrier.
+
+The latest local [equation checker](../spec/models/equations/README.md)
+proves typed B-coherence, global matching confluence, quotient-path confluence
+modulo natural AC and a template-only normalization bound under normalized
+substitutions. Nonlinear key-copy overlaps are joined; normality is
+AC-invariant. All 169 required audits and kernel cases pass; 25 audits use no
+axioms. The checked boundedness quantifies over every template and normalized
+assignment, not sampled ground terms. Missing boundedness/confluence audit
+transcripts have fail-closed CLI red/green checks. Native query-image transfer,
+complete sorted AC-unification and the remaining FVP theorem hypotheses are
+still open. The independent guarded native-sorted relation now transfers
+proper-message termination, B-coherence, convergence/normal-form uniqueness
+modulo AC and the template-only bound. It preserves controlled-kind framing
+and terminates on decoded kind messages.
+An independent structural native-AST proof now also gives bounded normalizing
+paths for controlled-kind and free framing templates under normalized
+assignments, without a compatible typed shadow. It counts source contexts,
+not substitution size, using proper-sort guards throughout. This closes
+normalizing-path existence, not arbitrary substitution/image closure.
+Exact guarded matching decoding now joins primitive overlaps, while structural
+context induction and a decreasing context count prove full frozen-index AST
+termination and matching confluence. Bidirectional structural AC transport
+also proves guarded quotient confluence, AC-invariant normality and normal-form
+uniqueness modulo AC, including controlled-kind/free framing. This is a direct
+proof of the guarded relation, not a shadow-confluence transfer. Sorted
+narrowing, complete AC-unification/FVP, the full imported NAT/kind-variable
+carrier and importer namespace correspondence remain open.
+Sort-respecting native assignments now have a complete existing typed
+representation, preserving proper-message guards and guarded counted
+matching/quotient paths. Kind abstraction preserves proper values and produces
+a sorted abstract assignment, deriving the compatible typed shadow for
+controlled-kind/free framing substitution closure. This replaces an assumed
+shadow premise for that modeled assignment class, not native unifier/importer
+verification. Sorted substitution can create redexes; normality preservation
+and rewrite reflection are not claimed.
+Sorted composition, simultaneous substitution laws and pointwise AC congruence
+are now checked. Sorted AC-unifier solutions compose, and message/natural
+encoding preserves/reflects all such solutions with typed representations.
+Kind solution correspondence uses compatible derived shadows, not unrestricted
+natural shadow unification: the latter admits a Fresh/natural cross-sort
+solution forbidden by the original sorts. Kernel cases and actual pinned Maude
+controls retain that boundary, including mixed-kind sums and the difference
+between plain AC unification and ordinary rewrite equality.
+Scoped AC factorization now compares only variables of the input query, with
+sorted postfactors forming a preorder and preserving solutions. Independent
+typed composition and all-five-sort equality/AC preserve/reflect factorization.
+For a given finite family on proper message/natural inputs, sound completeness
+and singleton most-generality now transfer in both directions. Kernel controls
+prove a variable-pair MGU, reject a sound but incomplete ground singleton and
+show why unrelated bindings must be excluded. No complete family is generated
+for arbitrary queries; these proper-image results do not cover unrestricted
+kind-shadow families.
+Finite binding-list representatives now preserve exact input substitutions
+for every sorted solution. Scoped postfactors also have finite witnesses,
+supported on variables in candidate values, including residual variables absent
+from the original query. Completeness and most-generality can quantify over
+input-supported finite solutions without loss. Restricting a supplied family's
+candidates preserves/reflects completeness with original sortedness retained.
+Kernel controls require residual index `7` in a factor and reject input-only
+factor restriction; restriction cannot justify accepting an invalid original
+assignment. These mathematical finite-support laws do not generate a complete
+family or verify native finite binding lookup/duplicate behavior.
+Kind abstraction now has a constructive assignment inverse, exact composition
+and input-support transport. Admissibility requires sorted expansion and exact
+reabstraction. Requiring it of candidate solutions, compared solutions and
+postfactors preserves/reflects scoped factorization, family completeness and
+most-generality across the frozen-index AST. The kernel rejects unrestricted
+shadow factorization even between sorted original candidates: a natural shadow
+factor can map a Fresh residual to `one`, unlike any sorted original factor.
+A sorted off-image lift and empty-family Fresh/natural counterexample retain
+both sides of the admissibility boundary. This is a mathematical constraint,
+not native result filtering or an executable decision procedure. The 14 new
+audits use at most `propext`/`Quot.sound`, except composition, which inherits
+classical choice from the existing sorted composition theorem.
+Runtime finite-support/occurs-check/fresh-namespace and native generator/importer
+correctness, narrowing/FVP and full assembled acceptance remain open.
+Actual Maude controls distinguish a blocked kind projection from allowed inner
+rewriting and proper-message matching. This proof increment leaves native
+source/performance identities unchanged; the
+[PR #9 checks](https://github.com/trancee/cairn/pull/9/checks) record current-head hosted acceptance.
+The structural frozen-index foundation also proves natural/
+message encoding left inverses and injectivity, separating rigid atoms from
+variables with the same native index. Its recognizers reject improper node/
+list/natural sorts. Independent raw structural AC and six-rule/context
+rewriting now preserve and reflect that image; recognized terms are exactly
+encodings. Quotient steps have typed matching realizations modulo AC.
+Typed natural/message substitutions commute with encoding and freeze rigid
+indices; node assignments stay in node atoms/variables, never messages. Free
+tuple/Node framing is also closed under AC, rewriting and typed substitution.
+Its envelope is wider than the printer's fixed tuple shape; it rejects
+`h(list(nil))`, unlike a naive use of the host sort classifier. The raw rewrite
+relation deliberately omits sort guards, which decoder reflection validates
+only for encoded message inputs. These are algebraic representation proofs,
+not actual backend query/framing or substitution-provenance proofs, nor a
+verified importer. Solution composition and scoped family/image correspondence are now checked;
+complete unifier generation and narrowing completeness remain open.
+The published termination checkpoint passed hosted acceptance
+at `70c1c19` in PR #9. The later 53-audit checkpoint at `3d5dd7c` has the
+formal failures described above; the 67-audit fix awaits hosted acceptance.
+The earlier termination-only snapshot in the following paragraphs is historical.
+
+Primary-source follow-up also identifies the kind-completion boundary:
+[Maude manual section 3.5](https://maude.lcc.uma.es/maude-manual/maude-manualch3.html)
+automatically lifts operators to kinds and admits error terms with no proper
+sort, while section 14.2 states its flat-pattern criterion using kind-sorted
+variables. The 17 declared-sort checks therefore are not treated as a
+complete certificate for the implicit kind-completed signature.
+
+A new bounded diagnostic on the unchanged captured native module addresses
+that enumeration gap: all 17 protocol ranks with kind-level arguments,
+plus the eight explicitly declared bookkeeping/list ranks, exhaust under
+Maude `3.5.1`. Each of the 25 commands has an exhaustion marker and no
+warning/error/advisory. The collector retains the existing 60-second/
+64 MiB limits. Error-kind identity variants remain in the result; the
+five reducible operators also produce their expected sorted branches.
+This does not enumerate imported `NAT` operators or discharge native
+convergence/coherence, builtin admissibility or query-image conservativity.
+The owner chose correspondence for the actual protocol-query image, later
+extended to required derivation-kind terms, not arbitrary error terms/imported arithmetic.
+That image still requires preservation/reflection and substitution,
+unification and narrowing closure; enumeration certifies none of these.
+
+Pinned native source narrows a possible conservativity proof to the actual
+query image, not all imported arithmetic. [`Types.hs:65-77`](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/lib/term/src/Term/Maude/Types.hs#L65-L77)
+recursively preserves function structure and encodes variables/constant tags.
+[`Parser.hs:141-157`](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/lib/term/src/Term/Maude/Parser.hs#L141-L157)
+prints atom indices as closed decimal literals and wraps tuples in
+`list`/`cons`/`nil`; its
+[returned-variable sort parser](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/lib/term/src/Term/Maude/Parser.hs#L305-L312)
+does not accept bookkeeping `Nat`, `TOP` or kind variables.
+This is structural evidence for a frozen-index image-language proof route,
+not a completed preservation/reflection, unification or FVP certificate.
+
+The pinned [`LTerm.hs:299-305`](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/lib/term/src/Term/LTerm.hs#L299-L305)
+sort classifier returns `LSortMsg` for all other function applications,
+including `List`, and
+[`Raw.hs:139-141`](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/lib/term/src/Term/Term/Raw.hs#L139-L141)
+constructs lists without a dependent sort check. The native printer instead
+gives list framing sort `TOP`. Therefore a Haskell term/sort tag is not itself
+a proof of native proper-sort membership. A correspondence proof must account
+for the actual query construction and framing discipline; it cannot simply
+assume every `LNTerm` lies in the typed message carrier.
+
+[`Process.hs:226-233`](https://github.com/tamarin-prover/tamarin-prover/blob/82780bbaf3328a45f624ddb41e51bf75425f851c/lib/term/src/Term/Maude/Process.hs#L226-L233)
+builds both matching tuples from the two projections of the same equation
+list, so their fixed framing has equal arity. Normalization, unification
+and variant queries use the generic recursive conversion without this wrapper.
+This establishes the matching wrapper's source shape, not proper message-sort
+membership of every tuple element or term supplied by its callers.
+
+The [Lean termination subgate](../spec/models/equations/README.md) now proves
+well-founded rewriting for all six exact equations in every typed message
+context modulo sorted natural AC. Its source guard pins all 15 message ranks,
+the six equations and the natural builtin; generated correspondences and all
+six theorem axiom audits pass locally. The exporter/translation are trusted,
+not verified importers. No equation, rule, restriction or protocol behavior
+changes. Hosted validation was pending when this snapshot was written.
+
+The earlier discussion of sampled variant enumeration below is historical.
+[Maude 3.5.1 manual section 14.2](https://maude.lcc.uma.es/maude-manual/maude-manualch14.html)
+does specify an exhaustive flat-pattern semi-decision procedure, citing theorem
+7 of Cholewa, Meseguer and Escobar's
+[*Variants of Variants and the Finite Variant Property*](https://www.ideals.illinois.edu/items/47132),
+an unpublished 2014 technical report. The criterion is an iff for EMS-FVP under
+an already admissible convergent order-sorted decomposition. It does not
+automatically verify termination, confluence, sort-decreasingness, AC coherence,
+the sort/signature conditions or complete AC unification.
+
+All 17 declared protocol flat patterns exhaust on the unchanged native module
+under Maude `3.5.1`. A known non-FVP control `f(s(x)) = s(f(x))`, limited to five
+variants, has no exhaustion marker. The separate source-checked protocol
+module retains `Pub`, `Fresh` and `TamNat` below `Msg`, all 15 message ranks,
+zero/identity-free natural AC and all six equations. It passes CRC's
+local-confluence and sort-decreasingness checks with official Maude `3.5.1`
+and checksum-verified MFE `mfe-3.5.1`; it omits native name-index/`NAT`/`TOP`
+bookkeeping. That omission needs a correspondence/conservativity argument
+before treating the result as an exact native combination certificate.
+CRC still assumes termination and does not independently discharge all
+variant-engine admissibility/coherence hypotheses.
+
+The Homebrew launcher overrides `MAUDE_LIB`; the compatible official
+standard-library scripts require invoking its unchanged underlying binary
+with an explicit library path. MFE's loop commands must be supplied on
+standard input after module/tool loading. Earlier file-stack invocations
+exhausted the unchanged 60-second bound without a CRC result; the corrected
+invocation reports all critical pairs joined, local confluence and
+sort-decreasingness. Neither tool-startup failures nor the successful corrected
+run changes the 60-second/64 MiB diagnostic limits.
+
+Independent exact mixed-theory/FVP acceptance remains open. Native bookkeeping
+`NAT` is not the protocol `TamNat`; its separate import must not be mistaken
+for a zero/identity in the protocol's natural AC operator.
+
+## Original investigation (2026-10-09)
+
+No model equations, rules, source lemmas or workflows were changed by that investigation; the evidence index and project
 profile now link to this report. All commands below were actually run in this environment
 (macOS/arm64, the repository's pinned `tamarin-prover 1.12.0` / `maude 3.5.1` from the
 `tamarin-prover/tap` Homebrew tap); exact output is quoted or summarized with the command that

@@ -1418,3 +1418,127 @@ Retain the separately approved duplicate-scheduling fix. No elapsed-time
 improvement is claimed from fewer Cargo artifact records.
 Checksum-verified archive reuse and change-aware gate applicability are not
 part of this decision.
+
+## Failure-only scratch-detach diagnostics
+
+PR #9 CodeQL run `38573866366` at branch head `53de10f` completed actual
+Kotlin tracing, coverage, bundled security queries and export, then failed
+the resource fixture's exit trap. Its eager five-second `diskutil info`
+lookup timed out even though subsequent ordinary `hdiutil detach -verbose`
+successfully ejected `disk7`. The earlier diagnostic error retained result
+one. Post-cell immutable-input checks and successful-result upload were
+skipped, so this is not accepted Kotlin CI. The outer PF cleanup's result
+one propagates the child failure; it does not establish a PF cleanup failure.
+
+The owner approved a failure-only diagnostic fix, OS-command/teardown tests
+and updated-source CI. Extract ordinary scratch teardown into the stable
+internal `detach-scratch.py` boundary. Validate the caller's canonical owned
+volume path before native mutation. Eject first and return zero only after
+actual ejection success. On failure, retain failure and collect the existing
+selected disk-state and holder-identity diagnostics within their unchanged
+five-/15-second ceilings. Invalid or unavailable diagnostics report a
+redacted error category without hiding the independent holder collection.
+The caller still preserves earlier workload/account-cleanup failures.
+
+The approved OS-boundary regression first returned one for successful
+ejection plus a timed-out metadata lookup, then passed after the lookup
+became failure-only. Failed ejection remains nonzero with state/holder
+reports; unavailable commands, malformed/truncated metadata, invalid volume
+paths and diagnostic timeout/error cases are covered. The initial fix's Python
+`3.9` local execution passes the complete Apple tooling suite (58 tests, six hosted-only
+supervisor skips). Hosted native teardown and final-source four-language
+analysis remain separate authoritative requirements.
+
+Keeping the eager lookup was rejected because optional diagnostics must not
+create an independent success-path failure. Ignoring real detach failures,
+retrying, forcing ejection or increasing deadlines was not selected.
+Moving lookup after failed ejection can lose mount-path metadata when unmount
+already succeeded; report that unavailability rather than invent disk state.
+The selected fields still include `ParentWholeDisk` when available.
+Earlier busy detach/helper failures and first-attempt reliability remain open.
+
+Migration replaces only the final trap's inline teardown with the helper;
+existing benign-preflight discovery owns its tests. No protocol, API, wire,
+production dependency, sandbox/PF permission, resource budget, compilation
+task, integrity gate or result-acceptance change is authorized. Final-head
+hosted evidence must be recorded by the PR; successful Kotlin analysis alone
+cannot substitute for cleanup, post-cell integrity and processed scans.
+
+### Owned-image diagnostic follow-up
+
+At published `8e6d82d`, final formal `38580683833` (19 jobs) and Rust
+`38580683851` (11 jobs) pass, attempt one. CodeQL `38580684474` instead fails
+benign preflight on real `hdiutil` ejection failure: `Resource busy`.
+All 58 tooling tests, all six actual dedicated-UID supervisor regressions,
+resource/sandbox assertions and empty-UID checks pass. The new helper correctly
+retains nonzero. Mount-path metadata and holder collection both return
+`CalledProcessError`; that is unavailable evidence, not proof of no holders
+or completed unmount. The eight retained artifact checksums verify.
+Kotlin preparation and its final integrity/delivery gates are skipped.
+
+The owner approved bounded owned-image diagnostics, their tests, commit/push
+and updated-source CI. Pass the current owned image path from the protected
+hosted caller; require the same canonical fixture directory and one of its
+two existing image filenames. After failed ejection, use the native
+[machine-readable image inventory](https://keith.github.io/xcode-man-pages/hdiutil.1.html#info)
+to select only an exact image-path match. Validate unique device entries,
+one whole-disk namespace and assigned mount points before printing or using
+device targets. Never print the full inventory or unrelated image metadata.
+Reported mount-point presence is evidence at that observation, not inferred
+whole-disk state or a successful-unmount assertion.
+
+The original mount-state query and image inventory share the existing
+five-second monotonic metadata window. Filesystem-holder and exact
+image/device-holder queries share the existing 15-second window; exhausted
+windows prohibit follow-on commands. Only PID/command fields are accepted.
+Keep valid partial holder output on nonzero query status and report that
+status explicitly. All errors retain the original ejection failure.
+Discovery failure still permits independent read-only collection for the
+known owned image file, never guessed or foreign devices.
+
+The approved regression is red on missing owned-device/holder identity after
+failed ejection plus unavailable mount-path information, then green after
+this change. Sixteen focused tests cover unrelated-image exclusion, malformed/
+ambiguous inventory, invalid image paths, reported mounts, partial/invalid
+holder fields and virtual-clock shared-deadline exhaustion. Python `3.9`
+passes the complete 66-test tooling suite with six hosted-only supervisor
+skips. Simulation is not native busy-ejection root-cause or reliability proof;
+final-source hosted execution remains required.
+
+Parsing human-readable verbose output was rejected in favor of the documented
+plist interface. Suppressing real ejection failure, retry/force, guessing disk
+identity, signaling holders or granting each new command a fresh deadline
+are not selected. This follow-up changes diagnostics only, not detach strategy,
+permission, budget, resource/integrity gates or the unresolved acceptance scope.
+Migration updates the sole owning shell invocation and every test consumer
+to the two-path internal CLI; no released SDK/API or protocol change.
+
+### Mandatory native holder-record compatibility
+
+CodeQL [run `38770078501`](https://github.com/trancee/cairn/actions/runs/38770078501)
+at proof checkpoint `bfff37f` completes Kotlin extraction, mapped SARIF and
+offline security queries, then fails ordinary scratch ejection with
+`Resource busy`, before mandatory integrity checks/result delivery. The UID
+is empty; owned-image inventory reports devices but no mount point. Holder
+diagnostics report `invalid-holder-fields`, so the actual holder remains unknown.
+A local native owned-file probe reproduces that diagnostic defect:
+`lsof -Fpc` always includes file-set `f` records, as its installed manual
+documents, but the validator accepts only `p`/`c`.
+
+The owner selected the existing `detach_scratch()` OS-command boundary and
+native `lsof` against an owned temporary file as regression seams. Accept
+nonempty printable `f` values as native framing and discard them; emit only
+validated PID/command records. Unknown fields, empty/control-bearing
+descriptors and malformed identities still reject without logging their
+values. Valid partial identities remain observable on nonzero query status.
+The native-format regression first fails on `invalid-holder-fields`, then
+passes after this compatibility fix. All 67 local Apple tooling cases pass
+under Xcode Python `3.9`, with six existing hosted-only supervisor skips.
+
+Logging descriptor/file fields was rejected to preserve diagnostic scope;
+suppressing real ejection failure, forced detach, retries, holder termination
+and larger limits remain unselected. This fixes record parsing, not the
+hosted busy-eject root cause or first-attempt reliability. Migration changes
+only internal diagnostics/tests and their reference; the caller, five-/15-second
+windows, sandbox/PF/resource controls and every integrity/result gate remain
+unchanged. Updated-source hosted acceptance is separate and recorded by PR #9.

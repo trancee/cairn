@@ -2,6 +2,487 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation; SDK/application=not implemented.
 
+## Current typed equation convergence/image evidence (2026-10-18)
+
+The [equation checker](docs/spec/models/equations/README.md) kernel-checks
+B-coherence, global matching confluence, quotient-path confluence modulo AC
+and a normalization bound depending only on the source template, not the
+normalized substitution. Nonlinear key-copy overlaps are joined even when
+keys have different AC representatives. A structural frozen-index image
+encoding also has checked left inverses/injectivity, distinguishing variables
+from rigid atoms with the same native index. Independent raw AC and six-rule/
+context relations preserve and reflect this image, and encoded quotient steps
+are realizable by typed matching modulo AC. Sort-separated natural/message
+substitutions commute with encoding and preserve image membership while rigid
+indices stay frozen. Free tuple/Node framing is closed under AC, rewriting and
+typed substitution, including node assignments; framing remains excluded from
+message functions. All 453 theorem audits and the kernel
+regression cases are wired into the existing lifecycle cell, without a new job or
+larger ceiling. Thirty audits use no axioms; none uses `sorryAx`.
+
+The new independent native-sorted relation requires proper-`Msg` equation
+variables and AC-equivalent repeated keys instead of using unguarded shadow
+rewrites. On proper-message inputs it inherits termination, B-coherence,
+confluence/normal-form uniqueness modulo AC, normality invariance and the same
+source-template-only normalizing bound. Controlled-kind framing closure and
+decoded-kind termination also hold. A separate structural proof gives every
+frozen-index native query template and normalized assignment a normalizing
+path bounded only by source contexts, including controlled error-kind and free
+framing contexts. It needs no compatible typed shadow, but does not prove
+sort/image closure for arbitrary assignments. Exact guarded matching decoding
+now joins root overlaps; structural context induction and a strictly decreasing
+source-context count prove full frozen-index AST matching confluence and
+termination. Bidirectional AC transport then proves guarded quotient-path
+confluence, AC-invariant normality and normal-form uniqueness modulo AC,
+including controlled-kind/free framing. This is not a proof of the full
+imported NAT/kind-variable carrier or native algorithms.
+Sort-respecting native assignments now have a proved complete representation
+by the existing typed substitution. They preserve proper-message guards,
+guarded rewrites and counted matching/quotient paths. Kind abstraction preserves
+proper values and produces a sorted abstract assignment, so a compatible typed
+shadow exists rather than being assumed. Controlled-kind/free framing is
+therefore closed under every modeled sort-respecting assignment. This is not
+normality preservation or a kernel proof of runtime validation/importing.
+Sorted assignments now compose, with checked simultaneous substitution laws
+and pointwise AC congruence. AC-unifier solutions are closed under sorted
+composition and preserve/reflect proper message/natural typed solutions.
+Kind solutions transfer only through compatible shadows: unrestricted natural
+shadows can solve a Fresh/natural equality that has no sorted original solution.
+Kernel and actual Maude controls retain this separation and distinguish AC
+unification from equality modulo rewrite equations.
+AC factorization now compares assignments only on input-query variables.
+Sorted factors give a preorder and preserve sorted solutions; independently
+defined typed composition and all-five-sort pointwise equality/AC preserve
+and reflect that relation. On proper message/natural inputs, a given finite
+family is sound and complete exactly when its typed counterpart is, and
+singleton completeness characterizes most-generality. Kernel cases distinguish
+the variable-pair MGU from a sound but incomplete ground singleton, and show
+that adding an unrelated variable would reject a valid scoped MGU.
+These are conditional completeness/most-generality transports; the actual
+full-AST generator is established below. Every sorted solution
+now has a finite binding-list representative agreeing exactly on the input
+variables. Scoped postfactors also have finite representatives, supported on
+variables in candidate values, including residual variables absent from the
+input. Completeness and most-generality can quantify over input-supported
+finite solutions without loss. Restricting a given family's candidates
+preserves/reflects completeness only with their original sortedness retained;
+it does not repair invalid bindings or generate a family. Kind assignment
+abstraction now has an explicit expansion inverse, with exact composition and
+input-support transport. Admissible shadows must expand to sorted original
+assignments and reabstract exactly. Requiring this of both solutions and
+postfactors preserves/reflects scoped factorization, family completeness and
+most-generality across the frozen-index AST, including controlled-kind/framing.
+Unrestricted shadow factoring is unsound even between two sorted original
+candidates: it can instantiate a Fresh residual to natural `one`. This is a
+mathematical constraint, not native result filtering or an executable
+admissibility decision procedure. The owner explicitly selected
+`resume-proof-only` despite the unresolved native budget diagnosis.
+Generic finite-AST occurs rejection now constructs complete empty AC families.
+An occurs-free sort-compatible one-binding substitution is finite, supported,
+idempotent and most general in either orientation. A proof-carrying
+variable-equation solver generates complete explicit binding-list families
+for identity, proper cycles and occurs-free targets. An incompatible
+orientation is outside its domain, not an unsatisfiability verdict; pure AC
+rejection does not reject equality modulo the six rewrite equations.
+This is constructive variable elimination, not a general sorted AC generator.
+Finite equation systems now have sorted solution and explicitly scoped
+complete-family predicates. Variable elimination substitutes its binding
+through the remainder and lifts supplied complete families using prefix-value
+support, including residual variables absent from remaining equations.
+Empty/reflexive systems, orientation reversal and proper-cycle rejection
+retain that scope. Explicit binding-list composition substitutes second-list
+values into first-list values before appending, preserving first lookup and
+finite representation. Kernel controls reject empty-remainder false coverage
+and hidden unsorted postfactors, and exercise shared variables, AC residuals
+and reversed Fresh/message elimination. This closes a conditional composition
+layer, not automatic system solving or natural-AC generation.
+Free-constructor inversion now lifts to complete system families with the
+original explicit scope retained. Ordered unary/binary/`kdf`/`list`/`cons`
+decomposition is well-founded by decreasing system function count.
+Different fixed heads reject modulo AC, but variables and natural addition
+are not treated as free ordered constructors. Rejection modulo AC does not
+reject equality modulo the six rewrite equations. Fresh independent Lean
+checks pass all 453 audits and 39 case modules; 43 public equation-checker
+controls use maintained tool fixtures. Additional local Tamarin/Maude
+source/export/replay investigation and runtime diagnosis remain deferred by
+the owner, with their default gates unchanged. Published hosted acceptance
+is recorded below. Natural AC now has an exact computable
+nonempty atom-list representation and a proved equivalence with pointwise
+multiplicity equality, preserving literal `one` versus labels and repetitions.
+No empty/zero term is introduced.
+Substitution now reduces exactly to finite occurrence-form linear counts,
+retaining repeated-variable coefficients, frozen rigid labels and residual
+atoms absent from the input. This is a constraint characterization, not a
+candidate generator by itself.
+An executable finite homogeneous integer-matrix basis now has unconditional
+soundness and decomposition completeness, including zero/negative coefficients
+and primitive pruning after every row. Its independently proved finite bound
+comes from bounded zero-sum words, not an assumed arithmetic oracle. Actual
+finite homogeneous semigroup candidate families are nonempty, sound and
+complete; every nonempty solution factors on the explicit input scope through
+globally nonempty residual assignments. Residual names are basis words in a
+separate namespace. Rigid-column families now enumerate inactive, ground and
+residual choices, preserve singleton constants and factor every nonempty
+solution. Fresh native indices are bounded and injective on the generated
+basis. Exact nonempty decoding constructs actual finite native bindings;
+concrete signed rows characterize proper-natural system solutions exactly.
+The actual native natural-system generator is unconditionally sound and
+complete on the original input scope, with globally sorted residual
+postfactors. It rejects no valid candidate during decoding. These results
+cover arbitrary finite proper-natural equation systems and supply the subsolver
+for the general full-AST generator below. Executable finite sort
+requirements now characterize post-substitution value sorts over the full raw
+native AST, including message variables that refine to natural values.
+An executable principal-sort classifier replaces each proper value with a
+variable preserving every modeled sort test. Pointwise agreement on these
+sort tests preserves and reflects value sorting through arbitrary native
+templates. The actual finite `nativeSortedACSystemBindingFamily` now has
+unconditional soundness and completeness for every finite `NativeEquationSystem`
+over the full modeled frozen-index AST, including mixed sorts, controlled-kind
+inputs and free framing. Exact-length source-label enumeration compiles each
+consistent plan to the complete nonempty natural subsolver. Marker rendering
+terminates by the available-marker count; strict decoded function-count descent
+proves successful rendering for every solution-derived plan. Finite residual
+retyping preserves all sorted solutions and supplies globally sorted postfactors.
+Every solution factors through a generated candidate on the original input
+variables. Every generated binding image uses residual indices absent from all
+original variable indices, across sorts. No empty natural value, assumed
+complete raw solver or output-equation filtering is used. This completes
+Task 2's modeled general sorted AC generator, not native algorithm
+correspondence, equality modulo the six rewrite equations or narrowing/FVP.
+The executable research enumerator may be very expensive; no efficiency,
+minimal-family or runtime-performance claim is made.
+The count equivalence inherits classical choice from the standard library's
+permutation/count theorem; representation, nonemptiness and addition counts
+use only `propext`. System substitution/elimination inherit existing classical choice
+through sorted composition; the binding-list construction does not need it.
+Native algorithm,
+runtime finite-support/occurs-check/fresh-namespace correspondence, narrowing/FVP and
+importer correctness remain open. The blocked error-kind
+projection and permitted inner rewrite agree with actual Maude controls.
+The existing kernel/CLI seams reject missing new audits after intended reds;
+the maintained inventories include 37 native CLI/202 model/50 lifecycle tests plus native
+clock/validation unit tests, 43 projections and all 453 audits. At local
+proof-authoring time, the 202 model tests were collected, not all executed.
+The subsequent [published proof acceptance](#published-proof-acceptance-2026-10-18)
+records their actual hosted execution rather than collection-only evidence.
+These equation proofs change no native guard source-ID input,
+equation, protocol, API, wire, runtime dependency or resource ceiling.
+
+## Published proof acceptance (2026-10-18)
+
+The committed proof head
+[`ae839f6`](https://github.com/trancee/cairn/commit/ae839f633e16cca7620a2b847981771d5801ef99)
+passed its own first-attempt hosted runs:
+[lifecycle](https://github.com/trancee/cairn/actions/runs/39141533822),
+[Rust](https://github.com/trancee/cairn/actions/runs/39141533859) and
+[CodeQL](https://github.com/trancee/cairn/actions/runs/39141533912).
+All 19 formal/native cells, 11 Rust jobs and six required CodeQL jobs passed;
+GitHub recorded 37 successful checks and one intentional CodeQL-only
+functional-simulator skip. The core log contains all 453 theorem audits
+(30 axiom-free, no `sorryAx`) and actual successful execution of all 37 native
+CLI, 202 model and 50 lifecycle tests, not just collection.
+
+Both ordinary three-pair native reports pass the unchanged validators:
+full-export overhead is `+8.174816%` against the `10%` cap, and startup adds
+`25.489288` ms against its approved `50` ms allowance. Their baseline revision
+is the tested merge commit `7ea1b24c7056bf2437927e5e753758b2656d9f25`.
+All four processed CodeQL analyses at that revision have zero results,
+errors or warnings. The same-run Kotlin artifact contains positive compiled
+coverage of all three tracked sources and both generated binding sources;
+raw/mapped security results, frozen-input integrity and ordinary cleanup pass.
+
+These run-specific results supersede the pre-publication acceptance gap,
+not the historical failed measurements below. They do not establish an
+intermittent Tamarin or Apple scratch-detach root-cause fix. Native algorithm/
+importer correspondence, narrowing/FVP and assembled-model obligations remain
+open. Each subsequent changed head, including documentation-only publication,
+requires its own authoritative CI; this record does not authorize merge,
+SDK/ratchet implementation or profile activation.
+
+## Native budget diagnosis (2026-10-16)
+
+Actual `29b7270` CI still rejects full export at `+10.512366%`, about
+`165.558` ms over budget; startup is not reached. All other lifecycle/Rust/
+required CodeQL jobs pass, including compiled Kotlin coverage and result
+delivery. A numeric-only diagnostic suggests `99.915170%` immediate identical
+query/reply pairs in the dominant stream. A bounded single-entry validator
+therefore reuses only exact complete command/reply certificates within one
+reviewed module. Every operation still executes in Maude with unchanged whole
+reply rejection and journals; inputs beyond cache admission use full validation.
+The public adversarial controls are green before/after, with exact journal
+counts preserved. Controlled ordinary Linux full-export overhead is
+`+2.530129%`, versus committed `29b7270` at `+2.734670%` (`7.479539%` lower
+normalized overhead; direct medians differ `0.083727%`), and startup adds
+`13.899814` ms. Current-source macOS budgets are `+5.443887%` and
+`37.992875` ms. Own-head hosted acceptance remains required.
+See [ADR 0010](docs/adr/0010-compositional-lifecycle-verification.md#exact-repeated-exchange-validation-2026-10-18).
+
+The measured operation-evidence refactor retains the complete journal/schema
+and validator state machine. Identical complete canonical cycles are compacted
+only in memory; the producer separately caches eight fixed records while
+retaining every checked write. On controlled native Linux, the actual journal
+audit uses `86.775464%` less CPU and producer caching separately reduces guard
+CPU `12.745850%`. Ordinary full-export overhead is `+3.628018%` at committed
+`2cffb27`, `+2.891542%` verifier-only and `+2.949324%` combined, with comparable
+direct medians. The composition's startup addition is `13.815699` ms.
+That source's macOS budgets pass at `+3.407211%` and `35.330875` ms.
+The preceding hosted `+10.495555%` failure remains historical; these controlled
+results require ordinary own-head CI and do not authorize merge or activation.
+See [ADR 0010](docs/adr/0010-compositional-lifecycle-verification.md#amortized-native-operation-evidence-2026-10-17).
+
+The owner-approved `bounded-ci-io-attribution` increment adds numeric nested
+consumer/backend I/O regions to the existing diagnostic pair, retaining the
+six coarse phases. Wrapper counts distinguish writes/readiness/reads, not
+exact kernel syscalls; independent clock-family bounds prevent double counting.
+Three bounded Ubuntu input/buffering candidates were rejected and withdrawn;
+neither their stream CPU gains nor passing controlled-host screens resolve
+the actual `b523dce` failures (`+11.449226%`/`+11.037917%`). A native source
+rebuild and one ordinary changed-head CI execution are required. If normal
+acceptance passes and failure capture skips, do not retry. All unprofiled
+acceptance pairs, 19 jobs, ceilings, deadlines, validators and budgets remain;
+no performance fix, merge or SDK/formal activation is claimed.
+See [ADR 0010](docs/adr/0010-compositional-lifecycle-verification.md#same-pair-nested-native-io-attribution-2026-10-17).
+
+The approved phase-accounting follow-up reuses the existing failure-only pair
+for numeric native-phase CPU/wall, driver-thread CPU, Linux guard observations
+and final Tamarin RTS statistics. No new full-export pair is added to the
+existing CLI test or failure capture. Native profiling is opt-in and Linux-only,
+requires owned bounded reports before shutdown evidence and a source-identified
+rebuild, and rejects at acceptance even when relabelled. All ordinary validation,
+19 jobs, deadlines and budgets remain unchanged. Actual current-head Linux
+execution and a causal fix require evidence; instrumentation does not establish
+either or activate SDK/formal acceptance.
+See [ADR 0010](docs/adr/0010-compositional-lifecycle-verification.md#same-pair-native-phase-and-driver-cpu-accounting-2026-10-17).
+
+The preceding increment adds
+[failure-only RTS/CPU capture](docs/spec/models/equations/native-proxy/README.md#failure-only-ci-capture)
+to the existing lifecycle core cell. The unprofiled budget step remains
+authoritative and failing; a separate one-pair diagnostic requires five minutes
+remaining plus a one-minute retention reserve within the existing 15-minute
+ceiling. Original reports and separately marked numeric evidence have a
+failure-only seven-day artifact. No job, native source-ID input, equation,
+validation, export deadline, budget, acceptance retry or PMU dependency changes.
+Local parser/process/control-flow tests and real macOS RTS execution are not
+hosted Linux failure-trigger proof or a fix for the intermittent native budget.
+`LEAN=<pinned Lean> scripts/check.sh` passes 24 native, 166 model and 50
+lifecycle tests plus both kernel/source gates. Separate unprofiled local
+three-pair budgets pass at `+6.419572%` full export and `+43.645208` ms startup;
+the new RTS pair retains both false budget flags and rejects at the public
+acceptance checker. These are local results, not current-head hosted acceptance.
+See [ADR 0010](docs/adr/0010-compositional-lifecycle-verification.md#failure-triggered-tamarin-runtime-accounting-2026-10-17).
+
+The published kind-family head `8c54f2b` passes its actual 169-audit kernel,
+18 caller cells, all 11 Rust jobs and six required CodeQL jobs, but its
+lifecycle core cell rejects full-export medians of `24.513057061`/
+`28.576567731` seconds (`+16.576923%`, above `10%`). Its final rollup is
+36 successes, one failure and one intentional simulator skip. No startup
+measurement follows that failure; the head is not accepted.
+
+The owner selected `diagnose-and-fix-native-performance`, extending the
+proof-only scope to bounded diagnosis and a justified fix without changing
+the equations, grammar, validation, strict gates/deadlines or budgets.
+An unchanged local baseline passes at `+6.403659%`, not reproducing Linux.
+Active-worker sampling shows mainly pipe/poll waits; the final Python journal
+audit takes `0.151` profiled seconds. Neither establishes the Linux cause.
+The first diagnostic increment adds per-sample waited-child CPU/context-switch
+resources outside wall timing. Legacy reports remain compatible; malformed
+present diagnostics reject, and diagnostics never replace the wall budget.
+All 17 report cases and 20 real native CLI/process/proof cases pass.
+Current local three-pair reports pass at `+6.154029%` full export and
+`+36.256333` ms startup, with fixed-identical exports. These unchanged-binary
+observations are not a native performance fix or new-head hosted acceptance.
+See the [reference](docs/spec/models/equations/native-proxy/README.md#child-resource-diagnostics)
+and [decision](docs/adr/0010-compositional-lifecycle-verification.md#native-budget-diagnostics-2026-10-16).
+
+Diagnostic head `c270c73` also fails actual Linux full export:
+`43.772741808`/`48.885125646` seconds (`+11.679378%`). All 18 callers,
+11 Rust jobs and six required CodeQL jobs pass, with independently audited
+strict execution/result delivery. Partial waited-child CPU increases by
+about `1.43` median seconds, versus about `5.11` median wall seconds; these
+aggregates do not identify individual guards or establish a cause.
+Separate borrowed-provenance and thin-LTO trials preserve native tests and
+exports but show no worthwhile wall improvement; both are removed.
+The next diagnostic adds opt-in, one-pair native-Linux process sampling to
+the existing benchmark CLI. The existing native CLI suite exercises it on
+Linux and rejects unsupported profiling on macOS. It records observed guard
+CPU/runqueue counters and sampler CPU, not complete accounting or performance
+acceptance. Normal three-pair measurements remain unprofiled and unchanged.
+Published profiling head `fb1abf4` passes all 19 lifecycle cells, 11 Rust
+jobs and six required CodeQL jobs, with one intentional simulator skip.
+Independently validated Linux budgets are `+9.038921%` full export and
+`+26.309800` ms startup. The active guard observation has `1.07` user/
+`2.08` system CPU seconds, unlike the partial waited-child aggregates.
+This unchanged-native checkpoint is diagnosis, not a performance fix.
+See the [reference](docs/spec/models/equations/native-proxy/README.md#native-linux-process-profiles)
+and [decision](docs/adr/0010-compositional-lifecycle-verification.md#native-linux-process-profiling-2026-10-16).
+
+Published readiness trial `d4bbeac` passes actual Linux 25 native/141 model/
+50 lifecycle cases, 43 projections, 169 audits and both budgets. Six loader
+faults check setup/wait/tag/removal/close failures. Full export is
+`31.742090`/`34.539671` seconds (`+8.813474%`), startup `+15.745673` ms.
+Observed guard CPU drops from `3.15` to `2.44` seconds, but direct export
+also becomes `22.1%` faster across hosted runs; normalized overhead improves
+only `2.49%`. This does not demonstrate a worthwhile native improvement.
+CodeQL preparation also fails its bounded frozen-tool-startup probe with
+exit `124`; compiled Kotlin analysis is skipped. This head is not accepted.
+Remove the additional `epoll` code and its now-obsolete fault injector.
+The original native source is restored; the two general CLI controls for
+closed stderr/repeated replies and diagnostic rejection remain (24 cases).
+All original validation, grammar/events, equations, dependencies, jobs,
+deadlines and budgets remain unchanged. No performance fix is established.
+See the [decision](docs/adr/0010-compositional-lifecycle-verification.md#native-linux-readiness-trial-2026-10-16).
+
+Removal `84d6267` restores the exact original Linux source/binary but again
+rejects actual full export: `43.565964908`/`48.308937965` seconds
+(`+10.886877%`); startup does not run. Actual 24/141/50 cases, 43 projections,
+169 audits/25 axiom-free, all 18 callers, 11 Rust and six required CodeQL jobs
+pass. Strict compilation/five Kotlin units, cleanup, integrity and processed
+delivery are independently verified. Final rollup is 36 successes/one failure/
+one intentional skip, not a native fix or acceptance.
+The owner-selected same-run Linux comparison at `bbf115c` validates frozen
+`fb1abf4`/`d4bbeac` through their own source-identified builds/CLIs, shared
+inputs/environment and owned-worktree cleanup. Original/candidate observed
+CPU is `2.44`/`2.43` seconds, while profiled overhead is `+8.964051%`/
+`+9.022732%`: only `0.4098%` lower CPU and `0.6546%` worse normalized overhead,
+with direct rate differing `0.4132%`. No worthwhile gain is established.
+All 19 lifecycle/11 Rust/six required CodeQL jobs and both normal budgets
+(`+9.562037%`, `+14.648994` ms) pass, with independently audited strict delivery.
+Final rollup is 37 successes/one intentional skip, not a native fix.
+Remove the one-shot driver/mode, scheduled step and extra history fetch;
+keep the diagnostic-report rejection/regression. Original native source/binary,
+19 jobs, deadlines and budgets remain unchanged; cleanup needs its own gates.
+See the [reference](docs/spec/models/equations/native-proxy/README.md#same-run-native-linux-comparison)
+and [decision](docs/adr/0010-compositional-lifecycle-verification.md#same-run-native-linux-comparison-2026-10-16).
+
+Published AC-unifier checkpoint `bfff37f` passes all 19 lifecycle cells,
+all 11 Rust jobs and both native budgets, but CodeQL `38770078501` fails
+ordinary Apple scratch ejection with `Resource busy` after Kotlin queries,
+before mandatory integrity/result delivery. This is not full hosted acceptance.
+A native owned-file regression reproduces a separate holder-diagnostic defect:
+`lsof -Fpc` also emits mandatory `f` records. The narrow parser fix accepts
+and discards those descriptors while retaining only validated PID/command
+output and the original ejection failure. All 67 local Apple tooling tests
+pass, with six existing hosted-only supervisor skips. Updated-source hosted
+gates remain separate; no busy-eject root-cause or reliability fix is claimed.
+See [the decision](docs/adr/0014-hosted-apple-isolation-probes.md#mandatory-native-holder-record-compatibility)
+and [current PR #9 checks](https://github.com/trancee/cairn/pull/9/checks).
+
+The owner-approved proof-only Maude boundary now checks the pinned native
+module and every executed query/complete reply, with fail-closed lifecycle
+evidence required by ratchet export, projection, equation, precompute, replay,
+mutation and attack callers. Returned sort/index provenance and importer
+variable-namespace restrictions are checked; no solutions are filtered.
+Real native operations and guarded Tamarin parsing pass. The initial complete
+ratchet export measured `+46.3%` overhead, unlike the unrepresentative `+2.7%`
+parse-only result. Owner-approved bounded operation-journal batching,
+selector reuse and conservative parser/audit fast paths reduce final-source
+medians to `24.303`/`29.761` seconds direct/guarded (`+22.5%`), with identical
+exports and unchanged deadlines. Every operation record is retained; the
+journal closes before successful shutdown evidence. This is approximately
+16% faster than the initial whole guard, but failed Constitution P4.
+That Python validator is now removed; no representative-workload exception
+was approved. Native recognition, tool implementations and injective variable renaming/
+importer correspondence are not kernel-verified.
+
+The owner then selected a bounded
+[compiled proxy prototype](docs/spec/models/equations/native-proxy/README.md),
+not a default cutover. Its standalone, dependency-free Rust host tool preserves
+the stream/evidence checks and shares the reviewed generated inventory.
+Eighteen opt-in CLI/process/proof checks pass. Three paired full-export runs
+measure `24.281`/`25.931` seconds direct/prototype (`+6.80%`), with identical
+bytes. A separate tiny derivation fixture adds `39.93` ms (`+33.76%`).
+The owner subsequently approved maintained promotion with a startup-only
+`50` ms additive allowance, retaining the full-export `10%` limit.
+Native [run `38721189200`](https://github.com/trancee/cairn/actions/runs/38721189200)
+at `71168a1` meets those staging criteria: all 19 cells pass, including all
+replay/mutation callers and both actual three-pair budgets. Linux full export
+is `32.023234`/`35.116483` seconds (`+9.6594%`); startup is
+`0.103667`/`0.119538` seconds (`+15.871115` ms, `+15.3097%`).
+Both workloads retain fixed per-host digests and six identical exports, without
+normalization, filtering, budget changes or larger deadlines. Earlier genuine
+Linux/startup failures and their measured stdout/teardown fixes remain recorded
+in the reference and issue. Companion Rust `38721189142` and four-language
+CodeQL `38721189358` also pass, including the Apple preflight.
+
+The owner-authorized conditional cutover now makes `cairn-maude-proxy` the
+shared ratchet acceptance default. It resolves from `CARGO_TARGET_DIR/release`,
+or root `target/native-proxy/release` when unset. Empty targets and missing/
+non-executable/stale builds reject; every version requires current source
+identity. No automatic build or fallback occurs inside proof commands.
+The temporary selector and obsolete Python validator/evidence/parser are
+deleted. All nine duplicate parser-test cases remain covered by the native CLI;
+the standalone framing and unsorted-Pub cases are explicitly retained.
+The cutover's local fast gate passed 19 native checks, 131 model tests,
+50 lifecycle tests, 43 projections and 67 audits. The intended default-selection
+red precedes implementation; malformed lifecycle fixtures reach their intended
+failure rather than an earlier missing-identity check.
+Current-source macOS three-pair medians are `24.324896`/`25.820824` seconds
+for full export (`+6.1498%`) and `0.112296`/`0.154256` seconds for startup
+(`+41.960417` ms, `+37.3660%`), both within the separate limits.
+At cutover `2fa6d16`, native run `38724991914` passes both actual budgets:
+full export `44.715197`/`48.455601` seconds (`+8.3650%`), startup
+`0.124042`/`0.149827` seconds (`+25.785370` ms, `+20.7876%`).
+The lifecycle cell and 17 of 18 callers pass. `replay-initial_ck_secret`
+fails during assembled export because the unchanged strict `60`-second
+derivation check times out, before its selected proof. The exact local
+caller passes (11-step claim plus five origin helpers); this is not a native
+reproduction or a fix. The hosted cause remains unestablished and the failed
+run is retained, without a raised limit or manual rerun.
+Companion Rust `38724991821` and four-language CodeQL `38724992020` pass.
+All current-head hosted gates remain a merge prerequisite; the
+[PR #9 checks](https://github.com/trancee/cairn/pull/9/checks) are authoritative
+for subsequent documentation-only checkpoints.
+Promotion commits/pushes and PR-description updates in PR #9 are authorized;
+merge and SDK/profile activation remain unapproved. Full-proof/memory overhead
+remains unmeasured.
+Native FVP and full assembled acceptance are unchanged.
+
+The 53-audit boundary checkpoint was published at `3d5dd7c`.
+Its [formal run](https://github.com/trancee/cairn/actions/runs/38622779805)
+passed the lifecycle cell but failed all 18 replay/mutation cells: Tamarin's
+derivation checker changes natural variables to Fresh inside natural sums.
+The owner selected `extend-derivation-kind-image`. A disjoint Fresh/natural
+shadow encoding now proves injectivity, raw AC/rewrite transfer, image closure
+and decoded-kind termination. Substitution commutation is unconditional;
+framed closure still has an explicit typed-shadow compatibility premise.
+The guard admits these controlled kind queries, not arbitrary sum operands,
+kind variables or kind-valued returned bindings/results. Raw rules omit
+native message-sort guards, so these kind results do not transfer
+controlled-kind confluence, normalization-path existence or narrowing/FVP completeness.
+
+At the preceding local extension checkpoint, the fresh fast gate passed
+117 model tests, 50 lifecycle tests, 43 projections and all 67 equation audits.
+The guarded default recovery witness and 56 refined safety certificates replay
+successfully with unchanged 43 rules/13 restrictions and deadlines.
+Both actual mutation regressions also preserve their verified defaults and
+expected 504-/526-step counterexamples.
+Selected contexts do not establish full assembled acceptance; full native acceptance is still incomplete as recorded above.
+
+The earlier termination-only checkpoint passed final-source formal/Rust/
+four-language CodeQL acceptance in PR #9 at `70c1c19`. Native bookkeeping
+hypotheses, universal query-builder/importer correspondence, narrowing/
+unification closure, sorted AC-unification/FVP acceptance and full assembled replay remain
+open. The owner selected the actual protocol-query image, extended to required
+derivation-kind terms, not the entire arithmetic/error-kind carrier.
+No merge, profile activation or SDK/ratchet
+implementation approval is implied. Earlier sections below are snapshots.
+
+## Current equation termination evidence (2026-10-14)
+
+The [equation termination checker](docs/spec/models/equations/README.md) now
+kernel-checks all six expanded source equations in every typed message context
+modulo sorted natural AC, with mandatory theorem axiom audits and generated
+source correspondences. It shares the exact equation inventory/audit helpers
+with the lifecycle gate and runs in the existing fast/CI lifecycle cell.
+At authoring, local proof/source-boundary checks pass; hosted validation of
+this snapshot is pending. Published revision status is recorded by its PR/CI.
+Native flat-pattern exhaustion and sorted CRC checks are supporting
+evidence, not a combined FVP certificate: source/signature transfer and
+admissibility/coherence hypotheses remain unverified. Full assembled replay
+also remains incomplete. No profile activation, SDK/ratchet implementation,
+protocol, public API, wire, primitive or constant-time claim change is authorized.
+
 ## Current ratchet evidence (2026-10-13)
 
 The opt-in `DISCLOSURE_SOURCES` profile now reports complete refined

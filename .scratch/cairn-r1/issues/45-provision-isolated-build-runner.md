@@ -61,6 +61,24 @@ are complete.
 
 ## Comments
 
+- 2026-10-15: Proof checkpoint `bfff37f` passes formal/Rust gates but CodeQL
+  [run `38770078501`](https://github.com/trancee/cairn/actions/runs/38770078501)
+  fails ordinary scratch ejection with `Resource busy` after actual Kotlin
+  extraction/mapped SARIF/security queries. Post-cell integrity and upload
+  do not run; this is not accepted Kotlin CI. Empty UID and exact owned-image
+  devices/no reported mount point do not identify the holder.
+  Local native `lsof -Fpc` on one owned file reproduces a separate parser
+  defect: mandatory `f` records cause `invalid-holder-fields`.
+  Owner-approved OS-boundary/native-owned-file regression is red, then green
+  after accepting and discarding printable descriptor records while logging
+  only validated PID/command fields. Malformed/unselected fields remain
+  redacted; failed ejection stays failed and all original limits remain.
+  The complete local Apple tooling suite passes 67 cases with six hosted-only
+  supervisor skips. Updated-source hosted CI remains required; neither this
+  diagnostic fix nor the earlier failed run establishes busy-eject reliability,
+  strict runtime acceptance or physical-device proof. See
+  [ADR 0014](../../../docs/adr/0014-hosted-apple-isolation-probes.md#mandatory-native-holder-record-compatibility).
+
 - 2026-10-12: Separate functional-runtime implementation completed in
   [run 38228998011, attempt 2](https://github.com/trancee/cairn/actions/runs/38228998011/attempts/2)
   at `19c35ba`. Attempt 1 passed preflight/strict offline build, immutable-input

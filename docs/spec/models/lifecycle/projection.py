@@ -2,9 +2,14 @@
 
 from collections import Counter
 from dataclasses import dataclass
+from pathlib import Path
 import re
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from parsing import ProjectionError, fact_list, parse_fact, split_terms, strip_comments
+from equations.signature import EQUATIONS
 
 
 STARTS = {"I_S1_classic", "I_S1_mix", "R_S2_classic", "R_S2_mix"}
@@ -18,11 +23,6 @@ TOKENS = {
     "FinishPermit": "finish", "IWait": "attempt", "RPending": "attempt",
 }
 ACTIONS = {"LockStage", "ResumeStart", "ResumeFinish", "LockAcquire", "LockRelease", "Init", "I_Start"}
-EQUATIONS = {
-    "flip(roleA)=roleB", "flip(roleB)=roleA", "fst(<x.1,x.2>)=x.1",
-    "snd(<x.1,x.2>)=x.2", "kdec(kem(ss,pk(dk)),dk)=ss",
-    "sdec(senc(x.1,x.2),x.2)=x.1",
-}
 ARITIES = {
     "ResumeSlot": 3, "StartPermit": 3, "BusySlot": 3, "FinishPermit": 3,
     "IWait": 15, "RPending": 11, "LockStage": 3, "ResumeStart": 3,
