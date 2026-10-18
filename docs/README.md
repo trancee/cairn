@@ -37,8 +37,9 @@ explains where the bytes go and why the implementation is staged.
 
 These pages record design decisions, alternatives, and risks:
 [the architecture ADR](adr/0004-core-architecture.md),
-[the verification-gates ADR](adr/0007-ct-conformance-gates.md) and
-[the bounded foundation ADR](adr/0012-rust-foundation-increment.md).
+[the verification-gates ADR](adr/0007-ct-conformance-gates.md),
+[the bounded foundation ADR](adr/0012-rust-foundation-increment.md) and
+[the epoch transfer ADR](adr/0016-unexposed-epoch-transfer-core.md).
 The [research collection](research/) provides the historical background.
 
 ## Understand what is proven

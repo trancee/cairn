@@ -17,10 +17,11 @@ cryptographic review are incomplete.
 | Available | Not implemented |
 |---|---|
 | Protocol specification, threat model, and design decisions | A secure-channel implementation |
-| Tamarin models, proof certificates and Lean lifecycle evidence | Pairing, Resume and ratchet state machines in Rust |
+| Tamarin models, proof certificates and Lean lifecycle evidence | Pairing, Resume, ratchet completion and mixing in Rust |
 | Canonical public wire codecs in `cairn-wire` | KEM, AEAD and protocol-labelled crypto glue |
 | SHA-384, HMAC, and raw HKDF through AWS-LC and RustCrypto | Kotlin bindings, BLE adapters, and the chat app |
 | Conformance, fuzz, host taint and mobile compilation checks | Device execution and mobile constant-time evidence |
+| Unexposed post-quantum epoch transfer in `cairn-proto` | Ratchet integration with sessions, persistence or bindings |
 
 The prototype targets Android API 26+ and iOS 15+ for Android-to-Android and
 Android-to-iOS communication. The Rust libraries compile for those platforms,
@@ -36,6 +37,7 @@ flowchart LR
 	Crypto --> Ref["RustCrypto adapter"]
 	AWS --> Ops["SHA-384, HMAC, and raw HKDF"]
 	Ref --> Ops
+	Proto["cairn-proto"] --> Transfer["Epoch IDs and KEM object transfer"]
 ```
 
 ## Start here
@@ -52,7 +54,7 @@ flowchart LR
 ## Repository
 
 ```text
-core/          Wire and partial crypto libraries, with internal test harnesses
+core/          Wire, partial crypto and epoch-transfer libraries, with internal test harnesses
 docs/spec/     Draft protocol, threat model and formal models
 docs/adr/      Accepted design decisions and their limitations
 docs/research/ Dated investigations, not normative protocol definitions

@@ -1,6 +1,22 @@
 # PROJECT
 
-state=protocol research/specification/formal models + host-only Rust foundation; SDK/application=not implemented.
+state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer; SDK/application=not implemented.
+
+## Unexposed epoch transfer increment (2026-10-18)
+
+The owner approved a narrow waiver of the strict S9 formal-model gate:
+a Rust-only, sans-IO ratchet increment with no SDK/FFI exposure, wire use or
+profile activation until *Formal model: PQ ratchet mixing* resolves
+([ADR 0016](docs/adr/0016-unexposed-epoch-transfer-core.md)). New
+dependency-free `core/cairn-proto` implements spec §9 epoch identifiers and
+parity (OI-4/OI-21), strict contiguous reassembly (OI-26) and cumulative
+sender progress (OI-25) over public fixed-length ML-KEM-768 objects.
+Tests were written first and failed on the unimplemented behavior before
+implementation; 39 behavior tests and one doctest now pass. Local Miri and
+workspace llvm-cov report 100% lines (268/268) and branches (44/44).
+Rust CI adds `cairn-proto` to its Miri step. KEM completion, mixing,
+record encoding, persistence, Resume integration, device demonstration and
+the model ticket remain open; earlier dated records stay historical.
 
 ## Current typed equation convergence/image evidence (2026-10-18)
 

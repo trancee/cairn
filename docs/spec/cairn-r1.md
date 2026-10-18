@@ -1,6 +1,6 @@
 # `cairn-r1` protocol specification
 
-Status: **draft 0.6** (ticket *Formal model: PQ ratchet mixing*, 2026-10-05). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed.
+Status: **draft 0.6** (ticket *Formal model: PQ ratchet mixing*, 2026-10-05). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
 
 This document consolidates, and is normative over:
 - [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md);

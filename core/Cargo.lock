@@ -49,6 +49,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "cairn-proto"
+version = "0.1.0"
+
+[[package]]
 name = "cairn-wire"
 version = "0.1.0"
 

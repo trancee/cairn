@@ -20,9 +20,15 @@ and validation evidence.
   `reference` selects RustCrypto. Both are enabled by default for differential
   tests; consumers can select one with `--no-default-features --features aws-lc`
   or `reference`. No runtime backend fallback exists.
+- `cairn-proto`: dependency-free `no_std` + `alloc` post-quantum epoch
+  identifiers and durable KEM object transfer from
+  [spec §9](../docs/spec/cairn-r1.md#9-post-quantum-ratchet), under the
+  narrow gate waiver in [ADR 0016](../docs/adr/0016-unexposed-epoch-transfer-core.md).
+  It is not wired into Resume, DATA records, persistence or bindings.
 
 Protocol-labelled KDF/MAC construction, tag verification, RNG, AEAD, X25519,
-ML-KEM, X-Wing, protocol state machines and FFI are not implemented.
+ML-KEM, X-Wing, pairing, Resume, ratchet completion and mixing, and FFI are
+not implemented.
 The `ch.trancee.cairn` namespace is reserved for future Kotlin bindings.
 Rust crate names use `cairn-`; Cargo does not have dotted namespaces.
 
@@ -38,6 +44,7 @@ rustup toolchain install nightly-2026-10-08 --profile minimal --component miri,r
 cargo install cargo-careful --version 0.4.10 --locked
 cd core
 cargo +nightly-2026-10-08 miri test -p cairn-wire --locked
+cargo +nightly-2026-10-08 miri test -p cairn-proto --locked
 cargo +nightly-2026-10-08 careful test -p cairn-crypto --all-features --locked
 cargo install cargo-fuzz --version 0.13.2 --locked
 cargo +nightly-2026-10-08 fuzz run wire_encoding -- -max_total_time=60 -max_len=65540 -seed=20261009
@@ -47,7 +54,7 @@ The Rust workflow runs the ordinary gates on Linux x86-64, Linux ARM64 and
 macOS, plus Miri/careful on Linux. All 11 jobs passed in
 [hosted run 37963154963](https://github.com/trancee/cairn/actions/runs/37963154963)
 at commit `4ba4955`. A separate coverage job requires 100% source line/branch
-coverage; both crates currently meet that threshold locally.
+coverage; all three crates currently meet that threshold locally.
 Interpreter checks do not prove constant-time behavior and
 Miri does not inspect the AWS-LC C implementation.
 
