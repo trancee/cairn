@@ -144,6 +144,60 @@ class ToolInputManifestTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout, expected)
 
+    def test_parallel_hashing_is_byte_identical_to_serial_hashing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for index in range(37):
+                (root / f"input-{index:02}").write_bytes(bytes([index]) * (index * 4099))
+            (root / "nested").mkdir()
+            (root / "nested" / "new\nline").write_bytes(b"\x00\xff" * 70000)
+            expected = reference_manifest(root)
+
+            actual = [manifest.create_manifest(root, jobs=jobs) for jobs in (1, 2, 3, 8)]
+
+            self.assertEqual(actual, [expected] * 4)
+
+    def test_cli_jobs_option_emits_the_serial_manifest(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "inputs"
+            (root / "scope").mkdir(parents=True)
+            for index in range(9):
+                (root / "scope" / f"input-{index}").write_bytes(bytes([index]) * 1000)
+            expected = reference_manifest(root, "scope")
+
+            result = subprocess.run([
+                sys.executable, "-I", str(SCRIPT), "--jobs", "3", str(root), "scope",
+            ], capture_output=True, timeout=5)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, expected)
+
+    def test_invalid_job_counts_are_rejected_before_reading(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for jobs in [0, -1]:
+                with self.subTest(jobs=jobs):
+                    with self.assertRaisesRegex(manifest.ManifestError, "invalid-jobs"):
+                        manifest.create_manifest(Path(directory), jobs=jobs)
+
+    def test_parallel_read_failure_emits_only_a_redacted_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for index in range(4):
+                (root / f"input-{index}").write_bytes(b"input")
+            errors = io.StringIO()
+            with (
+                mock.patch.object(Path, "open", side_effect=PermissionError("private-path")),
+                mock.patch.object(sys, "argv", [str(SCRIPT), "--jobs", "3", str(root)]),
+                mock.patch.object(sys, "stdout") as output,
+                mock.patch.object(sys, "stderr", errors),
+            ):
+
+                result = manifest.main()
+
+            self.assertEqual(result, 1)
+            output.buffer.write.assert_not_called()
+            self.assertEqual(errors.getvalue(), "FAIL: tool-input manifest: PermissionError\n")
+
     def test_root_symlink_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "inputs"

@@ -312,7 +312,38 @@ generator build, tracing and analysis alone exceed it. Therefore:
 A FIFO simulation over measured durations predicts about 8.6 to 8.9
 minutes for a PR that does not touch strict-lane inputs. PRs that do touch
 them remain bounded by the unchanged strict lane, about 17 to 20 minutes.
-Hosted timings must confirm this before a speedup is claimed.
+Hosted runs at `8b20be6` passed without retries, with the strict lane also
+running and competing for slots: `CodeQL advanced` `39157701948` in `4m45s`
+(Rust analysis `281s`), Rust `39157701925` in `1m52s`, lifecycle
+`39157701904` in `8m49s` and `CodeQL strict Kotlin` `39157702087` in
+`19m00s` (preparation `932s`). One sample, not a cold/warm comparison.
+
+### Strict-lane preparation speedup (2026-10-18)
+
+The owner then asked for the strict lane itself to finish within 10 minutes
+without weakening any gate. In run `39157702087`, preparation spent `111s` freezing
+(`83s` of `ditto` copies and a `28.6s` serial manifest), `44s` downloading and
+`55s` preparing Gradle while Cargo and Native waited. The approved changes are:
+
+- **Clone freeze.** Freeze copies use `ditto --clone`, so the source and
+  `/opt` on the same APFS volume share blocks copy-on-write.
+  `tool-input-manifest.py --jobs` hashes on `hw.ncpu` workers. Tests check
+  that its output is byte-identical to the serial manifest. Later edits to
+  the source do not affect the frozen copy, and the post-cell `shasum`
+  gates are unchanged.
+- **Checksum-verified download cache.** `fetch-pinned.sh` keeps pinned
+  JDK, Gradle, Kotlin/Native, CodeQL bundle and Android API archives in an
+  `actions/cache` directory keyed by their SHA-256. Every use, including a
+  cache hit, runs `shasum -a 256 --check` against the pin in the
+  workflow or script, and a mismatch fails. Compiled targets, Cargo inputs,
+  Gradle dependencies and the generator are not cached.
+- **Overlap.** JDK, toolchain and CodeQL downloads run concurrently, and
+  Gradle preparation runs concurrently with Cargo and Native preparation.
+  This is scheduling only; each step keeps its own manifest and integrity
+  log.
+- Preflight ordering, the split cells and the generator debuginfo are
+  recorded in
+  [ADR 0014](0014-hosted-apple-isolation-probes.md#concurrent-preflight-and-split-strict-cells-2026-10-18).
 
 ## Action release refresh (2026-10-16)
 

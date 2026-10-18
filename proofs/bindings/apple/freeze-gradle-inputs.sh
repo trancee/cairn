@@ -13,7 +13,7 @@ mkdir "$destination"
   "$prepared/gradle-home/caches/modules-2" "$destination/"
 chown -R root:wheel "$destination"
 chmod -R a+rX,a-w "$destination"
-"$(xcrun --find python3)" -I "$scripts/tool-input-manifest.py" \
+"$(xcrun --find python3)" -I "$scripts/tool-input-manifest.py" --jobs "$(sysctl -n hw.ncpu)" \
   /opt/cairn-apple-tools gradle-dependencies \
   > "$prepared/gradle-dependencies.sha256"
 echo 'PASS: Gradle dependency seed copied read-only without mutable locks'

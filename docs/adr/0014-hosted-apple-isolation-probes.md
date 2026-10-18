@@ -1574,3 +1574,46 @@ and passed. The window from scratch teardown to the next step took `25.6s`,
 down from `73.6s`. This is one hosted sample. On PRs the lane now runs only
 when its inputs change; see
 [ADR 0015](0015-build-backed-kotlin-codeql.md#runner-slot-scheduling-2026-10-18).
+
+## Concurrent preflight and split strict cells (2026-10-18)
+
+The owner rejected the `19m00s` strict Kotlin lane (run `39157702087`) and
+approved five changes that keep every gate. In that run preparation waited
+`188s` for preflight and spent `616s` in one sequential cell. Of that,
+`~210s` was the fresh generator compile and `~160s` was isolation probes
+whose results the CodeQL path does not consume.
+
+- **Preflight ordering (amends "sequential benign preflight before
+  preparation").** Preparation starts with the benign preflight instead of
+  after it. Before entering any cell, each job runs `await-preflight.py`. It
+  lists the jobs of the same run attempt through the Actions API
+  (`actions: read`) and proceeds only if exactly one job named
+  `benign-preflight / benign-probes` concluded `success`. Failure,
+  cancellation, an ambiguous or truncated listing, or a 25-minute timeout
+  fails the job before the cell. Downloads and freezing now run before the
+  preflight result is known. No fixture, generator or bound workload runs
+  first.
+- **Two cells.** With CodeQL, the matrix runs a `codeql` cell and an
+  `isolation` cell on separate fresh VMs. `cell-plan.py` defines each
+  probe list and `test_cell_plan.py` keeps them in step with the runner.
+  - The `codeql` cell runs CodeQL and toolchain startup, the fixture
+    targets, Cargo inputs, the fresh in-cell `installBindgen`,
+    `buildBindings`, the traced JVM build and the analysis.
+  - The `isolation` cell runs the remaining toolchain and fixture-selection
+    probes, the Native probes, the allocator inputs and the fixture Rust
+    builds.
+  - Without CodeQL, one `full` cell keeps the previous order.
+  - Each cell remains sequential under UID `59000`, with the same scratch
+    image, PF, resource ceilings and teardown. Both cells must pass, and
+    each verifies all four frozen-input manifests.
+- **Generator debuginfo.** `generator-cargo.sh` sets
+  `CARGO_PROFILE_DEV_DEBUG=0` for the generator's `cargo install --debug`.
+  The compile is still fresh, in the cell and offline. Optimization level,
+  sources and lockfile are unchanged; only debug symbols that no gate reads
+  are omitted. Locally, with `-j3` and the pinned Rust 1.97.1, the
+  generator built in `165.5s` without debuginfo and `167.6s` with it. This
+  is about 1%, from one uncontended pair. That is local component evidence;
+  the hosted effect is unmeasured and may be negligible.
+
+Prebuilding or caching the generator remains rejected. The split uses three
+concurrent macOS jobs out of the five allowed.

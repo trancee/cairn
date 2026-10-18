@@ -75,7 +75,9 @@ alternating pairs within one run, so a fresh VM changes only the preceding
 load, not the threshold, pairs, rounds or acceptance. The matrix now has
 20 cells and no `max-parallel` cap; see
 [ADR 0015](0015-build-backed-kotlin-codeql.md#runner-slot-scheduling-2026-10-18).
-Hosted budget results on the separate cell are not yet observed.
+Hosted run `39157701904` at `8b20be6` passed both budgets in the separate
+`318s` cell; `lifecycle` took `381s` and the matrix finished in `8m49s`.
+That is one sample of an intermittent budget, not proof it is stable.
 
 ### Certified full-AST sorted AC families (2026-10-18)
 

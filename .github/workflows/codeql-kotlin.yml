@@ -37,6 +37,9 @@ env:
 jobs:
   kotlin-analysis:
     uses: ./.github/workflows/apple-toolchain-preparation.yml
+    permissions:
+      contents: read
+      actions: read
     with:
       codeql: true
   kotlin-results:

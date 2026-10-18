@@ -375,6 +375,10 @@ a disabled-login UID only in the disposable hosted VM, enables ownership on
 a fixed 256 MiB scratch image and runs real capacity/process/CPU exhaustion.
 The user/volume are removed/detached afterwards; diagnostics remain retained.
 These are benign test thresholds, not build budgets or memory acceptance.
+A tool root must be followed by a scope argument (`full`, `codeql` or
+`isolation`) selects the probes that `cell-plan.py` lists for that cell.
+Before any cell, the strict preparation job runs `await-preflight.py` and
+requires the same run's benign preflight to have succeeded.
 
 The shared Linux collector now supports optional `--seconds` deadlines.
 `python3 -B -m unittest discover -s proofs/bindings/apple -p 'test_*.py'`
