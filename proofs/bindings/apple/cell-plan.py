@@ -7,12 +7,15 @@ ISOLATION = [
 ]
 BINDINGS = ["install-bindgen", "build-bindings", "jvm"]
 
-# Each scope is the ordered probe list for one bounded cell. The CodeQL lane
-# runs "codeql" and "isolation" as parallel cells on separate runners.
+# Each scope is (needs CodeQL, runs boundary probes, ordered probe list) for
+# one bounded cell. The CodeQL lane runs "codeql" and "isolation" as parallel
+# cells on separate runners; the isolation cell proves the shared boundary.
 PLANS = {
-    "full": (False, ["toolchains", *SETUP, *ISOLATION, *BINDINGS, "native-binaries"]),
-    "codeql": (True, ["toolchain-startup", *SETUP, *BINDINGS, "codeql-analysis"]),
-    "isolation": (True, ["codeql-startup", "toolchains", *SETUP, *ISOLATION]),
+    "full": (False, True, ["toolchains", *SETUP, *ISOLATION, *BINDINGS, "native-binaries"]),
+    "codeql": (True, False, [
+        "codeql-startup", "toolchain-startup", *SETUP, *BINDINGS, "codeql-analysis",
+    ]),
+    "isolation": (True, True, ["codeql-startup", "toolchains", *SETUP, *ISOLATION]),
 }
 SCOPES = tuple(PLANS)
 
@@ -21,8 +24,12 @@ def requires_codeql(scope: str) -> bool:
     return PLANS[scope][0]
 
 
+def boundary_probes(scope: str) -> bool:
+    return PLANS[scope][1]
+
+
 def probes(scope: str) -> list[str]:
-    return list(PLANS[scope][1])
+    return list(PLANS[scope][2])
 
 
 def main() -> int:
@@ -31,6 +38,7 @@ def main() -> int:
         return 2
     scope = sys.argv[1]
     print(f"codeql={'true' if requires_codeql(scope) else 'false'}")
+    print(f"boundary-probes={'true' if boundary_probes(scope) else 'false'}")
     for probe in probes(scope):
         print(probe)
     return 0

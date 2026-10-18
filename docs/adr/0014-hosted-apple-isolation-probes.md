@@ -1617,3 +1617,37 @@ whose results the CodeQL path does not consume.
 
 Prebuilding or caching the generator remains rejected. The split uses three
 concurrent macOS jobs out of the five allowed.
+
+Hosted run `39162172603` at `90dceae` passed without retries in `15m04s`,
+down from `19m00s`; the archive cache was cold. The isolation cell job took
+`9m47s`. The CodeQL cell still took `615s`, for two reasons:
+
+- The traced build waited `94s` before Gradle started, compared with `9s`
+  when `codeql-startup` had already run in the same cell.
+- About `45s` went to boundary probes that the isolation cell repeats.
+
+The owner then approved two changes:
+
+- **Tracer warm-up.** The `codeql` cell runs `codeql-startup` again before
+  its toolchain startup probe.
+- **Boundary probes only in the isolation cell.** `cell-plan.py` now marks
+  whether a scope runs boundary probes, and the `codeql` scope does not.
+  Without them, the `codeql` cell skips these probes:
+  - the 256 MiB resource-exhaustion image;
+  - the `test_uid_supervisor.py` self-test;
+  - both `probe-pf.py` runs;
+  - `launch-probes.py`.
+
+  The `isolation` and `full` cells and the benign preflight still run all of
+  them, with the same scripts and VM image. The `codeql` cell still sets up
+  and enforces the same boundary: the PF wrapper, the dedicated UID, the
+  8 GiB scratch image with both capacity checks, `sandbox-exec`, the
+  supervisor deadlines and teardown. Its build therefore runs inside the
+  boundary the isolation cell proves, without re-proving it. Both cells must
+  pass. `test_cell_plan.py` fails if any of these probes runs outside its
+  `boundary` guard.
+
+Even with both changes, the projected strict lane is about 12 minutes. The
+fresh `installBindgen` compile (`188s`) and about `190s` of preparation on
+3-core hosted runners keep a reliable sub-10-minute lane out of reach. The
+owner did not choose larger paid runners.

@@ -1029,7 +1029,10 @@ byte-identical logs (hosted `25.6s`, down from `73.6s`). To bring the strict lan
 it to succeed. CodeQL analysis and isolation probes run in separate sequential
 cells. Freezing uses copy-on-write clones and parallel manifests. Pinned
 archives are cached by digest and re-checked on every use. The fresh in-cell
-generator compile omits debuginfo
+generator compile omits debuginfo. The isolation cell alone runs the boundary
+probes; the CodeQL cell still enforces that boundary. Hosted strict lane:
+`15m04s` at `90dceae`, down from `19m00s`; projected about 12 minutes after
+these changes
 ([ADR 0014](docs/adr/0014-hosted-apple-isolation-probes.md#concurrent-preflight-and-split-strict-cells-2026-10-18),
 [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md#strict-lane-preparation-speedup-2026-10-18)). Hosted runs at `8b20be6` (one sample) took `8m49s`
 for lifecycle, `4m45s` for hosted CodeQL and `1m52s` for Rust; the strict lane

@@ -14,7 +14,7 @@ spec.loader.exec_module(plan)
 
 BINDING_PATH = ["install-bindgen", "build-bindings", "jvm"]
 ISOLATION_ONLY = [
-    "codeql-startup", "native-tool", "native-compilation", "native-cinterop",
+    "native-tool", "native-compilation", "native-cinterop",
     "native-linkage", "allocator-inputs", "fixture-rust",
 ]
 SETUP = ["fixture-targets", "cargo-inputs"]
@@ -30,8 +30,29 @@ class CellPlanTest(unittest.TestCase):
 
     def test_codeql_cell_runs_only_setup_and_the_traced_binding_path(self):
         self.assertEqual(plan.probes("codeql"), [
-            "toolchain-startup", *SETUP, *BINDING_PATH, "codeql-analysis",
+            "codeql-startup", "toolchain-startup", *SETUP, *BINDING_PATH, "codeql-analysis",
         ])
+        self.assertTrue(set(ISOLATION_ONLY).isdisjoint(plan.probes("codeql")))
+
+    def test_only_the_codeql_cell_leaves_boundary_probes_to_the_isolation_cell(self):
+        self.assertEqual(plan.boundary_probes("full"), True)
+        self.assertEqual(plan.boundary_probes("isolation"), True)
+        self.assertEqual(plan.boundary_probes("codeql"), False)
+
+    def test_runner_guards_every_boundary_probe_by_the_plan(self):
+        text = RUNNER.read_text()
+        guarded = "".join(re.findall(
+            r'^if \[ "\$boundary" = true \]; then\n(.*?)^fi$', text, re.MULTILINE | re.DOTALL,
+        ))
+        markers = [
+            "test_uid_supervisor.py", "probe-pf.py\" \"$work/proof-output/pf.log",
+            "probe-resources.py\" \"$volume", "-size 256m",
+            "sandbox-pf.log", "launch-probes.py",
+        ]
+
+        for marker in markers:
+            self.assertEqual(text.count(marker), 1, marker)
+            self.assertIn(marker, guarded)
 
     def test_isolation_cell_runs_every_probe_removed_from_the_codeql_cell(self):
         isolation = plan.probes("isolation")
@@ -74,14 +95,17 @@ class CellPlanTest(unittest.TestCase):
         self.assertEqual(result.stdout, "")
         self.assertEqual(result.stderr, "FAIL: unknown cell scope\n")
 
-    def test_cli_prints_codeql_requirement_then_one_probe_per_line(self):
+    def test_cli_prints_tool_and_boundary_requirements_then_one_probe_per_line(self):
         result = subprocess.run(
             [sys.executable, "-I", str(SCRIPT), "codeql"],
             capture_output=True, text=True, timeout=5,
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.splitlines(), ["codeql=true", *plan.probes("codeql")])
+        self.assertEqual(
+            result.stdout.splitlines(),
+            ["codeql=true", "boundary-probes=false", *plan.probes("codeql")],
+        )
 
     def test_runner_has_exactly_one_case_arm_for_every_planned_probe(self):
         arms = [

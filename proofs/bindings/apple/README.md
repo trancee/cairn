@@ -377,7 +377,9 @@ The user/volume are removed/detached afterwards; diagnostics remain retained.
 These are benign test thresholds, not build budgets or memory acceptance.
 A tool root must be followed by a scope argument (`full`, `codeql` or
 `isolation`) selects the probes that `cell-plan.py` lists for that cell.
-Before any cell, the strict preparation job runs `await-preflight.py` and
+The `codeql` scope skips the boundary probes (resource exhaustion, PF and
+launch); the `isolation` cell runs them. Before any cell, the strict
+preparation job runs `await-preflight.py` and
 requires the same run's benign preflight to have succeeded.
 
 The shared Linux collector now supports optional `--seconds` deadlines.

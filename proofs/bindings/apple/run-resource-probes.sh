@@ -45,10 +45,16 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 chmod 0755 "$work"
 mkdir "$volume"
-hdiutil create -size 256m -fs HFS+ -type UDIF -volname cairn-benign-scratch "$image"
-hdiutil attach -nobrowse -mountpoint "$volume" "$image"
-mounted=1
-diskutil enableOwnership "$volume"
+boundary=true
+plan=
+if [ "$#" -eq 3 ]; then
+  plan=$("$python" -I "$scripts/cell-plan.py" "$3")
+  case "$(printf '%s\n' "$plan" | sed -n 2p)" in
+    boundary-probes=true) ;;
+    boundary-probes=false) boundary=false ;;
+    *) echo 'FAIL: cell plan has no boundary-probe decision' >&2; exit 2 ;;
+  esac
+fi
 dscl . -create "/Users/$user"
 created=1
 dscl . -create "/Users/$user" UniqueID "$uid"
@@ -56,13 +62,9 @@ dscl . -create "/Users/$user" PrimaryGroupID 20
 dscl . -create "/Users/$user" UserShell /usr/bin/false
 dscl . -create "/Users/$user" NFSHomeDirectory "$volume"
 dscl . -create "/Users/$user" AuthenticationAuthority ';DisabledUser;'
-chown "$uid:20" "$volume"
-chmod 0700 "$volume"
-"$python" -B -m unittest discover -s "$scripts" -p 'test_uid_supervisor.py'
 mkdir "$work/inputs"
 mkdir "$work/proof-output"
 chmod 0700 "$work/proof-output"
-"$python" -I "$scripts/probe-pf.py" "$work/proof-output/pf.log"
 cp "$scripts/probe.py" "$work/inputs/probe.py"
 cp "$scripts/build.sb" "$work/build.sb"
 printf 'benign sentinel\n' > "$work/host-sentinel"
@@ -78,18 +80,30 @@ exec "$3" -I "$2/uid-supervisor.py" --seconds 30 "$1/proof-output/sandbox.log" \
   "$3" -I "$1/inputs/probe.py" "$1/scratch" "$1/inputs" "$1/host-sentinel" "$4" "$5" --build-limits
 COMMAND
 chmod 0644 "$work/command.sh"
-cp "$scripts/probe-resources.py" "$work/probe-resources.py"
-chmod 0644 "$work/probe-resources.py"
-if sudo -u "$user" /usr/bin/env -i PATH=/usr/bin:/bin HOME="$volume" TMPDIR="$volume" \
-  "$python" -I "$work/probe-resources.py" "$volume" 2>&1 | tee "$output/resources.log"; then
-  echo 'PASS: hosted-only resource probes completed'
+if [ "$boundary" = true ]; then
+  hdiutil create -size 256m -fs HFS+ -type UDIF -volname cairn-benign-scratch "$image"
+  hdiutil attach -nobrowse -mountpoint "$volume" "$image"
+  mounted=1
+  diskutil enableOwnership "$volume"
+  chown "$uid:20" "$volume"
+  chmod 0700 "$volume"
+  "$python" -B -m unittest discover -s "$scripts" -p 'test_uid_supervisor.py'
+  "$python" -I "$scripts/probe-pf.py" "$work/proof-output/pf.log"
+  cp "$scripts/probe-resources.py" "$work/probe-resources.py"
+  chmod 0644 "$work/probe-resources.py"
+  if sudo -u "$user" /usr/bin/env -i PATH=/usr/bin:/bin HOME="$volume" TMPDIR="$volume" \
+    "$python" -I "$work/probe-resources.py" "$volume" 2>&1 | tee "$output/resources.log"; then
+    echo 'PASS: hosted-only resource probes completed'
+  else
+    result=$?
+    cat "$output/resources.log" >&2
+    exit "$result"
+  fi
+  hdiutil detach "$volume"
+  mounted=0
 else
-  result=$?
-  cat "$output/resources.log" >&2
-  exit "$result"
+  echo 'INFO: boundary probes run in the parallel isolation cell'
 fi
-hdiutil detach "$volume"
-mounted=0
 image="$work/build-scratch.dmg"
 hdiutil create -size 8g -fs HFS+ -type UDIF -volname cairn-build-scratch "$image"
 "$python" -I "$scripts/reserve-build-image.py" "$image"
@@ -99,17 +113,18 @@ diskutil enableOwnership "$volume"
 chown "$uid:20" "$volume"
 chmod 0700 "$volume"
 "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
-cp "$scripts/probe-pf.py" "$work/inputs/probe-pf.py"
-chmod 0644 "$work/inputs/probe-pf.py"
-"$python" -I "$scripts/probe-pf.py" "$work/proof-output/sandbox-pf.log" \
-  "$volume" "$work/inputs" "$work/build.sb"
+if [ "$boundary" = true ]; then
+  cp "$scripts/probe-pf.py" "$work/inputs/probe-pf.py"
+  chmod 0644 "$work/inputs/probe-pf.py"
+  "$python" -I "$scripts/probe-pf.py" "$work/proof-output/sandbox-pf.log" \
+    "$volume" "$work/inputs" "$work/build.sb"
+fi
 if [ "$#" -eq 3 ]; then
   tools=$2
   scope=$3
   test "$tools" = /opt/cairn-apple-tools
   test "$(stat -f %u "$tools")" -eq 0
   sudo -n -u "$user" /bin/test -x "$tools/rust/bin/rustc"
-  plan=$("$python" -I "$scripts/cell-plan.py" "$scope")
   if [ "$(printf '%s\n' "$plan" | head -n 1)" = codeql=true ]; then
     test -d "$tools/codeql"
     cat "$work/build.sb" "$scripts/codeql-parent.sb" > "$work/codeql.sb"
@@ -120,7 +135,7 @@ if [ "$#" -eq 3 ]; then
   cp "$scripts/probe-toolchains.sh" "$work/inputs/probe-toolchains.sh"
   chmod 0644 "$work/inputs/probe-toolchains.sh"
   echo "INFO: bounded cell scope $scope"
-  for probe in $(printf '%s\n' "$plan" | tail -n +2); do
+  for probe in $(printf '%s\n' "$plan" | tail -n +3); do
     case "$probe" in
     codeql-startup)
       codeql_result=0
@@ -302,6 +317,8 @@ if [ "$#" -eq 3 ]; then
     esac
   done
 fi
-"$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
-  | tee "$output/dedicated-sandbox.log"
+if [ "$boundary" = true ]; then
+  "$python" -I "$scripts/launch-probes.py" "$work" "$scripts" "$python" \
+    | tee "$output/dedicated-sandbox.log"
+fi
 "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
