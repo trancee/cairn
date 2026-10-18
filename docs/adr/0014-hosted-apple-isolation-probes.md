@@ -1568,3 +1568,9 @@ cache or resource ceiling changes. Prebuilding or caching the in-cell
 `cargo install` of the Ubique generator (about 229 seconds) is again rejected,
 because the owning offline task must compile it fresh inside the cell.
 Sequential benign preflight before preparation remains required.
+
+Hosted CodeQL run `39154660841` at `1cee495` produced all four integrity logs
+and passed. The window from scratch teardown to the next step took `25.6s`,
+down from `73.6s`. This is one hosted sample. On PRs the lane now runs only
+when its inputs change; see
+[ADR 0015](0015-build-backed-kotlin-codeql.md#runner-slot-scheduling-2026-10-18).

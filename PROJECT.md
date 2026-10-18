@@ -1015,13 +1015,20 @@ gates are unchanged. See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md#
 Publication was initially kept local; the owner approved this scheduling
 change and bounded same-VM Cargo reuse validation on 2026-10-14.
 
-The lifecycle matrix runs at most 10 cells at once so the account's
-20-job limit leaves slots for the strict Kotlin CodeQL lane, the measured
-critical path, and the Rust macOS jobs. The four post-cell frozen-input
-`shasum --check` gates run as parallel contiguous chunks with byte-identical
-logs. See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md#runner-slot-scheduling-2026-10-18)
-and [ADR 0014](docs/adr/0014-hosted-apple-isolation-probes.md#parallel-post-cell-integrity-verification);
-hosted timings are pending.
+The owner set a 10-minute PR target on 2026-10-18 and chose path-scoped strict
+Kotlin scans. `CodeQL strict Kotlin` (`codeql-kotlin.yml`) runs on every
+`main` push, weekly and on dispatch, but on PRs only when strict-lane inputs
+change (`proofs/bindings/**`, its three workflows, `rust-toolchain.toml`,
+`.gitattributes`). A test fails if the filter misses a referenced path.
+`CodeQL advanced` keeps Actions/Python/Rust on every PR with the action's
+default threads and RAM. The lifecycle matrix runs native budgets in a separate
+`native-budgets` cell, giving 20 cells, with no `max-parallel` cap. The four post-cell
+frozen-input `shasum --check` gates run as parallel contiguous chunks with
+byte-identical logs (hosted `25.6s`, down from `73.6s`). Strict-lane PRs stay
+about 17 to 20 minutes; the expected under-10-minute result for other PRs is
+not yet observed. See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md#runner-slot-scheduling-2026-10-18),
+[ADR 0010](docs/adr/0010-compositional-lifecycle-verification.md#separate-native-budget-cell-2026-10-18)
+and [ADR 0014](docs/adr/0014-hosted-apple-isolation-probes.md#parallel-post-cell-integrity-verification).
 
 Setup caches contain version-keyed host tool binaries, lockfile-keyed Cargo
 registry downloads and pinned proof archives. Proof archives are checksum

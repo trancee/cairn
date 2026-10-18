@@ -279,12 +279,40 @@ The public user-owned repository runs at most 20 hosted jobs at once. At
 exactly 20; the 19-cell lifecycle matrix occupied the slots that the strict
 Kotlin preparation and Rust macOS jobs needed once they became ready.
 Kotlin preparation waited `141s` after its benign preflight and the macOS
-Rust jobs waited `220s` to `241s`. A FIFO simulation using measured job
-durations predicts the Kotlin lane drops from about 24.8 to 22.2 minutes
-with lifecycle `max-parallel: 10`, while lifecycle stays near 9.9 minutes.
-Apply only that cap: every lifecycle cell, its order, runner, timeout and
-gate is unchanged, and no workflow is skipped by path or event. Hosted
-timings must confirm the prediction before a speedup is claimed.
+Rust jobs waited `220s` to `241s`. A lifecycle `max-parallel: 10` cap was
+tried first. Hosted runs at `1cee495` passed without retries: CodeQL
+`39154660841` in `17m28s` (Kotlin preparation waited `8s`), Rust
+`39154660762` in `2m09s` and lifecycle `39154660809` in about `11m`.
+That is one sample, not a cold/warm comparison.
+
+The owner then asked for every PR to finish within 10 minutes and selected
+path-scoped strict Kotlin scans. No preparation, preflight or in-cell
+compilation change can meet that budget: the frozen preparation, fresh
+generator build, tracing and analysis alone exceed it. Therefore:
+
+- Move the strict lane and its result upload unchanged into
+  [`codeql-kotlin.yml`](../../.github/workflows/codeql-kotlin.yml). It keeps
+  the `/language:java-kotlin` category, upload policy, `main` pushes, weekly
+  scans and manual dispatch without filters. Pull requests run it only when
+  they change `proofs/bindings/**`, the three owning workflows,
+  `rust-toolchain.toml` or `.gitattributes`. The fixture is self-contained
+  and reads no other repository path. `test_codeql_kotlin_triggers.py` fails
+  if a reachable workflow references an uncovered path or if pushes or
+  scheduled scans become filtered. Changes to the hosted runner image or
+  pinned downloads are still caught by the unfiltered `main` and weekly runs.
+- Run the Actions, Python and Rust analyses with the action's default
+  threads and RAM instead of the strict cell's `2`-thread/`2 GiB` bound,
+  which had been copied without a hosted rationale. Rust query evaluation
+  took `377s` on 2 of the runner's 4 CPUs. Suites, languages, build mode,
+  threat model and upload/processing gates are unchanged.
+- Remove the lifecycle cap again and run the native budgets in their own
+  `native-budgets` cell; see
+  [ADR 0010](0010-compositional-lifecycle-verification.md#separate-native-budget-cell-2026-10-18).
+
+A FIFO simulation over measured durations predicts about 8.6 to 8.9
+minutes for a PR that does not touch strict-lane inputs. PRs that do touch
+them remain bounded by the unchanged strict lane, about 17 to 20 minutes.
+Hosted timings must confirm this before a speedup is claimed.
 
 ## Action release refresh (2026-10-16)
 

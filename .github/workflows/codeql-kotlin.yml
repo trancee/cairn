@@ -1,0 +1,67 @@
+name: CodeQL strict Kotlin
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: Upload verified analyses after default-setup cutover
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+  # The strict cell builds only the self-contained binding fixture. Every
+  # repository input it reads is listed here; test_codeql_kotlin_triggers.py
+  # fails when a reachable workflow references an uncovered path.
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/codeql-kotlin.yml
+      - .github/workflows/apple-toolchain-preparation.yml
+      - .github/workflows/apple-isolation-probe.yml
+      - proofs/bindings/**
+      - rust-toolchain.toml
+      - .gitattributes
+  schedule:
+    - cron: '23 6 * * 2'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CODEQL_UPLOAD: ${{ ((github.event_name != 'workflow_dispatch' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')) || (github.event_name == 'workflow_dispatch' && inputs.upload)) && 'always' || 'never' }}
+
+jobs:
+  kotlin-analysis:
+    uses: ./.github/workflows/apple-toolchain-preparation.yml
+    with:
+      codeql: true
+  kotlin-results:
+    name: CodeQL (compiled Kotlin results)
+    needs: kotlin-analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    steps:
+      - name: Check out the analyzed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Receive same-run strict-cell results
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: apple-codeql-analysis
+          path: ${{ runner.temp }}/kotlin-results
+      - name: Upload only mapped Kotlin SARIF
+        if: ${{ env.CODEQL_UPLOAD == 'always' }}
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          sarif_file: ${{ runner.temp }}/kotlin-results/java-kotlin.sarif
+          category: /language:java-kotlin
+          wait-for-processing: true

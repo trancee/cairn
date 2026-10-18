@@ -292,8 +292,11 @@ replacement scan or Android packaging
 proof; default Actions/Python/Rust scanning stays enabled. See
 [ADR 0015](../../../docs/adr/0015-build-backed-kotlin-codeql.md).
 
-The staged `.github/workflows/codeql.yml` runs existing Actions/Python/Rust
-default suites and calls this strict Kotlin lane. A manual `upload=false`
+`.github/workflows/codeql.yml` runs existing Actions/Python/Rust default
+suites; `.github/workflows/codeql-kotlin.yml` calls this strict Kotlin lane.
+PRs run it only when strict-lane inputs change; `main` pushes, weekly and manual
+runs are unfiltered. `test_codeql_kotlin_triggers.py` fails if a referenced
+repository path escapes that filter. A manual `upload=false`
 dispatch validates without publishing scans while default setup stays enabled.
 Feature branches without a PR use manual dispatch; main pushes, PRs targeting
 main and weekly runs remain automatic. Feature pushes no longer duplicate a
