@@ -21,6 +21,10 @@ jobs:
     timeout-minutes: 15
     strategy:
       fail-fast: false
+      # The account runs at most 20 jobs at once. Leave slots for the
+      # strict Kotlin CodeQL and Rust macOS jobs; the matrix order starts the
+      # longest core lifecycle cell first.
+      max-parallel: 10
       matrix:
         include:
           - name: lifecycle

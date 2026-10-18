@@ -111,7 +111,11 @@ File contents are read in 1 MiB chunks; the manifest is emitted after every
 selected file has been hashed successfully.
 
 The workflow's independent `shasum -a 256 --check` gates remain unchanged for
-tools, Gradle, Cargo and Native inputs after the bounded cell. No check,
+tools, Gradle, Cargo and Native inputs after the bounded cell.
+`verify-frozen-inputs.py --root ROOT --jobs N --check MANIFEST LOG ...` runs
+those same checks over contiguous manifest chunks in parallel and writes each
+log byte-identical to a serial check; any failed chunk fails the step after
+every log is written. No check,
 fresh compilation, archive verification, resource limit or copy/permission
 operation is removed. Nothing is cached by this change.
 

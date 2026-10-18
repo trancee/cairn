@@ -1015,6 +1015,14 @@ gates are unchanged. See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md#
 Publication was initially kept local; the owner approved this scheduling
 change and bounded same-VM Cargo reuse validation on 2026-10-14.
 
+The lifecycle matrix runs at most 10 cells at once so the account's
+20-job limit leaves slots for the strict Kotlin CodeQL lane, the measured
+critical path, and the Rust macOS jobs. The four post-cell frozen-input
+`shasum --check` gates run as parallel contiguous chunks with byte-identical
+logs. See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md#runner-slot-scheduling-2026-10-18)
+and [ADR 0014](docs/adr/0014-hosted-apple-isolation-probes.md#parallel-post-cell-integrity-verification);
+hosted timings are pending.
+
 Setup caches contain version-keyed host tool binaries, lockfile-keyed Cargo
 registry downloads and pinned proof archives. Proof archives are checksum
 verified after every restore. Cache misses install the same pinned tools.

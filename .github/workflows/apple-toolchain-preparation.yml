@@ -122,18 +122,13 @@ jobs:
             /bin/bash proofs/bindings/apple/run-resource-probes.sh \
             "$RUNNER_TEMP/apple-preparation" /opt/cairn-apple-tools \
             2>&1 | tee "$RUNNER_TEMP/apple-preparation/toolchain-cell.log"
-          (cd /opt/cairn-apple-tools && shasum -a 256 --check \
-            "$RUNNER_TEMP/apple-preparation/toolchains.sha256") \
-            > "$RUNNER_TEMP/apple-preparation/toolchain-integrity.log"
-          (cd /opt/cairn-apple-tools && shasum -a 256 --check \
-            "$RUNNER_TEMP/apple-preparation/gradle-dependencies.sha256") \
-            > "$RUNNER_TEMP/apple-preparation/gradle-integrity.log"
-          (cd /opt/cairn-apple-tools && shasum -a 256 --check \
-            "$RUNNER_TEMP/apple-preparation/cargo-inputs.sha256") \
-            > "$RUNNER_TEMP/apple-preparation/cargo-integrity.log"
-          (cd /opt/cairn-apple-tools && shasum -a 256 --check \
-            "$RUNNER_TEMP/apple-preparation/native-inputs.sha256") \
-            > "$RUNNER_TEMP/apple-preparation/native-integrity.log"
+          preparation="$RUNNER_TEMP/apple-preparation"
+          "$(xcrun --find python3)" -I proofs/bindings/apple/verify-frozen-inputs.py \
+            --root /opt/cairn-apple-tools --jobs "$(sysctl -n hw.ncpu)" \
+            --check "$preparation/toolchains.sha256" "$preparation/toolchain-integrity.log" \
+            --check "$preparation/gradle-dependencies.sha256" "$preparation/gradle-integrity.log" \
+            --check "$preparation/cargo-inputs.sha256" "$preparation/cargo-integrity.log" \
+            --check "$preparation/native-inputs.sha256" "$preparation/native-integrity.log"
       - name: Record same-run simulator payload provenance
         if: ${{ !inputs.codeql }}
         run: |

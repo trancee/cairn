@@ -272,6 +272,20 @@ Checksum-verified download reuse and
 avoiding repeated export/precomputation are separate potential optimizations,
 not implemented or measured improvements here.
 
+### Runner-slot scheduling (2026-10-18)
+
+The public user-owned repository runs at most 20 hosted jobs at once. At
+`09274a1` the three workflows requested about 37 jobs together, peaking at
+exactly 20; the 19-cell lifecycle matrix occupied the slots that the strict
+Kotlin preparation and Rust macOS jobs needed once they became ready.
+Kotlin preparation waited `141s` after its benign preflight and the macOS
+Rust jobs waited `220s` to `241s`. A FIFO simulation using measured job
+durations predicts the Kotlin lane drops from about 24.8 to 22.2 minutes
+with lifecycle `max-parallel: 10`, while lifecycle stays near 9.9 minutes.
+Apply only that cap: every lifecycle cell, its order, runner, timeout and
+gate is unchanged, and no workflow is skipped by path or event. Hosted
+timings must confirm the prediction before a speedup is claimed.
+
 ## Action release refresh (2026-10-16)
 
 The owner requested updating all GitHub Actions to their latest versions.

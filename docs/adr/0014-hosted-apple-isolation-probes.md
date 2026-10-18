@@ -1542,3 +1542,29 @@ hosted busy-eject root cause or first-attempt reliability. Migration changes
 only internal diagnostics/tests and their reference; the caller, five-/15-second
 windows, sandbox/PF/resource controls and every integrity/result gate remain
 unchanged. Updated-source hosted acceptance is separate and recorded by PR #9.
+
+## Parallel post-cell integrity verification
+
+On 2026-10-18 the owner requested faster CI without weakening any gate.
+CodeQL run `39148931733` at `8e66ebb` spent `73.6s` after the strict cell
+in the four serial `shasum -a 256 --check` gates (80,635 tool, 647 Gradle,
+6,875 Cargo and 297 Native records); the cell itself took about 11 minutes.
+
+Run the same independent native `/usr/bin/shasum -a 256 --check` from the
+unchanged `/opt/cairn-apple-tools` root through
+`verify-frozen-inputs.py`. It splits each existing manifest into contiguous
+line chunks, verifies them on `hw.ncpu` workers and concatenates standard
+output in manifest order, so every retained integrity log is byte-identical
+to one serial check. All four logs are written before any failure is
+reported; any mismatched, missing or unreadable file and an empty manifest
+still fail the step. Tests compare actual logs against serial `shasum` output
+and cover tampering, deletion, empty manifests, one worker and invalid
+worker counts. On a local 1.3 GB, 515-file Rust tree with three workers,
+the check took `2.84s` instead of `5.14s` with an identical log. That is local
+component evidence, not a hosted end-to-end speedup.
+
+No manifest, verifier algorithm, root, record, cell boundary, compilation,
+cache or resource ceiling changes. Prebuilding or caching the in-cell
+`cargo install` of the Ubique generator (about 229 seconds) is again rejected,
+because the owning offline task must compile it fresh inside the cell.
+Sequential benign preflight before preparation remains required.
