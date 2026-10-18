@@ -58,6 +58,229 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Certified full-AST sorted AC families (2026-10-18)
+
+The natural-system and principal-sort layers below left general generation
+conditional. Complete Task 2 with an actual finite generator over every
+`NativeEquationSystem`, including mixed-sort, controlled-kind and free-framing
+inputs, while retaining the five existing sorted assignment-value classes.
+The earlier component-only completion statuses below are historical.
+
+Enumerate exact-length bounded labels over the original source-subterm table.
+Keep equation-root equality and consistent fixed heads/ordered children;
+compile addition and frozen source markers to the actual complete nonempty
+natural subsolver. Render all markers/classes and original variable bindings.
+Recursion removes the current marker from its available list, establishing
+termination. Independently interpret successful outputs to prove raw soundness,
+without a solved-equation output filter.
+
+For completeness, build finite source classes and atom models from an arbitrary
+solution. Natural-family completeness supplies actual auxiliary candidates.
+Strict decoded function-count descent proves every required marker renders,
+and exact plan congruence transfers semantic labels to an enumerated lookup
+table. These mathematical quotient representatives do not enter executable
+generation. Requiring a caller-supplied complete raw family or an assumed
+acyclic ordering would leave the requested theorem conditional.
+
+Enumerate principal-sort residual retypings and check each whole binding list.
+Every sorted solution factors through an emitted sorted candidate on the
+original input-variable scope, with a globally sorted postfactor. Separately
+prove that no variable in any generated binding image uses an original input
+index, even at a different sort. Introducing empty naturals, broadening
+assignment-value sorts or accepting unsorted postfactors would change the
+contract. The research enumerator can be very expensive; it supplies no native
+performance or minimal-family claim.
+
+The exact unrestricted completeness target and fresh-residual theorem have
+their intended missing-theorem reds. Public missing-report controls are red
+before registration and green afterward. An actual definitions-only compile
+also exposes the old assumption that every module prints a theorem report;
+the public tool fixture reproduces it before the narrow orchestration fix.
+Definitions-only modules still compile with warnings as errors, while every
+declared theorem report remains mandatory and uses the unchanged axiom allowlist.
+Fresh strict Lean passes 453 audits (30 axiom-free, no `sorryAx`) and 39 case
+modules. All 43 public equation-command fixture controls pass. Twelve executable
+general-family cases and non-vacuous mixed-constructor/kind/framing existence
+controls accompany the unrestricted contract and fresh-variable invariant.
+
+Keep production audit metadata separate from independent literal fixture
+transcripts. The existing checker/public process suite and legacy fixture
+inventory retain their cohesive orchestration/oracle responsibilities above
+the 300-line recommendation but below the 500-line maximum; new modules stay
+below 300. Synchronize the reference, environment, project and issue record.
+Task 2's modeled generator is complete; real native source/export/replay/runtime,
+algorithm/importer correspondence and narrowing/FVP remain deferred/open.
+No protocol/API/wire, dependency, native gate, deadline, resource ceiling,
+merge authorization or SDK activation changes.
+
+### Certified residual sort refinement (2026-10-18)
+
+Rejecting a template before substitution loses valid solutions: a message
+variable beneath natural addition may receive a natural value. Compile the
+full raw AST to finite sort-intersection requirements and prove their exact
+equivalence to post-substitution value sorting under globally sorted assignments.
+This does not require the original input context to be a proper value.
+
+Choose a proper value's most specific modeled sort by executable checks in
+public/fresh/natural/message/Node order. Prove that replacing the value by
+a variable of that principal sort preserves and reflects every value-sort test.
+The finite requirement theorem then transports this agreement through arbitrary
+templates. Choosing message for every residual would admit invalid natural
+or fresh instantiations; treating framing or controlled-kind expressions as
+new assignment-value sorts would change the contract.
+
+Missing-characterization kernel reds and mandatory-report command reds precede
+the implementations. Fresh strict Lean passes 331 audits (29 axiom-free, none
+using `sorryAx`) and 38 case modules; all 42 public command fixture controls pass.
+Cases retain all five sorts and reject malformed value shapes while allowing
+message-to-natural refinement. The independent literal fixture transcript
+remains one cohesive test oracle above the 300-line recommendation and below
+500, rather than importing acceptance metadata and making the test tautological.
+All new proof/case modules remain below 300 lines.
+
+This supplies exact sort abstraction, not the complete combined generator.
+General mixed-sort/controlled-kind/free-constructor soundness, factorization
+completeness and combined termination remain open. Earlier natural-system
+and homogeneous milestones below remain historical. Existing reference,
+environment, project and issue documentation record the same current scope.
+Native source/export/replay/runtime work stays deferred; no protocol/API/wire,
+dependency, resource ceiling, default gate, merge or SDK activation changes.
+
+### Certified finite native natural systems (2026-10-18)
+
+The homogeneous word layer alone does not produce native bindings or account
+for constants. Enumerate inactive, rigid-singleton and residual choices over
+the actual finite matrix basis. Nonempty images and exact rigid columns retain
+the nonempty semigroup contract; every solution factors through this generated
+family with a globally nonempty factor fixing constants.
+
+Allocate residual natural indices above all input live indices, prove their
+range/injectivity on basis members, and reuse the exact existing atom decoder.
+Extract concrete live/rigid columns and signed rows from natural equations;
+prove row balancing equivalent to the actual simultaneous substituted
+equations. Decode every candidate image as one operation. Prove this cannot
+fail for valid candidates, then prove actual finite native binding-family
+soundness and scoped completeness with globally sorted postfactors.
+Rigid parity and basis-member injectivity prevent constant/residual confusion.
+
+Treating rigid columns as unconstrained variables, introducing an empty natural
+term, silently omitting failed bindings or factoring through unsorted native
+assignments would not preserve the contract. Mathematical witness selection
+uses only the permitted standard axioms; executable generation uses no
+arithmetic oracle or classical choice. Finite enumeration can be large, so
+this supplies no efficiency or native implementation-performance claim.
+
+The actual native-family completeness target was red for a missing theorem
+before implementation. New mandatory audit omissions also fail before the
+gate is wired and pass afterward. Fresh strict Lean passes 320 audits
+(29 axiom-free, no `sorryAx`) and 36 case modules; all 42 public command
+fixture controls pass. Computed controls include rigid/native-index collisions,
+fresh residuals, nonempty impossibility, seven branches and empty scope.
+General mixed-sort/controlled-kind/free-constructor AC generation and combined
+termination/completeness remain open: Task 2 is not complete.
+
+Move additive report-name metadata and independent omission scenarios out of
+the near-limit checker/test files, preserving exact prior report/build/case
+inventories and omission scenarios before extending them. Keep build-order
+orchestration and public process controls together: their single acceptance
+boundary justifies the remaining deviation from the 300-line recommendation,
+below the 500-line maximum. New proof/metadata files remain below 300 lines.
+Existing docs are updated to the new scope; native Tamarin/Maude/source-export/
+replay/runtime, all default gates, protocol/API/wire, dependencies, resource
+ceilings, merge authorization and SDK activation remain unchanged.
+
+### Certified homogeneous semigroup families (2026-10-18)
+
+General AC generation needs an actual finite arithmetic generator rather than
+a supplied completeness hypothesis. Independently prove bounded zero-sum
+extraction by keeping prefix sums in a finite integer interval. Enumerate
+bounded words for one row, intersect rows recursively, and prove that
+permutation/decomposability pruning preserves coverage after each row.
+Words retain nonnegative multiplicities without a new vector or arithmetic
+dependency. The actual definitions are executable and structurally total;
+classical choice appears only in proofs.
+
+Enumerate active basis subsets and reject empty column images. Prove every
+candidate satisfies every homogeneous row and every nonempty word-valued
+solution factors on the original alphabet through globally nonempty factors.
+This avoids importing monoid zero into natural substitutions. A separate
+residual namespace prevents original/residual aliasing at this word layer,
+but is not yet a native-index allocation. Unguarded optional empty natural
+images, an assumed finite arithmetic oracle, and treating this as a complete
+sorted native solver would change or overstate the contract. Worst-case
+enumeration remains potentially large; no efficiency claim is made.
+
+Intended kernel missing-generator/completeness/soundness and public
+missing-audit reds precede implementation. Fresh strict Lean passes 263
+audits (29 axiom-free, no `sorryAx`) and 31 case modules; all 42 public
+equation-command fixture controls pass, including required audit omissions.
+The 201-model-test inventory was collected, not executed in full. Rigid-column
+choices, sorted finite bindings/fresh native indices and combined solver
+termination/completeness remain open: Task 2 is not complete.
+The source-size justification at this checkpoint is superseded by the
+responsibility split in the native-system increment above.
+New proof modules stay below 300 lines.
+Native Tamarin/Maude/source-export/replay/runtime remain deferred. No dependency,
+protocol, API, wire, runtime budget, gate, merge or SDK activation changes.
+
+### Exact nonempty natural multiplicities (2026-10-18)
+
+General sorted AC generation first needs an exact additive representation,
+not merely the existing termination weight. Encode literal `one` separately
+from every labeled leaf, flatten addition to a nonempty list, and prove AC
+equivalent to list permutation and to equality of every code's multiplicity.
+Reduce actual simultaneous natural substitution to finite occurrence-form
+linear counts, preserving repetitions, frozen rigid labels and residual atoms
+absent from the input. Reuse the pinned Lean standard library; add no
+proof/runtime dependency.
+
+A weight-only representation loses labels and repetitions. A monoid encoding
+that admits an empty substitution changes the theory. Private optional folds
+are proof scaffolding only: every public term still has a nonempty list.
+The count characterization inherits the standard library theorem's allowed
+classical axioms; the representation functions are executable without them.
+
+The public missing-audit and real kernel missing-equivalence reds precede
+implementation. The linearization increment also has its intended public
+missing-audit and kernel missing-equivalence reds. Fresh strict Lean checks
+accept 225 audits (29 axiom-free, no `sorryAx`) and 28 case modules; all 41
+public equation-command fixture controls pass. This establishes
+representation and exact constraints, not a general generator:
+finite additive bases, sorted residual-variable candidates, combined
+termination and finite-family completeness remain open. Native source/export/
+replay and runtime work stay deferred with all default gates unchanged.
+No protocol, public SDK API, wire, dependency, budget or activation changes.
+Extend the existing checker and public command suite rather than create a
+parallel acceptance path; their 391/466 lines exceed the 300-line preference
+but remain below the 500-line hard limit. New proof modules remain below 300.
+
+### Independent free-constructor systems (2026-10-18)
+
+The owner prioritizes finite-system/free-constructor proofs and general sorted
+AC generation, explicitly deferring Maude/Tamarin acceptance and runtime
+diagnosis. Extend the existing kernel-checked system interface rather than
+changing a native equation, saved certificate or proof gate.
+
+Structural AC preserves exact heads and ordered free children. Decompose
+matching unary/binary/`kdf`/`list`/`cons` equations without changing the original
+explicit coverage scope or candidate family. Different substitution-stable
+heads give a complete empty AC family; query-variable heads do not. Natural
+addition is excluded from ordered decomposition. The constructor-step relation
+strictly decreases system function count and is therefore well-founded.
+
+Treating addition as ordered, rejecting from a variable's pre-substitution
+head, or interpreting AC-only clashes as equational unsatisfiability would be
+unsound. General additive generation and termination of a combined solver
+remain separate obligations, not consequences of this constructor measure.
+
+The public missing-audit red and real kernel missing-decomposition/termination
+reds precede their implementations. Fresh independent Lean checks accept
+219 audits (29 axiom-free, no `sorryAx`) and 26 case modules; all 39 public
+equation-command fixture controls pass. The fixture-backed command is not
+real source/export acceptance. The default command still requires its native
+checks; none is skipped or weakened. This is a local proof-only increment,
+with no wire/API, runtime dependency, budget, merge or SDK activation change.
+
 ### Exact repeated-exchange validation (2026-10-18)
 
 The operation-evidence change at `29b7270` still fails its actual hosted

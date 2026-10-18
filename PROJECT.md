@@ -2,7 +2,7 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation; SDK/application=not implemented.
 
-## Current typed equation convergence/image evidence (2026-10-17)
+## Current typed equation convergence/image evidence (2026-10-18)
 
 The [equation checker](docs/spec/models/equations/README.md) kernel-checks
 B-coherence, global matching confluence, quotient-path confluence modulo AC
@@ -16,9 +16,9 @@ are realizable by typed matching modulo AC. Sort-separated natural/message
 substitutions commute with encoding and preserve image membership while rigid
 indices stay frozen. Free tuple/Node framing is closed under AC, rewriting and
 typed substitution, including node assignments; framing remains excluded from
-message functions. All 201 theorem audits and the kernel
-regression cases run in the existing lifecycle cell, without a new job or
-larger ceiling. Twenty-eight audits use no axioms; none uses `sorryAx`.
+message functions. All 453 theorem audits and the kernel
+regression cases are wired into the existing lifecycle cell, without a new job or
+larger ceiling. Thirty audits use no axioms; none uses `sorryAx`.
 
 The new independent native-sorted relation requires proper-`Msg` equation
 variables and AC-equivalent repeated keys instead of using unguarded shadow
@@ -58,8 +58,8 @@ family is sound and complete exactly when its typed counterpart is, and
 singleton completeness characterizes most-generality. Kernel cases distinguish
 the variable-pair MGU from a sound but incomplete ground singleton, and show
 that adding an unrelated variable would reject a valid scoped MGU.
-These are conditional completeness/most-generality transports, not a finite
-complete native generator. Every sorted solution
+These are conditional completeness/most-generality transports; the actual
+full-AST generator is established below. Every sorted solution
 now has a finite binding-list representative agreeing exactly on the input
 variables. Scoped postfactors also have finite representatives, supported on
 variables in candidate values, including residual variables absent from the
@@ -95,17 +95,76 @@ values into first-list values before appending, preserving first lookup and
 finite representation. Kernel controls reject empty-remainder false coverage
 and hidden unsorted postfactors, and exercise shared variables, AC residuals
 and reversed Fresh/message elimination. This closes a conditional composition
-layer, not automatic system solving, constructor decomposition or natural-AC
-generation. System substitution/elimination inherit existing classical choice
+layer, not automatic system solving or natural-AC generation.
+Free-constructor inversion now lifts to complete system families with the
+original explicit scope retained. Ordered unary/binary/`kdf`/`list`/`cons`
+decomposition is well-founded by decreasing system function count.
+Different fixed heads reject modulo AC, but variables and natural addition
+are not treated as free ordered constructors. Rejection modulo AC does not
+reject equality modulo the six rewrite equations. Fresh independent Lean
+checks pass all 453 audits and 39 case modules; 43 public equation-checker
+controls use maintained tool fixtures. Real Tamarin/Maude source/export/replay
+acceptance and runtime diagnosis are explicitly deferred by the owner, with
+their default gates unchanged. Natural AC now has an exact computable
+nonempty atom-list representation and a proved equivalence with pointwise
+multiplicity equality, preserving literal `one` versus labels and repetitions.
+No empty/zero term is introduced.
+Substitution now reduces exactly to finite occurrence-form linear counts,
+retaining repeated-variable coefficients, frozen rigid labels and residual
+atoms absent from the input. This is a constraint characterization, not a
+candidate generator by itself.
+An executable finite homogeneous integer-matrix basis now has unconditional
+soundness and decomposition completeness, including zero/negative coefficients
+and primitive pruning after every row. Its independently proved finite bound
+comes from bounded zero-sum words, not an assumed arithmetic oracle. Actual
+finite homogeneous semigroup candidate families are nonempty, sound and
+complete; every nonempty solution factors on the explicit input scope through
+globally nonempty residual assignments. Residual names are basis words in a
+separate namespace. Rigid-column families now enumerate inactive, ground and
+residual choices, preserve singleton constants and factor every nonempty
+solution. Fresh native indices are bounded and injective on the generated
+basis. Exact nonempty decoding constructs actual finite native bindings;
+concrete signed rows characterize proper-natural system solutions exactly.
+The actual native natural-system generator is unconditionally sound and
+complete on the original input scope, with globally sorted residual
+postfactors. It rejects no valid candidate during decoding. These results
+cover arbitrary finite proper-natural equation systems and supply the subsolver
+for the general full-AST generator below. Executable finite sort
+requirements now characterize post-substitution value sorts over the full raw
+native AST, including message variables that refine to natural values.
+An executable principal-sort classifier replaces each proper value with a
+variable preserving every modeled sort test. Pointwise agreement on these
+sort tests preserves and reflects value sorting through arbitrary native
+templates. The actual finite `nativeSortedACSystemBindingFamily` now has
+unconditional soundness and completeness for every finite `NativeEquationSystem`
+over the full modeled frozen-index AST, including mixed sorts, controlled-kind
+inputs and free framing. Exact-length source-label enumeration compiles each
+consistent plan to the complete nonempty natural subsolver. Marker rendering
+terminates by the available-marker count; strict decoded function-count descent
+proves successful rendering for every solution-derived plan. Finite residual
+retyping preserves all sorted solutions and supplies globally sorted postfactors.
+Every solution factors through a generated candidate on the original input
+variables. Every generated binding image uses residual indices absent from all
+original variable indices, across sorts. No empty natural value, assumed
+complete raw solver or output-equation filtering is used. This completes
+Task 2's modeled general sorted AC generator, not native algorithm
+correspondence, equality modulo the six rewrite equations or narrowing/FVP.
+The executable research enumerator may be very expensive; no efficiency,
+minimal-family or runtime-performance claim is made.
+The count equivalence inherits classical choice from the standard library's
+permutation/count theorem; representation, nonemptiness and addition counts
+use only `propext`. System substitution/elimination inherit existing classical choice
 through sorted composition; the binding-list construction does not need it.
 Native algorithm,
 runtime finite-support/occurs-check/fresh-namespace correspondence, narrowing/FVP and
 importer correctness remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
-the current gates run 37 native CLI/197 model/50 lifecycle tests plus native
-clock/validation unit tests, 43 projections and all 201 audits. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
-record authoritative current-head hosted results. These equation proofs change no native guard source-ID input,
+the maintained inventories include 37 native CLI/202 model/50 lifecycle tests plus native
+clock/validation unit tests, 43 projections and all 453 audits. The 202 model tests
+were collected, not all executed for this increment. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
+record authoritative published-head hosted results, not acceptance of these local proof increments.
+These equation proofs change no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
 
 ## Native budget diagnosis (2026-10-16)

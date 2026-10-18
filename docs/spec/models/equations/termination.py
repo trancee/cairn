@@ -9,6 +9,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from equations import additive_audits, general_audits
 from equations.signature import lean_correspondence, reviewed_signature
 from equations.maude_runner import run_guarded_tamarin
 from proof_tools import check_axioms, check_tamarin_version
@@ -212,13 +213,48 @@ QUERY_VARIABLE_GENERATION_THEOREMS = (
 QUERY_SYSTEM_THEOREMS = (
     "native_system_cons_iff", "native_system_singleton_complete_iff",
     "native_system_substitution_iff", "native_system_assignment_ac",
+    "native_system_assignment_eq_on",
     "native_system_empty_complete", "native_system_reflexive_complete_iff",
     "native_ac_instance_prefix", "native_system_swap_complete_iff",
 )
+QUERY_SORT_INTERSECTION_THEOREMS = (
+    "native_sorted_value_check_iff", "native_sort_intersection_iff",
+)
+QUERY_SORT_SHAPE_THEOREMS = (
+    "native_sorted_add_shape", "native_sorted_unary_shape",
+    "native_sorted_binary_shape", "native_sorted_kdf_shape",
+)
+QUERY_SORT_REQUIREMENT_THEOREMS = (
+    "native_sort_requirements_append_iff", "native_ground_sort_requirements_iff",
+)
+QUERY_SORT_REFINEMENT_THEOREMS = ("native_sort_requirements_iff",)
+QUERY_PRINCIPAL_SORT_THEOREMS = ("native_principal_sort_iff",)
+QUERY_SORT_FINGERPRINT_THEOREMS = ("native_sort_fingerprint_substitution",)
 QUERY_SYSTEM_BINDING_THEOREMS = (
     "native_bindings_composition", "native_finite_assignment_composition",
     "native_system_variable_elimination", "native_system_reversed_variable_elimination",
     "native_system_single_binding_complete", "native_system_occurs_complete_empty_family",
+)
+QUERY_CONSTRUCTOR_THEOREMS = (
+    "native_query_ac_head", "native_query_ac_free_children", "native_query_ac_constructor_iff",
+    "native_ac_unary_iff", "native_ac_binary_iff", "native_ac_kdf_iff",
+    "native_ac_list_iff", "native_ac_cons_iff",
+)
+QUERY_CONSTRUCTOR_SYSTEM_THEOREMS = (
+    "native_system_unary_decomposition", "native_system_binary_decomposition",
+    "native_system_kdf_decomposition", "native_system_list_decomposition",
+    "native_system_cons_decomposition", "native_substitution_fixed_head",
+    "native_system_constructor_clash",
+    "native_constructor_decomposition_complete", "native_constructor_decomposition_decreases",
+    "native_constructor_decomposition_termination",
+)
+NATURAL_MULTIPLICITY_THEOREMS = (
+    "natural_atom_codes_nonempty", "natural_ac_atoms_iff",
+    "natural_ac_multiplicity_iff", "natural_multiplicity_add",
+    "natural_codes_decode_empty", "natural_codes_decode_exact", "natural_codes_decode_exists",
+)
+NATURAL_LINEARIZATION_THEOREMS = (
+    "natural_linear_count_substitution", "natural_linear_unifier_iff",
 )
 
 
@@ -284,15 +320,60 @@ def main() -> int:
                 ("QueryVariableBindings", QUERY_VARIABLE_BINDING_THEOREMS),
                 ("QueryVariableGeneration", QUERY_VARIABLE_GENERATION_THEOREMS),
                 ("QuerySystems", QUERY_SYSTEM_THEOREMS),
+                ("QuerySortIntersection", QUERY_SORT_INTERSECTION_THEOREMS),
+                ("QuerySortShapes", QUERY_SORT_SHAPE_THEOREMS),
+                ("QuerySortRequirements", QUERY_SORT_REQUIREMENT_THEOREMS),
+                ("QuerySortRefinement", QUERY_SORT_REFINEMENT_THEOREMS),
+                ("QueryPrincipalSort", QUERY_PRINCIPAL_SORT_THEOREMS),
+                ("QuerySortFingerprint", QUERY_SORT_FINGERPRINT_THEOREMS),
                 ("QuerySystemBindings", QUERY_SYSTEM_BINDING_THEOREMS),
+                ("QueryConstructors", QUERY_CONSTRUCTOR_THEOREMS),
+                ("QueryConstructorSystems", QUERY_CONSTRUCTOR_SYSTEM_THEOREMS),
+                ("NaturalMultiplicity", NATURAL_MULTIPLICITY_THEOREMS),
+                ("NaturalLinearization", NATURAL_LINEARIZATION_THEOREMS),
+                ("IntegerWords", additive_audits.INTEGER_WORD_THEOREMS),
+                ("IntegerZeroSum", additive_audits.INTEGER_ZERO_SUM_THEOREMS),
+                ("IntegerWordBasis", additive_audits.INTEGER_ROW_BASIS_THEOREMS),
+                ("IntegerWordInclusion", additive_audits.INTEGER_INCLUSION_THEOREMS),
+                ("IntegerWordPruning", additive_audits.INTEGER_PRUNING_THEOREMS),
+                ("IntegerBasisCompleteness", additive_audits.INTEGER_PRUNING_COMPLETENESS_THEOREMS),
+                ("IntegerBasisExtension", additive_audits.INTEGER_EXTENSION_THEOREMS),
+                ("IntegerMatrixBasis", additive_audits.INTEGER_MATRIX_THEOREMS),
+                ("IntegerWordExpansion", additive_audits.INTEGER_EXPANSION_THEOREMS),
+                ("IntegerWordMixture", additive_audits.INTEGER_MIXTURE_THEOREMS),
+                ("IntegerWordLinear", additive_audits.INTEGER_LINEAR_THEOREMS),
+                ("IntegerMatrixFactors", additive_audits.INTEGER_FACTOR_THEOREMS),
+                ("IntegerWordFamily", additive_audits.INTEGER_SELECTION_THEOREMS),
+                ("IntegerMixtureAlgebra", additive_audits.INTEGER_MIXTURE_ALGEBRA_THEOREMS),
+                ("IntegerMixtureSoundness", additive_audits.INTEGER_MIXTURE_SOUNDNESS_THEOREMS),
+                ("IntegerFamilySoundness", additive_audits.INTEGER_FAMILY_SOUNDNESS_THEOREMS),
+                ("IntegerFamilyCompleteness", additive_audits.INTEGER_FAMILY_COMPLETENESS_THEOREMS),
+                ("IntegerMixtureComponents", additive_audits.INTEGER_COMPONENT_THEOREMS),
+                ("IntegerMixtureTransport", additive_audits.INTEGER_MIXTURE_TRANSPORT_THEOREMS),
+                ("IntegerRigidFamily", additive_audits.INTEGER_RIGID_CANDIDATE_THEOREMS),
+                ("IntegerRigidAssignments", additive_audits.INTEGER_RIGID_ASSIGNMENT_THEOREMS),
+                ("IntegerRigidWitness", additive_audits.INTEGER_RIGID_WITNESS_THEOREMS),
+                ("IntegerRigidCompleteness", additive_audits.INTEGER_RIGID_COMPLETENESS_THEOREMS),
+                ("IntegerRigidSoundness", additive_audits.INTEGER_RIGID_SOUNDNESS_THEOREMS),
+                ("IntegerRigidScope", additive_audits.INTEGER_RIGID_SCOPE_THEOREMS),
+                ("NaturalResiduals", additive_audits.NATURAL_RESIDUAL_THEOREMS),
+                ("NaturalColumns", additive_audits.NATURAL_COLUMN_THEOREMS),
+                ("NaturalSystemFamily", additive_audits.NATURAL_SYSTEM_GENERATOR_THEOREMS),
+                ("NaturalBindings", additive_audits.NATURAL_BINDING_THEOREMS),
+                ("NaturalAtomSubstitution", additive_audits.NATURAL_ATOM_SUBSTITUTION_THEOREMS),
+                ("NaturalSystemScope", additive_audits.NATURAL_SYSTEM_SCOPE_THEOREMS),
+                ("NaturalSystemRealization", additive_audits.NATURAL_SYSTEM_REALIZATION_THEOREMS),
+                ("NaturalSystemCompleteness", additive_audits.NATURAL_SYSTEM_COMPLETENESS_THEOREMS),
+                *general_audits.MODULES,
             ):
                 output = run([
                     *environment, arguments.lean, "-DwarningAsError=true",
                     "-o", str(build / f"{module}.olean"), str(here / f"{module}.lean"),
                 ], 120)
-                check_axioms(
-                    output, tuple(f"Cairn.Equations.{name}" for name in theorems),
-                )
+                if theorems:
+                    check_axioms(
+                        output, tuple(f"Cairn.Equations.{name}" for name in theorems),
+                    )
                 outputs.append(output.strip())
             for module in (
                 "CoherenceCases", "BoundednessCases", "ConfluenceCases", "QueryImageCases",
@@ -311,7 +392,21 @@ def main() -> int:
                 "QueryOccursCases",
                 "QueryVariableBindingCases",
                 "QuerySystemCases",
+                "QuerySortRequirementCases",
+                "QueryPrincipalSortCases",
                 "QuerySystemBindingCases",
+                "QueryConstructorCases",
+                "NaturalMultiplicityCases",
+                "NaturalCodeCases",
+                "NaturalLinearizationCases",
+                "IntegerWordCases",
+                "IntegerFactorCases",
+                "IntegerFamilyCases",
+                "IntegerRigidCases",
+                "NaturalResidualCases",
+                "NaturalColumnCases",
+                "NaturalSystemCases",
+                "QueryGeneralCases",
             ):
                 run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -348,7 +443,19 @@ def main() -> int:
         print("PASS: sort-compatible occurs-free variable bindings construct finite complete AC-unifier families.")
         print("PASS: proof-carrying variable equations generate complete finite binding families.")
         print("PASS: finite equation systems preserve scoped AC solutions and residual factorization.")
+        print("PASS: finite sort requirements exactly characterize sorted substitutions over the full native AST.")
+        print("PASS: principal residual sorts preserve every value-sort test through full-AST substitution.")
         print("PASS: finite binding composition and variable elimination preserve complete system families.")
+        print("PASS: free-constructor decomposition and fixed-head clashes preserve complete system families.")
+        print("PASS: natural AC equivalence is exactly equality of nonempty atom multiplicities.")
+        print("PASS: natural substitutions solve AC exactly when their finite linear counts agree.")
+        print("PASS: finite integer-matrix bases generate every homogeneous nonnegative solution.")
+        print("PASS: homogeneous semigroup candidates are nonempty, sound and complete with nonempty factors.")
+        print("PASS: rigid-column semigroup families preserve constants with complete nonempty factorization.")
+        print("PASS: residual Nat indices are fresh, bounded and distinct on the generated basis.")
+        print("PASS: concrete natural-system rows characterize sorted natural AC solutions exactly.")
+        print("PASS: natural equation systems generate sound, complete finite native sorted binding families.")
+        print("PASS: full-AST sorted AC systems generate finite complete families with fresh residuals and globally sorted postfactors.")
         print("Scope: typed image algebra + enforced native stream membership; not a native FVP certificate.")
         print("Trust boundary: Tamarin/Maude + Rust stream guard + Python evidence/signature/translation + Lean kernel.")
         return 0

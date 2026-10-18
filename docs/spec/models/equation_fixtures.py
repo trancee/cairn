@@ -1,5 +1,7 @@
 """Independent theorem-report transcripts for the public equation checker."""
 
+from equation_general_fixtures import GENERAL_REPORT_GROUPS
+
 REPORT_GROUPS = {
     "termination": (
         "natural_ac_preserves_weight", "message_ac_preserves_weight",
@@ -164,6 +166,7 @@ REPORT_GROUPS = {
     "equation-systems": (
         "native_system_cons_iff", "native_system_singleton_complete_iff",
         "native_system_substitution_iff", "native_system_assignment_ac",
+        "native_system_assignment_eq_on",
         "native_system_empty_complete", "native_system_reflexive_complete_iff",
         "native_ac_instance_prefix", "native_system_swap_complete_iff",
     ),
@@ -172,4 +175,136 @@ REPORT_GROUPS = {
         "native_system_variable_elimination", "native_system_reversed_variable_elimination",
         "native_system_single_binding_complete", "native_system_occurs_complete_empty_family",
     ),
+    "free-constructors": (
+        "native_query_ac_head", "native_query_ac_free_children", "native_query_ac_constructor_iff",
+        "native_ac_unary_iff", "native_ac_binary_iff", "native_ac_kdf_iff",
+        "native_ac_list_iff", "native_ac_cons_iff",
+    ),
+    "constructor-systems": (
+        "native_system_unary_decomposition", "native_system_binary_decomposition",
+        "native_system_kdf_decomposition", "native_system_list_decomposition",
+        "native_system_cons_decomposition", "native_substitution_fixed_head",
+        "native_system_constructor_clash",
+        "native_constructor_decomposition_complete", "native_constructor_decomposition_decreases",
+        "native_constructor_decomposition_termination",
+    ),
+    "natural-multiplicity": (
+        "natural_atom_codes_nonempty", "natural_ac_atoms_iff",
+        "natural_ac_multiplicity_iff", "natural_multiplicity_add",
+    ),
+    "natural-linearization": (
+        "natural_linear_count_substitution", "natural_linear_unifier_iff",
+    ),
+    "integer-words": (
+        "integer_word_sum_append", "integer_word_sum_permutation", "integer_word_bounded_order",
+    ),
+    "integer-zero-sum": (
+        "integer_word_bounded_zero_sum",
+    ),
+    "integer-row-basis": (
+        "integer_alphabet_bound", "integer_bounded_words_iff",
+        "integer_row_word_basis_sound", "integer_row_word_basis_complete",
+    ),
+    "integer-inclusion": (
+        "integer_word_contains_iff",
+    ),
+    "integer-pruning": (
+        "integer_word_representative_member", "integer_word_representative_complete",
+        "integer_primitive_basis_member", "integer_primitive_subword",
+    ),
+    "integer-pruning-completeness": (
+        "integer_primitive_basis_complete",
+    ),
+    "integer-extension": (
+        "integer_word_sum_flatten", "integer_basis_extension_sound", "integer_basis_extension_complete",
+    ),
+    "integer-matrix": (
+        "integer_matrix_word_basis_sound", "integer_matrix_word_basis_complete",
+    ),
+    "integer-expansion": (
+        "integer_word_erase_duplicates_unique", "integer_word_expansion_scope",
+        "integer_word_nodup_count", "integer_word_expansion_count",
+        "integer_word_expansion_zero", "integer_word_expansion_permutation",
+    ),
+    "integer-mixture": ("integer_word_mixture_count",),
+    "integer-factors": ("integer_matrix_word_factorization",),
+    "integer-selections": (
+        "integer_word_selection_scope", "integer_word_selection_filter",
+        "integer_matrix_word_family_nonempty",
+    ),
+    "integer-mixture-algebra": (
+        "integer_word_mixture_cons", "integer_word_mixture_congr",
+        "integer_word_mixture_filter_nonempty", "integer_word_mixture_bind_singletons",
+    ),
+    "integer-mixture-soundness": (
+        "integer_word_mixture_transpose", "integer_word_mixture_balanced",
+    ),
+    "integer-family-soundness": ("integer_matrix_word_family_sound",),
+    "integer-family-completeness": ("integer_matrix_word_family_complete",),
+    "integer-components": (
+        "integer_word_mixture_component", "integer_word_mixture_rigid_component",
+    ),
+    "integer-mixture-transport": (
+        "integer_word_mixture_bind", "integer_word_mixture_map", "integer_word_mixture_relevant_congr",
+    ),
+    "integer-rigid-candidates": (
+        "integer_rigid_word_family_nonempty", "integer_rigid_word_family_constants",
+    ),
+    "integer-rigid-assignments": ("integer_word_rigid_assignments_complete",),
+    "integer-rigid-witness": (
+        "integer_word_rigid_choice_allowed", "integer_word_rigid_postfactor_nonempty",
+        "integer_word_rigid_choice_instantiation", "integer_word_rigid_choice_ground",
+    ),
+    "integer-rigid-completeness": ("integer_rigid_word_family_complete",),
+    "integer-rigid-soundness": ("integer_rigid_word_family_sound",),
+    "natural-residuals": (
+        "natural_fresh_base_bound", "natural_residual_index_fresh",
+        "natural_residual_index_range", "natural_residual_index_injective",
+    ),
+    "natural-codec": (
+        "natural_codes_decode_empty", "natural_codes_decode_exact", "natural_codes_decode_exists",
+    ),
+    "integer-linear": (
+        "integer_word_sum_add", "integer_word_sum_subtract", "integer_word_sum_congr",
+        "integer_word_sum_indicator", "integer_word_count_pairing", "integer_word_flatmap_count",
+        "integer_word_equation_counts",
+    ),
+    "natural-columns": (
+        "natural_column_values_nonempty", "natural_template_column_substitution",
+        "natural_system_columns_scope", "natural_system_columns_unique",
+        "natural_system_rigid_scope", "natural_system_rigid_values", "natural_system_rows_iff",
+    ),
+    "integer-rigid-scope": (
+        "integer_word_rigid_assignments_scope", "integer_rigid_word_family_name_scope",
+        "integer_rigid_word_family_map_sound",
+    ),
+    "natural-system-generator": ("natural_system_residual_code_fresh",),
+    "natural-bindings": ("natural_bindings_encode", "natural_bindings_realization"),
+    "natural-atom-substitution": (
+        "natural_substitution_atom_codes", "natural_atom_image_rigid",
+        "natural_atom_image_variable", "natural_residual_factor_realization",
+    ),
+    "natural-system-scope": (
+        "natural_variable_indices_iff", "natural_rigid_columns_iff", "natural_system_rigid_codes_even",
+        "native_natural_variables_iff", "native_natural_system_scope", "natural_system_scope_keys",
+    ),
+    "natural-system-realization": (
+        "natural_system_candidate_realization", "natural_system_factor_realization",
+    ),
+    "natural-system-completeness": (
+        "native_natural_system_rows_iff", "native_natural_system_family_sound",
+        "native_natural_system_family_complete",
+    ),
+    "sort-intersection": ("native_sorted_value_check_iff", "native_sort_intersection_iff"),
+    "sort-shapes": (
+        "native_sorted_add_shape", "native_sorted_unary_shape",
+        "native_sorted_binary_shape", "native_sorted_kdf_shape",
+    ),
+    "sort-requirements": (
+        "native_sort_requirements_append_iff", "native_ground_sort_requirements_iff",
+    ),
+    "sort-refinement": ("native_sort_requirements_iff",),
+    "principal-sort": ("native_principal_sort_iff",),
+    "sort-fingerprint": ("native_sort_fingerprint_substitution",),
+    **GENERAL_REPORT_GROUPS,
 }

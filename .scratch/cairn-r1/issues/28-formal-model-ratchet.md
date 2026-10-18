@@ -15,6 +15,116 @@ Put the model under `docs/spec/models/`. A failing lemma reopens the relevant AD
 
 ## Comments
 
+2026-10-18: Task 2's modeled general sorted AC generator is complete.
+The actual finite `nativeSortedACSystemBindingFamily` is unconditionally sound
+and complete for every finite `NativeEquationSystem` over the full modeled
+frozen-index AST, including mixed sorts, controlled-kind inputs and free framing.
+Exact-length source-label plans use the actual complete nonempty natural
+subsolver. Marker-count recursion terminates, and strict decoded function-count
+descent proves rendering completeness. Every sorted solution factors through a
+generated candidate on the original input variables with a globally sorted
+postfactor. Every variable in a generated binding image has an index absent
+from all original input indices, across sorts.
+Fresh strict Lean passes 453 audits (30 axiom-free, no `sorryAx`) and 39 case
+modules; all 43 public equation-command fixture controls pass after intended
+missing-theorem/report reds. Twelve executable general-family controls retain
+fresh shared residuals, literal/frozen indices, sort clashes, framing, proper
+cycles, nonempty semantics and AC-versus-six-rule rejection. Larger mixed
+constructor/kind/framing existence cases use the unconditional theorem rather
+than impractical literal enumeration.
+This supersedes the component-only Task 2 statuses below, not the native gate.
+The enumerator may be very expensive and is not an efficiency/minimal-family
+result. Native Tamarin/Maude source/export/replay/runtime work remains deferred;
+native algorithm/importer correspondence and narrowing/FVP remain open.
+No protocol, API, wire, dependency, native gate, resource ceiling, merge or SDK
+activation changes.
+See the [decision](../../../docs/adr/0010-compositional-lifecycle-verification.md#certified-full-ast-sorted-ac-families-2026-10-18).
+
+2026-10-18: full raw native templates now have exact finite post-substitution
+sort requirements, including message-to-natural refinement. Executable
+principal-sort classification proves that replacing a proper value by a
+variable of that sort preserves every value-sort test. Pointwise agreement
+on those tests preserves and reflects sorting through arbitrary templates.
+Fresh strict Lean passes 331 audits (29 axiom-free, no `sorryAx`) and 38 case
+modules; all 42 public equation-command fixture controls pass after intended
+missing-theorem/report reds.
+Task 2 is still incomplete: the combined generator's general soundness,
+factorization completeness and termination have not been established.
+A private finite purification/partition/rendering prototype compiles and
+executes ten worked existence/rejection and binding-sort controls, including
+mixed constructor/AC, controlled-kind inputs and free framing. It is not wired
+into maintained acceptance and supplies no universal completeness evidence.
+Native work stays deferred; no protocol, API, wire, resource, gate, merge or
+SDK activation change.
+See the [decision](../../../docs/adr/0010-compositional-lifecycle-verification.md#certified-residual-sort-refinement-2026-10-18).
+
+2026-10-18: proper-natural equation systems now have an actual executable
+finite native binding-family generator with unconditional soundness and scoped
+completeness. Rigid-column choices preserve singleton constants; fresh native
+residual indices are bounded/injective, exact decoding never drops a valid
+candidate, and globally sorted postfactors cover residuals absent from the
+original input. Concrete signed rows characterize substituted equations exactly.
+Computed controls cover literal/frozen-index collisions, fresh `2X = 3Y`
+bindings, all seven branches of `X + Y = Z + W`, contradictory constants,
+empty systems and nonempty-semigroup impossibility. The original missing
+native-completeness theorem and new mandatory-audit reds are green.
+Fresh strict Lean passes 320 audits (29 axiom-free, no `sorryAx`) and 36 case
+modules; all 42 public equation-command fixture controls pass.
+Task 2 remains incomplete: general mixed-sort/controlled-kind/free-constructor
+generation and combined-solver termination/completeness are still needed.
+The static metadata split preserves the same acceptance command and previous
+inventory/omission controls. Native work stays deferred; no protocol, API,
+wire, resource, gate, merge or SDK activation change.
+See the [decision](../../../docs/adr/0010-compositional-lifecycle-verification.md#certified-finite-native-natural-systems-2026-10-18).
+
+2026-10-18: the second priority now includes actual complete homogeneous
+semigroup generation. A proved finite zero-sum bound drives one-row enumeration
+and recursive matrix intersection, with certified primitive pruning after
+every row. Generated finite homogeneous candidates are nonempty and sound;
+every nonempty word-valued solution factors on the explicit input alphabet
+through globally nonempty residual assignments, retaining atoms outside the
+input. The residual namespace is separate, not yet fresh native indices.
+Computed controls cover the `2X = 3Y` ratio, all seven nonempty branches of
+`X + Y = Z + W`, zero coefficients, empty scope and cancellation failure.
+Fresh strict Lean passes 263 audits (29 axiom-free, no `sorryAx`) and 31 case
+modules; all 42 public equation-command fixture controls pass. The 201 model
+tests were collected, not all executed. Task 2 remains incomplete:
+rigid-column/inhomogeneous choices, sorted finite binding families/native
+fresh indices and combined solver termination/completeness are still needed.
+Native work stays deferred; no gate, merge or SDK activation change.
+See the [decision](../../../docs/adr/0010-compositional-lifecycle-verification.md#certified-homogeneous-semigroup-families-2026-10-18).
+
+2026-10-18: the second priority now has exact nonempty multiplicities and
+substitution linearization.
+Natural AC is equivalent to permutation of tagged atom lists and to equality
+of every atom count. Literal `one`, labels and repeated occurrences remain
+distinct; no empty/zero term or substitution is added. Adversarial kernel
+cases reject equal-weight/different-label terms and treating `one` as identity.
+Finite occurrence-form linear counts retain repeated-variable coefficients,
+frozen rigid labels and residual atoms outside the input, and characterize
+substituted natural AC equations exactly. Fresh strict Lean checks pass 225
+audits (29 axiom-free, no `sorryAx`) and 28 case modules; all 41 public
+equation-command fixture controls pass.
+General sorted AC generation remains incomplete: finite additive bases,
+sorted residual candidates, combined termination and finite-family
+completeness are not consequences of this representation. Native work stays
+deferred, with existing gates unchanged and no merge/SDK activation.
+See the [decision](../../../docs/adr/0010-compositional-lifecycle-verification.md#exact-nonempty-natural-multiplicities-2026-10-18).
+
+2026-10-18: the owner prioritizes equation systems/free-constructor decomposition
+and general sorted AC generation, deferring real Tamarin/Maude acceptance and
+runtime diagnosis. The local constructor increment preserves complete families
+and explicit scopes under ordered unary/binary/`kdf`/`list`/`cons` decomposition,
+rejects different fixed heads modulo AC, and proves constructor-step termination.
+Variable heads and natural addition are excluded from the corresponding
+unsound shortcuts; AC-only rejection is not six-equation rejection.
+Fresh independent Lean checks pass 219 audits (29 axiom-free, no `sorryAx`)
+and 26 case modules; all 39 public equation-command fixture controls pass.
+Native source/export gates remain unchanged and unexecuted for this increment.
+General sorted AC family generation remains open; no merge or ratchet/SDK
+activation is implied.
+See the [decision](../../../docs/adr/0010-compositional-lifecycle-verification.md#independent-free-constructor-systems-2026-10-18).
+
 2026-10-18: actual `29b7270` hosted full export still fails at `+10.512366%`,
 about `165.558` ms beyond the unchanged limit; startup is not reached.
 The other 18 lifecycle cells, 11 Rust jobs and six required CodeQL jobs pass,

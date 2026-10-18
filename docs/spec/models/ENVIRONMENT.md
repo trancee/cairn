@@ -15,8 +15,8 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   for the six source equations in the typed algebra. It also checks structural
   frozen-index encoding round trips, independent raw AC/rewrite correspondence
   and typed substitution commutation, including free tuple/Node framing closure
-  and controlled Fresh/natural derivation-kind abstraction (201 audits,
-  28 axiom-free, none using `sorryAx`).
+  and controlled Fresh/natural derivation-kind abstraction (453 audits,
+  30 axiom-free, none using `sorryAx`).
   An independently guarded native-sorted relation inherits proper-message
   termination, B-coherence, convergence modulo AC and the template-only bound.
   Controlled-kind framing closure and decoded-kind termination also hold.
@@ -73,8 +73,50 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   Explicit finite binding composition substitutes second-list values into
   first-list values before appending the second list, preserving first lookup.
   Empty/reflexive systems, reversed orientations and proper-cycle rejection
-  retain their scope. This is conditional system composition, not a general
-  solver, constructor decomposition or sorted natural-AC generation.
+  retain their scope. Free-constructor inversion/decomposition and fixed-head
+  clash rejection now preserve complete families on that same scope.
+  Constructor decomposition is well-founded by decreasing system function
+  count; natural addition is not an ordered constructor and variable heads
+  cannot justify a clash. Exact nonempty natural atom lists now characterize
+  AC by permutations and, equivalently, pointwise multiplicities. Literal
+  `one`, distinct labels and repetitions stay distinct; no empty/zero term
+  enters substitutions. Substituted natural AC equations reduce exactly to
+  finite occurrence-form linear counts, preserving repeated-variable
+  coefficients, frozen rigid labels and residual labels absent from the
+  input. A total finite homogeneous integer-matrix basis generator now proves
+  unconditional soundness/decomposition completeness with signed/zero rows
+  and primitive pruning. Executable homogeneous semigroup families are
+  nonempty, sound and complete with globally nonempty residual postfactors
+  on the explicit input scope. Finite rigid-column families now preserve
+  singleton ground values and have complete globally nonempty factorization.
+  Actual native residual indices are fresh, bounded and injective on the
+  generated basis. Exact atom decoding and the concrete equation-to-matrix
+  bridge yield finite native sorted binding families for arbitrary finite
+  proper-natural systems, with unconditional soundness and completeness on
+  the original input scope. Their postfactors are globally sorted, including
+  residuals absent from the input; valid candidates never fail decoding.
+  Executable finite requirements characterize the sort of any substituted
+  native template, without prematurely rejecting message-to-natural refinement.
+  Principal-sort classification preserves every value-sort test when a proper
+  value is replaced by a suitably sorted variable. Agreement on value-sort
+  tests preserves and reflects sorting through arbitrary raw templates.
+  The actual finite `nativeSortedACSystemBindingFamily` now has unconditional
+  soundness and completeness over every finite full-AST `NativeEquationSystem`.
+  Exact-length finite source partitions feed the complete nonempty natural
+  subsolver; terminating marker rendering reconstructs raw constructors.
+  Strict decoded function-count descent proves rendering completeness.
+  Finite principal-sort residual retyping covers all sorted solutions, with
+  globally sorted postfactors and factorization on the original input variables.
+  Generated binding images contain no residual variable with an original input
+  index, regardless of sort. Mixed sorts, controlled-kind inputs and free framing
+  are included; arbitrary framing/error-kind assignment values are not.
+  This completes Task 2's modeled generator, not native implementation or
+  narrowing/FVP correspondence. Enumeration may be expensive; no runtime
+  performance or minimal-family claim is established.
+  The owner deferred real Tamarin/Maude acceptance/runtime work while the
+  independent mathematical layers proceed. Fresh strict Lean checks cover
+  453 audits/39 case modules; 43 public equation-command fixture controls pass.
+  These do not substitute for the unchanged native source/export gates.
   Runtime finite-support/native
   occurs-check/fresh-name correspondence, narrowing and
   native algorithm/importer correctness remain unproved.

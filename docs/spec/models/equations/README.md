@@ -75,8 +75,47 @@ The command:
   audits 13 reports and checks finite, supported, idempotent one-binding MGUs
   and complete generated families for sort-compatible variable equations;
 - kernel-checks `QuerySystems.lean` and `QuerySystemBindings.lean`, audits
-  14 reports and checks finite equation systems, explicit coverage scopes,
+  15 reports and checks finite equation systems, explicit coverage scopes,
   residual-factor lifting, finite binding composition and variable elimination;
+- kernel-checks `QueryConstructors.lean` and `QueryConstructorSystems.lean`,
+  audits 18 reports and checks free-constructor inversion/decomposition,
+  fixed-head clashes and termination of constructor decomposition;
+- kernel-checks `NaturalMultiplicity.lean`, audits seven reports and checks
+  exact AC/multiplicity equivalence and decoding without an empty natural term;
+- kernel-checks `NaturalLinearization.lean`, audits two reports and checks
+  exact substitution counts with repeated variables and frozen rigid labels;
+- kernel-checks `IntegerWords.lean`, `IntegerZeroSum.lean`, `IntegerWordBasis.lean`,
+  `IntegerWordInclusion.lean`, `IntegerWordPruning.lean`,
+  `IntegerBasisCompleteness.lean`, `IntegerBasisExtension.lean` and
+  `IntegerMatrixBasis.lean`, audits 19 reports and checks finite complete
+  homogeneous matrix bases with signed/zero coefficients and primitive pruning;
+- kernel-checks `IntegerWordExpansion.lean`, `IntegerWordMixture.lean`,
+  `IntegerMatrixFactors.lean`, `IntegerWordFamily.lean`,
+  `IntegerMixtureAlgebra.lean`, `IntegerMixtureSoundness.lean`,
+  `IntegerFamilySoundness.lean` and `IntegerFamilyCompleteness.lean`, audits
+  19 reports and checks complete nonempty homogeneous semigroup families
+  with globally nonempty residual factors on the explicit input scope;
+- kernel-checks the seven `IntegerRigid*`/mixture-component/transport modules,
+  audits 14 reports and checks finite rigid-column choices, singleton
+  constants and complete globally nonempty factorization;
+- kernel-checks `NaturalResiduals.lean`, audits four reports and checks fresh,
+  bounded native indices with injectivity on actual basis members;
+- kernel-checks `IntegerWordLinear.lean` and `NaturalColumns.lean`, audits
+  14 reports and checks exact concrete matrix characterization of natural systems;
+- kernel-checks `IntegerRigidScope.lean`, `NaturalSystemFamily.lean`,
+  `NaturalBindings.lean`, `NaturalAtomSubstitution.lean`,
+  `NaturalSystemScope.lean`, `NaturalSystemRealization.lean` and
+  `NaturalSystemCompleteness.lean`, audits 21 reports and checks generated
+  finite native natural-system bindings, original input scope, frozen constants,
+  fresh residuals and globally sorted complete postfactorization;
+- kernel-checks the six sort-intersection/shape/requirement/refinement/principal/
+  fingerprint modules, audits 11 reports and checks exact post-substitution
+  value sorts without rejecting message-to-natural refinement;
+- kernel-checks the 27 full-AST generation/lifting modules in
+  [`general_audits.py`](general_audits.py), including the definitions-only
+  `QueryRawGeneration.lean`, audits 122 reports and checks unrestricted raw
+  soundness, complete marker realization, fresh residuals and actual finite
+  sorted-family completeness with globally sorted postfactors;
 - generates and kernel-checks a certificate translating every source equation
   to its exact `PrimitiveRewrite` constructor.
 
@@ -87,7 +126,7 @@ the existing `120`-second bound; version checks use `30` seconds.
 Invalid command-line syntax uses argparse's exit `2`; `--help` exits `0` without
 checking a proof.
 Only `propext`, `Classical.choice` and `Quot.sound` are permitted by the shared
-axiom audit. Twenty-eight of the 201 audited theorems use no axioms. The three
+axiom audit. Thirty of the 453 audited theorems use no axioms. The three
 uniform normalization-bound theorems, assignment/shadow representation and
 closure/solution-representation, sorted factorization, admissible-shadow
 composition and family/most-generality
@@ -97,6 +136,13 @@ The new kind-instance/family audits also use at most those two, except
 admissible-shadow composition, which inherits classical choice from sorted composition.
 System substitution and elimination also inherit classical choice from sorted
 composition; their explicit binding-list construction is executable without it.
+The natural multiplicity equivalence inherits all three permitted axioms from
+the standard library's permutation/count characterization; atom-list
+equivalence, nonemptiness and addition counts use only `propext`.
+The linear count substitution theorem uses `propext` and `Quot.sound`; its
+AC-unifier equivalence inherits the count characterization's classical choice.
+Integer-word coverage, primitive extraction and finite-family factorization
+may use classical choice in their proofs; the actual finite generators do not.
 Other audits use at most `propext` and `Quot.sound`.
 Assignment witnesses use classical choice only in the mathematical proof,
 not an executable native fallback.
@@ -269,8 +315,8 @@ controlled-kind/free framing as a subset without widening the stream grammar.
 Regression cases retain distinct AC-equivalent error-kind normal forms,
 framed nonlinear key-copy peaks, `kdf` and explicitly marked raw terms outside
 the stream grammar. They do not claim properness invariant on that larger AST.
-Complete sorted unification, narrowing completeness and backend algorithm
-correctness remain unproved.
+Correspondence with native sorted unification, narrowing completeness and
+backend algorithm correctness remain unproved.
 
 `QuerySortedSubstitution.lean` independently defines `NativeSortedValue` for
 the five variable sorts: public/fresh atoms or same-sort variables, recognized
@@ -291,8 +337,12 @@ are preservation, not reflection or normality-preservation, theorems.
 Kernel cases retain all-sort rejection, same-index rigid/variable and Fresh/
 natural distinctions, blocked ill-kind projections, framed substitution,
 nonlinear AC-key paths and redex creation. The independent CLI transcript
-inventory is in `../equation_fixtures.py`, separate from the shared process
-fixture to keep maintained files below the hard size limit.
+inventory is in `../equation_fixtures.py`; independent omission scenarios are
+in `../equation_audit_cases.py`. General-generation fixture reports are literal
+and independent in `../equation_general_fixtures.py`. The checker owns build order
+and imports additive/general report names from `additive_audits.py` and
+`general_audits.py`. These responsibility splits
+retain the same public command and keep maintained files below the hard size limit.
 
 `QueryComposition.lean` defines `composeNativeAssignments first second` by
 applying `first`, then `second`, not the reverse. It proves identity,
@@ -487,7 +537,9 @@ System substitution corresponds exactly to ordered assignment composition,
 with sortedness of both assignments retained explicitly. Sorted composition
 alone does not establish sortedness of its second assignment: the first can
 hide an invalid binding. Pointwise AC-equivalent sorted assignments preserve
-system solutions. Prefix composition lifts scoped factorization only when
+system solutions. Exact agreement on the original system's variables also
+preserves solutions when the replacement assignment remains sorted.
+Prefix composition lifts scoped factorization only when
 the residual scope includes `nativeAssignmentVariables variables prefix`,
 including variables in prefix values that no residual equation mentions.
 
@@ -515,6 +567,273 @@ Fresh/message elimination. A ground residual binding is complete on the
 empty remaining-equation support but yields an incomplete family for `X = Y`;
 retaining the prefix-value scope excludes that false completeness claim.
 
+### Free-constructor systems
+
+`QueryConstructors.lean` defines `nativeQueryHead` with constructor symbols,
+sorts and rigid indices retained. Structural AC preserves this head.
+`nativeFreeChildren` gives the ordered arguments of unary/binary message
+functions, `kdf`, `list` and `cons`; constants have no children. Natural
+addition deliberately has no ordered free children. `NativeChildrenAC`
+requires equal-length lists with pointwise structural AC.
+
+For a non-addition left head, structural AC is equivalent to equal heads
+and AC-related free children. This gives exact inversion laws for all five
+non-nullary free-constructor forms, without assuming that natural addition
+is ordered or that different native sorts/rigid indices coincide.
+
+`QueryConstructorSystems.lean` lifts these laws to
+`NativeCompleteACSystemOn`: replace a matching constructor equation by its
+ordered argument equations, preserving the tail, explicit variable scope
+and candidate family in both directions. `NativeFixedHead` excludes query
+variables. Substitution preserves every fixed head, so two different fixed
+heads give a complete empty AC family regardless of the tail.
+No clash is inferred merely from a variable's original head.
+
+`NativeConstructorDecomposition` contains the five decomposition steps.
+Each strictly decreases `nativeSystemFunctionCount`, giving a well-founded
+relation. This proves termination of constructor decomposition, not of a
+general AC solver incorporating variable elimination or additive branching.
+
+`QueryConstructorCases.lean` checks symbolic constructor parameters, nested
+addition, ordered pairs, symbol/rigid-index/sort clashes, free framing,
+variable binding and the addition exclusion. An AC-empty `flip(roleA) =
+roleB` system still has the source `flipA` rewrite: these clash results do
+not reject equality modulo the six equations.
+
+The constructor increment has fresh standalone Lean/kernel and fixture-backed
+CLI evidence. Real native source/export acceptance is deferred at the owner's
+request; the default command and its native checks remain unchanged.
+Constructor decomposition alone does not generate mixed AC families; the actual
+full-AST generator is specified [below](#general-sorted-ac-families).
+
+### Exact natural multiplicities and linearization
+
+`NaturalMultiplicity.lean` defines the computable `naturalAtomCodes` list:
+literal `one` has code `0`, and variable/atom label `index` has code `index + 1`.
+These are proof representation tags, not natural terms or changed native/wire
+indices. Addition concatenates the lists; every term's list is nonempty.
+`naturalMultiplicity atom term` counts one code in that list.
+
+`natural_ac_atoms_iff` proves structural natural AC exactly when the lists
+are permutations. `natural_ac_multiplicity_iff` proves the equivalent
+pointwise count characterization in both directions; count invariance alone
+would not suffice. `natural_multiplicity_add` proves counts add under addition.
+Private optional folds handle an empty list during the proof without adding
+an empty/zero term to `NaturalTerm` or any substitution.
+
+`NaturalMultiplicityCases.lean` checks repeated labels, literal/label
+separation, arbitrary reassociation/permutation and equal-weight terms with
+different counts. For every term, adding literal `one` changes its AC class;
+`one` is not an identity. This closes the multiplicity representation layer,
+not finite Diophantine-basis generation, sorted residual-variable construction,
+combined-solver termination or finite-family completeness.
+
+`NaturalLinearization.lean` computes `naturalVariableOccurrences` with
+repetitions retained and rigid odd labels omitted. `naturalRigidMultiplicity`
+counts only literal `one` and frozen rigid labels. `naturalLinearCount` adds
+this constant to the finite sum of assigned atom counts, one per variable
+occurrence. Thus `X + X` has coefficient two, not one. It does not recursively
+substitute inside assigned values.
+
+`natural_linear_count_substitution` proves that this finite occurrence-form
+linear expression equals the actual substituted term's multiplicity.
+`natural_linear_unifier_iff` proves that two substituted naturals are AC
+equivalent exactly when their expressions agree for every atom, including
+residual labels absent from the input. `NaturalLinearizationCases.lean`
+checks repeated variables, rigid/variable parity separation, residual labels,
+simultaneous substitution and the unsatisfiable equation `X + X = one`.
+These are exact constraints, not by themselves an enumeration or completeness
+proof for natural systems with rigid constants.
+
+### Finite homogeneous semigroup generation
+
+An integer word encodes a nonnegative column vector by repeating column
+labels. `integerWordSum row word` is its signed dot product. The zero-sum
+proof reorders bounded weights so every prefix stays in `[-B,B]`; repeated
+prefix states extract a nonempty zero-sum subword of length at most `2*B+1`.
+`B` is the maximum absolute alphabet weight, including zero. The one-row
+generator enumerates this finite word bound. Recursive row intersection
+generates a complete homogeneous matrix basis and prunes permutation
+duplicates and generators containing a smaller nonempty generator after
+each row. The universal coverage theorem instantiates the concrete
+generator; it does not assume a complete family supplied by a caller.
+
+`integerMatrixWordFamily alphabet rows` enumerates subsets of that basis
+and retains only candidates with nonempty images for every alphabet column.
+For a duplicate-free alphabet, all candidates satisfy every row for every
+output atom. Every nonempty word-valued solution factors through a candidate,
+on the explicit alphabet scope, using a globally nonempty residual assignment.
+Arbitrary solution atoms outside the input remain covered. Empty intermediate
+words represent inactive generators only, not natural zero or empty candidate
+images/postfactors. Residual names are the basis words themselves in a separate
+namespace; this is not yet an allocation into native natural-variable indices.
+
+The generators are total by structural recursion on finite budgets, rows and
+selection lists. Well-founded extraction uses decreasing remaining word
+length. `IntegerWordCases.lean`, `IntegerFactorCases.lean` and
+`IntegerFamilyCases.lean` check universal coverage/factorization and computed
+zero columns, empty alphabets/rows, cancellation failure, coupled rows,
+the `2X = 3Y` coefficient ratio and all seven nonempty branches of
+`X + Y = Z + W`. The homogeneous milestone passed 263 audits and 31 case
+modules. Its word residual namespace is encoded by the native layer below.
+
+### Finite rigid and native natural systems
+
+`integerRigidWordFamily` enumerates inactive, ground-singleton and residual
+choices per matrix generator. It retains only nonempty column images and
+exact singleton rigid columns. Every retained candidate satisfies every row;
+every nonempty solution factors through the actual finite family, with a
+globally nonempty postfactor fixing every ground atom. The seven rigid/
+component/transport modules prove these properties without a supplied
+complete arithmetic oracle.
+
+`naturalResidualIndex` allocates above all original live indices, using the
+first position in the generated basis. Allocation is bounded and injective
+on distinct basis members, even with duplicate basis entries.
+`naturalTermFromAtomCodes` reuses the existing optional fold: it returns
+`none` exactly for the empty list and otherwise reconstructs the exact code
+list. Code `0` still denotes literal `one`, not zero.
+
+`NaturalColumns.lean` extracts live query-variable and frozen rigid columns,
+deduplicates their finite alphabet and computes signed occurrence rows.
+The rows balance exactly when all substituted natural equations hold.
+`IntegerWordLinear.lean` supplies the count-pairing and flat-map identities;
+rigid names remain even codes and fresh residuals become odd variable codes.
+
+`nativeNaturalSystemBindingFamily` accepts a finite `NaturalEquationSystem`.
+It generates rigid word candidates, encodes residuals at fresh native indices
+and decodes all original variable images into finite bindings. A failed image
+rejects the whole candidate, not an individual binding.
+`natural_system_candidate_realization` proves valid generated candidates
+never fail decoding and their binding assignments are globally sorted,
+agreeing exactly with their typed representations on the original input scope.
+
+`native_natural_system_family_complete` proves every generated binding
+assignment solves every encoded equation and every sorted solution factors
+through a generated candidate on `nativeSystemVariables` of the original
+system. The constructed postfactor is globally sorted and covers residual
+variables absent from the input. Substitution is simultaneous, including
+inside assigned words; rigid constants remain fixed. Generator definitions
+are structurally total over finite lists and introduce no empty natural term.
+Mathematical witness selection may use classical choice; the actual candidate
+generator does not.
+
+`NaturalColumnCases.lean` checks exact row/solution equivalence.
+`NaturalSystemCases.lean` checks universal native-family completeness and
+computed literal/frozen-index bindings, `2X = 3Y`, all seven branches of
+`X + Y = Z + W`, residual freshness, empty systems, contradictory constants,
+`2X = one` and cancellation without zero.
+The natural-system/sort-refinement milestone passed 331 audits (29 axiom-free,
+no `sorryAx`) and 38 case modules; all 42 public equation-command fixture controls passed,
+including mandatory completeness, scope, encoding and factor audits.
+Real native source/export/replay/runtime work remains deferred.
+
+This subsolver generates proper-natural systems, not mixed-sort,
+controlled-kind or free-constructor systems by itself. The
+[full-AST generator](#general-sorted-ac-families) uses its unconditional
+completeness. No efficiency claim or changed native gate, budget, protocol or
+activation follows from these proofs.
+
+### Residual sort refinement and abstraction
+
+`nativeSortedValueCheck sort term` decides `NativeSortedValue sort term`.
+`nativeSortIntersection first second` returns their strongest common value
+sort or `none` when no common value is possible. Message includes public,
+fresh and natural values; Node intersects only Node.
+
+`nativeSortRequirements expected template` returns `none` for an impossible
+value shape or `some constraints` for finite variable requirements.
+Each constraint pairs an original variable key with its required refined sort.
+`native_sort_requirements_iff` proves that, under any globally sorted
+assignment, the substituted raw template has the requested value sort exactly
+when those requirements hold. The template itself need not be a proper value:
+a message variable inside addition may subsequently receive a natural value.
+Free framing and controlled-kind terms remain valid input ASTs, not new
+admissible assignment-value sorts.
+
+`nativePrincipalSort term` checks public, fresh, natural, message and Node
+in that order, returning the first accepted sort or `none` if no modeled
+value sort accepts the term. `native_principal_sort_iff` proves that every
+proper value and a variable of its principal sort satisfy exactly the same
+requested value sorts, for any replacement index. Narrow public/fresh/natural
+sorts retain their inclusion in message without being replaced by an
+unrestricted message variable.
+
+`native_sort_fingerprint_substitution` proves that two globally sorted
+assignments agreeing on every value-sort test preserve and reflect sorting
+through every raw native template. Agreement on principal sorts suffices.
+This concerns value sorting, not equality or preservation of solutions.
+`QuerySortRequirementCases.lean` and `QueryPrincipalSortCases.lean` exercise
+message-to-natural refinement, all five principal sorts, invalid natural sums,
+Node beneath message functions and framing rejection as assignment values.
+These characterization theorems supply the finite residual-sort choices used
+by the full generator below; they do not generate a family by themselves.
+
+### General sorted AC families
+
+`nativeRawACSystemBindingFamily equations` and
+`nativeSortedACSystemBindingFamily equations` return finite lists of finite
+binding lists for any `NativeEquationSystem`. The latter interprets each list
+with the existing first-binding, simultaneous `nativeBindingAssignment`.
+Input terms may use the entire modeled frozen-index AST, including mixed sorts,
+controlled-kind contexts and free framing. Assigned values must still satisfy
+the five existing `NativeSortedValue` classes; framing and error-kind terms
+are not new assignment-value sorts.
+
+`QuerySourceTerms.lean` collects the original finite subterm table.
+`QueryRawPlans.lean` enumerates bounded label words of exactly that table's
+length. A consistent plan equates original equation roots and retains the
+exact heads and ordered children of fixed nodes sharing a label.
+Addition compiles to an auxiliary natural sum, not an ordered free constructor.
+Every class is included in the proper-natural subsolver's explicit scope.
+Rigid source nodes have separate frozen markers.
+
+`QueryRawGeneration.lean` applies the actual complete natural-system generator
+to each consistent plan. Marker rendering removes the current marker from
+the available list before recursion, so it terminates by that list's length.
+All markers, class words and original-variable bindings must render successfully.
+The unconditional raw soundness theorem proves these bindings solve the
+original equations; there is no output-equation validation filter.
+
+`QuerySolutionLabels.lean` through `QueryRawRealization.lean` construct a
+solution-derived finite class/atom model, apply actual natural-family
+completeness and prove successful rendering. Every marker used in a parent's
+child word has strictly smaller decoded function count. This proves rendering
+completeness without assuming a topological ordering. Semantic source labels
+are proved equivalent to an actually enumerated executable lookup table.
+Classical quotient representatives are proof witnesses only.
+
+Finite residual retyping enumerates all five principal-sort choices and
+retains whole candidates whose binding values satisfy their required sorts.
+Every sorted solution is represented by such a choice.
+`QueryFreshGeneration.lean` proves that no variable in a generated binding
+image has an original input index, regardless of sort.
+`native_sorted_ac_system_family_complete` unconditionally proves
+`NativeCompleteACSystemOn equations (nativeSystemVariables equations)` for
+the actual generated binding assignments: every candidate is globally sorted
+and solves every input equation, and every sorted solution factors through
+one on the original input-variable scope with a globally sorted postfactor.
+No supplied raw-completeness hypothesis or empty natural value is introduced.
+
+`QueryGeneralCases.lean` checks that exact unrestricted contract, original
+scope, sorted factors, fresh residuals and existence for controlled-kind/free
+framing systems containing unary/binary/`kdf` constructors. Twelve executable
+controls cover empty systems, literal `one`, frozen/variable index collisions,
+Message/Fresh refinement with fresh shared residuals, Fresh/Public and
+Message/Node incompatibility, fixed-head clashes, framing, proper cycles,
+nonempty-semigroup rejection and AC versus six-rule equality.
+Fresh strict Lean passes 453 audits (30 axiom-free, no `sorryAx`) and
+39 case modules; all 43 public equation-command fixture controls pass after
+intended missing-report reds. Definitions-only modules compile without
+requiring nonexistent theorem reports; all declared theorem audits remain mandatory.
+
+This completes the modeled general sorted AC generation task. Enumeration is
+finite but can be very expensive; no efficiency or irredundant/minimal-family
+claim is established. This is not equality modulo the six rewrite equations,
+native generator/importer correspondence, narrowing/FVP acceptance or runtime
+validation. Real Tamarin/Maude source/export/replay/runtime work remains deferred,
+with its default gates unchanged.
+
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of
 native bookkeeping `NAT`, the entire kind-completed carrier or finite variants.
@@ -523,8 +842,9 @@ structural results cover the guarded relation on the full frozen-index AST,
 including controlled-kind and free framing contexts. Executed
 native operations additionally require the boundary checks below; a universal
 source-linked query-builder/importer proof remains unverified.
-Complete sorted AC unification, backend narrowing/unification closure and the
-remaining finite-variant theorem hypotheses are not discharged by this command.
+Correspondence with native sorted AC unification, backend narrowing/unification
+closure and the remaining finite-variant theorem hypotheses are not discharged
+by this command.
 
 ## Native stream boundary
 

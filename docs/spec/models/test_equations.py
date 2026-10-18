@@ -7,6 +7,7 @@ import tempfile
 import unittest
 
 from equation_fixtures import REPORT_GROUPS
+from equation_audit_cases import ARITHMETIC_OMISSIONS, NATIVE_OMISSIONS
 from equations.signature import EQUATIONS, lean_correspondence, reviewed_signature
 from equations.maude_native import source_identity, source_inputs
 from replay import ReplayError
@@ -243,7 +244,10 @@ class EquationCommandTests(unittest.TestCase):
         )
         tool.write_text(
             f"#!{sys.executable}\nimport sys\n"
-            f"print('Lean (version 4.34.1, fixture)' if '--version' in sys.argv else {reports!r})\n",
+            "if '--version' in sys.argv:\n"
+            "    print('Lean (version 4.34.1, fixture)')\n"
+            "elif not sys.argv[-1].endswith('/QueryRawGeneration.lean'):\n"
+            f"    print({reports!r})\n",
         )
         tool.chmod(0o700)
         environment = {**os.environ, "PATH": f"{self.distribution}{os.pathsep}{os.environ['PATH']}"}
@@ -381,7 +385,73 @@ class EquationCommandTests(unittest.TestCase):
         self.assertIn("PASS: proof-carrying variable equations generate complete finite binding families", result.stdout)
         self.assertIn("PASS: finite equation systems preserve scoped AC solutions", result.stdout)
         self.assertIn("PASS: finite binding composition and variable elimination", result.stdout)
+        self.assertIn("PASS: free-constructor decomposition and fixed-head clashes", result.stdout)
+        self.assertIn("PASS: natural AC equivalence is exactly equality", result.stdout)
+        self.assertIn("PASS: natural substitutions solve AC exactly", result.stdout)
+        self.assertIn("PASS: finite integer-matrix bases generate every", result.stdout)
+        self.assertIn("PASS: homogeneous semigroup candidates are nonempty, sound and complete", result.stdout)
+        self.assertIn("PASS: rigid-column semigroup families preserve constants", result.stdout)
+        self.assertIn("PASS: full-AST sorted AC systems generate finite complete families", result.stdout)
         self.assertNotIn("FAIL:", result.stderr)
+
+    def test_unrestricted_sorted_generation_reports_are_required_before_success(self):
+        for group, missing in (
+            ("residual-realization", "native_residual_retyping_realization"),
+            ("sorted-generation", "native_sorted_binding_family_complete"),
+            ("raw-soundness", "native_raw_ac_system_family_sound"),
+            ("solution-models", "native_solution_natural_model"),
+            ("marker-completeness", "native_solution_marker_complete"),
+            ("plan-congruence", "native_raw_render_bindings_congr"),
+            ("residual-freshness", "native_sorted_binding_family_fresh"),
+            ("general-ac-completeness", "native_sorted_ac_system_family_complete"),
+        ):
+            with self.subTest(group=group):
+                result = self.run_with_axiom_reports(*(item for item in REPORT_GROUPS if item != group))
+
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+                self.assertIn(missing, result.stderr)
+                self.assertNotIn("PASS:", result.stdout)
+
+    def test_free_constructor_reports_are_required_before_success(self):
+        result = self.run_with_axiom_reports(*(
+            group for group in REPORT_GROUPS if group != "free-constructors"
+        ))
+
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+        self.assertIn("native_query_ac_head", result.stderr)
+        self.assertNotIn("PASS:", result.stdout)
+
+    def test_natural_multiplicity_reports_are_required_before_success(self):
+        result = self.run_with_axiom_reports(*(
+            group for group in REPORT_GROUPS if group != "natural-multiplicity"
+        ))
+
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+        self.assertIn("natural_atom_codes_nonempty", result.stderr)
+        self.assertNotIn("PASS:", result.stdout)
+
+    def test_natural_linearization_reports_are_required_before_success(self):
+        result = self.run_with_axiom_reports(*(
+            group for group in REPORT_GROUPS if group != "natural-linearization"
+        ))
+
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+        self.assertIn("natural_linear_unifier_iff", result.stderr)
+        self.assertNotIn("PASS:", result.stdout)
+
+    def test_integer_matrix_reports_are_required_before_success(self):
+        for group, missing in ARITHMETIC_OMISSIONS:
+            with self.subTest(group=group):
+                result = self.run_with_axiom_reports(*(item for item in REPORT_GROUPS if item != group))
+
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn("missing Lean theorem axiom reports:", result.stderr)
+                self.assertIn(missing, result.stderr)
+                self.assertNotIn("PASS:", result.stdout)
 
     def test_sorted_query_bound_axiom_reports_are_required_before_success(self):
         result = self.run_with_axiom_reports(*(
@@ -394,29 +464,7 @@ class EquationCommandTests(unittest.TestCase):
         self.assertNotIn("PASS:", result.stdout)
 
     def test_native_kind_convergence_reports_are_required_before_success(self):
-        for group, missing in (
-            ("sorted-exact", "native_sorted_rewrite_matching_decode"),
-            ("sorted-global", "native_sorted_matching_confluence"),
-            ("sorted-ac", "native_sorted_query_ac_coherent"),
-            ("sorted-quotient", "native_sorted_modulo_ac_confluence"),
-            ("sorted-substitution", "native_sorted_rewrite_substitution"),
-            ("kind-substitution", "native_kind_sorted_framed_substitution"),
-            ("assignment-algebra", "native_sorted_composition"),
-            ("sorted-unifiers", "native_message_ac_unifier_representation"),
-            ("kind-unifiers", "native_kind_ac_unifier_representation"),
-            ("scoped-instances", "native_ac_instance_transitive"),
-            ("typed-instances", "native_query_ac_instance_iff"),
-            ("complete-unifiers", "native_message_complete_unifiers_iff"),
-            ("finite-support", "native_restriction_substitution"),
-            ("finite-unifiers", "native_ac_instance_finite_factor_iff"),
-            ("kind-instances", "native_kind_ac_instance_iff"),
-            ("kind-families", "native_kind_complete_unifiers_iff"),
-            ("occurs-check", "native_ac_unifier_occurs_check"),
-            ("variable-bindings", "native_single_binding_most_general"),
-            ("variable-generation", "native_variable_binding_family_complete"),
-            ("equation-systems", "native_system_substitution_iff"),
-            ("system-bindings", "native_system_variable_elimination"),
-        ):
+        for group, missing in NATIVE_OMISSIONS:
             with self.subTest(group=group):
                 result = self.run_with_axiom_reports(*(
                     candidate for candidate in REPORT_GROUPS if candidate != group

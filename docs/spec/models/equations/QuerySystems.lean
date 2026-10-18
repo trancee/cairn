@@ -79,6 +79,22 @@ theorem native_system_assignment_ac (sorted : NativeSortedAssignment second)
     (.transitive (solved.2 equation member)
       (native_substitution_assignment_ac equivalent equation.2))
 
+theorem native_system_assignment_eq_on (sorted : NativeSortedAssignment second)
+    (equal : ∀ sort index, (sort, index) ∈ nativeSystemVariables equations →
+      first sort index = second sort index)
+    (solved : NativeACSystemUnifier equations first) :
+    NativeACSystemUnifier equations second := by
+  refine ⟨sorted, ?_⟩
+  intro equation member
+  have left := native_substitution_eq_on (term := equation.1)
+    (fun sort index occurs => equal sort index
+      (List.mem_flatMap.mpr ⟨equation, member, List.mem_append.mpr (.inl occurs)⟩))
+  have right := native_substitution_eq_on (term := equation.2)
+    (fun sort index occurs => equal sort index
+      (List.mem_flatMap.mpr ⟨equation, member, List.mem_append.mpr (.inr occurs)⟩))
+  rw [← left, ← right]
+  exact solved.2 equation member
+
 theorem native_system_empty_complete (variables : List (QuerySort × Nat)) :
     NativeCompleteACSystemOn [] variables [NativeQueryTerm.queryVariable] := by
   constructor
@@ -132,6 +148,7 @@ theorem native_system_swap_complete_iff :
 #print axioms native_system_singleton_complete_iff
 #print axioms native_system_substitution_iff
 #print axioms native_system_assignment_ac
+#print axioms native_system_assignment_eq_on
 #print axioms native_system_empty_complete
 #print axioms native_system_reflexive_complete_iff
 #print axioms native_ac_instance_prefix
