@@ -103,9 +103,10 @@ Different fixed heads reject modulo AC, but variables and natural addition
 are not treated as free ordered constructors. Rejection modulo AC does not
 reject equality modulo the six rewrite equations. Fresh independent Lean
 checks pass all 453 audits and 39 case modules; 43 public equation-checker
-controls use maintained tool fixtures. Real Tamarin/Maude source/export/replay
-acceptance and runtime diagnosis are explicitly deferred by the owner, with
-their default gates unchanged. Natural AC now has an exact computable
+controls use maintained tool fixtures. Additional local Tamarin/Maude
+source/export/replay investigation and runtime diagnosis remain deferred by
+the owner, with their default gates unchanged. Published hosted acceptance
+is recorded below. Natural AC now has an exact computable
 nonempty atom-list representation and a proved equivalence with pointwise
 multiplicity equality, preserving literal `one` versus labels and repetitions.
 No empty/zero term is introduced.
@@ -161,11 +162,43 @@ importer correctness remain open. The blocked error-kind
 projection and permitted inner rewrite agree with actual Maude controls.
 The existing kernel/CLI seams reject missing new audits after intended reds;
 the maintained inventories include 37 native CLI/202 model/50 lifecycle tests plus native
-clock/validation unit tests, 43 projections and all 453 audits. The 202 model tests
-were collected, not all executed for this increment. The [PR #9 checks](https://github.com/trancee/cairn/pull/9/checks)
-record authoritative published-head hosted results, not acceptance of these local proof increments.
+clock/validation unit tests, 43 projections and all 453 audits. At local
+proof-authoring time, the 202 model tests were collected, not all executed.
+The subsequent [published proof acceptance](#published-proof-acceptance-2026-10-18)
+records their actual hosted execution rather than collection-only evidence.
 These equation proofs change no native guard source-ID input,
 equation, protocol, API, wire, runtime dependency or resource ceiling.
+
+## Published proof acceptance (2026-10-18)
+
+The committed proof head
+[`ae839f6`](https://github.com/trancee/cairn/commit/ae839f633e16cca7620a2b847981771d5801ef99)
+passed its own first-attempt hosted runs:
+[lifecycle](https://github.com/trancee/cairn/actions/runs/39141533822),
+[Rust](https://github.com/trancee/cairn/actions/runs/39141533859) and
+[CodeQL](https://github.com/trancee/cairn/actions/runs/39141533912).
+All 19 formal/native cells, 11 Rust jobs and six required CodeQL jobs passed;
+GitHub recorded 37 successful checks and one intentional CodeQL-only
+functional-simulator skip. The core log contains all 453 theorem audits
+(30 axiom-free, no `sorryAx`) and actual successful execution of all 37 native
+CLI, 202 model and 50 lifecycle tests, not just collection.
+
+Both ordinary three-pair native reports pass the unchanged validators:
+full-export overhead is `+8.174816%` against the `10%` cap, and startup adds
+`25.489288` ms against its approved `50` ms allowance. Their baseline revision
+is the tested merge commit `7ea1b24c7056bf2437927e5e753758b2656d9f25`.
+All four processed CodeQL analyses at that revision have zero results,
+errors or warnings. The same-run Kotlin artifact contains positive compiled
+coverage of all three tracked sources and both generated binding sources;
+raw/mapped security results, frozen-input integrity and ordinary cleanup pass.
+
+These run-specific results supersede the pre-publication acceptance gap,
+not the historical failed measurements below. They do not establish an
+intermittent Tamarin or Apple scratch-detach root-cause fix. Native algorithm/
+importer correspondence, narrowing/FVP and assembled-model obligations remain
+open. Each subsequent changed head, including documentation-only publication,
+requires its own authoritative CI; this record does not authorize merge,
+SDK/ratchet implementation or profile activation.
 
 ## Native budget diagnosis (2026-10-16)
 
