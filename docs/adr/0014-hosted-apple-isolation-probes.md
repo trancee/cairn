@@ -1882,5 +1882,13 @@ Local evidence (Gradle 9.7.0, JDK 21, 8-core Mac): online preparation produced
 identical to hosted CI, so the transform is deterministic. With the real
 `seed-gradle-home.sh`, a fresh home in a different project path seeded in
 `3s`. The offline fixture configuration then took `12s` and created no new
-transform directory. Cold runs took `21s` to `32s`. This is not hosted
-evidence. The hosted `fixture-targets` timings on the PR decide acceptance.
+transform directory. Cold runs took `21s` to `32s`.
+
+Hosted acceptance in #15
+[run `39305577160`](https://github.com/trancee/cairn/actions/runs/39305577160):
+both strict cells passed. The seed took `3.5s` (isolation) and `4.9s`
+(`codeql`) before the deadline started. `fixture-targets` then took `22.8s`
+and `20.8s`, against `31s` to `49s` for earlier passing runs and repeated
+60-second expiries. The instrumented JAR was still 67,326,033 bytes, and the
+`gradle-warm-home.sha256` integrity check passed after the cell. The two benign
+read-only dependency-cache denials still appear.
