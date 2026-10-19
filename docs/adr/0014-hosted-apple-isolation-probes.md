@@ -1635,7 +1635,16 @@ whose results the CodeQL path does not consume.
   (`actions: read`) and proceeds only if exactly one job named
   `benign-preflight / benign-probes` concluded `success`. Failure,
   cancellation, an ambiguous or truncated listing, or a 25-minute timeout
-  fails the job before the cell. Downloads and freezing now run before the
+  fails the job before the cell. A poll that itself fails (a nonzero `gh`
+  exit, a 60-second call timeout, an unavailable command or invalid JSON)
+  counts as still pending, under the same 25-minute deadline. The owner
+  approved this on 2026-10-19 after PR #14
+  [run `39276386263`](https://github.com/trancee/cairn/actions/runs/39276386263):
+  the preflight had passed, but one failed poll crashed the `codeql` cell.
+  Each failed poll prints
+  `DIAGNOSTIC: preflight poll unavailable: <error type>[ exit <code>: <first gh error line>]`,
+  limited to one printable line of 200 characters. The pass condition is
+  unchanged. Downloads and freezing now run before the
   preflight result is known. No fixture, generator or bound workload runs
   first.
 - **Two cells.** With CodeQL, the matrix runs a `codeql` cell and an

@@ -2,6 +2,7 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+import subprocess
 import sys
 import unittest
 from unittest import mock
@@ -121,6 +122,60 @@ class AwaitPreflightTest(unittest.TestCase):
 
         self.assertEqual(result, "timeout")
         self.assertLessEqual(clock.now, 12)
+
+    def test_failed_poll_is_reported_and_retried_within_the_same_deadline(self):
+        failures = [
+            (subprocess.CalledProcessError(1, ["gh"], stderr="gh: HTTP 502\nsecond line\n"),
+             "DIAGNOSTIC: preflight poll unavailable: CalledProcessError exit 1: gh: HTTP 502\n"),
+            (subprocess.TimeoutExpired(["gh"], 60),
+             "DIAGNOSTIC: preflight poll unavailable: TimeoutExpired\n"),
+            (OSError("missing"), "DIAGNOSTIC: preflight poll unavailable: OSError\n"),
+            (json.JSONDecodeError("bad", "", 0),
+             "DIAGNOSTIC: preflight poll unavailable: JSONDecodeError\n"),
+        ]
+        for failure, message in failures:
+            with self.subTest(failure=type(failure).__name__):
+                clock = FakeClock()
+                results = iter([failure, page(job(SUFFIX))])
+
+                def fetch():
+                    result = next(results)
+                    if isinstance(result, Exception):
+                        raise result
+                    return result
+
+                errors = io.StringIO()
+                with mock.patch.object(sys, "stderr", errors):
+                    result = await_preflight.await_preflight(
+                        fetch, SUFFIX, seconds=60, interval=5,
+                        monotonic=clock.monotonic, sleep=clock.sleep)
+
+                self.assertEqual(result, "success")
+                self.assertEqual(clock.sleeps, [5])
+                self.assertEqual(errors.getvalue(), message)
+
+    def test_persistently_failing_poll_times_out_at_the_unchanged_deadline(self):
+        clock = FakeClock()
+
+        def fetch():
+            raise subprocess.CalledProcessError(1, ["gh"], stderr="gh: HTTP 502\n")
+
+        with mock.patch.object(sys, "stderr", io.StringIO()):
+            result = await_preflight.await_preflight(
+                fetch, SUFFIX, seconds=12, interval=5,
+                monotonic=clock.monotonic, sleep=clock.sleep)
+
+        self.assertEqual(result, "timeout")
+        self.assertLessEqual(clock.now, 12)
+
+    def test_poll_diagnostic_is_one_bounded_printable_line(self):
+        error = subprocess.CalledProcessError(1, ["gh"], stderr="\x1b[31m" + "x" * 500 + "\nnext")
+
+        message = await_preflight.describe_poll_error(error)
+
+        self.assertTrue(message.startswith("CalledProcessError exit 1: "))
+        self.assertTrue(message.isprintable())
+        self.assertLessEqual(len(message), 240)
 
     def test_main_reports_success_and_failure_exit_codes(self):
         for listing, code, message in [

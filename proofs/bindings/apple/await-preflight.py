@@ -22,10 +22,24 @@ def preflight_state(listing: dict, suffix: str) -> str:
     return "success" if matches[0]["conclusion"] == "success" else "failure"
 
 
+def describe_poll_error(error: Exception) -> str:
+    name = type(error).__name__
+    if not isinstance(error, subprocess.CalledProcessError):
+        return name
+    lines = (error.stderr or "").splitlines()
+    detail = "".join(char for char in (lines[0] if lines else "") if char.isprintable())
+    return f"{name} exit {error.returncode}: {detail[:200]}"
+
+
 def await_preflight(fetch, suffix, seconds, interval, monotonic=time.monotonic, sleep=time.sleep):
     deadline = monotonic() + seconds
     while True:
-        state = preflight_state(fetch(), suffix)
+        try:
+            state = preflight_state(fetch(), suffix)
+        except (OSError, subprocess.SubprocessError, ValueError) as error:
+            print(f"DIAGNOSTIC: preflight poll unavailable: {describe_poll_error(error)}",
+                  file=sys.stderr, flush=True)
+            state = "pending"
         if state != "pending":
             return state
         if monotonic() + interval > deadline:
