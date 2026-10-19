@@ -30,7 +30,7 @@ class CellPlanTest(unittest.TestCase):
 
     def test_codeql_cell_runs_only_setup_and_the_traced_binding_path(self):
         self.assertEqual(plan.probes("codeql"), [
-            "codeql-startup", "toolchain-startup", *SETUP, *BINDING_PATH, "codeql-analysis",
+            "codeql-startup", "toolchains", *SETUP, *BINDING_PATH, "codeql-analysis",
         ])
         self.assertTrue(set(ISOLATION_ONLY).isdisjoint(plan.probes("codeql")))
 
@@ -70,15 +70,19 @@ class CellPlanTest(unittest.TestCase):
             *BINDING_PATH, "codeql-analysis",
         ]
         covered = set(plan.probes("codeql")) | set(plan.probes("isolation"))
-        covered.discard("toolchain-startup")
 
         self.assertEqual(covered, set(unsplit))
         for scope in ["codeql", "isolation"]:
             ordered = [probe for probe in unsplit if probe in plan.probes(scope)]
-            self.assertEqual(
-                [probe for probe in plan.probes(scope) if probe != "toolchain-startup"],
-                ordered,
-            )
+            self.assertEqual(plan.probes(scope), ordered)
+
+    def test_fixture_targets_always_follow_the_warming_toolchain_probe(self):
+        # Probe deadlines were calibrated with fixture selection warming the
+        # Gradle home before fixture targets; a cold start can exceed 60s.
+        for scope in plan.SCOPES:
+            probes = plan.probes(scope)
+            self.assertIn("toolchains", probes, scope)
+            self.assertLess(probes.index("toolchains"), probes.index("fixture-targets"), scope)
 
     def test_each_scope_requires_its_matching_codeql_tool_state(self):
         self.assertEqual(plan.requires_codeql("full"), False)

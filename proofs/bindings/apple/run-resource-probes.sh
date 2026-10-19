@@ -152,13 +152,11 @@ if [ "$#" -eq 3 ]; then
         exit "$codeql_result"
       fi
       ;;
-    toolchains|toolchain-startup)
-      toolchain_mode=()
-      if [ "$probe" = toolchain-startup ]; then toolchain_mode=(--startup-only); fi
+    toolchains)
       "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/toolchains.log" \
         /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
         -D PRIVATE_IPC=true -f "$work/build.sb" \
-        /bin/bash "$work/inputs/probe-toolchains.sh" "$tools" ${toolchain_mode[@]+"${toolchain_mode[@]}"}
+        /bin/bash "$work/inputs/probe-toolchains.sh" "$tools"
       ;;
     fixture-targets)
       "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/fixture-targets.log" \

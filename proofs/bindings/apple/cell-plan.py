@@ -13,7 +13,7 @@ BINDINGS = ["install-bindgen", "build-bindings", "jvm"]
 PLANS = {
     "full": (False, True, ["toolchains", *SETUP, *ISOLATION, *BINDINGS, "native-binaries"]),
     "codeql": (True, False, [
-        "codeql-startup", "toolchain-startup", *SETUP, *BINDINGS, "codeql-analysis",
+        "codeql-startup", "toolchains", *SETUP, *BINDINGS, "codeql-analysis",
     ]),
     "isolation": (True, True, ["codeql-startup", "toolchains", *SETUP, *ISOLATION]),
 }
