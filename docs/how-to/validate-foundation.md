@@ -30,6 +30,7 @@ if your environment cannot run a check.
 | Changed path | Additional check |
 |---|---|
 | Wire decoding or encoding | [Wire Miri and fuzz commands](../../core/README.md#validation) |
+| Protocol state machines in `cairn-proto` | [Protocol Miri command](../../core/README.md#validation) |
 | Crypto adapter or error handling | [Crypto careful command](../../core/README.md#validation), conformance tests and [Linux taint driver](../../core/README.md#foundation-secret-taint-harness) |
 | Native dependency or platform build setup | [Apple](../../core/README.md#apple-cross-build-smoke) and [Android](../../core/README.md#android-cross-build-smoke) cross-builds |
 | Formal artifacts or workflow shell and schema | Read the [proof environment](../spec/models/ENVIRONMENT.md), then run `bash scripts/check.sh` |

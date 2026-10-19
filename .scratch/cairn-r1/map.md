@@ -16,6 +16,11 @@ A working `cairn` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform sh
   gate waiver or default activation. Earlier counts below are historical;
   see [current evidence](../../docs/spec/models/ratchet-source-evidence.md#current-result-2026-10-13).
 
+- Ratchet implementation (2026-10-18): the owner approved a narrow S9 gate
+  waiver for an unexposed Rust-only increment; `cairn-proto` implements §9
+  epoch identifiers and KEM object transfer only. No FFI, wire use or
+  activation; see [ADR 0016](../../docs/adr/0016-unexposed-epoch-transfer-core.md).
+
 - **Execution is in scope** (override of wayfinder's plan-only default): the destination is a working prototype, so later tickets may build. Gate: spec + ADRs for every protocol/crypto/wire decision exist **before** implementation of that part (`CONSTITUTION.md` O3, S6).
 - Baseline research: [`PQC over BLE findings`](../../docs/research/2026-10-05-pqc-over-ble-findings.md) (protocol sketch §4, open questions §8, round-2 research §9) and [`ble_airtime.py`](../../docs/research/ble_airtime.py).
 - Settled at charting (user answers, 2026-10-05):

@@ -1,7 +1,7 @@
 # Rust foundation API
 
-Scope: unreleased `cairn-wire` and `cairn-crypto` at crate version `0.1.0`.
-There is no protocol state-machine, transport or FFI API.
+Scope: unreleased `cairn-wire`, `cairn-crypto` and `cairn-proto` at crate
+version `0.1.0`. There is no session, transport or FFI API.
 
 ## `cairn-wire`
 
@@ -64,3 +64,43 @@ not a runtime fallback. A consumer can disable default features and select
 one adapter. Both are enabled in the default workspace for differential
 tests. The [core reference](../../core/README.md) records exact dependencies,
 vectors, commands and validation limitations.
+
+## `cairn-proto`
+
+This dependency-free `no_std` + `alloc` crate implements the epoch identifiers
+and durable KEM object transfer of
+[spec §9](../spec/cairn-r1.md#9-post-quantum-ratchet). It moves public
+ML-KEM-768 objects only: it performs no KEM operation, record encoding or
+persistence, and nothing calls it yet
+([ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md)).
+
+| Type or operation | Contract | Errors |
+|---|---|---|
+| `Epoch::new(value: u32)`, `Epoch::value(self) -> u32`, `Epoch::FIRST` | Wire identifier, starting at 0 | None |
+| `Epoch::successor(self) -> Result<Epoch, EpochExhausted>` | Advances by exactly one; never wraps | `EpochExhausted` after `u32::MAX` |
+| `Epoch::generator(self) -> PairingRole` | `A` for even epochs, `B` for odd ones | None |
+| `Epoch::incoming_kind(self, local: PairingRole) -> ObjectKind` | The generator receives `Ciphertext`; the other role receives `EncapsulationKey` | None |
+| `ObjectKind::length(self) -> usize` | 1184 for `EncapsulationKey`, 1088 for `Ciphertext` | None |
+| `ObjectKind::progress_code(self) -> u8`, `ObjectKind::from_progress_code(code: u8)` | KEM_PROGRESS `kind`: `0x01` key, `0x02` ciphertext | `ProgressRejected` for other codes |
+| `IncomingObject::new(epoch, kind)` | Empty receiver prefix for one epoch object | None |
+| `IncomingObject::accept_chunk(&mut self, epoch, kind, offset: u32, chunk: &[u8]) -> Result<ChunkOutcome, TransferInvalid>` | `Appended` at the frontier; `Duplicate` for an exact copy inside the prefix | `TransferInvalid` |
+| `IncomingObject::next_offset(&self) -> u32` | Cumulative progress to report | None |
+| `IncomingObject::completed(&self) -> Option<&[u8]>` | The object only once every byte arrived | None |
+| `OutgoingObject::new(epoch, kind, bytes: Vec<u8>) -> Result<OutgoingObject, ObjectLengthInvalid>` | Immutable object of the kind's fixed length | `ObjectLengthInvalid` |
+| `OutgoingObject::next_chunk(&mut self, capacity: usize) -> Option<OutgoingChunk<'_>>` | Next unsent `offset` and at most `capacity` bytes; `None` when nothing fits or remains | None |
+| `OutgoingObject::accept_progress(&mut self, epoch, kind, next_offset: u32) -> Result<(), ProgressRejected>` | Raises acknowledged progress; older progress keeps the stored value | `ProgressRejected` |
+| `OutgoingObject::acknowledged(&self) -> u32`, `is_fully_acknowledged(&self) -> bool` | Acknowledged cumulative offset | None |
+| `OutgoingObject::restart_session(&mut self)` | The next chunk restarts at the acknowledged offset | None |
+
+`TransferInvalid` covers a wrong epoch or kind, an empty chunk, a gap, a
+conflicting duplicate, an overlap crossing the frontier and any byte beyond
+the fixed length, including offsets near `u32::MAX`. A rejected chunk leaves
+the object unchanged; its diagnostic is the spec's local reason
+`pq_transfer_invalid`. `ProgressRejected` (`KEM_PROGRESS rejected`) covers a
+wrong epoch or kind and progress beyond bytes sent in any session; rejected
+progress changes nothing. `EpochExhausted` displays `epoch_exhausted`.
+
+Callers must persist appended bytes and their progress before sending
+KEM_PROGRESS, and persist an outgoing object before its first chunk.
+The duplicate check uses ordinary equality because KEM objects are public.
+The crate-level documentation contains an executable transfer example.
