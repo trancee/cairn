@@ -54,6 +54,41 @@ def owned_image_entities(inventory: object, image: str, volume: str) -> tuple[li
     return devices, mounts
 
 
+def registry_class(value: object) -> bool:
+    return isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_]+", value) is not None
+
+
+def owned_media_state(registry: object, names: list[str]) -> tuple[list[dict], list[str]]:
+    if not isinstance(registry, list):
+        raise DiagnosticError("invalid-media-registry")
+    found, pending = {}, list(registry)
+    while pending:
+        entry = pending.pop()
+        children = entry.get("IORegistryEntryChildren", []) if isinstance(entry, dict) else None
+        if not isinstance(children, list) or not all(isinstance(child, dict) for child in children):
+            raise DiagnosticError("invalid-media-registry")
+        pending.extend(children)
+        name = entry.get("BSD Name")
+        if name not in names:
+            continue
+        if name in found:
+            raise DiagnosticError("ambiguous-owned-media")
+        state = {
+            "bsd-name": name, "class": entry.get("IOObjectClass"), "open": entry.get("Open"),
+            "busy": entry.get("IOServiceBusyState"), "retain": entry.get("IOObjectRetainCount"),
+        }
+        if not registry_class(state["class"]) or not isinstance(state["open"], bool) \
+                or type(state["busy"]) is not int or type(state["retain"]) is not int:
+            raise DiagnosticError("invalid-owned-media-field")
+        clients = [[child.get("IOObjectClass"), child.get("IOServiceBusyState")] for child in children]
+        if not all(registry_class(client) and type(busy) is int for client, busy in clients):
+            raise DiagnosticError("invalid-owned-media-client")
+        found[name] = {**state, "clients": clients}
+    return [found[name] for name in names if name in found], [
+        name for name in names if name not in found
+    ]
+
+
 def print_holder_fields(output: str) -> None:
     lines = output.splitlines()
     if any(
@@ -136,6 +171,22 @@ def detach_scratch(volume: str, image: str) -> int:
         except (OSError, subprocess.SubprocessError, UnicodeError, ValueError) as error:
             reason = str(error) if isinstance(error, DiagnosticError) else type(error).__name__
             print(f"DIAGNOSTIC: open-file holder collection failed: {reason}", file=sys.stderr)
+    if devices:
+        try:
+            registry = subprocess.run(
+                ["/usr/sbin/ioreg", "-a", "-r", "-c", "IOMedia", "-w0"],
+                capture_output=True, check=True, timeout=5,
+            )
+            media, absent = owned_media_state(
+                plistlib.loads(registry.stdout), [device.removeprefix("/dev/") for device in devices],
+            )
+            print("DIAGNOSTIC: owned scratch media state " + json.dumps(media))
+            print("DIAGNOSTIC: owned scratch media absent " + json.dumps(absent))
+        except (
+            OSError, subprocess.SubprocessError, ValueError, plistlib.InvalidFileException, ExpatError,
+        ) as error:
+            reason = str(error) if isinstance(error, DiagnosticError) else type(error).__name__
+            print(f"DIAGNOSTIC: owned scratch media unavailable: {reason}", file=sys.stderr)
     return 1
 
 

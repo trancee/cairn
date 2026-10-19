@@ -1543,6 +1543,51 @@ only internal diagnostics/tests and their reference; the caller, five-/15-second
 windows, sandbox/PF/resource controls and every integrity/result gate remain
 unchanged. Updated-source hosted acceptance is separate and recorded by PR #9.
 
+### Kernel media state on busy ejection (2026-10-19)
+
+`Resource busy` still fails two of the last 73 completed strict-lane jobs:
+run `39258233481` attempt 1 (isolation cell) and run `39210781030`
+attempt 1 (preflight). In the latest failure the owned image reports no
+mount point, so the volume had already unmounted. Only the whole-disk eject
+failed, and the
+only open-file holder was `diskimages-helper`, the image's own helper. No
+build or probe process holds a file, so the remaining hold is at the IOKit
+device level, which `lsof` cannot see.
+
+The owner chose diagnostics only. After the holder phase, a failed
+ejection now runs the native registry query
+`/usr/sbin/ioreg -a -r -c IOMedia -w0` with its own five-second timeout.
+From the plist, `owned_media_state()` selects only entries whose `BSD Name`
+is one of the owned image's validated devices; this includes `IOMedia`
+subclasses such as `AppleAPFSMedia`. It prints:
+
+- `DIAGNOSTIC: owned scratch media state`: for each owned device, its
+  registry class, `Open`, `IOServiceBusyState`, `IOObjectRetainCount`, and
+  each direct child's class and busy state. The children are the kernel
+  clients still attached, such as `IOMediaBSDClient` or a partition scheme.
+- `DIAGNOSTIC: owned scratch media absent`: owned devices missing from the
+  registry. This explains whether devices such as the earlier `disk7s2` still
+  exist.
+
+Malformed registry data, invalid class names, non-integer counters and
+duplicate owned names are reported as a redacted reason on stderr
+(`owned scratch media unavailable: ...`). The query never prints foreign
+devices, properties outside that list, or paths. It runs only when the owned
+devices were identified and never changes the nonzero result.
+
+The regressions were red because the query was missing, then green. They
+cover owned-only selection, absent devices, subclasses, malformed or
+ambiguous registry data, and non-dictionary children. Under Python `3.9.6`
+and the local `3`, 125 Apple tooling tests pass with six hosted-only skips.
+A locally attached HFS+ UDIF image parses with the expected
+`IOMedia`/`IOMediaBSDClient`/`IOGUIDPartitionScheme` shape.
+
+Retry, forced detach, holder termination and larger limits remain
+unselected. This is evidence collection only. The detach strategy, the
+five- and 15-second windows, sandbox/PF controls and all integrity and
+result gates are unchanged. The next hosted `Resource busy` failure decides
+whether a strategy change is justified.
+
 ## Parallel post-cell integrity verification
 
 On 2026-10-18 the owner requested faster CI without weakening any gate.
@@ -1590,7 +1635,16 @@ whose results the CodeQL path does not consume.
   (`actions: read`) and proceeds only if exactly one job named
   `benign-preflight / benign-probes` concluded `success`. Failure,
   cancellation, an ambiguous or truncated listing, or a 25-minute timeout
-  fails the job before the cell. Downloads and freezing now run before the
+  fails the job before the cell. A poll that itself fails (a nonzero `gh`
+  exit, a 60-second call timeout, an unavailable command or invalid JSON)
+  counts as still pending, under the same 25-minute deadline. The owner
+  approved this on 2026-10-19 after PR #14
+  [run `39276386263`](https://github.com/trancee/cairn/actions/runs/39276386263):
+  the preflight had passed, but one failed poll crashed the `codeql` cell.
+  Each failed poll prints
+  `DIAGNOSTIC: preflight poll unavailable: <error type>[ exit <code>: <first gh error line>]`,
+  limited to one printable line of 200 characters. The pass condition is
+  unchanged. Downloads and freezing now run before the
   preflight result is known. No fixture, generator or bound workload runs
   first.
 - **Two cells.** With CodeQL, the matrix runs a `codeql` cell and an
@@ -1761,3 +1815,14 @@ owned by the probe UID. When `--diagnose-after` fires, the supervisor also print
 rows. The rows cover the eight processes with the highest CPU use, plus
 up to eight further processes in state `U`. Each row has only CPU percent,
 state and executable basename: no PID, UID, arguments or environment.
+
+The denial report must not fail a passing probe. In PR #14
+[run `39273095309`](https://github.com/trancee/cairn/actions/runs/39273095309),
+`fixture-targets` passed in about 33 seconds, but `log show` exceeded the
+report's 15-second timeout. The uncaught `TimeoutExpired` failed the
+`codeql` cell, and fail-fast cancelled the isolation cell. As with the
+scratch-detach lookup above, optional diagnostics must not create their own
+failure. The report now prints
+`DIAGNOSTIC: sandbox-denial query unavailable: <error type>` and exits zero
+on a timeout, a nonzero `log` status or an unavailable command. The
+15-second limit and the probe's own exit status are unchanged.

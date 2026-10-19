@@ -1,7 +1,11 @@
+import contextlib
 import importlib.util
+import io
 from pathlib import Path
 import re
+import subprocess
 import unittest
+from unittest import mock
 
 
 SCRIPT = Path(__file__).with_name("report-sandbox-denials.py")
@@ -38,6 +42,24 @@ class ReportSandboxDenialsTest(unittest.TestCase):
         ])
         self.assertEqual(report.summarize("Timestamp               Ty Process[PID:TID]\n"),
                          ["DIAGNOSTIC: java sandbox denials under /opt: 0"])
+
+    def test_unavailable_log_query_is_reported_without_failing_the_probe(self):
+        for failure in (
+            subprocess.TimeoutExpired(["/usr/bin/log"], 15),
+            subprocess.CalledProcessError(1, ["/usr/bin/log"]),
+            OSError("unavailable"),
+        ):
+            with self.subTest(failure=type(failure).__name__):
+                errors = io.StringIO()
+                with mock.patch.object(report.subprocess, "run", side_effect=failure), \
+                        mock.patch.object(report.sys, "argv", ["report", "2026-10-19 15:05:24"]), \
+                        contextlib.redirect_stderr(errors):
+                    report.main()
+
+                self.assertEqual(
+                    errors.getvalue(),
+                    f"DIAGNOSTIC: sandbox-denial query unavailable: {type(failure).__name__}\n",
+                )
 
     def test_fixture_targets_reports_denials_whether_or_not_the_probe_passes(self):
         arm = re.search(r"^    fixture-targets\)\n(.*?)^      ;;$", RUNNER.read_text(),
