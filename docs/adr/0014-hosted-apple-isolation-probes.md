@@ -1647,7 +1647,26 @@ The owner then approved two changes:
   pass. `test_cell_plan.py` fails if any of these probes runs outside its
   `boundary` guard.
 
-Even with both changes, the projected strict lane is about 12 minutes. The
-fresh `installBindgen` compile (`188s`) and about `190s` of preparation on
-3-core hosted runners keep a reliable sub-10-minute lane out of reach. The
-owner did not choose larger paid runners.
+Hosted run `39164191196` at `6449361` passed without retries in `17m43s`,
+with a warm archive cache. Both changes worked:
+
+| Measure | Before | After |
+| --- | --- | --- |
+| Traced Gradle start gap | `94s` | `12s` |
+| Boundary setup | `63s` | `31s` |
+| Traced build | `158s` | `84s` |
+
+That runner was much slower, though. Fresh `installBindgen` took `353s`
+(`188s` in the previous run) and fixture targets took `49s` (`31s` before).
+The CodeQL job also waited `51s` and the preflight `170s` for macOS slots.
+Normalized to the previous runner's compile speed, the lane is about
+`14.7` minutes. Several costs remain on 3-core hosted runners:
+
+- the mandatory fresh compile: `188s` to `353s`;
+- preparation: about `210s`;
+- analysis: about `70s`;
+- the post-cell PF check and teardown: about `50s`;
+- frozen-input verification: about `40s`.
+
+With these, the strict lane cannot reliably finish in under 10 minutes
+unless the fresh in-cell compile rule changes or faster runners are used.
