@@ -42,6 +42,8 @@ reports fail. A theorem depending on no axioms is also accepted.
 [`Lifecycle verification`](../../../../.github/workflows/lifecycle.yml)
 defines the `lifecycle` job on `ubuntu-24.04`, for pushes, pull requests,
 merge queues and manual dispatch. It runs the same `check.py` entry point.
+The native guard budgets run in a separate `native-budgets` cell of the same
+matrix, so neither waits for the other.
 It also runs the [exact-source witness gate](../README.md#exact-source-witness-replay)
 and its separate regression suite; that evidence is native Tamarin replay,
 not a Lean lifecycle theorem.

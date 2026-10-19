@@ -58,6 +58,27 @@ without verifying the extractor or replacing independent expert review.
 
 ## Migration
 
+### Separate native budget cell (2026-10-18)
+
+The owner asked for every PR to finish within 10 minutes. At `1cee495` the
+core `lifecycle` cell took `645s` (`334s` fast gates and proofs, then `267s`
+native budgets), longer than any other cell, so lifecycle could not finish
+in under about 11 minutes. Run the unchanged budget step, the failure-only
+capture and its artifact in a new `native-budgets` cell. `lifecycle` keeps
+`scripts/check.sh`. Both cells keep the same runner, 15-minute timeout,
+checksum-pinned tools and source-identified guard build. The diagnostic
+clock now starts in the `native-budgets` cell, so the 900-second capture
+window still measures the job that owns the budget step.
+
+Budgets were never measured against `check.sh` output. They compare
+alternating pairs within one run, so a fresh VM changes only the preceding
+load, not the threshold, pairs, rounds or acceptance. The matrix now has
+20 cells and no `max-parallel` cap; see
+[ADR 0015](0015-build-backed-kotlin-codeql.md#runner-slot-scheduling-2026-10-18).
+Hosted run `39157701904` at `8b20be6` passed both budgets in the separate
+`318s` cell; `lifecycle` took `381s` and the matrix finished in `8m49s`.
+That is one sample of an intermittent budget, not proof it is stable.
+
 ### Certified full-AST sorted AC families (2026-10-18)
 
 The natural-system and principal-sort layers below left general generation

@@ -35,9 +35,17 @@ jobs:
   benign-preflight:
     uses: ./.github/workflows/apple-isolation-probe.yml
   prepare:
-    needs: benign-preflight
+    # Downloads and freezing overlap the benign preflight; each bounded cell
+    # waits for that same-run preflight to succeed before it starts.
+    name: prepare (${{ matrix.cell }})
     runs-on: macos-26
     timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      matrix:
+        cell: ${{ fromJSON(inputs.codeql && '["codeql","isolation"]' || '["full"]') }}
     steps:
       - name: Check out trusted preparation scripts
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -48,42 +56,62 @@ jobs:
           sudo -n /usr/bin/env GITHUB_ACTIONS=true \
             /bin/bash proofs/bindings/apple/disable-hosted-swap.sh
           "$(xcrun --find python3)" -I proofs/bindings/apple/probe-memory.py
-      - name: Download exact pinned daemon JDK
+      - name: Restore checksum-pinned download archives
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/pinned-archives
+          key: apple-pinned-archives-v1-${{ inputs.codeql && 'codeql' || 'base' }}-${{ hashFiles('.github/workflows/apple-toolchain-preparation.yml', 'proofs/bindings/apple/prepare-toolchains.sh', 'proofs/bindings/apple/prepare-codeql.sh') }}
+      - name: Download exact pinned JDKs
         run: |
-          archive="$RUNNER_TEMP/temurin-25.0.4.1.tar.gz"
-          curl --fail --silent --show-error --location \
+          export CAIRN_ARCHIVE_CACHE="$RUNNER_TEMP/pinned-archives"
+          printf 'CAIRN_ARCHIVE_CACHE=%s\n' "$CAIRN_ARCHIVE_CACHE" >> "$GITHUB_ENV"
+          /bin/bash proofs/bindings/apple/fetch-pinned.sh \
             'https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jdk_aarch64_mac_hotspot_25.0.4.1_1.tar.gz' \
-            -o "$archive"
-          printf '%s  %s\n' \
-            61979887f7506a24a57439ff99adb8b3a7fc89977d9cfe3b8984f58a981b7b9d "$archive" \
-            | shasum -a 256 --check
-          tar -xzf "$archive" -C "$RUNNER_TEMP"
+            61979887f7506a24a57439ff99adb8b3a7fc89977d9cfe3b8984f58a981b7b9d \
+            "$RUNNER_TEMP/temurin-25.0.4.1.tar.gz" &
+          daemon=$!
+          /bin/bash proofs/bindings/apple/fetch-pinned.sh \
+            'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.12.1_1.tar.gz' \
+            3623232f33a9c3baadf304480b2535f9a3cba8a58d42ecbb438ba267315d9998 \
+            "$RUNNER_TEMP/temurin-21.0.12.1.tar.gz" &
+          compiler=$!
+          wait "$daemon"
+          wait "$compiler"
+          tar -xzf "$RUNNER_TEMP/temurin-25.0.4.1.tar.gz" -C "$RUNNER_TEMP"
+          tar -xzf "$RUNNER_TEMP/temurin-21.0.12.1.tar.gz" -C "$RUNNER_TEMP"
           printf 'CAIRN_DAEMON_JAVA_HOME=%s/jdk-25.0.4.1+1/Contents/Home\n' \
             "$RUNNER_TEMP" >> "$GITHUB_ENV"
-      - name: Download exact pinned compile JDK
-        run: |
-          archive="$RUNNER_TEMP/temurin-21.0.12.1.tar.gz"
-          curl --fail --silent --show-error --location \
-            'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.12.1_1.tar.gz' \
-            -o "$archive"
-          printf '%s  %s\n' \
-            3623232f33a9c3baadf304480b2535f9a3cba8a58d42ecbb438ba267315d9998 "$archive" \
-            | shasum -a 256 --check
-          tar -xzf "$archive" -C "$RUNNER_TEMP"
           printf 'JAVA_HOME=%s/jdk-21.0.12.1+1/Contents/Home\n' \
             "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Prepare pinned downloads without a fixture build
+        env:
+          CODEQL: ${{ inputs.codeql }}
         run: |
           python="$(xcrun --find python3)"
+          prepared="$RUNNER_TEMP/apple-preparation"
           "$python" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
             "$RUNNER_TEMP/apple-preparation.log" \
-            /bin/bash proofs/bindings/apple/prepare-toolchains.sh "$RUNNER_TEMP/apple-preparation"
-      - name: Prepare opt-in CodeQL inputs
-        if: ${{ inputs.codeql }}
-        run: |
-          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
-            "$RUNNER_TEMP/apple-preparation/codeql-preparation.log" \
-            /bin/bash proofs/bindings/apple/prepare-codeql.sh "$RUNNER_TEMP/apple-preparation"
+            /bin/bash proofs/bindings/apple/prepare-toolchains.sh "$prepared" &
+          toolchains=$!
+          if [ "$CODEQL" = true ]; then
+            codeql_prepared="$RUNNER_TEMP/codeql-preparation"
+            mkdir -m 0700 "$codeql_prepared"
+            "$python" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
+              "$codeql_prepared/codeql-preparation.log" \
+              /bin/bash proofs/bindings/apple/prepare-codeql.sh "$codeql_prepared" &
+            codeql=$!
+          fi
+          result=0
+          wait "$toolchains" || result=$?
+          if [ "$CODEQL" = true ]; then wait "$codeql" || result=$?; fi
+          if [ "$result" -ne 0 ]; then exit "$result"; fi
+          if [ "$CODEQL" = true ]; then
+            for input in "$codeql_prepared"/*; do
+              test ! -e "$prepared/$(basename "$input")"
+              mv "$input" "$prepared/"
+            done
+            rmdir "$codeql_prepared"
+          fi
       - name: Freeze trusted tool copies
         run: |
           rust="$(dirname "$(dirname "$(rustup which --toolchain 1.97.1 rustc)")")"
@@ -93,55 +121,64 @@ jobs:
       - name: Verify opt-in CodeQL tool architecture
         if: ${{ inputs.codeql }}
         run: /opt/cairn-apple-tools/codeql/codeql version
-      - name: Prepare pinned plugin inputs without binding build tasks
+      - name: Prepare and freeze Gradle, Cargo and Native inputs in parallel
         run: |
-          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
-            "$RUNNER_TEMP/apple-preparation/gradle-preparation.log" \
-            /bin/bash proofs/bindings/apple/prepare-gradle-inputs.sh "$RUNNER_TEMP/apple-preparation"
-      - name: Prepare locked Cargo vendor inputs
+          python="$(xcrun --find python3)"
+          prepared="$RUNNER_TEMP/apple-preparation"
+          (
+            "$python" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
+              "$prepared/gradle-preparation.log" \
+              /bin/bash proofs/bindings/apple/prepare-gradle-inputs.sh "$prepared"
+            sudo -n /usr/bin/env GITHUB_ACTIONS=true \
+              /bin/bash proofs/bindings/apple/freeze-gradle-inputs.sh "$prepared"
+          ) &
+          gradle=$!
+          (
+            "$python" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
+              "$prepared/cargo-preparation.log" \
+              /bin/bash proofs/bindings/apple/prepare-cargo-inputs.sh "$prepared"
+            sudo -n /usr/bin/env GITHUB_ACTIONS=true \
+              /bin/bash proofs/bindings/apple/freeze-cargo-inputs.sh "$prepared"
+            "$python" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
+              "$prepared/native-preparation.log" \
+              /bin/bash proofs/bindings/apple/prepare-native-inputs.sh "$prepared"
+            sudo -n /usr/bin/env GITHUB_ACTIONS=true \
+              /bin/bash proofs/bindings/apple/freeze-native-inputs.sh "$prepared"
+          ) &
+          compilers=$!
+          result=0
+          wait "$gradle" || result=$?
+          wait "$compilers" || result=$?
+          exit "$result"
+      - name: Wait for the same-run benign preflight
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
-            "$RUNNER_TEMP/apple-preparation/cargo-preparation.log" \
-            /bin/bash proofs/bindings/apple/prepare-cargo-inputs.sh "$RUNNER_TEMP/apple-preparation"
-          sudo -n /usr/bin/env GITHUB_ACTIONS=true \
-            /bin/bash proofs/bindings/apple/freeze-cargo-inputs.sh "$RUNNER_TEMP/apple-preparation"
-      - name: Freeze Gradle dependency inputs
-        run: |
-          sudo -n /usr/bin/env GITHUB_ACTIONS=true \
-            /bin/bash proofs/bindings/apple/freeze-gradle-inputs.sh "$RUNNER_TEMP/apple-preparation"
-      - name: Prepare and freeze trusted Native compiler inputs
-        run: |
-          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
-            "$RUNNER_TEMP/apple-preparation/native-preparation.log" \
-            /bin/bash proofs/bindings/apple/prepare-native-inputs.sh "$RUNNER_TEMP/apple-preparation"
-          sudo -n /usr/bin/env GITHUB_ACTIONS=true \
-            /bin/bash proofs/bindings/apple/freeze-native-inputs.sh "$RUNNER_TEMP/apple-preparation"
+          "$(xcrun --find python3)" -I proofs/bindings/apple/await-preflight.py \
+            --job 'benign-preflight / benign-probes'
       - name: Probe frozen tool startup inside the bounded cell
+        env:
+          CELL: ${{ matrix.cell }}
         run: |
           sudo -n /usr/bin/env GITHUB_ACTIONS=true \
             /bin/bash proofs/bindings/apple/run-resource-probes.sh \
-            "$RUNNER_TEMP/apple-preparation" /opt/cairn-apple-tools \
+            "$RUNNER_TEMP/apple-preparation" /opt/cairn-apple-tools "$CELL" \
             2>&1 | tee "$RUNNER_TEMP/apple-preparation/toolchain-cell.log"
-          (cd /opt/cairn-apple-tools && shasum -a 256 --check \
-            "$RUNNER_TEMP/apple-preparation/toolchains.sha256") \
-            > "$RUNNER_TEMP/apple-preparation/toolchain-integrity.log"
-          (cd /opt/cairn-apple-tools && shasum -a 256 --check \
-            "$RUNNER_TEMP/apple-preparation/gradle-dependencies.sha256") \
-            > "$RUNNER_TEMP/apple-preparation/gradle-integrity.log"
-          (cd /opt/cairn-apple-tools && shasum -a 256 --check \
-            "$RUNNER_TEMP/apple-preparation/cargo-inputs.sha256") \
-            > "$RUNNER_TEMP/apple-preparation/cargo-integrity.log"
-          (cd /opt/cairn-apple-tools && shasum -a 256 --check \
-            "$RUNNER_TEMP/apple-preparation/native-inputs.sha256") \
-            > "$RUNNER_TEMP/apple-preparation/native-integrity.log"
+          preparation="$RUNNER_TEMP/apple-preparation"
+          "$(xcrun --find python3)" -I proofs/bindings/apple/verify-frozen-inputs.py \
+            --root /opt/cairn-apple-tools --jobs "$(sysctl -n hw.ncpu)" \
+            --check "$preparation/toolchains.sha256" "$preparation/toolchain-integrity.log" \
+            --check "$preparation/gradle-dependencies.sha256" "$preparation/gradle-integrity.log" \
+            --check "$preparation/cargo-inputs.sha256" "$preparation/cargo-integrity.log" \
+            --check "$preparation/native-inputs.sha256" "$preparation/native-integrity.log"
       - name: Record same-run simulator payload provenance
-        if: ${{ !inputs.codeql }}
+        if: ${{ matrix.cell == 'full' }}
         run: |
           printf '%s\n' "$GITHUB_SHA" | sudo -n tee \
             "$RUNNER_TEMP/apple-preparation/simulator-payload/revision.txt"
           sudo -n chmod 0444 "$RUNNER_TEMP/apple-preparation/simulator-payload/revision.txt"
       - name: Retain strict-cell Kotlin extraction database
-        if: ${{ inputs.codeql }}
+        if: ${{ matrix.cell == 'codeql' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: apple-codeql-java
@@ -150,7 +187,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Retain strict-cell Kotlin coverage and security analysis
-        if: ${{ inputs.codeql }}
+        if: ${{ matrix.cell == 'codeql' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: apple-codeql-analysis
@@ -169,7 +206,7 @@ jobs:
           ' > "$RUNNER_TEMP/apple-preparation/codeql-denials.log"
           cat "$RUNNER_TEMP/apple-preparation/codeql-denials.log"
       - name: Deliver strictly built simulator executable
-        if: ${{ !inputs.codeql }}
+        if: ${{ matrix.cell == 'full' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: apple-simulator-payload
@@ -180,7 +217,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: apple-toolchain-preparation
+          name: apple-toolchain-preparation-${{ matrix.cell }}
           path: |
             ${{ runner.temp }}/apple-preparation.log
             ${{ runner.temp }}/apple-preparation/versions.txt

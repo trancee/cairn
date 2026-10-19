@@ -1542,3 +1542,153 @@ hosted busy-eject root cause or first-attempt reliability. Migration changes
 only internal diagnostics/tests and their reference; the caller, five-/15-second
 windows, sandbox/PF/resource controls and every integrity/result gate remain
 unchanged. Updated-source hosted acceptance is separate and recorded by PR #9.
+
+## Parallel post-cell integrity verification
+
+On 2026-10-18 the owner requested faster CI without weakening any gate.
+CodeQL run `39148931733` at `8e66ebb` spent `73.6s` after the strict cell
+in the four serial `shasum -a 256 --check` gates (80,635 tool, 647 Gradle,
+6,875 Cargo and 297 Native records); the cell itself took about 11 minutes.
+
+Run the same independent native `/usr/bin/shasum -a 256 --check` from the
+unchanged `/opt/cairn-apple-tools` root through
+`verify-frozen-inputs.py`. It splits each existing manifest into contiguous
+line chunks, verifies them on `hw.ncpu` workers and concatenates standard
+output in manifest order, so every retained integrity log is byte-identical
+to one serial check. All four logs are written before any failure is
+reported; any mismatched, missing or unreadable file and an empty manifest
+still fail the step. Tests compare actual logs against serial `shasum` output
+and cover tampering, deletion, empty manifests, one worker and invalid
+worker counts. On a local 1.3 GB, 515-file Rust tree with three workers,
+the check took `2.84s` instead of `5.14s` with an identical log. That is local
+component evidence, not a hosted end-to-end speedup.
+
+No manifest, verifier algorithm, root, record, cell boundary, compilation,
+cache or resource ceiling changes. Prebuilding or caching the in-cell
+`cargo install` of the Ubique generator (about 229 seconds) is again rejected,
+because the owning offline task must compile it fresh inside the cell.
+Sequential benign preflight before preparation remains required.
+
+Hosted CodeQL run `39154660841` at `1cee495` produced all four integrity logs
+and passed. The window from scratch teardown to the next step took `25.6s`,
+down from `73.6s`. This is one hosted sample. On PRs the lane now runs only
+when its inputs change; see
+[ADR 0015](0015-build-backed-kotlin-codeql.md#runner-slot-scheduling-2026-10-18).
+
+## Concurrent preflight and split strict cells (2026-10-18)
+
+The owner rejected the `19m00s` strict Kotlin lane (run `39157702087`) and
+approved five changes that keep every gate. In that run preparation waited
+`188s` for preflight and spent `616s` in one sequential cell. Of that,
+`~210s` was the fresh generator compile and `~160s` was isolation probes
+whose results the CodeQL path does not consume.
+
+- **Preflight ordering (amends "sequential benign preflight before
+  preparation").** Preparation starts with the benign preflight instead of
+  after it. Before entering any cell, each job runs `await-preflight.py`. It
+  lists the jobs of the same run attempt through the Actions API
+  (`actions: read`) and proceeds only if exactly one job named
+  `benign-preflight / benign-probes` concluded `success`. Failure,
+  cancellation, an ambiguous or truncated listing, or a 25-minute timeout
+  fails the job before the cell. Downloads and freezing now run before the
+  preflight result is known. No fixture, generator or bound workload runs
+  first.
+- **Two cells.** With CodeQL, the matrix runs a `codeql` cell and an
+  `isolation` cell on separate fresh VMs. `cell-plan.py` defines each
+  probe list and `test_cell_plan.py` keeps them in step with the runner.
+  - The `codeql` cell runs CodeQL startup, the toolchain and
+    fixture-selection probes (see the 2026-10-19 note below), the fixture
+    targets, Cargo inputs, the fresh in-cell `installBindgen`,
+    `buildBindings`, the traced JVM build and the analysis.
+  - The `isolation` cell runs CodeQL startup, the toolchain and
+    fixture-selection probes, the Native probes, the allocator inputs and the fixture Rust
+    builds.
+  - Without CodeQL, one `full` cell keeps the previous order.
+  - Each cell remains sequential under UID `59000`, with the same scratch
+    image, PF, resource ceilings and teardown. Both cells must pass, and
+    each verifies all four frozen-input manifests.
+- **Generator debuginfo.** `generator-cargo.sh` sets
+  `CARGO_PROFILE_DEV_DEBUG=0` for the generator's `cargo install --debug`.
+  The compile is still fresh, in the cell and offline. Optimization level,
+  sources and lockfile are unchanged; only debug symbols that no gate reads
+  are omitted. Locally, with `-j3` and the pinned Rust 1.97.1, the
+  generator built in `165.5s` without debuginfo and `167.6s` with it. This
+  is about 1%, from one uncontended pair. That is local component evidence;
+  the hosted effect is unmeasured and may be negligible.
+
+Prebuilding or caching the generator remains rejected. The split uses three
+concurrent macOS jobs out of the five allowed.
+
+Hosted run `39162172603` at `90dceae` passed without retries in `15m04s`,
+down from `19m00s`; the archive cache was cold. The isolation cell job took
+`9m47s`. The CodeQL cell still took `615s`, for two reasons:
+
+- The traced build waited `94s` before Gradle started, compared with `9s`
+  when `codeql-startup` had already run in the same cell.
+- About `45s` went to boundary probes that the isolation cell repeats.
+
+The owner then approved two changes:
+
+- **Tracer warm-up.** The `codeql` cell runs `codeql-startup` again before
+  its toolchain probe.
+- **Boundary probes only in the isolation cell.** `cell-plan.py` now marks
+  whether a scope runs boundary probes, and the `codeql` scope does not.
+  Without them, the `codeql` cell skips these probes:
+  - the 256 MiB resource-exhaustion image;
+  - the `test_uid_supervisor.py` self-test;
+  - both `probe-pf.py` runs;
+  - `launch-probes.py`.
+
+  The `isolation` and `full` cells and the benign preflight still run all of
+  them, with the same scripts and VM image. The `codeql` cell still sets up
+  and enforces the same boundary: the PF wrapper, the dedicated UID, the
+  8 GiB scratch image with both capacity checks, `sandbox-exec`, the
+  supervisor deadlines and teardown. Its build therefore runs inside the
+  boundary the isolation cell proves, without re-proving it. Both cells must
+  pass. `test_cell_plan.py` fails if any of these probes runs outside its
+  `boundary` guard.
+
+Hosted run `39164191196` at `6449361` passed without retries in `17m43s`,
+with a warm archive cache. Both changes worked:
+
+| Measure | Before | After |
+| --- | --- | --- |
+| Traced Gradle start gap | `94s` | `12s` |
+| Boundary setup | `63s` | `31s` |
+| Traced build | `158s` | `84s` |
+
+That runner was much slower, though. Fresh `installBindgen` took `353s`
+(`188s` in the previous run) and fixture targets took `49s` (`31s` before).
+The CodeQL job also waited `51s` and the preflight `170s` for macOS slots.
+Normalized to the previous runner's compile speed, the lane is about
+`14.7` minutes. Several costs remain on 3-core hosted runners:
+
+- the mandatory fresh compile: `188s` to `353s`;
+- preparation: about `210s`;
+- analysis: about `70s`;
+- the post-cell PF check and teardown: about `50s`;
+- frozen-input verification: about `40s`.
+
+With these, the strict lane cannot reliably finish in under 10 minutes
+unless the fresh in-cell compile rule changes or faster runners are used.
+
+### Restored fixture-selection warm-up (2026-10-19)
+
+The `main` run `39210781030` at `57826d1` failed twice without passing:
+
+- **First attempt:** the benign preflight hit the known `Resource busy`
+  scratch detach failure, so both cells stopped at the preflight gate.
+- **Rerun:** this was only to restore `main`, not evidence. The `codeql`
+  cell's `fixture-targets` probe exceeded its unchanged 60-second
+  deadline. In the earlier split runs it had taken `31s` and `49s`.
+
+The split had replaced the `codeql` cell's full toolchain probe with a
+startup-only variant that skipped fixture selection. That probe used to
+warm the Gradle home, and the `fixture-targets` deadline was calibrated with
+that warm-up. Without it, `fixture-targets` absorbed the cold start and
+became runner-speed sensitive.
+
+The `codeql` cell now runs the full `toolchains` probe, including fixture
+selection (about `18s`), in its original position. The startup-only variant
+is deleted. `test_cell_plan.py` requires `toolchains` to precede
+`fixture-targets` in every scope. No deadline changed.

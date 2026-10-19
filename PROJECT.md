@@ -1031,6 +1031,33 @@ gates are unchanged. See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md#
 Publication was initially kept local; the owner approved this scheduling
 change and bounded same-VM Cargo reuse validation on 2026-10-14.
 
+The owner set a 10-minute PR target on 2026-10-18 and chose path-scoped strict
+Kotlin scans. `CodeQL strict Kotlin` (`codeql-kotlin.yml`) runs on every
+`main` push, weekly and on dispatch, but on PRs only when strict-lane inputs
+change (`proofs/bindings/**`, its three workflows, `rust-toolchain.toml`,
+`.gitattributes`). A test fails if the filter misses a referenced path.
+`CodeQL advanced` keeps Actions/Python/Rust on every PR with the action's
+default threads and RAM. The lifecycle matrix runs native budgets in a separate
+`native-budgets` cell, giving 20 cells, with no `max-parallel` cap. The four post-cell
+frozen-input `shasum --check` gates run as parallel contiguous chunks with
+byte-identical logs (hosted `25.6s`, down from `73.6s`). To bring the strict lane under
+10 minutes, preparation now overlaps the benign preflight; each cell waits for
+it to succeed. CodeQL analysis and isolation probes run in separate sequential
+cells. Freezing uses copy-on-write clones and parallel manifests. Pinned
+archives are cached by digest and re-checked on every use. The fresh in-cell
+generator compile omits debuginfo. The isolation cell alone runs the boundary
+probes; the CodeQL cell still enforces that boundary. Hosted strict lane:
+`15m04s` at `90dceae` and `17m43s` at `6449361`, down from `19m00s`. The
+slower run had a slower runner: its fresh generator compile took `353s`
+instead of `188s`. Under 10 minutes is not reliably reachable without changing
+the fresh-compile rule or using faster runners
+([ADR 0014](docs/adr/0014-hosted-apple-isolation-probes.md#concurrent-preflight-and-split-strict-cells-2026-10-18),
+[ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md#strict-lane-preparation-speedup-2026-10-18)). Hosted runs at `8b20be6` (one sample) took `8m49s`
+for lifecycle, `4m45s` for hosted CodeQL and `1m52s` for Rust; the strict lane
+took `19m00s`. See [ADR 0015](docs/adr/0015-build-backed-kotlin-codeql.md#runner-slot-scheduling-2026-10-18),
+[ADR 0010](docs/adr/0010-compositional-lifecycle-verification.md#separate-native-budget-cell-2026-10-18)
+and [ADR 0014](docs/adr/0014-hosted-apple-isolation-probes.md#parallel-post-cell-integrity-verification).
+
 Setup caches contain version-keyed host tool binaries, lockfile-keyed Cargo
 registry downloads and pinned proof archives. Proof archives are checksum
 verified after every restore. Cache misses install the same pinned tools.

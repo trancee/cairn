@@ -15,17 +15,13 @@ if ! rustup run "$rust" rustc --version; then
 else
   rustup target add --toolchain "$rust" aarch64-apple-ios aarch64-apple-ios-sim
 fi
-gradle_hash=84fbba45c7f4c64abc77460e1c00f541e9f960e3c7ed2538f1ede19eacd873ae
-curl --fail --silent --show-error --location \
+/bin/bash "$scripts/fetch-pinned.sh" \
   https://services.gradle.org/distributions/gradle-9.7.0-bin.zip \
-  -o "$output/gradle.zip"
-printf '%s  %s\n' "$gradle_hash" "$output/gradle.zip" | shasum -a 256 --check
+  84fbba45c7f4c64abc77460e1c00f541e9f960e3c7ed2538f1ede19eacd873ae "$output/gradle.zip"
 unzip -q "$output/gradle.zip" -d "$output"
-curl --fail --silent --show-error --location \
+/bin/bash "$scripts/fetch-pinned.sh" \
   https://github.com/JetBrains/kotlin/releases/download/v2.4.20/kotlin-native-prebuilt-macos-aarch64-2.4.20.tar.gz \
-  -o "$output/kotlin-native.tar.gz"
-printf '%s  %s\n' b70d4fd2855fdb054fc9604beaa7de83c18d786454ae948de72a226e81f07dc8 \
-  "$output/kotlin-native.tar.gz" | shasum -a 256 --check
+  b70d4fd2855fdb054fc9604beaa7de83c18d786454ae948de72a226e81f07dc8 "$output/kotlin-native.tar.gz"
 mkdir "$output/kotlin-native"
 tar -xzf "$output/kotlin-native.tar.gz" --strip-components=1 -C "$output/kotlin-native"
 export JAVA_HOME="$CAIRN_DAEMON_JAVA_HOME"

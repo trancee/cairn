@@ -21,9 +21,14 @@ jobs:
     timeout-minutes: 15
     strategy:
       fail-fast: false
+      # The account runs at most 20 jobs at once. Matrix order starts the
+      # longest cells first; the core checks and native budgets run in
+      # separate cells so neither waits for the other.
       matrix:
         include:
           - name: lifecycle
+            replay: ''
+          - name: native-budgets
             replay: ''
           - name: replay-default-witness
             replay: '--target lost_data_recovery'
@@ -67,8 +72,8 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Record the core lifecycle diagnostic clock
-        if: matrix.name == 'lifecycle'
+      - name: Record the native budget diagnostic clock
+        if: matrix.name == 'native-budgets'
         run: |
           started="$(python3 -c 'import time; print(time.monotonic())')"
           printf 'CAIRN_LIFECYCLE_STARTED_AT=%s\n' "$started" >> "$GITHUB_ENV"
@@ -130,7 +135,7 @@ jobs:
         run: scripts/check.sh
       - name: Check representative and startup-only native guard budgets
         id: native-budgets
-        if: matrix.name == 'lifecycle'
+        if: matrix.name == 'native-budgets'
         run: |
           set -euo pipefail
           umask 077
@@ -142,7 +147,7 @@ jobs:
               | tee "$RUNNER_TEMP/native-budget/normal-$workload.json"
           done
       - name: Capture one bounded diagnostic after a native budget failure
-        if: ${{ failure() && !cancelled() && matrix.name == 'lifecycle' && steps.native-budgets.outcome == 'failure' }}
+        if: ${{ failure() && !cancelled() && matrix.name == 'native-budgets' && steps.native-budgets.outcome == 'failure' }}
         timeout-minutes: 5
         env:
           FAILED_WORKLOAD: ${{ steps.native-budgets.outputs.workload }}
@@ -154,7 +159,7 @@ jobs:
             --output "$RUNNER_TEMP/native-budget" \
             --job-started-at "$CAIRN_LIFECYCLE_STARTED_AT"
       - name: Retain the original failed report and separate diagnostic evidence
-        if: ${{ always() && matrix.name == 'lifecycle' && steps.native-budgets.outcome == 'failure' }}
+        if: ${{ always() && matrix.name == 'native-budgets' && steps.native-budgets.outcome == 'failure' }}
         timeout-minutes: 1
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -163,7 +168,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Check exact-source witness replay
-        if: matrix.name != 'lifecycle' && !matrix.mutation
+        if: matrix.name != 'lifecycle' && matrix.name != 'native-budgets' && !matrix.mutation
         env:
           REPLAY_ARGUMENTS: ${{ matrix.replay }}
         run: |
