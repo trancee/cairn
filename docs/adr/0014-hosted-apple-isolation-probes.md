@@ -1596,11 +1596,12 @@ whose results the CodeQL path does not consume.
 - **Two cells.** With CodeQL, the matrix runs a `codeql` cell and an
   `isolation` cell on separate fresh VMs. `cell-plan.py` defines each
   probe list and `test_cell_plan.py` keeps them in step with the runner.
-  - The `codeql` cell runs CodeQL and toolchain startup, the fixture
+  - The `codeql` cell runs CodeQL startup, the toolchain and
+    fixture-selection probes (see the 2026-10-19 note below), the fixture
     targets, Cargo inputs, the fresh in-cell `installBindgen`,
     `buildBindings`, the traced JVM build and the analysis.
-  - The `isolation` cell runs the remaining toolchain and fixture-selection
-    probes, the Native probes, the allocator inputs and the fixture Rust
+  - The `isolation` cell runs CodeQL startup, the toolchain and
+    fixture-selection probes, the Native probes, the allocator inputs and the fixture Rust
     builds.
   - Without CodeQL, one `full` cell keeps the previous order.
   - Each cell remains sequential under UID `59000`, with the same scratch
@@ -1629,7 +1630,7 @@ down from `19m00s`; the archive cache was cold. The isolation cell job took
 The owner then approved two changes:
 
 - **Tracer warm-up.** The `codeql` cell runs `codeql-startup` again before
-  its toolchain startup probe.
+  its toolchain probe.
 - **Boundary probes only in the isolation cell.** `cell-plan.py` now marks
   whether a scope runs boundary probes, and the `codeql` scope does not.
   Without them, the `codeql` cell skips these probes:
@@ -1670,3 +1671,24 @@ Normalized to the previous runner's compile speed, the lane is about
 
 With these, the strict lane cannot reliably finish in under 10 minutes
 unless the fresh in-cell compile rule changes or faster runners are used.
+
+### Restored fixture-selection warm-up (2026-10-19)
+
+The `main` run `39210781030` at `57826d1` failed twice without passing:
+
+- **First attempt:** the benign preflight hit the known `Resource busy`
+  scratch detach failure, so both cells stopped at the preflight gate.
+- **Rerun:** this was only to restore `main`, not evidence. The `codeql`
+  cell's `fixture-targets` probe exceeded its unchanged 60-second
+  deadline. In the earlier split runs it had taken `31s` and `49s`.
+
+The split had replaced the `codeql` cell's full toolchain probe with a
+startup-only variant that skipped fixture selection. That probe used to
+warm the Gradle home, and the `fixture-targets` deadline was calibrated with
+that warm-up. Without it, `fixture-targets` absorbed the cold start and
+became runner-speed sensitive.
+
+The `codeql` cell now runs the full `toolchains` probe, including fixture
+selection (about `18s`), in its original position. The startup-only variant
+is deleted. `test_cell_plan.py` requires `toolchains` to precede
+`fixture-targets` in every scope. No deadline changed.
