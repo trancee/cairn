@@ -6,6 +6,32 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+import importlib.util
+
+
+SUPERVISOR = Path(__file__).with_name("uid-supervisor.py")
+spec = importlib.util.spec_from_file_location("uid_supervisor", SUPERVISOR)
+supervisor = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(supervisor)
+
+
+class HostLoadSelectionTest(unittest.TestCase):
+    def test_reports_top_cpu_and_disk_waiting_processes_by_name_only(self):
+        listing = "\n".join([
+            " 0.0 Ss   /sbin/launchd",
+            "95.5 R    /usr/libexec/runner worker",
+            " 1.0 U    /System/Library/mds_stores",
+            *[f" {n}.0 S    /usr/bin/busy{n}" for n in range(2, 12)],
+        ])
+
+        rows = supervisor.select_host_processes(listing, limit=3)
+
+        self.assertEqual(rows, [
+            {"cpu_percent": 95.5, "state": "R", "command": "runner worker"},
+            {"cpu_percent": 11.0, "state": "S", "command": "busy11"},
+            {"cpu_percent": 10.0, "state": "S", "command": "busy10"},
+            {"cpu_percent": 1.0, "state": "U", "command": "mds_stores"},
+        ])
 
 
 @unittest.skipUnless(
@@ -66,6 +92,13 @@ class DedicatedSupervisorTest(unittest.TestCase):
             self.assertTrue(all(set(row) == {
                 "uid", "pid", "ppid", "state", "cpu_time", "command",
             } for row in snapshots), snapshots)
+            host = [line for line in result.stdout.splitlines()
+                    if line.startswith("DIAGNOSTIC: host-load ")]
+            self.assertEqual(len(host), 1, result.stdout)
+            self.assertEqual(set(json.loads(host[0].removeprefix("DIAGNOSTIC: host-load "))),
+                             {"load_average"})
+            self.assertTrue(any(line.startswith("DIAGNOSTIC: host-process ")
+                                for line in result.stdout.splitlines()), result.stdout)
             self.assertIn("PASS: dedicated UID has no remaining processes", result.stdout)
 
     def test_child_file_ceiling_allows_boundary_and_rejects_next_byte(self):

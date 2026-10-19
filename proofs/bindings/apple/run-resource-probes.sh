@@ -159,12 +159,17 @@ if [ "$#" -eq 3 ]; then
         /bin/bash "$work/inputs/probe-toolchains.sh" "$tools"
       ;;
     fixture-targets)
-      "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/fixture-targets.log" \
+      probe_start=$(/bin/date '+%Y-%m-%d %H:%M:%S')
+      probe_result=0
+      "$python" -I "$scripts/uid-supervisor.py" --seconds 60 --diagnose-after 50 \
+        "$work/proof-output/fixture-targets.log" \
         /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
         -D PRIVATE_IPC=true -f "$work/build.sb" \
         /usr/bin/env JAVA_HOME="$tools/daemon-jdk" GRADLE_USER_HOME="$volume/gradle" \
         GRADLE_DAEMON_BIND_ADDRESS=127.0.0.2 \
-        /bin/bash "$tools/check-fixture-targets.sh" "$tools" "$python"
+        /bin/bash "$tools/check-fixture-targets.sh" "$tools" "$python" || probe_result=$?
+      "$python" -I "$scripts/report-sandbox-denials.py" "$probe_start"
+      if [ "$probe_result" -ne 0 ]; then exit "$probe_result"; fi
       "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
       ;;
     cargo-inputs)

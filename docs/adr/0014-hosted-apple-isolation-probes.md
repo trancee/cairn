@@ -1692,3 +1692,72 @@ The `codeql` cell now runs the full `toolchains` probe, including fixture
 selection (about `18s`), in its original position. The startup-only variant
 is deleted. `test_cell_plan.py` requires `toolchains` to precede
 `fixture-targets` in every scope. No deadline changed.
+
+### Fixture-targets configuration stall (2026-10-19)
+
+The `main` run `39246119795` at `ea62c7d` failed although both cells
+ran the restored warm-up. `fixture-targets` exceeded its 60-second deadline
+in **both** cells, on separate runners. Gradle printed nothing for about
+58 seconds after `Shared read-only dependency cache is an incubating feature.`
+
+This does not look like a regression or a slow runner:
+
+- The strict lane's inputs were unchanged. `ea62c7d` touched no path in
+  the workflow's trigger list.
+- Both runs used runner image `20261013.0424.1`.
+- Every other step in the failing run, including the Gradle builds in
+  the toolchain probe, was as fast as or faster than in the green run
+  `39215566960`.
+- The nine earlier passing measurements took `30s` to `47s`.
+
+The rerun (attempt 2) failed the same way in the `codeql` cell (`60.6s`).
+The isolation cell passed in `31.8s` before it was cancelled.
+
+All three `fixture-targets` failures today, including the earlier one in
+`39210781030`, logged the same two kernel sandbox denials about three
+seconds into the probe: `java` writing `module-metadata.bin` and
+`module-artifact.bin` in the read-only dependency cache
+(`/opt/cairn-apple-tools/gradle-dependencies`). Gradle documents that it
+never writes to a read-only cache, and its lock wait defaults to 60
+seconds, close to the silent stall. The workflow collects these denials
+only for failed jobs, so it is unknown whether green runs log them too.
+
+The failure kept no evidence of what Gradle was waiting on. The
+`fixture-targets` probe now records two diagnostics:
+
+- It requests the existing owned-process snapshot at 50 seconds
+  (`--diagnose-after 50`), inside its unchanged 60-second deadline, as
+  `install-bindgen` does at 540 seconds. The snapshot shows whether the
+  JVM was accumulating CPU or blocked, and whether an external child
+  process was running.
+- After every run, pass or fail, `report-sandbox-denials.py` prints the
+  java sandbox denials under `/opt` since the probe started, and their
+  count. The probe's exit status is preserved. Comparing green and failing
+  runs shows whether the read-only cache write is linked to the stall.
+
+A JVM thread dump was not added. The daemon's stdout is `/dev/null`, so a
+`SIGQUIT` dump is lost. `jcmd` attach needs a Unix-socket bind, which
+`build.sb` denies. Either route would loosen the sandbox or change the
+probe's JVM options.
+
+The first run with these diagnostics (#13, run `39254726531`) failed the
+same way in the `codeql` cell (`60.8s`). The isolation cell passed in
+`40.9s`. Two results:
+
+- **The denials are benign.** The passing isolation probe logged the
+  same two read-only cache write denials, so they do not cause the stall.
+- **The daemon is busy, not blocked.** At 50 seconds the Gradle daemon
+  had `0:41.66` CPU time and was in state `U` (disk wait). The work is
+  real, most likely the cold Kotlin Gradle plugin setup. The fixture-selection
+  warm-up does not load the plugins, so this cost always falls inside
+  `fixture-targets`.
+
+Five of the last sixteen measurements failed, all on 2026-10-19, and four
+of them in the `codeql` cell. To find out whether another process on the
+runner competes with the probe, the owner approved a host-level snapshot.
+This relaxes the earlier rule that diagnostics record only processes
+owned by the probe UID. When `--diagnose-after` fires, the supervisor also prints
+`DIAGNOSTIC: host-load` (the load average) and `DIAGNOSTIC: host-process`
+rows. The rows cover the eight processes with the highest CPU use, plus
+up to eight further processes in state `U`. Each row has only CPU percent,
+state and executable basename: no PID, UID, arguments or environment.
