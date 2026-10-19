@@ -538,8 +538,10 @@ The owner approved raising only the dedicated child per-file ceiling to
 8 GiB scratch, 7 GiB VM RAM, CPU/process limits and deadlines are unchanged.
 First require the real supervised child to observe the new hard/soft limit,
 then verify actual file-boundary enforcement and instrumented artifact size.
-Precomputed transform inputs were not selected because they add Gradle/cache
-coupling and may not cover later Native compiler files.
+Precomputed transform inputs were not selected then because they add Gradle/cache
+coupling and may not cover later Native compiler files. The owner later
+reversed this for `fixture-targets`; see "Warm Gradle home seeded from
+preparation (2026-10-19)".
 
 The new child-limit expectation failed as intended in
 [run 38129355841](https://github.com/trancee/cairn/actions/runs/38129355841):
@@ -1826,3 +1828,59 @@ failure. The report now prints
 `DIAGNOSTIC: sandbox-denial query unavailable: <error type>` and exits zero
 on a timeout, a nonzero `log` status or an unavailable command. The
 15-second limit and the probe's own exit status are unchanged.
+
+### Warm Gradle home seeded from preparation (2026-10-19)
+
+After #14 merged, `main` run `39301004434` at `6b84553` failed in the
+isolation cell (`fixture-targets` `60.4s`). Its rerun failed in the `codeql`
+cell, again at the 60-second deadline. The first host snapshot showed no
+competing process: the probe's `java` used 226% CPU, every other process
+stayed below 9%, and the load average was `3.1/11.52/9.55`. The cost is the
+probe's own cold work: the probe starts from an empty Gradle home, so every run
+re-instruments the 64 MiB Kotlin Gradle plugin JAR and recompiles the
+Kotlin DSL scripts.
+
+The owner selected warm-in-prep. This reverses the earlier decision above not
+to use precomputed transform inputs. The deadlines (60 seconds, diagnostics
+at 50 seconds) do not change.
+
+- **Freeze.** Online preparation already runs the same Apple configuration
+  with the same Gradle, daemon JDK and plugin project. `freeze-gradle-inputs.sh`
+  now also copies `caches/9.7.0/{transforms,kotlin-dsl,groovy-dsl}` and
+  `caches/jars-9`, without lock or `gc.properties` files, into the
+  root-owned, read-only `/opt/cairn-apple-tools/gradle-warm-home`. It writes
+  that tree's manifest to `gradle-warm-home.sha256`. The post-cell integrity
+  step verifies the manifest, and the workflow retains it as an artifact.
+- **Seed.** Before the supervised `fixture-targets` command, and outside its
+  deadline, the probe UID runs `seed-gradle-home.sh` itself, under the same
+  `build.sb` profile with private IPC disabled. The script copies the
+  world-readable seed into `$volume/gradle/caches` with
+  `rsync -rlpt --ignore-existing` and then makes the copies owner-writable.
+  Root never writes into a tree that the probe UID controlled earlier
+  (`toolchains` creates `$volume/gradle`), so a planted symlink cannot
+  redirect a privileged copy. The sandbox also denies writes outside the
+  scratch volume: locally, a `caches` symlink to a path outside scratch made
+  the seed fail without creating its target. Entries that the probe already
+  created are kept. `-a` is not used because openrsync's owner lookup is
+  denied by the sandbox and is meaningless for a non-root copy.
+- **Integrity model.** The probe can change only its own scratch copies. The
+  frozen seed stays read-only, and its manifest is checked after the cell.
+  Gradle keys each transform workspace by the hash of its inputs.
+  A Gradle, plugin or JDK change produces new keys, so the probe falls back to
+  the cold path. It stays correct but slower. A Gradle version change fails
+  the freeze loudly at its `test -d .../caches/9.7.0/...` checks.
+- **File boundary.** The instrumented JAR in the probe home now usually comes
+  from the trusted copy instead of being written by the child. The 128 MiB
+  child per-file limit stays proven separately by the preflight boundary
+  probe. `check-fixture-targets.sh` still requires the JAR to exist and to stay
+  within 64–128 MiB.
+- **Capacity.** The seed adds about 315 MB to the 8 GiB scratch volume.
+  `check-build-scratch.py` still runs after the probe.
+
+Local evidence (Gradle 9.7.0, JDK 21, 8-core Mac): online preparation produced
+642 transform directories. The instrumented JAR was 67,326,033 bytes,
+identical to hosted CI, so the transform is deterministic. With the real
+`seed-gradle-home.sh`, a fresh home in a different project path seeded in
+`3s`. The offline fixture configuration then took `12s` and created no new
+transform directory. Cold runs took `21s` to `32s`. This is not hosted
+evidence. The hosted `fixture-targets` timings on the PR decide acceptance.

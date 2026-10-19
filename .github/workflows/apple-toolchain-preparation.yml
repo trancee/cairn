@@ -169,6 +169,7 @@ jobs:
             --root /opt/cairn-apple-tools --jobs "$(sysctl -n hw.ncpu)" \
             --check "$preparation/toolchains.sha256" "$preparation/toolchain-integrity.log" \
             --check "$preparation/gradle-dependencies.sha256" "$preparation/gradle-integrity.log" \
+            --check "$preparation/gradle-warm-home.sha256" "$preparation/gradle-warm-integrity.log" \
             --check "$preparation/cargo-inputs.sha256" "$preparation/cargo-integrity.log" \
             --check "$preparation/native-inputs.sha256" "$preparation/native-integrity.log"
       - name: Record same-run simulator payload provenance
@@ -226,6 +227,7 @@ jobs:
             ${{ runner.temp }}/apple-preparation/toolchains.sha256
             ${{ runner.temp }}/apple-preparation/gradle*.log
             ${{ runner.temp }}/apple-preparation/gradle-dependencies.sha256
+            ${{ runner.temp }}/apple-preparation/gradle-warm-home.sha256
             ${{ runner.temp }}/apple-preparation/cargo*.log
             ${{ runner.temp }}/apple-preparation/cargo-inputs.sha256
             ${{ runner.temp }}/apple-preparation/codeql*.log
