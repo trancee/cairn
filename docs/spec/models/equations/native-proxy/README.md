@@ -333,8 +333,8 @@ cannot be combined into exact whole-tree attribution.
 
 ## Failure-only CI capture
 
-The existing core lifecycle cell records a monotonic clock in its first step.
-Its normal, unprofiled budget step still runs full export then startup, each
+The dedicated `native-budgets` lifecycle cell records a monotonic clock in its
+first step; the `lifecycle` cell runs `scripts/check.sh` separately. Its normal, unprofiled budget step still runs full export then startup, each
 with three alternating pairs. `pipefail` preserves the actual failing exit
 through `tee`; stdout reports are retained separately as
 `normal-full-export.json` and, if reached, `normal-startup.json`.

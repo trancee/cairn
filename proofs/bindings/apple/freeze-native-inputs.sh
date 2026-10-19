@@ -12,7 +12,7 @@ mkdir "$destination"
   "$prepared/native-home/native-cinterop-data/dependencies/" "$destination/"
 chown -R root:wheel "$destination"
 chmod -R a+rX,a-w "$destination"
-"$(xcrun --find python3)" -I "$scripts/tool-input-manifest.py" \
+"$(xcrun --find python3)" -I "$scripts/tool-input-manifest.py" --jobs "$(sysctl -n hw.ncpu)" \
   /opt/cairn-apple-tools native-dependencies \
   > "$prepared/native-inputs.sha256"
 echo 'PASS: extracted Native dependencies frozen read-only'

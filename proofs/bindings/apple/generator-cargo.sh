@@ -19,7 +19,7 @@ if [ "${1:-}" = install ]; then
     echo 'FAIL: debug installation is restricted to the pinned generator source' >&2
     exit 2
   fi
-  echo 'INFO: approved debug-profile generator installation; SDK profiles unchanged'
-  exec /opt/cairn-apple-tools/rust/bin/cargo install --debug "$@"
+  echo 'INFO: approved debug-profile generator installation without debuginfo; SDK profiles unchanged'
+  CARGO_PROFILE_DEV_DEBUG=0 exec /opt/cairn-apple-tools/rust/bin/cargo install --debug "$@"
 fi
 exec /opt/cairn-apple-tools/rust/bin/cargo "$@"

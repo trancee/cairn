@@ -111,7 +111,11 @@ File contents are read in 1 MiB chunks; the manifest is emitted after every
 selected file has been hashed successfully.
 
 The workflow's independent `shasum -a 256 --check` gates remain unchanged for
-tools, Gradle, Cargo and Native inputs after the bounded cell. No check,
+tools, Gradle, Cargo and Native inputs after the bounded cell.
+`verify-frozen-inputs.py --root ROOT --jobs N --check MANIFEST LOG ...` runs
+those same checks over contiguous manifest chunks in parallel and writes each
+log byte-identical to a serial check; any failed chunk fails the step after
+every log is written. No check,
 fresh compilation, archive verification, resource limit or copy/permission
 operation is removed. Nothing is cached by this change.
 
@@ -288,8 +292,11 @@ replacement scan or Android packaging
 proof; default Actions/Python/Rust scanning stays enabled. See
 [ADR 0015](../../../docs/adr/0015-build-backed-kotlin-codeql.md).
 
-The staged `.github/workflows/codeql.yml` runs existing Actions/Python/Rust
-default suites and calls this strict Kotlin lane. A manual `upload=false`
+`.github/workflows/codeql.yml` runs existing Actions/Python/Rust default
+suites; `.github/workflows/codeql-kotlin.yml` calls this strict Kotlin lane.
+PRs run it only when strict-lane inputs change; `main` pushes, weekly and manual
+runs are unfiltered. `test_codeql_kotlin_triggers.py` fails if a referenced
+repository path escapes that filter. A manual `upload=false`
 dispatch validates without publishing scans while default setup stays enabled.
 Feature branches without a PR use manual dispatch; main pushes, PRs targeting
 main and weekly runs remain automatic. Feature pushes no longer duplicate a
@@ -368,6 +375,12 @@ a disabled-login UID only in the disposable hosted VM, enables ownership on
 a fixed 256 MiB scratch image and runs real capacity/process/CPU exhaustion.
 The user/volume are removed/detached afterwards; diagnostics remain retained.
 These are benign test thresholds, not build budgets or memory acceptance.
+A tool root must be followed by a scope argument (`full`, `codeql` or
+`isolation`) selects the probes that `cell-plan.py` lists for that cell.
+The `codeql` scope skips the boundary probes (resource exhaustion, PF and
+launch); the `isolation` cell runs them. Before any cell, the strict
+preparation job runs `await-preflight.py` and
+requires the same run's benign preflight to have succeeded.
 
 The shared Linux collector now supports optional `--seconds` deadlines.
 `python3 -B -m unittest discover -s proofs/bindings/apple -p 'test_*.py'`
