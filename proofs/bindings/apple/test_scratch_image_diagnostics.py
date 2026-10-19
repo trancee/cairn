@@ -35,6 +35,8 @@ class ScratchImageDiagnosticsTest(unittest.TestCase):
                 return subprocess.CompletedProcess(command, 0, stdout=plistlib.dumps(inventory))
             if command[0] == "/usr/sbin/diskutil" or "+f" in command:
                 raise subprocess.CalledProcessError(1, command)
+            if command[0] == "/usr/sbin/ioreg":
+                return subprocess.CompletedProcess(command, 0, stdout=plistlib.dumps([]))
             return subprocess.CompletedProcess(command, 0, stdout="p123\ncdiskimages-helper\n")
 
         output, errors = io.StringIO(), io.StringIO()
@@ -152,6 +154,8 @@ class ScratchImageDiagnosticsTest(unittest.TestCase):
                 self.assertEqual(options["timeout"], 2)
                 clock[0] += 2
                 return subprocess.CompletedProcess(command, 0, stdout=INVENTORY)
+            if command[0] == "/usr/sbin/ioreg":
+                return subprocess.CompletedProcess(command, 0, stdout=plistlib.dumps([]))
             holder_calls.append(command)
             self.assertEqual(options["timeout"], 15 if len(holder_calls) == 1 else 3)
             clock[0] += 12 if len(holder_calls) == 1 else 3
@@ -183,6 +187,8 @@ class ScratchImageDiagnosticsTest(unittest.TestCase):
                     if command[0] == "/usr/bin/hdiutil":
                         self.assertNotEqual(phase, "metadata", "metadata exceeded its shared budget")
                         return subprocess.CompletedProcess(command, 0, stdout=INVENTORY)
+                    if command[0] == "/usr/sbin/ioreg":
+                        return subprocess.CompletedProcess(command, 0, stdout=plistlib.dumps([]))
                     if phase == "holders":
                         self.assertIn("+f", command, "holders exceeded their shared budget")
                         clock[0] += 15
@@ -217,6 +223,117 @@ class ScratchImageDiagnosticsTest(unittest.TestCase):
         self.assertIn("p123\ncfixture\n", output.getvalue())
         self.assertIn("holder-query-nonzero", errors.getvalue())
         self.assertNotRegex(output.getvalue(), r"(?m)^f")
+
+    def test_failed_ejection_reports_only_owned_media_kernel_clients(self):
+        registry = plistlib.dumps([
+            {"IOObjectClass": "IOMedia", "BSD Name": "disk0", "Open": True,
+             "IOServiceBusyState": 0, "IOObjectRetainCount": 9, "IORegistryEntryChildren": [
+                 {"IOObjectClass": "IOMediaBSDClient", "IOServiceBusyState": 0},
+             ]},
+            {"IOObjectClass": "IOMedia", "BSD Name": "disk7", "Open": True,
+             "IOServiceBusyState": 1, "IOObjectRetainCount": 12, "IORegistryEntryChildren": [
+                 {"IOObjectClass": "IOMediaBSDClient", "IOServiceBusyState": 0},
+                 {"IOObjectClass": "IOGUIDPartitionScheme", "IOServiceBusyState": 1,
+                  "IORegistryEntryChildren": [
+                      {"IOObjectClass": "IOMedia", "BSD Name": "disk7s1", "Open": False,
+                       "IOServiceBusyState": 0, "IOObjectRetainCount": 7},
+                  ]},
+             ]},
+        ])
+        commands = []
+
+        def operating_system(command, **options):
+            commands.append(command)
+            if command[:2] == ["/usr/bin/hdiutil", "detach"]:
+                return subprocess.CompletedProcess(command, 1)
+            if command[:2] == ["/usr/bin/hdiutil", "info"]:
+                return subprocess.CompletedProcess(command, 0, stdout=INVENTORY)
+            if command[0] == "/usr/sbin/ioreg":
+                self.assertEqual(options["timeout"], 5)
+                return subprocess.CompletedProcess(command, 0, stdout=registry)
+            if command[0] == "/usr/sbin/lsof":
+                return subprocess.CompletedProcess(command, 0, stdout="p123\ncdiskimages-helper\n")
+            raise subprocess.CalledProcessError(1, command)
+
+        output, errors = io.StringIO(), io.StringIO()
+        with mock.patch.object(scratch_detach.subprocess, "run", side_effect=operating_system):
+            with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
+                result = scratch_detach.detach_scratch(VOLUME, IMAGE)
+
+        self.assertEqual(result, 1)
+        self.assertEqual(commands[-1], ["/usr/sbin/ioreg", "-a", "-r", "-c", "IOMedia", "-w0"])
+        self.assertIn(
+            'DIAGNOSTIC: owned scratch media state [{"bsd-name": "disk7", "class": "IOMedia", '
+            '"open": true, '
+            '"busy": 1, "retain": 12, "clients": [["IOMediaBSDClient", 0], '
+            '["IOGUIDPartitionScheme", 1]]}]\n',
+            output.getvalue(),
+        )
+        self.assertIn('DIAGNOSTIC: owned scratch media absent ["disk7s2"]\n', output.getvalue())
+        self.assertNotIn("disk0", output.getvalue())
+        self.assertNotIn("disk7s1", output.getvalue())
+
+    def test_owned_media_subclasses_are_reported_with_their_registry_class(self):
+        registry = [{"IOObjectClass": "AppleAPFSMedia", "BSD Name": "disk9", "Open": True,
+                     "IOServiceBusyState": 0, "IOObjectRetainCount": 13,
+                     "IORegistryEntryChildren": [
+                         {"IOObjectClass": "AppleAPFSContainer", "IOServiceBusyState": 0,
+                          "IORegistryEntryChildren": [
+                             {"IOObjectClass": "AppleAPFSVolume", "BSD Name": "disk9s1",
+                              "Open": False, "IOServiceBusyState": 2, "IOObjectRetainCount": 8},
+                         ]},
+                     ]}]
+
+        media, absent = scratch_detach.owned_media_state(registry, ["disk9", "disk9s1"])
+
+        self.assertEqual(
+            [(entry["bsd-name"], entry["class"], entry["busy"]) for entry in media],
+            [("disk9", "AppleAPFSMedia", 0), ("disk9s1", "AppleAPFSVolume", 2)],
+        )
+        self.assertEqual(absent, [])
+
+    def test_invalid_media_registry_is_reported_without_clearing_failed_ejection(self):
+        def media(**fields):
+            return [{"IOObjectClass": "IOMedia", "BSD Name": "disk7", "Open": True,
+                     "IOServiceBusyState": 0, "IOObjectRetainCount": 3, **fields}]
+
+        cases = (
+            (b"invalid", "InvalidFileException"),
+            ({}, "invalid-media-registry"),
+            (media(Open="yes"), "invalid-owned-media-field"),
+            (media(IOObjectClass="bad class\n"), "invalid-owned-media-field"),
+            (media(IOServiceBusyState=True), "invalid-owned-media-field"),
+            (media(IOObjectRetainCount="3"), "invalid-owned-media-field"),
+            (media(IORegistryEntryChildren="x"), "invalid-media-registry"),
+            (media(IORegistryEntryChildren=[7]), "invalid-media-registry"),
+            (media(IORegistryEntryChildren=[{"IOObjectClass": "IOMediaBSDClient"}]),
+             "invalid-owned-media-client"),
+            (media(IORegistryEntryChildren=[{"IOObjectClass": "bad class\n"}]),
+             "invalid-owned-media-client"),
+            (media() + media(), "ambiguous-owned-media"),
+        )
+        for payload, reason in cases:
+            with self.subTest(reason=reason):
+                def operating_system(command, **options):
+                    if command[:2] == ["/usr/bin/hdiutil", "detach"]:
+                        return subprocess.CompletedProcess(command, 1)
+                    if command[:2] == ["/usr/bin/hdiutil", "info"]:
+                        return subprocess.CompletedProcess(command, 0, stdout=INVENTORY)
+                    if command[0] == "/usr/sbin/ioreg":
+                        data = payload if isinstance(payload, bytes) else plistlib.dumps(payload)
+                        return subprocess.CompletedProcess(command, 0, stdout=data)
+                    if command[0] == "/usr/sbin/lsof":
+                        return subprocess.CompletedProcess(command, 0, stdout="")
+                    raise subprocess.CalledProcessError(1, command)
+
+                output, errors = io.StringIO(), io.StringIO()
+                with mock.patch.object(scratch_detach.subprocess, "run", side_effect=operating_system):
+                    with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
+                        result = scratch_detach.detach_scratch(VOLUME, IMAGE)
+
+                self.assertEqual(result, 1)
+                self.assertIn("owned scratch media unavailable: " + reason, errors.getvalue())
+                self.assertNotIn("bad class", output.getvalue() + errors.getvalue())
 
     def test_holder_field_errors_do_not_log_unselected_file_fields(self):
         for fields in (

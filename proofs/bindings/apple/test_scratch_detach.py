@@ -54,6 +54,8 @@ class ScratchDetachTest(unittest.TestCase):
                 return subprocess.CompletedProcess(command, 0, stdout=INVENTORY)
             if command[0] == "/usr/sbin/diskutil":
                 return subprocess.CompletedProcess(command, 0, stdout=plistlib.dumps(state))
+            if command[0] == "/usr/sbin/ioreg":
+                return subprocess.CompletedProcess(command, 0, stdout=plistlib.dumps([]))
             return subprocess.CompletedProcess(command, 0, stdout="p123\ncfixture\nf3\nfcwd\n")
 
         output, errors = io.StringIO(), io.StringIO()
@@ -99,6 +101,8 @@ class ScratchDetachTest(unittest.TestCase):
                 return subprocess.CompletedProcess(command, 0, stdout=INVENTORY)
             if command[0] == "/usr/sbin/diskutil":
                 return subprocess.CompletedProcess(command, 0, stdout=plistlib.dumps({}))
+            if command[0] == "/usr/sbin/ioreg":
+                return subprocess.CompletedProcess(command, 0, stdout=plistlib.dumps([]))
             return subprocess.CompletedProcess(command, 0, stdout=holders.stdout)
 
         output, errors = io.StringIO(), io.StringIO()
@@ -142,6 +146,8 @@ class ScratchDetachTest(unittest.TestCase):
                         return subprocess.CompletedProcess(command, 0, stdout=INVENTORY)
                     if command[0] == "/usr/sbin/diskutil":
                         return subprocess.CompletedProcess(command, 0, stdout=response)
+                    if command[0] == "/usr/sbin/ioreg":
+                        return subprocess.CompletedProcess(command, 0, stdout=plistlib.dumps([]))
                     return subprocess.CompletedProcess(command, 0, stdout="p123\ncfixture\n")
 
                 output, errors = io.StringIO(), io.StringIO()

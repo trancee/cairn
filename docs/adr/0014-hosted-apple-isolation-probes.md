@@ -1543,6 +1543,51 @@ only internal diagnostics/tests and their reference; the caller, five-/15-second
 windows, sandbox/PF/resource controls and every integrity/result gate remain
 unchanged. Updated-source hosted acceptance is separate and recorded by PR #9.
 
+### Kernel media state on busy ejection (2026-10-19)
+
+`Resource busy` still fails two of the last 73 completed strict-lane jobs:
+run `39258233481` attempt 1 (isolation cell) and run `39210781030`
+attempt 1 (preflight). In the latest failure the owned image reports no
+mount point, so the volume had already unmounted. Only the whole-disk eject
+failed, and the
+only open-file holder was `diskimages-helper`, the image's own helper. No
+build or probe process holds a file, so the remaining hold is at the IOKit
+device level, which `lsof` cannot see.
+
+The owner chose diagnostics only. After the holder phase, a failed
+ejection now runs the native registry query
+`/usr/sbin/ioreg -a -r -c IOMedia -w0` with its own five-second timeout.
+From the plist, `owned_media_state()` selects only entries whose `BSD Name`
+is one of the owned image's validated devices; this includes `IOMedia`
+subclasses such as `AppleAPFSMedia`. It prints:
+
+- `DIAGNOSTIC: owned scratch media state`: for each owned device, its
+  registry class, `Open`, `IOServiceBusyState`, `IOObjectRetainCount`, and
+  each direct child's class and busy state. The children are the kernel
+  clients still attached, such as `IOMediaBSDClient` or a partition scheme.
+- `DIAGNOSTIC: owned scratch media absent`: owned devices missing from the
+  registry. This explains whether devices such as the earlier `disk7s2` still
+  exist.
+
+Malformed registry data, invalid class names, non-integer counters and
+duplicate owned names are reported as a redacted reason on stderr
+(`owned scratch media unavailable: ...`). The query never prints foreign
+devices, properties outside that list, or paths. It runs only when the owned
+devices were identified and never changes the nonzero result.
+
+The regressions were red because the query was missing, then green. They
+cover owned-only selection, absent devices, subclasses, malformed or
+ambiguous registry data, and non-dictionary children. Under Python `3.9.6`
+and the local `3`, 125 Apple tooling tests pass with six hosted-only skips.
+A locally attached HFS+ UDIF image parses with the expected
+`IOMedia`/`IOMediaBSDClient`/`IOGUIDPartitionScheme` shape.
+
+Retry, forced detach, holder termination and larger limits remain
+unselected. This is evidence collection only. The detach strategy, the
+five- and 15-second windows, sandbox/PF controls and all integrity and
+result gates are unchanged. The next hosted `Resource busy` failure decides
+whether a strategy change is justified.
+
 ## Parallel post-cell integrity verification
 
 On 2026-10-18 the owner requested faster CI without weakening any gate.
