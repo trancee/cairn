@@ -1806,3 +1806,14 @@ owned by the probe UID. When `--diagnose-after` fires, the supervisor also print
 rows. The rows cover the eight processes with the highest CPU use, plus
 up to eight further processes in state `U`. Each row has only CPU percent,
 state and executable basename: no PID, UID, arguments or environment.
+
+The denial report must not fail a passing probe. In PR #14
+[run `39273095309`](https://github.com/trancee/cairn/actions/runs/39273095309),
+`fixture-targets` passed in about 33 seconds, but `log show` exceeded the
+report's 15-second timeout. The uncaught `TimeoutExpired` failed the
+`codeql` cell, and fail-fast cancelled the isolation cell. As with the
+scratch-detach lookup above, optional diagnostics must not create their own
+failure. The report now prints
+`DIAGNOSTIC: sandbox-denial query unavailable: <error type>` and exits zero
+on a timeout, a nonzero `log` status or an unavailable command. The
+15-second limit and the probe's own exit status are unchanged.

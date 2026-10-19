@@ -28,8 +28,13 @@ def summarize(text):
 def main():
     if len(sys.argv) != 2:
         raise SystemExit("usage: report-sandbox-denials.py 'YYYY-MM-DD HH:MM:SS'")
-    result = subprocess.run(query(sys.argv[1]), check=True, capture_output=True,
-                            text=True, timeout=15)
+    try:
+        result = subprocess.run(query(sys.argv[1]), check=True, capture_output=True,
+                                text=True, timeout=15)
+    except (OSError, subprocess.SubprocessError) as error:
+        print(f"DIAGNOSTIC: sandbox-denial query unavailable: {type(error).__name__}",
+              file=sys.stderr, flush=True)
+        return
     print("\n".join(summarize(result.stdout)), flush=True)
 
 
