@@ -84,6 +84,17 @@ class CellPlanTest(unittest.TestCase):
             self.assertIn("toolchains", probes, scope)
             self.assertLess(probes.index("toolchains"), probes.index("fixture-targets"), scope)
 
+    def test_fixture_targets_reports_owned_processes_before_its_unchanged_deadline(self):
+        arm = re.search(r"^    fixture-targets\)\n(.*?)^      ;;$", RUNNER.read_text(),
+                        re.MULTILINE | re.DOTALL)
+        self.assertIsNotNone(arm)
+        supervisor = re.search(r'uid-supervisor\.py"((?:[^\n]|\\\n)*?)"\$work/proof-output',
+                               arm.group(1))
+        self.assertIsNotNone(supervisor, arm.group(1))
+
+        self.assertEqual(supervisor.group(1).split(),
+                         ["--seconds", "60", "--diagnose-after", "50", "\\"])
+
     def test_each_scope_requires_its_matching_codeql_tool_state(self):
         self.assertEqual(plan.requires_codeql("full"), False)
         self.assertEqual(plan.requires_codeql("codeql"), True)
