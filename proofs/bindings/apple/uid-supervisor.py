@@ -90,6 +90,28 @@ def report_account_processes(uid):
             }), flush=True)
 
 
+def select_host_processes(listing, limit=8):
+    rows = []
+    for line in listing.splitlines():
+        cpu, state, command = line.split(maxsplit=2)
+        rows.append({"cpu_percent": float(cpu), "state": state, "command": Path(command).name})
+    rows.sort(key=lambda row: row["cpu_percent"], reverse=True)
+    waiting = [row for row in rows[limit:] if row["state"].startswith("U")]
+    return rows[:limit] + waiting[:limit]
+
+
+def report_host_load():
+    print("DIAGNOSTIC: host-load " + json.dumps({
+        "load_average": [round(value, 2) for value in os.getloadavg()],
+    }), flush=True)
+    result = subprocess.run(
+        ["/bin/ps", "-axo", "pcpu=,stat=,comm="],
+        check=True, capture_output=True, text=True, timeout=5,
+    )
+    for row in select_host_processes(result.stdout):
+        print("DIAGNOSTIC: host-process " + json.dumps(row), flush=True)
+
+
 def main():
     if sys.argv[1:2] == ["--child"]:
         launch_child(sys.argv[2:])
@@ -136,6 +158,7 @@ def main():
                 return process.wait(timeout=arguments.diagnose_after)
             except subprocess.TimeoutExpired:
                 report_account_processes(account.pw_uid)
+                report_host_load()
         return process.wait()
     except InterruptedError as error:
         print(f"FAIL: hosted supervisor interrupted by signal {error.errno}", file=sys.stderr)

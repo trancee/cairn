@@ -1739,3 +1739,25 @@ A JVM thread dump was not added. The daemon's stdout is `/dev/null`, so a
 `SIGQUIT` dump is lost. `jcmd` attach needs a Unix-socket bind, which
 `build.sb` denies. Either route would loosen the sandbox or change the
 probe's JVM options.
+
+The first run with these diagnostics (#13, run `39254726531`) failed the
+same way in the `codeql` cell (`60.8s`). The isolation cell passed in
+`40.9s`. Two results:
+
+- **The denials are benign.** The passing isolation probe logged the
+  same two read-only cache write denials, so they do not cause the stall.
+- **The daemon is busy, not blocked.** At 50 seconds the Gradle daemon
+  had `0:41.66` CPU time and was in state `U` (disk wait). The work is
+  real, most likely the cold Kotlin Gradle plugin setup. The fixture-selection
+  warm-up does not load the plugins, so this cost always falls inside
+  `fixture-targets`.
+
+Five of the last sixteen measurements failed, all on 2026-10-19, and four
+of them in the `codeql` cell. To find out whether another process on the
+runner competes with the probe, the owner approved a host-level snapshot.
+This relaxes the earlier rule that diagnostics record only processes
+owned by the probe UID. When `--diagnose-after` fires, the supervisor also prints
+`DIAGNOSTIC: host-load` (the load average) and `DIAGNOSTIC: host-process`
+rows. The rows cover the eight processes with the highest CPU use, plus
+up to eight further processes in state `U`. Each row has only CPU percent,
+state and executable basename: no PID, UID, arguments or environment.
