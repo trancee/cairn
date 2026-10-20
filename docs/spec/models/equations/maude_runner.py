@@ -25,6 +25,10 @@ class GuardError(RuntimeError):
     """A guarded proof command did not establish its native boundary evidence."""
 
 
+class InFlightBoundary(GuardError):
+    """The report's final record may still be in flight; fatal only at the shutdown deadline."""
+
+
 def unique_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
     fields: dict[str, object] = {}
     for name, value in pairs:
@@ -40,7 +44,7 @@ def boundary_complete(report: Path, *, source_id: str) -> bool:
     except (OSError, UnicodeError) as error:
         raise GuardError("missing native boundary records") from error
     if not text or not text.endswith("\n"):
-        raise GuardError("truncated native boundary records")
+        raise InFlightBoundary("truncated native boundary records")
     # Avoid a full compaction pass without a repeat in the first producer-sized batch.
     if OPERATION_CYCLES.search(text, 0, 16_384) is not None:
         # Identical complete cycles preserve every initial lifecycle verdict.
@@ -136,8 +140,14 @@ def run_guarded_tamarin(
         except (OSError, ReplayError) as error:
             raise GuardError(str(error)) from error
         deadline = time.monotonic() + 5
-        while not boundary_complete(report, source_id=source_id):
+        while True:
+            try:
+                if boundary_complete(report, source_id=source_id):
+                    break
+                failure = GuardError("native boundary shutdown incomplete")
+            except InFlightBoundary as error:
+                failure = error
             if time.monotonic() >= deadline:
-                raise GuardError("native boundary shutdown incomplete")
+                raise failure
             time.sleep(0.001)
     return output
