@@ -475,6 +475,7 @@ def main() -> int:
         print("PASS: full-AST sorted AC systems generate finite complete families with fresh residuals and globally sorted postfactors.")
         print("PASS: guarded native query terms have finite complete variant families.")
         print("PASS: the native module text and six rule templates are rendered by Lean; parse∘render = id.")
+        print("PASS: AC equality of native query terms is decided by an executable canonical form.")
         print("Scope: typed image algebra + Lean native-query FVP + enforced native stream membership; not a Maude variant-generator certificate.")
         print("Trust boundary: Tamarin/Maude + Rust stream guard + Python evidence/signature/translation + Lean kernel.")
         return 0

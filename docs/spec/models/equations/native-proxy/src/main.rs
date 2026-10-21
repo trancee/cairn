@@ -1,3 +1,4 @@
+mod certificate;
 mod error;
 mod evidence;
 mod input;

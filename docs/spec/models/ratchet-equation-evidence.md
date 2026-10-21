@@ -631,7 +631,10 @@ the builtin AC relation. Constructor terms and message variables can
 still contain natural-number subterms, however; disjoint function names
 alone are not a complete proof of the combined theory's FVP. Tamarin's
 sorted AC unification/variant backend and its supported combination
-remain part of the trusted tool boundary.
+remain part of the trusted tool boundary. The native guard rejects any
+returned `unify`/`match` solution that fails an AC-equality check proved in
+Lean ([`QueryACCanonical.lean`](equations/README.md#native-module-correspondence)),
+so only the completeness of solution families stays trusted.
 
 Independent acceptance of the exact mixed message/natural theory, or a
 formal combination certificate, is still outstanding. This document

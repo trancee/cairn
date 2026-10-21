@@ -446,6 +446,7 @@ class EquationCommandTests(unittest.TestCase):
             ("general-ac-completeness", "native_sorted_ac_system_family_complete"),
             ("finite-variants", "native_finite_variants_complete"),
             ("module-correspondence", "native_maude_parse_render"),
+            ("ac-canonical", "native_ac_canonical_iff"),
         ):
             with self.subTest(group=group):
                 result = self.run_with_axiom_reports(*(item for item in REPORT_GROUPS if item != group))

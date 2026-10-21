@@ -2,6 +2,15 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer; SDK/application=not implemented.
 
+## Native unifier soundness certificate (2026-10-21)
+
+The native guard rejects any `unify` or `match` reply containing a solution
+that does not solve the query modulo AC. Equality uses flattened, sorted sums;
+`QueryACCanonical.lean` proves that procedure decides `NativeQueryAC`. The
+Rust certificate agrees with 564 Lean-labelled `EQUAL`/`DISTINCT` corpus pairs.
+Completeness of Maude's solution families remains trusted
+([details](docs/spec/models/equations/README.md#native-stream-boundary)).
+
 ## Flattened-sum syntax corpus (2026-10-21)
 
 The Lean syntax corpus now includes flattened n-ary `tamtplus` sums as Maude
