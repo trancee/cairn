@@ -2,6 +2,14 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer; SDK/application=not implemented.
 
+## Flattened-sum syntax corpus (2026-10-21)
+
+The Lean syntax corpus now includes flattened n-ary `tamtplus` sums as Maude
+prints them, classified by the right-nested term the Lean parser reads. The
+Rust recognizer agrees on all 3037 lines; accepting only binary sums or
+checking only the first two operands now fails the test
+([details](docs/spec/models/equations/README.md#native-module-correspondence)).
+
 ## Kind-sorted syntax corpus (2026-10-21)
 
 The Lean syntax corpus now also classifies controlled-kind terms
