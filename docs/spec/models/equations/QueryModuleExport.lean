@@ -3,6 +3,7 @@ import QueryInstances
 import QueryPrincipalSort
 import QueryKind
 import QueryACCanonical
+import QuerySyntacticUnification
 
 namespace Cairn.Equations
 
@@ -191,6 +192,74 @@ def nativeACPairLines : List String :=
       acLine text (nativeMaudeTerm shorter) (nativeACEqual term shorter)]
   rendered ++ flat
 
+private def resultLine (tag problem : String) : NativeSyntacticResult → String
+  | .solved bindings => s!"{tag}\t{problem}\tSOLVED\t" ++ (if bindings.isEmpty then "-" else
+      " ; ".intercalate (bindings.map fun (key, value) =>
+        s!"{nativeMaudeTerm (.queryVariable key.1 key.2)} --> {nativeMaudeTerm value}"))
+  | .failed => s!"{tag}\t{problem}\tFAILED\t-"
+  | .unsupported => s!"{tag}\t{problem}\tUNSUPPORTED\t-"
+
+private def problemText (relation : String) (pairs : List (NativeQueryTerm × NativeQueryTerm)) :
+    String :=
+  " /\\ ".intercalate (pairs.map fun (left, right) =>
+    s!"{nativeMaudeTerm left} {relation} {nativeMaudeTerm right}")
+
+private def publicVariable (index : Nat) : NativeQueryTerm := .queryVariable .publicAtom index
+private def nodeVariable (index : Nat) : NativeQueryTerm := .queryVariable .node index
+
+-- Small terms of every sort whose pairwise problems cover variable/variable sort combinations.
+private def nativeSyntacticTerms : List NativeQueryTerm := [
+  publicVariable 0, fresh 0, message 0, natural 0, nodeVariable 0, message 1,
+  .atom .publicAtom 0, .atom .freshAtom 0, .atom .messageAtom 0, .naturalAtom 0, .nodeAtom 0,
+  .naturalOne, .roleA, .unary .hash (message 0), .binary .pair (message 1) (.atom .messageAtom 0),
+  .naturalAdd (natural 0) .naturalOne, .nil, .list .nil, .cons (nodeVariable 0) .nil
+]
+
+def nativeUnifySystems : List NativeEquationSystem :=
+  nativeSyntacticTerms.flatMap (fun left => nativeSyntacticTerms.map fun right => [(left, right)]) ++ [
+    [(.binary .pair (message 0) (message 1), .binary .pair (.atom .messageAtom 1) (.unary .hash (message 0)))],
+    [(.binary .pair (message 0) (message 1), .binary .senc (message 0) (message 1))],
+    [(.unary .hash (message 0), message 1)],
+    [(message 0, message 1), (message 1, .atom .messageAtom 2)],
+    [(message 0, .binary .pair (message 1) (message 2)), (message 1, .binary .pair (message 0) (message 2))],
+    [(.list (.cons (nodeVariable 0) .nil), .list (.cons (.nodeAtom 1) .nil))],
+    [(.cons (message 0) .nil, .cons (nodeVariable 1) .nil)],
+    [(message 0, .naturalAdd (message 1) .naturalOne)],
+    [(natural 0, .naturalAdd (message 1) .naturalOne)],
+    [(publicVariable 0, message 1), (message 1, .atom .freshAtom 0)],
+    [(message 0, publicVariable 1), (message 0, .atom .publicAtom 3)],
+    [(.kdf (message 0) (natural 1) .roleA, .kdf (.unary .pk (message 2)) .naturalOne (message 3))],
+    [(.kdf (message 0) (natural 1) .roleA, .kdf (message 2) (fresh 3) (message 3))],
+    [(.binary .pair (message 0) (message 0), .binary .pair (message 1) (.unary .hash (message 1)))],
+    [(message 0, message 0), (natural 1, .naturalAtom 2)],
+    [(message 0, message 1), (message 1, message 2), (message 2, message 3), (message 3, .roleB)],
+    [(.naturalAdd (natural 0) (natural 1), .naturalAdd (natural 0) (natural 1))],
+    [(.unary .hash (.naturalAdd (natural 0) .naturalOne), .unary .hash (message 1))],
+    [(.unary .hash (.naturalAdd (natural 0) .naturalOne), .unary .hash (.naturalAdd .naturalOne (natural 0)))]
+  ]
+
+def nativeMatchProblems : List (List (NativeQueryTerm × NativeQueryTerm)) :=
+  nativeSyntacticTerms.flatMap (fun pattern => nativeSyntacticTerms.map fun subject => [(pattern, subject)]) ++ [
+    [(.binary .pair (message 0) (message 0), .binary .pair (message 1) (message 1))],
+    [(.binary .pair (message 0) (message 0), .binary .pair (message 1) (message 2))],
+    [(.binary .pair (message 0) (message 0), .binary .pair (.naturalAdd (natural 1) .naturalOne)
+      (.naturalAdd .naturalOne (natural 1)))],
+    [(.binary .pair (message 0) (message 0), .binary .pair (.naturalAdd (natural 1) .naturalOne)
+      (.naturalAdd .naturalOne (natural 2)))],
+    [(message 0, message 1), (message 0, message 1)],
+    [(message 0, message 1), (message 0, message 2)],
+    [(publicVariable 0, .atom .publicAtom 1), (message 1, .unary .hash (publicVariable 0))],
+    [(.list (.cons (nodeVariable 0) (.cons (nodeVariable 1) .nil)), .list (.cons (.nodeAtom 1) (.cons (.nodeAtom 2) .nil)))],
+    [(.kdf (message 0) (natural 1) .roleA, .kdf (.unary .pk (message 2)) .naturalOne .roleA)],
+    [(.kdf (message 0) (natural 1) .roleA, .kdf (message 2) (fresh 3) .roleA)]
+  ]
+
+def nativeSyntacticLines : List String :=
+  nativeUnifySystems.map (fun system => resultLine "UNIFY" (problemText "=?" system)
+    (nativeSyntacticUnify nativeSyntacticFuel system)) ++
+  nativeMatchProblems.map fun pairs => resultLine "MATCH" (problemText "<=?" pairs)
+    (nativeSyntacticMatch nativeSyntacticFuel pairs [])
+
 def nativeSyntaxLines : List String :=
   let accepted := (nativeSyntaxCorpus ++ nativeKindCorpus).filterMap fun term =>
     (nativeExpectedKind term).map fun sort =>
@@ -210,7 +279,8 @@ def nativeSyntaxLines : List String :=
     fun characters =>
       let text := String.ofList characters
       if (nativeMaudeParse text).isNone then some s!"REJECT\t{text}" else none
-  accepted.eraseDups ++ flat ++ illSorted ++ rejected.eraseDups ++ nativeACPairLines
+  accepted.eraseDups ++ flat ++ illSorted ++ rejected.eraseDups ++ nativeACPairLines ++
+    nativeSyntacticLines
 
 #guard nativeSyntaxCorpus.all fun term => (nativeExpectedSort term).isSome
 #guard nativeKindCorpus.all fun term =>
@@ -226,6 +296,12 @@ def nativeSyntaxLines : List String :=
 #guard (nativeACPairLines.filter (·.startsWith "DISTINCT")).length ≥ 60
 #guard nativeFlatSumCorpus.all fun (_, term) =>
   !nativeACEqual term (nativeACRebuild (nativeACSummands term).tail)
+#guard ["UNIFY", "MATCH"].all fun tag => ["SOLVED", "FAILED", "UNSUPPORTED"].all fun status =>
+  nativeSyntacticLines.any fun line => line.startsWith tag && (line.splitOn "\t")[2]? == some status
+#guard (nativeUnifySystems.filter fun system =>
+  match nativeSyntacticUnify nativeSyntacticFuel system with
+  | .unsupported => false
+  | _ => true).length ≥ 300
 
 #eval do
   IO.print nativeMaudeModule

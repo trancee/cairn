@@ -107,6 +107,12 @@ pub fn check(query: &Query, bindings: &BTreeMap<&str, &str>) -> Result<()> {
     Ok(())
 }
 
+// `nativeACEqual`: equal canonical renderings decide AC equality (native_ac_equal_iff).
+pub fn equivalent(left: &str, right: &str) -> Result<bool> {
+    let identity = BTreeMap::new();
+    Ok(canonical(left, &identity)?.render() == canonical(right, &identity)?.render())
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;

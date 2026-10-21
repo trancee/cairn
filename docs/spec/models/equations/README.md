@@ -951,6 +951,33 @@ guard's reply certificate to agree with every `EQUAL`/`DISTINCT` line; omitting
 the summand sort or the flattening, or deduplicating summands, fails it.
 This is corpus evidence for the Rust certificate, not a proof.
 
+`QuerySyntacticUnification.lean` defines a fuelled sorted unifier
+`nativeSyntacticUnify` and matcher `nativeSyntacticMatch` for systems whose
+solutions need no natural-sum reasoning. Sort intersections in the native
+lattice are one of their arguments or empty, so such a system has at most one
+most general unifier and needs no fresh variables. Each returns `solved`,
+`failed` or `unsupported` (fuel, a residual above 4096 nodes, a `tamtplus`
+head or a sort refinement that would need a new variable). Its audited theorems:
+
+- `native_syntactic_unify_spec`: `solved σ` is a complete singleton family and
+  `failed` means no sorted AC unifier exists;
+- `native_syntactic_match_solved`/`native_syntactic_match_failed`: `solved`
+  is a sorted AC matcher and `failed` means none exists;
+- `native_ac_instance_match_iff`: one assignment generalizes another exactly
+  when the binding pairs have a matcher;
+- `native_complete_family_cover_iff`: given a most general unifier, a sound
+  family is complete exactly when one member generalizes it;
+- `native_complete_empty_family_iff`: when no unifier exists, only the empty
+  family is complete.
+
+The export adds 751 `UNIFY`/`MATCH` lines with Lean's result and bindings. The
+Rust unit test `unifier_and_matcher_agree_with_the_lean_corpus` requires
+`native-proxy/src/unifier.rs` to reproduce every line; omitting the occurs
+check, the sort check, the AC lookup for repeated pattern variables or the
+head-clash failure fails it. This is corpus evidence for the Rust mirror, not
+a proof. The Rust mirror also reports `unsupported` for terms or composed
+bindings above 4096 nodes; `unsupported` makes no claim.
+
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of
 native bookkeeping `NAT`, the entire kind-completed carrier or finite variants.
@@ -963,7 +990,9 @@ The Lean finite-variant theorem above is discharged for the native query
 algebra. Correspondence with Tamarin/Maude sorted AC unification, backend
 narrowing/variant generation and the importer is not discharged by this command.
 The native guard checks the soundness of each returned `unify`/`match`
-solution (below); completeness of Maude's solution families stays trusted.
+solution and, for sum-free queries the verified syntactic unifier decides,
+the completeness of the family (below). Completeness for queries with natural
+sums, or that the syntactic procedure leaves `unsupported`, stays trusted.
 
 ## Native stream boundary
 
@@ -1001,7 +1030,17 @@ Each `unify` solution must make both sides of every equation AC-equal, and
 each `match` solution must instantiate the pattern to an AC-equal copy of the
 unchanged subject. Equality compares flattened, sorted sums, the procedure
 `QueryACCanonical.lean` proves decides `NativeQueryAC`. A non-solution rejects
-the entire reply. This certifies soundness only: a missing solution goes undetected.
+the entire reply.
+
+For queries without `tamtplus`, the guard also runs the Lean-mirrored
+syntactic unifier or matcher. If it returns `solved`, `No unifier.` or
+`No match.` rejects the entire reply. For `unify`, some returned solution must
+generalize the most general unifier: matching its bindings (generated
+variables bindable) against the unifier's (original variables constant) must
+not fail. By `native_complete_family_cover_iff` this decides completeness of
+the already-certified family. `failed` needs no extra check: every returned
+solution already fails the certificate. `unsupported` keeps family
+completeness trusted, as do all queries with natural sums.
 There is no per-solution filtering or success fallback.
 
 `CAIRN_MAUDE_BINARY` selects the underlying executable, otherwise `maude` is

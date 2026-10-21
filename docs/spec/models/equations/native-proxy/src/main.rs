@@ -7,6 +7,7 @@ mod profile;
 mod query;
 mod reply;
 mod syntax;
+mod unifier;
 mod unix;
 mod validation;
 
