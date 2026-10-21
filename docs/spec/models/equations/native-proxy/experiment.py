@@ -26,6 +26,9 @@ from tamarin_profile import TamarinRuntimeProfile
 
 
 MODELS = Path(__file__).resolve().parents[2]
+ROOT = MODELS.parents[2]
+COMMITTED_BASELINE = "unchanged committed replay.run, direct pinned Tamarin/Maude"
+WORKING_TREE_BASELINE = "uncommitted working-tree replay.run, direct pinned Tamarin/Maude"
 WORKLOADS = {
     "full-export": (
         MODELS / "ratchet.spthy",
@@ -46,6 +49,31 @@ WORKLOADS = {
 
 class BudgetExceeded(GuardError):
     """A structurally valid current-source report exceeds its approved budget."""
+
+
+def committed_baseline(root: Path, timeout: float | None = None) -> bool:
+    # Outside a repository, git diff silently switches to --no-index mode.
+    toplevel = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+        text=True, capture_output=True, timeout=timeout,
+    )
+    if toplevel.returncode != 0 or Path(toplevel.stdout.strip()).resolve() != root.resolve():
+        raise GuardError("native guard committed replay baseline unavailable")
+    result = subprocess.run(
+        ["git", "-C", str(root), "diff", "--quiet", "HEAD", "--", "docs/spec/models/replay.py"],
+        capture_output=True, timeout=timeout,
+    )
+    if result.returncode not in (0, 1):
+        raise GuardError("native guard committed replay baseline unavailable")
+    return result.returncode == 0
+
+
+def baseline_label(rounds: int, *, committed: bool) -> str:
+    if committed:
+        return COMMITTED_BASELINE
+    if rounds != 1:
+        raise GuardError("native guard acceptance requires a committed replay baseline")
+    return WORKING_TREE_BASELINE
 
 
 def check_budget(report: object, workload: str) -> None:
@@ -73,6 +101,7 @@ def check_budget(report: object, workload: str) -> None:
     if (
         report.get("workload_name") != workload
         or report.get("method") != "three alternating paired runs"
+        or report.get("baseline") != COMMITTED_BASELINE
         or report.get("source_id") != source_identity()
         or report.get("model_sha256") != hashlib.sha256(model.read_bytes()).hexdigest()
         or report.get("export_sha256") not in expected_exports
@@ -143,10 +172,7 @@ def measure(
     identity = source_identity()
     proxy_digest = hashlib.sha256(proxy.read_bytes()).hexdigest()
     metadata_timeout = 5 if profile_tamarin or profile_native else None
-    subprocess.run(
-        ["git", "diff", "--quiet", "HEAD", "--", "docs/spec/models/replay.py"],
-        check=True, timeout=metadata_timeout,
-    )
+    baseline = baseline_label(rounds, committed=committed_baseline(ROOT, metadata_timeout))
     command = [
         "tamarin-prover", str(model), "--quit-on-warning",
         "--derivcheck-timeout=60", "--output-module=msr",
@@ -224,9 +250,9 @@ def measure(
         "logical_cpus": os.cpu_count(),
         "physical_memory_bytes": os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE"),
         "baseline_revision": subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], text=True, timeout=metadata_timeout,
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True, timeout=metadata_timeout,
         ).strip(),
-        "baseline": "unchanged committed replay.run, direct pinned Tamarin/Maude",
+        "baseline": baseline,
         "method": "three alternating paired runs" if rounds == 3 else "one screening pair, not acceptance",
         "seconds": timings,
         "waited_child_resources": child_resources,

@@ -511,13 +511,16 @@ formula/attributes. The runner fails closed on incomplete source evidence;
 local/CI gate definitions cover the joint source, complete safety and witnesses.
 
 The three serialization claims use the accepted Lean compositional gate.
-Full assembled replay was system-killed with exit 137 before a summary.
+Full assembled replay was system-killed with exit 137 before a summary;
+witness heap residency adds up past the 5 GiB ceiling. An audited partition
+now accepts the safety and witness contexts as full-context certificate
+checking ([ADR 0017](docs/adr/0017-split-full-context-acceptance.md)).
 All 19 formal jobs passed at `85aa105` in
 [run 38442377893](https://github.com/trancee/cairn/actions/runs/38442377893).
 A separate full-context hint-hiding experiment timed out and was discarded.
 Independent mixed-equation/FVP acceptance remains outstanding.
 Default activation and ratchet implementation
-are not authorized by these partial-context results. Earlier source counts
+are not authorized by these results. Earlier source counts
 and replay results elsewhere in this profile are historical; the
 [current source evidence](docs/spec/models/ratchet-source-evidence.md#current-result-2026-10-13)
 is authoritative for this increment. No protocol, API, wire, primitive,
@@ -932,7 +935,11 @@ acceptance is implied.
   It preserves every non-lemma declaration and retained certificate through
   a native MSR roundtrip, removes unrelated lemmas and does not start new
   searches with `--prove`. Full-context certificate-only replay still timed
-  out at 300 seconds; assembled completion remains unverified (re-run: both profiles exhaust the 5 GiB heap, no lemma result).
+  out at 300 seconds (re-run: both profiles exhaust the 5 GiB heap, no lemma result).
+  `python3 docs/spec/models/replay.py --disclosure-sources --audit-partition`
+  checks that the split contexts preserve every sources/reuse context; they
+  are accepted as full-context certificate checking
+  ([ADR 0017](docs/adr/0017-split-full-context-acceptance.md)).
   The [source inventory](docs/spec/models/ratchet-source-evidence.md)
   accounts for 43 goal groups/179 branches; the raw inventory has 30
   residual CK/SS disclosure chains, while the current refined profile has

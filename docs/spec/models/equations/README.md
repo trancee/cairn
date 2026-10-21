@@ -985,8 +985,10 @@ The guarded default `lost_data_recovery` replay verifies the 826-step witness
 and nine-step ownership helper in `106.77` seconds of reported proof processing.
 The guarded `--disclosure-sources --target complete_safety` context verifies
 all 56 safety certificates in `44.85` seconds, with complete refined sources
-and unchanged 43 rules/13 restrictions. These are selected contexts, not a
-full 63-declaration replay or a native FVP certificate.
+and unchanged 43 rules/13 restrictions. With the partition audit these
+contexts are accepted full-context certificate checking
+([ADR 0017](../../../adr/0017-split-full-context-acceptance.md)), not a single
+63-declaration process or a native FVP certificate.
 Both final-source mutation runners also pass: default/`CLASSIC_FALLBACK`
 verifies/falsifies in 2/504 steps (`48.50`/`55.13` seconds), and
 default/`NO_PREFIX_GUARD` in 4/526 steps (`49.82`/`56.79` seconds).

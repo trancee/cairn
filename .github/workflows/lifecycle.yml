@@ -46,6 +46,8 @@ jobs:
             replay: '--disclosure-sources --target kem_and_ct_tail_origin'
           - name: replay-complete-safety
             replay: '--disclosure-sources --target complete_safety'
+          - name: replay-full-context-partition
+            replay: '--disclosure-sources --audit-partition'
           - name: replay-fresh_dk_origin
             replay: '--disclosure-sources --target fresh_dk_origin'
           - name: replay-encrypted_origin

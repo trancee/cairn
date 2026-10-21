@@ -1637,8 +1637,11 @@ All 19 formal jobs passed at `85aa105` in
 [run 38442377893](https://github.com/trancee/cairn/actions/runs/38442377893).
 Independent combined-equation/FVP acceptance remains unverified.
 Keep the profile opt-in and the ratchet
-implementation gate closed. Independent contexts are not a claimed full
-assembled Tamarin result. The three serialization claims still use the
+implementation gate closed. Independent contexts were not then a claimed
+full assembled Tamarin result;
+[ADR 0017](0017-split-full-context-acceptance.md) later accepts them as
+full-context certificate checking behind an audited partition. The three
+serialization claims still use the
 accepted Lean compositional route. See the
 [current evidence](../spec/models/ratchet-source-evidence.md#current-result-2026-10-13).
 

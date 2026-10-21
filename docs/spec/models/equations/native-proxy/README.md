@@ -43,7 +43,12 @@ exercises explicit unsupported-platform rejection.
 explicitly screening only; it never reports budget acceptance.
 
 Three alternating pairs compare unchanged committed `replay.run` with the
-shared guarded runner and explicit executable. Every export must match a
+shared guarded runner and explicit executable. Measurement compares
+`docs/spec/models/replay.py` with `HEAD` at the repository root, independent
+of the working directory, and fails closed outside a checkout. Acceptance
+requires the committed file. A one-pair screening run with an edited file
+labels its baseline `uncommitted working-tree replay.run`, so edits to
+`replay.py` stay committable; `--check-report` rejects that label. Every export must match a
 retained workload digest, and all six exports in a measurement must be
 byte-identical. The medians must satisfy **full export at most
 `+10%`** and **startup at most `+50` ms**. The tiny allowance never applies
