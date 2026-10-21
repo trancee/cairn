@@ -29,7 +29,10 @@ fi
 lean="${LEAN:-$(command -v lean || true)}"
 if [ -n "$lean" ]; then
   python3 docs/spec/models/lifecycle/check.py --lean "$lean"
-  python3 docs/spec/models/equations/termination.py --lean "$lean"
+  variant_export="$(mktemp)"
+  trap 'rm -f "$variant_export"' EXIT
+  python3 docs/spec/models/equations/termination.py --lean "$lean" --variant-export "$variant_export"
+  python3 docs/spec/models/equations/variant_differential.py --export "$variant_export"
 else
   echo "skip: set LEAN=<path to pinned lean> to run lifecycle/equation convergence/image gates" >&2
 fi

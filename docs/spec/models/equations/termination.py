@@ -261,6 +261,7 @@ NATURAL_LINEARIZATION_THEOREMS = (
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--lean", default="lean", help="pinned Lean executable")
+    parser.add_argument("--variant-export", type=Path, help="write QueryVariantExport output here")
     arguments = parser.parse_args()
     here = Path(__file__).resolve().parent
     try:
@@ -408,11 +409,14 @@ def main() -> int:
                 "NaturalSystemCases",
                 "QueryGeneralCases",
                 "QueryVariantCases",
+                "QueryVariantExport",
             ):
-                run([
+                output = run([
                     *environment, arguments.lean, "-DwarningAsError=true",
                     str(here / f"{module}.lean"),
                 ], 120)
+                if module == "QueryVariantExport" and arguments.variant_export:
+                    arguments.variant_export.write_text(output)
             certificate = build / "SourceEquations.lean"
             certificate.write_text(lean_correspondence(equations))
             run([*environment, arguments.lean, "-DwarningAsError=true", str(certificate)], 120)

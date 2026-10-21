@@ -869,6 +869,27 @@ about the Lean native query algebra. It does not prove correspondence with
 Tamarin/Maude variant generation, the importer or native bookkeeping `NAT`, or
 the full kind-completed carrier.
 
+### Native variant differential
+
+`QueryVariantExport.lean` renders 21 protocol-shaped queries to Maude syntax
+and exports, per scheme, its value and exact `nativeVariantSystem`. The queries
+cover single and nested destructors, nonlinear and already-reducible terms,
+natural AC, `Pub` keys, `kdf`, list/`Node` framing and shared variables.
+`termination.py --variant-export PATH` writes that output from the same build.
+`variant_differential.py --export PATH` then compares it with the native proxy:
+
+- Lean family F: each scheme value and the term's variables under every native
+  AC `unify` solution of the scheme system;
+- native family G: `get variants`;
+- every G tuple must `match` some F tuple, and every reduced F tuple must
+  `match` some G tuple;
+- every F value must `reduce` like its unifier's term instance.
+
+`scripts/check.sh` runs it after the Lean gate. `test_variant_differential.py`
+checks the parsers and that a missing rule scheme or wrong value fails. This is
+differential corpus evidence. Native AC unification stands in for the Lean
+unifier family, and the check is not a proof of Maude's variant generator.
+
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of
 native bookkeeping `NAT`, the entire kind-completed carrier or finite variants.
