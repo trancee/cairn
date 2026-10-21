@@ -97,4 +97,8 @@ GENERAL_REPORT_GROUPS = {
         "native_raw_ac_system_family_complete", "native_sorted_ac_system_family_complete",
         "native_sorted_ac_system_family_sound", "native_sorted_ac_system_family_fresh",
     ),
+    "finite-variants": (
+        "native_variant_schemes_scope", "native_variant_schemes_reach", "native_variant_schemes_cover",
+        "native_finite_variants_sound", "native_finite_variants_complete",
+    ),
 }

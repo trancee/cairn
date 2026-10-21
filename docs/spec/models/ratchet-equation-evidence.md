@@ -32,6 +32,9 @@ composition preserves the existing ordered, simultaneous first-binding
 semantics. This is a proved composition layer, not a general system solver.
 Native narrowing/unification and the remaining
 FVP hypotheses stay separate; this is not a native FVP certificate.
+The later Lean native-query FVP proof is recorded in the
+[equation README](equations/README.md#native-finite-variants); it does not
+certify Maude's variant generator.
 
 ## Why executed queries now need a guard
 

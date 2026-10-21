@@ -823,7 +823,7 @@ Message/Fresh refinement with fresh shared residuals, Fresh/Public and
 Message/Node incompatibility, fixed-head clashes, framing, proper cycles,
 nonempty-semigroup rejection and AC versus six-rule equality.
 Fresh strict Lean passes 453 audits (30 axiom-free, no `sorryAx`) and
-39 case modules; all 43 public equation-command fixture controls pass after
+39 case modules at that checkpoint; all 43 public equation-command fixture controls pass after
 intended missing-report reds. Definitions-only modules compile without
 requiring nonexistent theorem reports; all declared theorem audits remain mandatory.
 
@@ -834,6 +834,41 @@ native generator/importer correspondence, narrowing/FVP acceptance or runtime
 validation. Real Tamarin/Maude source/export/replay/runtime work remains deferred,
 with its default gates unchanged.
 
+## Native finite variants
+
+`QueryVariants.lean` proves the finite variant property for the guarded
+six-rule relation on the full native query AST, modulo natural AC. It builds
+variants directly in the sorted native algebra, so no narrowing-to-variant
+lifting hypothesis is needed.
+
+`nativeVariantSchemes term next` walks the term bottom-up. At each `fst`, `snd`,
+`flip`, `sdec` or `kdec` node it either keeps the node or applies one rule
+pattern, using fresh `Message` variables from `next` and recording the
+matching equations. Other nodes are rebuilt from their children's schemes.
+`nativeVariants term` starts above every input index (`nativeFreshBase`)
+and attaches each scheme to the complete sorted AC-unifier family of its
+equations, also including the term and scheme value.
+
+| Theorem | Result |
+| --- | --- |
+| `native_variant_schemes_scope` | Scheme variables are input variables or fresh `Message` indices in `[next, after)`. |
+| `native_variant_schemes_reach` | Any sorted solution of a scheme's equations rewrites the instantiated term to its value modulo AC. |
+| `native_variant_schemes_cover` | For a sorted, normalized assignment, one scheme and an extension at fresh indices solve the equations. That extension's value is AC-equal to a normal form of the instance. |
+| `native_finite_variants_sound` | Each listed variant has a sorted substitution and is reachable from the instantiated term. |
+| `native_finite_variants_complete` | Every sorted, normalized instance is a sorted AC instance of a listed variant on the term's variables. That variant's normal form maps to the instance's normal form. |
+
+As in Escobar-Meseguer variant semantics, completeness covers normalized
+assignments. A variant's own instance is shown to be normal: a rewrite would
+lift through the sorted factor and contradict AC invariance of normality.
+All five audits depend only on `propext`, `Classical.choice` and `Quot.sound`.
+`QueryVariantCases.lean` checks concrete scheme lists (`fst`, `snd ∘ fst`,
+`flip`, `hash`, `sdec`) and both public theorem shapes.
+
+The family is finite but unminimized and potentially large. This theorem is
+about the Lean native query algebra. It does not prove correspondence with
+Tamarin/Maude variant generation, the importer or native bookkeeping `NAT`, or
+the full kind-completed carrier.
+
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of
 native bookkeeping `NAT`, the entire kind-completed carrier or finite variants.
@@ -842,9 +877,9 @@ structural results cover the guarded relation on the full frozen-index AST,
 including controlled-kind and free framing contexts. Executed
 native operations additionally require the boundary checks below; a universal
 source-linked query-builder/importer proof remains unverified.
-Correspondence with native sorted AC unification, backend narrowing/unification
-closure and the remaining finite-variant theorem hypotheses are not discharged
-by this command.
+The Lean finite-variant theorem above is discharged for the native query
+algebra. Correspondence with Tamarin/Maude sorted AC unification, backend
+narrowing/variant generation and the importer is not discharged by this command.
 
 ## Native stream boundary
 
@@ -1099,4 +1134,4 @@ derivation check, before its selected proof; the exact local replay passes.
 This is not a native reproduction or fix, and the failed run remains evidence.
 All current-head hosted gates are still required; subsequent checks are
 recorded by [PR #9](https://github.com/trancee/cairn/pull/9/checks).
-Native FVP remains open.
+Native FVP remained open at that checkpoint; see [Native finite variants](#native-finite-variants).

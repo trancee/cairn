@@ -407,6 +407,7 @@ def main() -> int:
                 "NaturalColumnCases",
                 "NaturalSystemCases",
                 "QueryGeneralCases",
+                "QueryVariantCases",
             ):
                 run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -456,7 +457,8 @@ def main() -> int:
         print("PASS: concrete natural-system rows characterize sorted natural AC solutions exactly.")
         print("PASS: natural equation systems generate sound, complete finite native sorted binding families.")
         print("PASS: full-AST sorted AC systems generate finite complete families with fresh residuals and globally sorted postfactors.")
-        print("Scope: typed image algebra + enforced native stream membership; not a native FVP certificate.")
+        print("PASS: guarded native query terms have finite complete variant families.")
+        print("Scope: typed image algebra + Lean native-query FVP + enforced native stream membership; not a Maude variant-generator certificate.")
         print("Trust boundary: Tamarin/Maude + Rust stream guard + Python evidence/signature/translation + Lean kernel.")
         return 0
     except (OSError, RuntimeError, ReplayError) as error:
