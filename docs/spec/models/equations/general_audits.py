@@ -106,4 +106,5 @@ MODULES = (
         "native_maude_parse_render", "native_maude_term_injective", "native_rule_templates_sound",
         "native_rule_templates_complete", "native_maude_function_heads_complete",
     )),
+    ("QueryACCanonical", ("native_ac_canonical_related", "native_ac_canonical_iff", "native_ac_equal_iff")),
 )

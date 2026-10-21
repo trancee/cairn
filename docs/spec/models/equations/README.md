@@ -923,7 +923,11 @@ for byte and the corpus to equal the committed
   that term has neither (a `Msg`, `nil`, `Node` or message-function operand
   anywhere in the chain);
 - `REJECT` with each single-character deletion that the Lean parser rejects;
-  by the round-trip theorem none of them renders any query term.
+  by the round-trip theorem none of them renders any query term;
+- `EQUAL` or `DISTINCT` with two rendered or flattened terms, labelled by
+  `nativeACEqual` (below): bracketings and orders of nine summand multisets in
+  seven contexts, flattened texts against their canonical and shortened sums,
+  and near misses (non-commutative `pair`, multiplicity, AC inside `tamXCh`).
 
 The Rust unit test `recognizer_agrees_with_the_lean_syntax_corpus` requires
 `syntax::term` to agree on every line. Accepting a leading-zero index, a
@@ -932,6 +936,20 @@ The Rust unit test `recognizer_agrees_with_the_lean_syntax_corpus` requires
 or checking only the first two sum operands. This is corpus evidence for the
 Rust recognizer, not a proof.
 Tamarin's Haskell importer remains trusted.
+
+`QueryACCanonical.lean` defines an executable AC canonical form
+`nativeACCanonical`: flatten each natural sum, sort the canonical summands by
+rendering and right-nest them. Its audited theorems:
+
+- `native_ac_canonical_related`: every term is AC-equal to its canonical form;
+- `native_ac_canonical_iff`: `NativeQueryAC` holds exactly when canonical
+  forms are equal;
+- `native_ac_equal_iff`: the Boolean `nativeACEqual` decides `NativeQueryAC`.
+
+The Rust unit test `certificate_agrees_with_the_lean_ac_corpus` requires the
+guard's reply certificate to agree with every `EQUAL`/`DISTINCT` line; omitting
+the summand sort or the flattening, or deduplicating summands, fails it.
+This is corpus evidence for the Rust certificate, not a proof.
 
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of
@@ -944,6 +962,8 @@ source-linked query-builder/importer proof remains unverified.
 The Lean finite-variant theorem above is discharged for the native query
 algebra. Correspondence with Tamarin/Maude sorted AC unification, backend
 narrowing/variant generation and the importer is not discharged by this command.
+The native guard checks the soundness of each returned `unify`/`match`
+solution (below); completeness of Maude's solution families stays trusted.
 
 ## Native stream boundary
 
@@ -977,6 +997,11 @@ rigid atom indices, solution headers, substitutions and variant exhaustion.
 Matching/reduction use original `x` variables; unification/variants use generated
 `#`/`%` variables. Opposite generated prefixes with the same index/sort in one
 solution are rejected because the pinned importer conflates them.
+Each `unify` solution must make both sides of every equation AC-equal, and
+each `match` solution must instantiate the pattern to an AC-equal copy of the
+unchanged subject. Equality compares flattened, sorted sums, the procedure
+`QueryACCanonical.lean` proves decides `NativeQueryAC`. A non-solution rejects
+the entire reply. This certifies soundness only: a missing solution goes undetected.
 There is no per-solution filtering or success fallback.
 
 `CAIRN_MAUDE_BINARY` selects the underlying executable, otherwise `maude` is

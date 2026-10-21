@@ -1,6 +1,7 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use crate::{
+    certificate,
     error::{Error::Rejected, Result},
     query::{Kind, Query},
     syntax::{Sort, lines, term},
@@ -127,7 +128,7 @@ pub fn validate(query: &Query, reply: &str) -> Result<()> {
             value(query, text, sort, Some(upper), false, &mut fresh)?;
             position += 1;
         }
-        let mut bindings = BTreeSet::new();
+        let mut bindings = BTreeMap::new();
         if lines.get(position) == Some(&"empty substitution") {
             if query.kind == Kind::Variants {
                 return Err(Rejected(
@@ -147,7 +148,7 @@ pub fn validate(query: &Query, reply: &str) -> Result<()> {
                                 .any(|term| term.variables.contains(*variable))
                     })
                     .ok_or(Rejected("native reply: unknown or duplicate binding"))?;
-                if !bindings.insert(variable) {
+                if bindings.insert(variable, text).is_some() {
                     return Err(Rejected("native reply: unknown or duplicate binding"));
                 }
                 let sort = variable
@@ -160,6 +161,9 @@ pub fn validate(query: &Query, reply: &str) -> Result<()> {
             if bindings.is_empty() && query.kind != Kind::Variants {
                 return Err(Rejected("native reply: missing substitution"));
             }
+        }
+        if matches!(query.kind, Kind::Unify | Kind::Match) {
+            certificate::check(query, &bindings)?;
         }
     }
     if count == 0 {

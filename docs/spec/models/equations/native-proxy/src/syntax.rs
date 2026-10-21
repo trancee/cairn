@@ -116,7 +116,7 @@ fn variable(token: &str, query: bool) -> Result<Sort> {
     Ok(sort)
 }
 
-fn tokens(text: &str) -> Result<Vec<&str>> {
+pub fn tokens(text: &str) -> Result<Vec<&str>> {
     let bytes = text.as_bytes();
     let mut result = Vec::new();
     let mut position = 0;
@@ -345,6 +345,7 @@ mod tests {
                     assert!(term(text, true).is_err(), "recognizer accepted {text}");
                     rejected += 1;
                 }
+                ["EQUAL" | "DISTINCT", _, _] => {}
                 _ => panic!("malformed corpus line {line}"),
             }
         }

@@ -25,6 +25,7 @@ impl Kind {
 pub struct Query {
     pub kind: Kind,
     pub terms: Vec<Term>,
+    pub sides: Vec<String>,
 }
 
 pub fn validate(command: &str) -> Result<Query> {
@@ -59,6 +60,7 @@ pub fn validate(command: &str) -> Result<Query> {
         found.ok_or(Rejected("native query: unsupported command"))?
     };
     let mut terms = Vec::new();
+    let mut sides = Vec::new();
     if matches!(kind, Kind::Reduce | Kind::Variants) {
         terms.push(term(body, true)?);
     } else {
@@ -68,16 +70,17 @@ pub fn validate(command: &str) -> Result<Query> {
             vec![body]
         };
         for equation in equations {
-            let sides: Vec<_> = equation
+            let equation_sides: Vec<_> = equation
                 .split(if kind == Kind::Unify { "=?" } else { "<=?" })
                 .collect();
-            if sides.len() != 2 {
+            if equation_sides.len() != 2 {
                 return Err(Rejected("native query: malformed equation"));
             }
-            for side in sides {
+            for side in equation_sides {
                 terms.push(term(side, true)?);
+                sides.push(trim(side).to_owned());
             }
         }
     }
-    Ok(Query { kind, terms })
+    Ok(Query { kind, terms, sides })
 }

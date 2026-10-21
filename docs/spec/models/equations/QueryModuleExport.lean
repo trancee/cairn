@@ -2,6 +2,7 @@ import QueryModule
 import QueryInstances
 import QueryPrincipalSort
 import QueryKind
+import QueryACCanonical
 
 namespace Cairn.Equations
 
@@ -132,6 +133,64 @@ def nativeFlatSumCorpus : List (String × NativeQueryTerm) :=
 private def deletions (characters : List Char) : List (List Char) :=
   (List.range characters.length).map characters.eraseIdx
 
+private def leftSum : List NativeQueryTerm → NativeQueryTerm
+  | [] => .naturalOne
+  | first :: rest => rest.foldl .naturalAdd first
+
+private def arrangements (terms : List NativeQueryTerm) : List NativeQueryTerm :=
+  [nativeACRebuild terms, leftSum terms, nativeACRebuild terms.reverse,
+    leftSum (terms.rotateLeft 1), nativeACRebuild (terms.rotateRight 1)].eraseDups
+
+-- Summand multisets whose bracketings and orders are compared in every context.
+private def nativeACSumGroups : List (List NativeQueryTerm) := [
+  [natural 0, natural 1], [natural 0, natural 1, .naturalOne],
+  [natural 0, natural 0, .naturalOne], [natural 0, .naturalOne, .naturalOne],
+  [natural 0, natural 1, natural 2, .naturalOne], [fresh 0, natural 1, .naturalOne],
+  [.naturalAtom 3, natural 0, .naturalOne],
+  [.unary .hash (.naturalAdd (natural 0) (natural 1)), natural 2],
+  [.unary .hash (.naturalAdd (natural 1) (natural 0)), natural 2, natural 2]
+]
+
+private def nativeACContexts : List (NativeQueryTerm → NativeQueryTerm) := [
+  id, .unary .hash, (.binary .pair · (message 0)), (.kdf (message 0) · .roleA), .list,
+  (.cons · .nil), (.naturalAdd · (natural 9))
+]
+
+private def nativeACNearMisses : List (NativeQueryTerm × NativeQueryTerm) := [
+  (.naturalAdd (.unary .hash (.naturalAdd (natural 0) (natural 1))) (natural 2),
+    .naturalAdd (natural 2) (.unary .hash (.naturalAdd (natural 1) (natural 0)))),
+  (.binary .pair (natural 0) (natural 1), .binary .pair (natural 1) (natural 0)),
+  (.naturalAdd (.unary .hash (natural 0)) (natural 1),
+    .naturalAdd (.unary .hash (natural 1)) (natural 0)),
+  (.naturalAdd (natural 0) (natural 0), natural 0),
+  (.naturalAdd (natural 0) (.naturalAdd (natural 0) (natural 1)),
+    .naturalAdd (natural 1) (.naturalAdd (natural 1) (natural 0))),
+  (.kdf (.naturalAdd (natural 0) (natural 1)) (message 0) (message 1),
+    .kdf (message 0) (.naturalAdd (natural 1) (natural 0)) (message 1)),
+  (.cons (.naturalAdd (natural 0) .naturalOne) .nil, .cons (.naturalAdd .naturalOne (natural 0)) .nil),
+  (.naturalAdd (natural 0) .naturalOne, .naturalAdd (natural 0) (.naturalAtom 1))
+]
+
+private def acLine (left : String) (right : String) (verdict : Bool) : String :=
+  s!"{if verdict then "EQUAL" else "DISTINCT"}\t{left}\t{right}"
+
+-- AC pairs whose verdicts are `nativeACEqual`, decided by `native_ac_equal_iff`.
+def nativeACPairLines : List String :=
+  let firsts := nativeACSumGroups.filterMap fun group => (arrangements group).head?
+  let terms : List (NativeQueryTerm × NativeQueryTerm) := nativeACContexts.flatMap fun context =>
+    (nativeACSumGroups.flatMap fun group =>
+      let options := arrangements group
+      options.flatMap fun left => (options.dropWhile (· != left)).drop 1 |>.map fun right =>
+        (context left, context right)) ++
+    (firsts.zip (firsts.drop 1)).map fun (left, right) => (context left, context right)
+  let rendered := (terms ++ nativeACNearMisses).map fun (left, right) =>
+    acLine (nativeMaudeTerm left) (nativeMaudeTerm right) (nativeACEqual left right)
+  let flat := nativeFlatSumCorpus.flatMap fun (text, term) =>
+    let shorter := nativeACRebuild (nativeACSummands term).tail
+    [acLine text (nativeMaudeTerm (nativeACCanonical term)) true,
+      acLine text (nativeMaudeTerm shorter) (nativeACEqual term shorter)]
+  rendered ++ flat
+
 def nativeSyntaxLines : List String :=
   let accepted := (nativeSyntaxCorpus ++ nativeKindCorpus).filterMap fun term =>
     (nativeExpectedKind term).map fun sort =>
@@ -151,7 +210,7 @@ def nativeSyntaxLines : List String :=
     fun characters =>
       let text := String.ofList characters
       if (nativeMaudeParse text).isNone then some s!"REJECT\t{text}" else none
-  accepted.eraseDups ++ flat ++ illSorted ++ rejected.eraseDups
+  accepted.eraseDups ++ flat ++ illSorted ++ rejected.eraseDups ++ nativeACPairLines
 
 #guard nativeSyntaxCorpus.all fun term => (nativeExpectedSort term).isSome
 #guard nativeKindCorpus.all fun term =>
@@ -160,6 +219,13 @@ def nativeSyntaxLines : List String :=
 #guard nativeFlatSumCorpus.all fun (text, term) => String.ofList (nativeMaudeChars term) != text
 #guard (nativeFlatSumCorpus.filter fun entry => (nativeExpectedKind entry.2).isNone).length == 4
 #guard nativeIllSortedCorpus.all fun term => (nativeExpectedKind term).isNone
+#guard nativeACSumGroups.all fun group =>
+  (arrangements group).length ≥ 2 && (arrangements group).all fun term =>
+    nativeACEqual term (nativeACRebuild group)
+#guard (nativeACPairLines.filter (·.startsWith "EQUAL")).length ≥ 300
+#guard (nativeACPairLines.filter (·.startsWith "DISTINCT")).length ≥ 60
+#guard nativeFlatSumCorpus.all fun (_, term) =>
+  !nativeACEqual term (nativeACRebuild (nativeACSummands term).tail)
 
 #eval do
   IO.print nativeMaudeModule
