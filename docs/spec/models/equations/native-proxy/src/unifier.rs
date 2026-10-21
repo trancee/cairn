@@ -168,7 +168,7 @@ fn natural(tree: &Tree) -> bool {
     }
 }
 
-fn message(tree: &Tree) -> bool {
+pub fn message(tree: &Tree) -> bool {
     match tree {
         Tree::Variable(name) => variable_sort(name).is_some_and(|sort| sort != Sort::Node),
         Tree::Apply(name, children) => match name.as_str() {

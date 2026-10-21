@@ -638,6 +638,10 @@ and rejects incomplete families for queries the verified syntactic unifier
 decides, including natural sums that cancel to one open summand
 ([`QuerySyntacticUnification.lean`](equations/README.md#native-module-correspondence)),
 so only completeness of families for queries it leaves `unsupported` stays trusted.
+It also rejects a `reduce` result of a message query unless it is AC-equal to
+the Lean-verified normal form
+([`QueryNormalization.lean`](equations/README.md#native-module-correspondence));
+`get variants` replies remain trusted.
 
 Independent acceptance of the exact mixed message/natural theory, or a
 formal combination certificate, is still outstanding. This document

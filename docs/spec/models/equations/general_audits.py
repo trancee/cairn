@@ -112,4 +112,7 @@ MODULES = (
         "native_ac_instance_match_iff", "native_complete_family_cover_iff",
         "native_complete_empty_family_iff",
     )),
+    ("QueryNormalization", (
+        "native_sorted_normalize_spec", "native_sorted_reduce_certificate", "native_sorted_reduce_normal",
+    )),
 )

@@ -978,6 +978,26 @@ head-clash failure fails it. This is corpus evidence for the Rust mirror, not
 a proof. The Rust mirror also reports `unsupported` for terms or composed
 bindings above 4096 nodes; `unsupported` makes no claim.
 
+`QueryNormalization.lean` defines an executable innermost normalizer
+`nativeSortedNormalize`: it normalizes children, then applies one root step
+for `flip` of a role, `fst`/`snd` of a pair, or `sdec`/`kdec` whose keys are
+AC-equal (`nativeACEqual`), each guarded on proper message arguments. Its
+audited theorems:
+
+- `native_sorted_normalize_spec`: the normalizer's output is reachable by
+  sorted rewrite steps and is normal;
+- `native_sorted_reduce_certificate`: for a decodable message term, a result
+  is AC-equal to the normalizer's output exactly when some normal form reachable
+  from the term is AC-equal to it (by convergence modulo AC);
+- `native_sorted_reduce_normal`: such an accepted result is itself normal.
+
+The export adds 551 `REDUCE` lines, 119 of which rewrite. The Rust unit test
+`normalizer_agrees_with_the_lean_reduce_corpus` requires
+`native-proxy/src/reduction.rs` to reproduce every line; dropping the proper
+argument or AC key checks, swapping projections, skipping child normalization,
+fixing `flip` or omitting `kdec` fails it. This is corpus evidence for the
+Rust mirror, not a proof.
+
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of
 native bookkeeping `NAT`, the entire kind-completed carrier or finite variants.
@@ -989,7 +1009,8 @@ source-linked query-builder/importer proof remains unverified.
 The Lean finite-variant theorem above is discharged for the native query
 algebra. Correspondence with Tamarin/Maude sorted AC unification, backend
 narrowing/variant generation and the importer is not discharged by this command.
-The native guard checks the soundness of each returned `unify`/`match`
+The native guard checks each `reduce` result of a message query against the
+verified normal form, the soundness of each returned `unify`/`match`
 solution and, for queries the verified syntactic unifier decides, the
 completeness of the family (below). Natural sums are decided by cancelling
 AC-equal summands; completeness for queries the procedure leaves

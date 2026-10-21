@@ -2,6 +2,17 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer; SDK/application=not implemented.
 
+## Reduce normal-form certificate (2026-10-22)
+
+The native guard now rejects a `reduce` reply for a message query unless the
+result is AC-equal to the normal form computed by `nativeSortedNormalize`.
+`QueryNormalization.lean` proves the normalizer reaches a normal form and
+that, by convergence modulo AC, AC-equality to it decides correct reduction.
+The Rust mirror agrees with 551 Lean `REDUCE` corpus lines; all 10 distinct
+`reduce` queries sampled from real Tamarin runs, replayed through Maude 3.5.1,
+are accepted. `get variants` replies remain trusted
+([details](docs/spec/models/equations/README.md#native-module-correspondence)).
+
 ## Sum cancellation guard (2026-10-22)
 
 The verified syntactic unifier and matcher now handle natural sums by
