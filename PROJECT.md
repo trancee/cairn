@@ -2,6 +2,16 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer; SDK/application=not implemented.
 
+## Native variant differential (2026-10-21)
+
+`scripts/check.sh` now compares the Lean variant schemes with native Maude
+`get variants` on 21 protocol-shaped queries
+([details](docs/spec/models/equations/README.md#native-variant-differential)).
+Both families cover each other modulo AC, and every Lean value normalizes like
+its term instance. A dropped `flip` scheme fails the gate. This is differential
+evidence; native AC unification stands in for the Lean unifier family. It is
+not a Maude variant-generator proof.
+
 ## Native finite variants (2026-10-21)
 
 [`QueryVariants.lean`](docs/spec/models/equations/QueryVariants.lean) proves

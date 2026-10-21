@@ -35,6 +35,9 @@ FVP hypotheses stay separate; this is not a native FVP certificate.
 The later Lean native-query FVP proof is recorded in the
 [equation README](equations/README.md#native-finite-variants); it does not
 certify Maude's variant generator.
+A corpus differential against native `get variants` is
+[recorded there too](equations/README.md#native-variant-differential); it is
+evidence, not a certificate.
 
 ## Why executed queries now need a guard
 

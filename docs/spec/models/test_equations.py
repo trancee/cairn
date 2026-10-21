@@ -222,7 +222,7 @@ class EquationCommandTests(unittest.TestCase):
         self.assertEqual(result.stderr.strip(), "FAIL: expected Lean 4.34.1")
         self.assertNotIn("PASS:", result.stdout)
 
-    def run_with_axiom_reports(self, *groups):
+    def run_with_axiom_reports(self, *groups, options=()):
         (self.distribution / "lifecycle/lean-toolchain").write_text(
             "leanprover/lean4:v4.34.1\n",
         )
@@ -246,6 +246,8 @@ class EquationCommandTests(unittest.TestCase):
             f"#!{sys.executable}\nimport sys\n"
             "if '--version' in sys.argv:\n"
             "    print('Lean (version 4.34.1, fixture)')\n"
+            "elif sys.argv[-1].endswith('/QueryVariantExport.lean'):\n"
+            "    print('CASE fixture-export')\n"
             "elif not sys.argv[-1].endswith('/QueryRawGeneration.lean'):\n"
             f"    print({reports!r})\n",
         )
@@ -253,7 +255,7 @@ class EquationCommandTests(unittest.TestCase):
         environment = {**os.environ, "PATH": f"{self.distribution}{os.pathsep}{os.environ['PATH']}"}
 
         return subprocess.run(
-            [*self.command, "--lean", str(tool)], env=environment,
+            [*self.command, "--lean", str(tool), *options], env=environment,
             text=True, capture_output=True, timeout=30,
         )
 
@@ -394,6 +396,14 @@ class EquationCommandTests(unittest.TestCase):
         self.assertIn("PASS: full-AST sorted AC systems generate finite complete families", result.stdout)
         self.assertIn("PASS: guarded native query terms have finite complete variant families", result.stdout)
         self.assertNotIn("FAIL:", result.stderr)
+
+    def test_variant_export_keeps_the_lean_export_output(self):
+        export = self.distribution / "variant-export.txt"
+
+        result = self.run_with_axiom_reports(*REPORT_GROUPS, options=("--variant-export", str(export)))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(export.read_text().strip(), "CASE fixture-export")
 
     def test_unrestricted_sorted_generation_reports_are_required_before_success(self):
         for group, missing in (
