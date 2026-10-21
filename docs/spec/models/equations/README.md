@@ -918,14 +918,19 @@ for byte and the corpus to equal the committed
 - `REJECT` with rendered terms that have neither a sort nor a kind
   (message, `Pub`, `Node` or framing operands of sums; framing or `Node`
   beneath message functions);
+- flattened n-ary sums as Maude prints them, `ACCEPT`ed with the sort or
+  kind of the right-nested term the Lean parser reads, or `REJECT`ed when
+  that term has neither (a `Msg`, `nil`, `Node` or message-function operand
+  anywhere in the chain);
 - `REJECT` with each single-character deletion that the Lean parser rejects;
   by the round-trip theorem none of them renders any query term.
 
 The Rust unit test `recognizer_agrees_with_the_lean_syntax_corpus` requires
 `syntax::term` to agree on every line. Accepting a leading-zero index, a
 `Msg` sum operand or a `Node` message argument, or classifying `tamtplus` as
-`Msg` or kind framing as `TOP`, fails it. This is corpus evidence for the
-Rust recognizer, not a proof; flattened n-ary sums are not in the corpus.
+`Msg` or kind framing as `TOP`, fails it, as do accepting only binary sums
+or checking only the first two sum operands. This is corpus evidence for the
+Rust recognizer, not a proof.
 Tamarin's Haskell importer remains trusted.
 
 The source bridge trusts Tamarin's export, the reviewed signature/term translation

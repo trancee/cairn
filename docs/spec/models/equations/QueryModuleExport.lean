@@ -11,7 +11,8 @@ namespace Cairn.Equations
 sort, or else its controlled kind (`KindNatural`, `KindMessage`, `KindFraming`) under
 `kindAbstraction`, which reads `Fresh` as natural. `REJECT` lines are rendered terms with neither,
 and single-character deletions that `nativeMaudeParse` rejects; by `native_maude_parse_render`
-none of the deletions is the rendering of any query term. -/
+none of the deletions is the rendering of any query term. Flattened n-ary sums appear as Maude
+prints them, classified by the right-nested term `nativeMaudeParse` reads. -/
 
 def nativeFramedCheck : NativeQueryTerm → Bool
   | .nodeAtom _ | .queryVariable .node _ | .nil => true
@@ -109,6 +110,25 @@ def nativeIllSortedCorpus : List NativeQueryTerm := [
   .list (.naturalAdd (message 0) .naturalOne), .cons (.unary .hash .nil) .nil
 ]
 
+-- Flattened AC sums as Maude prints them; `nativeMaudeParse` right-nests them.
+def nativeFlatSumTexts : List String := [
+  "tamtplus(x0:TamNat,x1:TamNat,tamXCtone)",
+  "tamtplus(tamXCtone,tamXCtone,tamXCtone,tamXCtone)",
+  "tamtplus(t(3),x0:TamNat,tamXCtone,x0:TamNat)",
+  "tamtplus(x0:Fresh,x1:TamNat,tamXCtone)",
+  "tamtplus(x0:TamNat,x1:TamNat,f(4))",
+  "tamXCh(tamtplus(x0:TamNat,tamXCtone,x1:Fresh))",
+  "tamXCkdf(x0:Msg,tamtplus(x1:TamNat,tamXCtone,tamXCtone),tamXCroleA)",
+  "list(tamtplus(x0:TamNat,x1:TamNat,x2:TamNat))",
+  "tamtplus(x0:TamNat,x1:TamNat,x2:Msg)",
+  "tamtplus(x0:TamNat,tamXCtone,nil)",
+  "tamtplus(x0:Fresh,x1:TamNat,tamXCh(x2:TamNat))",
+  "tamtplus(x0:TamNat,tamXCtone,x1:Node)"
+]
+
+def nativeFlatSumCorpus : List (String × NativeQueryTerm) :=
+  nativeFlatSumTexts.filterMap fun text => (nativeMaudeParse text).map (text, ·)
+
 private def deletions (characters : List Char) : List (List Char) :=
   (List.range characters.length).map characters.eraseIdx
 
@@ -118,17 +138,27 @@ def nativeSyntaxLines : List String :=
       s!"ACCEPT\t{sort}\t{nativeMaudeTerm term}\t" ++
         s!"{field ((nativeQueryVariables term).map fun entry =>
           nativeMaudeTerm (.queryVariable entry.1 entry.2))}\t{field (nativeQueryAtoms term)}"
+  let flat := nativeFlatSumCorpus.map fun (text, term) =>
+    match nativeExpectedKind term with
+    | some sort => s!"ACCEPT\t{sort}\t{text}\t" ++
+        s!"{field ((nativeQueryVariables term).map fun entry =>
+          nativeMaudeTerm (.queryVariable entry.1 entry.2))}\t{field (nativeQueryAtoms term)}"
+    | none => s!"REJECT\t{text}"
   let illSorted := nativeIllSortedCorpus.map fun term => s!"REJECT\t{nativeMaudeTerm term}"
-  let rejected := ((nativeSyntaxCorpus ++ nativeKindCorpus).flatMap fun term =>
-      deletions (nativeMaudeChars term)).filterMap
+  let rejected := ((nativeSyntaxCorpus ++ nativeKindCorpus).flatMap (fun term =>
+      deletions (nativeMaudeChars term)) ++
+      nativeFlatSumTexts.flatMap fun text => deletions text.toList).filterMap
     fun characters =>
       let text := String.ofList characters
       if (nativeMaudeParse text).isNone then some s!"REJECT\t{text}" else none
-  accepted.eraseDups ++ illSorted ++ rejected.eraseDups
+  accepted.eraseDups ++ flat ++ illSorted ++ rejected.eraseDups
 
 #guard nativeSyntaxCorpus.all fun term => (nativeExpectedSort term).isSome
 #guard nativeKindCorpus.all fun term =>
   (nativeExpectedSort term).isNone && (nativeExpectedKind term).isSome
+#guard nativeFlatSumCorpus.length == nativeFlatSumTexts.length
+#guard nativeFlatSumCorpus.all fun (text, term) => String.ofList (nativeMaudeChars term) != text
+#guard (nativeFlatSumCorpus.filter fun entry => (nativeExpectedKind entry.2).isNone).length == 4
 #guard nativeIllSortedCorpus.all fun term => (nativeExpectedKind term).isNone
 
 #eval do
