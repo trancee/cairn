@@ -1852,7 +1852,8 @@ at 50 seconds) do not change.
   that tree's manifest to `gradle-warm-home.sha256`. The post-cell integrity
   step verifies the manifest, and the workflow retains it as an artifact.
 - **Seed.** Before the supervised `fixture-targets` command, and outside its
-  deadline, the probe UID runs `seed-gradle-home.sh` itself, under the same
+  deadline, the probe UID runs `seed-gradle-home.sh` itself, under its own
+  `uid-supervisor.py` launch with a separate 60-second deadline and the same
   `build.sb` profile with private IPC disabled. The script copies the
   world-readable seed into `$volume/gradle/caches` with
   `rsync -rlpt --ignore-existing` and then makes the copies owner-writable.
@@ -1892,3 +1893,13 @@ and `20.8s`, against `31s` to `49s` for earlier passing runs and repeated
 60-second expiries. The instrumented JAR was still 67,326,033 bytes, and the
 `gradle-warm-home.sha256` integrity check passed after the cell. The two benign
 read-only dependency-cache denials still appear.
+
+Supervised seed (follow-up). #15 first ran the seed with a direct
+`sudo -n -u` call. That path skipped the supervisor's UID process check and
+cleanup. On `main` at `3857428`
+([run `39557473636`](https://github.com/trancee/cairn/actions/runs/39557473636)),
+the `codeql` preparation cell printed the seed's PASS line, and the next
+supervisor launch found a launchd-parented `distnoted` under UID 59000 and
+refused to start. The seed now uses the same supervisor as every other probe
+command, so its owned processes are cleaned and checked before
+`fixture-targets` starts. No pre-cleanup or trust exception was added.

@@ -161,9 +161,10 @@ if [ "$#" -eq 3 ]; then
         /bin/bash "$work/inputs/probe-toolchains.sh" "$tools"
       ;;
     fixture-targets)
-      (cd "$volume" && sudo -n -u "$user" /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
-        -D PRIVATE_IPC=false -f "$work/build.sb" /usr/bin/env -i PATH=/usr/bin:/bin /bin/bash \
-        "$work/inputs/seed-gradle-home.sh" "$tools/gradle-warm-home" "$volume/gradle")
+      "$python" -I "$scripts/uid-supervisor.py" --seconds 60 "$work/proof-output/gradle-warm-seed.log" \
+        /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+        -D PRIVATE_IPC=false -f "$work/build.sb" \
+        /bin/bash "$work/inputs/seed-gradle-home.sh" "$tools/gradle-warm-home" "$volume/gradle"
       probe_start=$(/bin/date '+%Y-%m-%d %H:%M:%S')
       probe_result=0
       "$python" -I "$scripts/uid-supervisor.py" --seconds 60 --diagnose-after 50 \

@@ -66,7 +66,7 @@ class ReportSandboxDenialsTest(unittest.TestCase):
                         re.MULTILINE | re.DOTALL).group(1)
 
         start = arm.index("probe_start=$(/bin/date '+%Y-%m-%d %H:%M:%S')")
-        supervised = arm.index('uid-supervisor.py" --seconds 60')
+        supervised = arm.index('uid-supervisor.py" --seconds 60 --diagnose-after 50')
         captured = arm.index("|| probe_result=$?")
         reported = arm.index('report-sandbox-denials.py" "$probe_start"')
         propagated = arm.index('if [ "$probe_result" -ne 0 ]; then exit "$probe_result"; fi')

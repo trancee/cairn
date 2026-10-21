@@ -88,7 +88,7 @@ class CellPlanTest(unittest.TestCase):
         arm = re.search(r"^    fixture-targets\)\n(.*?)^      ;;$", RUNNER.read_text(),
                         re.MULTILINE | re.DOTALL)
         self.assertIsNotNone(arm)
-        supervisor = re.search(r'uid-supervisor\.py"((?:[^\n]|\\\n)*?)"\$work/proof-output',
+        supervisor = re.search(r'uid-supervisor\.py"((?:[^\n]|\\\n)*?)"\$work/proof-output/fixture-targets\.log"',
                                arm.group(1))
         self.assertIsNotNone(supervisor, arm.group(1))
 
