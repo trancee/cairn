@@ -10,6 +10,7 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from equations import additive_audits, general_audits
+from equations.maude_module import reviewed_module
 from equations.signature import lean_correspondence, reviewed_signature
 from equations.maude_runner import run_guarded_tamarin
 from proof_tools import check_axioms, check_tamarin_version
@@ -258,6 +259,14 @@ NATURAL_LINEARIZATION_THEOREMS = (
 )
 
 
+def check_module_export(output: str, corpus: Path) -> None:
+    module = reviewed_module()
+    if not output.startswith(module):
+        raise ReplayError("Lean-rendered native module differs from reviewed_module()")
+    if output[len(module):] != corpus.read_text():
+        raise ReplayError(f"stale native syntax corpus: regenerate {corpus.name} from QueryModuleExport")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--lean", default="lean", help="pinned Lean executable")
@@ -410,6 +419,7 @@ def main() -> int:
                 "QueryGeneralCases",
                 "QueryVariantCases",
                 "QueryVariantExport",
+                "QueryModuleExport",
             ):
                 output = run([
                     *environment, arguments.lean, "-DwarningAsError=true",
@@ -417,6 +427,8 @@ def main() -> int:
                 ], 120)
                 if module == "QueryVariantExport" and arguments.variant_export:
                     arguments.variant_export.write_text(output)
+                if module == "QueryModuleExport":
+                    check_module_export(output, here / "native-proxy/tests/syntax_corpus.txt")
             certificate = build / "SourceEquations.lean"
             certificate.write_text(lean_correspondence(equations))
             run([*environment, arguments.lean, "-DwarningAsError=true", str(certificate)], 120)
@@ -462,6 +474,7 @@ def main() -> int:
         print("PASS: natural equation systems generate sound, complete finite native sorted binding families.")
         print("PASS: full-AST sorted AC systems generate finite complete families with fresh residuals and globally sorted postfactors.")
         print("PASS: guarded native query terms have finite complete variant families.")
+        print("PASS: the native module text and six rule templates are rendered by Lean; parse∘render = id.")
         print("Scope: typed image algebra + Lean native-query FVP + enforced native stream membership; not a Maude variant-generator certificate.")
         print("Trust boundary: Tamarin/Maude + Rust stream guard + Python evidence/signature/translation + Lean kernel.")
         return 0

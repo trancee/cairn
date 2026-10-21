@@ -2,6 +2,17 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer; SDK/application=not implemented.
 
+## Native module correspondence (2026-10-21)
+
+[`QueryModule.lean`](docs/spec/models/equations/QueryModule.lean) renders the
+native Maude module and query terms in Lean, and proves parse∘render = id,
+renderer injectivity and that the six rule templates are exactly the native
+rewrite steps. The equation command requires the Lean module text to equal
+`reviewed_module()` byte for byte, and its 999-line syntax corpus to equal the
+committed copy. A Rust unit test checks the proxy recognizer against every
+corpus line. Tamarin's importer remains trusted
+([details](docs/spec/models/equations/README.md#native-module-correspondence)).
+
 ## Native variant differential (2026-10-21)
 
 `scripts/check.sh` now compares the Lean variant schemes with native Maude

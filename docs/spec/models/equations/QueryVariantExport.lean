@@ -1,49 +1,7 @@
 import QueryVariants
+import QueryModule
 
 namespace Cairn.Equations
-
-def nativeMaudeSort : QuerySort → String
-  | .publicAtom => "Pub"
-  | .freshAtom => "Fresh"
-  | .message => "Msg"
-  | .natural => "TamNat"
-  | .node => "Node"
-
-def nativeMaudeUnary : UnarySymbol → String
-  | .flip => "tamXCflip"
-  | .fst => "tamXCfst"
-  | .hash => "tamXCh"
-  | .pk => "tamXCpk"
-  | .snd => "tamXCsnd"
-
-def nativeMaudeBinary : BinarySymbol → String
-  | .ext => "tamXCext"
-  | .kdec => "tamXCkdec"
-  | .kem => "tamXCkem"
-  | .mac => "tamXCmac"
-  | .pair => "tamXCpair"
-  | .sdec => "tamXCsdec"
-  | .senc => "tamXCsenc"
-
-def nativeMaudeTerm : NativeQueryTerm → String
-  | .atom .publicAtom index => s!"p({index})"
-  | .atom .freshAtom index => s!"f({index})"
-  | .atom .messageAtom index => s!"c({index})"
-  | .naturalAtom index => s!"t({index})"
-  | .nodeAtom index => s!"n({index})"
-  | .queryVariable sort index => s!"x{index}:{nativeMaudeSort sort}"
-  | .naturalOne => "tamXCtone"
-  | .naturalAdd left right => s!"tamtplus({nativeMaudeTerm left},{nativeMaudeTerm right})"
-  | .roleA => "tamXCroleA"
-  | .roleB => "tamXCroleB"
-  | .unary symbol argument => s!"{nativeMaudeUnary symbol}({nativeMaudeTerm argument})"
-  | .binary symbol left right =>
-    s!"{nativeMaudeBinary symbol}({nativeMaudeTerm left},{nativeMaudeTerm right})"
-  | .kdf first second third =>
-    s!"tamXCkdf({nativeMaudeTerm first},{nativeMaudeTerm second},{nativeMaudeTerm third})"
-  | .list argument => s!"list({nativeMaudeTerm argument})"
-  | .cons first rest => s!"cons({nativeMaudeTerm first},{nativeMaudeTerm rest})"
-  | .nil => "nil"
 
 -- One record per scheme: its value and the exact `nativeVariantSystem` handed to unification.
 def nativeVariantExport (term : NativeQueryTerm) : String :=

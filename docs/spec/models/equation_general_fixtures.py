@@ -101,4 +101,8 @@ GENERAL_REPORT_GROUPS = {
         "native_variant_schemes_scope", "native_variant_schemes_reach", "native_variant_schemes_cover",
         "native_finite_variants_sound", "native_finite_variants_complete",
     ),
+    "module-correspondence": (
+        "native_maude_parse_render", "native_maude_term_injective", "native_rule_templates_sound",
+        "native_rule_templates_complete", "native_maude_function_heads_complete",
+    ),
 }

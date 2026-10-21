@@ -890,6 +890,37 @@ checks the parsers and that a missing rule scheme or wrong value fails. This is
 differential corpus evidence. Native AC unification stands in for the Lean
 unifier family, and the check is not a proof of Maude's variant generator.
 
+### Native module correspondence
+
+`QueryModule.lean` defines the native Maude syntax of the query AST in Lean:
+a renderer `nativeMaudeTerm`, a fuel-bounded parser `nativeMaudeParse` that
+reads canonical decimals and right-nests flattened `tamtplus` sums, the six
+rule templates and the module text `nativeMaudeModule`. Its audited theorems:
+
+- `native_maude_parse_render`: parsing a rendered term returns it;
+- `native_maude_term_injective`: distinct terms render differently;
+- `native_rule_templates_sound`/`complete`: template instances are exactly
+  the `NativePrimitiveRewrite` steps;
+- `native_maude_function_heads_complete`: every unary/binary symbol, `kdf`,
+  `roleA` and `roleB` is declared.
+
+`QueryModuleExport.lean` prints `nativeMaudeModule` and then a syntax corpus.
+`termination.py` requires the module text to equal `reviewed_module()` byte
+for byte and the corpus to equal the committed
+[`syntax_corpus.txt`](native-proxy/tests/syntax_corpus.txt). Its lines are:
+
+- `ACCEPT` with the expected sort, variables and atoms of a well-sorted
+  rendered term (leaves of every sort, every head, nested sums, framing and
+  both sides of every rule);
+- `REJECT` with each single-character deletion that the Lean parser rejects;
+  by the round-trip theorem none of them renders any query term.
+
+The Rust unit test `recognizer_agrees_with_the_lean_syntax_corpus` requires
+`syntax::term` to agree on every line. Accepting a leading-zero index or
+classifying `tamtplus` as `Msg` fails it. This is corpus evidence for the
+Rust recognizer, not a proof; Lean-ill-sorted terms that the proxy accepts as
+kinds are not covered. Tamarin's Haskell importer remains trusted.
+
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of
 native bookkeeping `NAT`, the entire kind-completed carrier or finite variants.
@@ -970,7 +1001,9 @@ Existing proof deadlines/options remain unchanged. Version checks use
 existing `5`-second teardown grace, not a proof-search retry. Child pipes close
 before shutdown acknowledgment, and unexpected exit/remaining output/stderr
 fails closed. Replies are buffered in full; no new byte/heap cap is introduced.
-The Python recognizer/module checker, pinned tool implementations and
+The module text is now rendered by Lean and the Rust recognizer is checked
+against a Lean corpus ([module correspondence](#native-module-correspondence)).
+The Python module checker, pinned tool implementations and
 variable renaming/importer remain trusted or unverified, not Lean-certified.
 
 ## Integration and observed evidence

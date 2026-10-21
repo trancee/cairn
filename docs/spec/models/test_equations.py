@@ -10,6 +10,7 @@ from equation_fixtures import REPORT_GROUPS
 from equation_audit_cases import ARITHMETIC_OMISSIONS, NATIVE_OMISSIONS
 from equations.signature import EQUATIONS, lean_correspondence, reviewed_signature
 from equations.maude_native import source_identity, source_inputs
+from equations.maude_module import reviewed_module
 from replay import ReplayError
 
 
@@ -182,6 +183,11 @@ class EquationCommandTests(unittest.TestCase):
             target = Path(temporary.name) / path.relative_to(source.parents[2])
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, target)
+        corpus = Path("equations/native-proxy/tests/syntax_corpus.txt")
+        (self.distribution / corpus).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source / corpus, self.distribution / corpus)
+        self.module_export = self.distribution / "module-export.txt"
+        self.module_export.write_text(reviewed_module() + (source / corpus).read_text())
         self.command = [sys.executable, str(self.distribution / "equations/termination.py")]
 
     def test_missing_toolchain_pin_reports_a_controlled_failure(self):
@@ -248,6 +254,8 @@ class EquationCommandTests(unittest.TestCase):
             "    print('Lean (version 4.34.1, fixture)')\n"
             "elif sys.argv[-1].endswith('/QueryVariantExport.lean'):\n"
             "    print('CASE fixture-export')\n"
+            "elif sys.argv[-1].endswith('/QueryModuleExport.lean'):\n"
+            f"    print(open({str(self.module_export)!r}).read(), end='')\n"
             "elif not sys.argv[-1].endswith('/QueryRawGeneration.lean'):\n"
             f"    print({reports!r})\n",
         )
@@ -395,6 +403,7 @@ class EquationCommandTests(unittest.TestCase):
         self.assertIn("PASS: rigid-column semigroup families preserve constants", result.stdout)
         self.assertIn("PASS: full-AST sorted AC systems generate finite complete families", result.stdout)
         self.assertIn("PASS: guarded native query terms have finite complete variant families", result.stdout)
+        self.assertIn("PASS: the native module text and six rule templates are rendered by Lean", result.stdout)
         self.assertNotIn("FAIL:", result.stderr)
 
     def test_variant_export_keeps_the_lean_export_output(self):
@@ -404,6 +413,26 @@ class EquationCommandTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(export.read_text().strip(), "CASE fixture-export")
+
+    def test_lean_module_text_must_equal_the_reviewed_module(self):
+        corpus = (self.distribution / "equations/native-proxy/tests/syntax_corpus.txt").read_text()
+        self.module_export.write_text(reviewed_module().replace("[variant]", "[variant ]", 1) + corpus)
+
+        result = self.run_with_axiom_reports(*REPORT_GROUPS)
+
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("FAIL: Lean-rendered native module differs from reviewed_module()", result.stderr)
+        self.assertNotIn("PASS:", result.stdout)
+
+    def test_committed_syntax_corpus_must_match_the_lean_export(self):
+        corpus = self.distribution / "equations/native-proxy/tests/syntax_corpus.txt"
+        corpus.write_text(corpus.read_text().replace("REJECT\t", "ACCEPT\t", 1))
+
+        result = self.run_with_axiom_reports(*REPORT_GROUPS)
+
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("FAIL: stale native syntax corpus", result.stderr)
+        self.assertNotIn("PASS:", result.stdout)
 
     def test_unrestricted_sorted_generation_reports_are_required_before_success(self):
         for group, missing in (
@@ -416,6 +445,7 @@ class EquationCommandTests(unittest.TestCase):
             ("residual-freshness", "native_sorted_binding_family_fresh"),
             ("general-ac-completeness", "native_sorted_ac_system_family_complete"),
             ("finite-variants", "native_finite_variants_complete"),
+            ("module-correspondence", "native_maude_parse_render"),
         ):
             with self.subTest(group=group):
                 result = self.run_with_axiom_reports(*(item for item in REPORT_GROUPS if item != group))
