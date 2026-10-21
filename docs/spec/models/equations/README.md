@@ -909,17 +909,24 @@ rule templates and the module text `nativeMaudeModule`. Its audited theorems:
 for byte and the corpus to equal the committed
 [`syntax_corpus.txt`](native-proxy/tests/syntax_corpus.txt). Its lines are:
 
-- `ACCEPT` with the expected sort, variables and atoms of a well-sorted
-  rendered term (leaves of every sort, every head, nested sums, framing and
-  both sides of every rule);
+- `ACCEPT` with the expected sort, variables and atoms of a rendered term
+  (leaves of every sort, every head, nested sums, framing and both sides of
+  every rule). The sort is the proper Maude sort, or else the controlled kind
+  `KindNatural`, `KindMessage` or `KindFraming` of its `kindAbstraction`
+  image, which reads `Fresh` as natural: `Fresh` operands of sums and every
+  message/framing context above them;
+- `REJECT` with rendered terms that have neither a sort nor a kind
+  (message, `Pub`, `Node` or framing operands of sums; framing or `Node`
+  beneath message functions);
 - `REJECT` with each single-character deletion that the Lean parser rejects;
   by the round-trip theorem none of them renders any query term.
 
 The Rust unit test `recognizer_agrees_with_the_lean_syntax_corpus` requires
-`syntax::term` to agree on every line. Accepting a leading-zero index or
-classifying `tamtplus` as `Msg` fails it. This is corpus evidence for the
-Rust recognizer, not a proof; Lean-ill-sorted terms that the proxy accepts as
-kinds are not covered. Tamarin's Haskell importer remains trusted.
+`syntax::term` to agree on every line. Accepting a leading-zero index, a
+`Msg` sum operand or a `Node` message argument, or classifying `tamtplus` as
+`Msg` or kind framing as `TOP`, fails it. This is corpus evidence for the
+Rust recognizer, not a proof; flattened n-ary sums are not in the corpus.
+Tamarin's Haskell importer remains trusted.
 
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of

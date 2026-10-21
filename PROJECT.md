@@ -2,6 +2,15 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer; SDK/application=not implemented.
 
+## Kind-sorted syntax corpus (2026-10-21)
+
+The Lean syntax corpus now also classifies controlled-kind terms
+(`Fresh` in natural sums and every context above them) by their
+`kindAbstraction` image, and lists rendered terms with neither a sort nor a
+kind as rejections. The Rust recognizer agrees on all 2515 lines; accepting
+a `Msg` sum operand or a `Node` message argument now fails the test
+([details](docs/spec/models/equations/README.md#native-module-correspondence)).
+
 ## Native module correspondence (2026-10-21)
 
 [`QueryModule.lean`](docs/spec/models/equations/QueryModule.lean) renders the
