@@ -85,6 +85,44 @@ def lemma_header(block: str) -> tuple[str, str, str]:
     return match[1] or "", match[2], content[match.end():]
 
 
+COMPOSITIONAL = frozenset({"lock_stage_order", "initial_resume_serialized", "resume_serialized"})
+
+
+def has_attribute(block: str, name: str) -> bool:
+    return bool(re.search(rf"(?:^|,)\s*{name}\s*(?:,|$)", lemma_header(block)[0]))
+
+
+def proof_context(names: list[str], blocks: dict[str, str], target: str) -> tuple[set[str], set[str]]:
+    """Tamarin uses every sources lemma and, except for sources lemmas, each earlier reuse lemma."""
+    earlier = [] if has_attribute(blocks[target], "sources") else names[:names.index(target)]
+    return (
+        {name for name in names if has_attribute(blocks[name], "sources")},
+        {name for name in earlier if has_attribute(blocks[name], "reuse")},
+    )
+
+
+def audit_partition(export: str) -> dict[str, tuple[str, ...]]:
+    """Split the full context into independently checkable contexts with identical proof inputs."""
+    _, blocks = export_parts(export)
+    names = list(blocks)
+    for name in names:
+        kind = lemma_header(blocks[name])[1]
+        excluded = name in COMPOSITIONAL or kind == "exists-trace"
+        if kind == "exists-trace" and name not in EXISTENTIAL_TARGETS:
+            raise ReplayError(f"uncovered declaration: {name}")
+        if excluded and (has_attribute(blocks[name], "reuse") or has_attribute(blocks[name], "sources")):
+            raise ReplayError(f"{name}: excluded claim is reused")
+    contexts = {"complete_safety": select_certificate(export, "complete_safety", "all-traces")[1]}
+    for target in EXISTENTIAL_TARGETS:
+        if target in blocks:
+            contexts[target] = select_certificate(export, target, "exists-trace")[1]
+    for context, retained in contexts.items():
+        for name in retained:
+            if proof_context(list(retained), blocks, name) != proof_context(names, blocks, name):
+                raise ReplayError(f"{name}: reuse context differs in {context}")
+    return contexts
+
+
 def select_certificate(
     export: str, target: str,
     trace_kind: Literal["exists-trace", "all-traces"] = "exists-trace",
@@ -92,10 +130,9 @@ def select_certificate(
 ) -> tuple[str, tuple[str, ...]]:
     prefix, blocks = export_parts(export)
     if target == "complete_safety":
-        compositional = {"lock_stage_order", "initial_resume_serialized", "resume_serialized"}
         retained = tuple(
             name for name, block in blocks.items()
-            if lemma_header(block)[1] == "all-traces" and name not in compositional
+            if lemma_header(block)[1] == "all-traces" and name not in COMPOSITIONAL
         )
         if not retained:
             raise ReplayError("missing safety certificates")
@@ -216,6 +253,10 @@ def main() -> int:
         ),
         default="lost_data_recovery", help="certificate to replay (default: lost_data_recovery)",
     )
+    parser.add_argument(
+        "--audit-partition", action="store_true",
+        help="check that the replay contexts cover the full context with identical proof inputs",
+    )
     arguments = parser.parse_args()
     if arguments.timeout <= 0:
         parser.error("--timeout must be positive")
@@ -241,6 +282,18 @@ def main() -> int:
                 *(["--defines=DISCLOSURE_SOURCES"] if arguments.disclosure_sources else []),
             ], 120)
             source = exported.read_text()
+            if arguments.audit_partition:
+                contexts = audit_partition(source)
+                declarations = export_parts(source)[1]
+                print(f"Source SHA-256: {hashlib.sha256(source.encode()).hexdigest()}", flush=True)
+                for context, retained in contexts.items():
+                    print(f"{context}: {', '.join(retained)}", flush=True)
+                print(
+                    f"Full-context partition: {len(declarations)} declarations, "
+                    f"{len(contexts)} contexts, {len(COMPOSITIONAL & set(declarations))} compositional; "
+                    "reuse/source contexts preserved", flush=True,
+                )
+                return 0
             selected, retained = select_certificate(source, target, trace_kind, uses)
             theory = build / "ratchet-witness.spthy"
             theory.write_text(selected)

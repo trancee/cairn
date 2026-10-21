@@ -341,6 +341,9 @@ The same minimal context with `--prove` timed out at 240 seconds.
 Certificate-only replay of the full assembled context also timed out at
 300 seconds. Thus this closes reproducible exact-transition-system witness
 replay, **not** full-context completion or a new 56/59 assembled result.
+[ADR 0017](../../adr/0017-split-full-context-acceptance.md) later accepts
+the audited `complete_safety` and witness contexts as full-context
+certificate checking (`replay.py --disclosure-sources --audit-partition`).
 The [workflow](../../../.github/workflows/lifecycle.yml) now runs these
 regressions and the witness runner alongside the lifecycle gate.
 The lifecycle gate, two witnesses and eight refined safety targets run as

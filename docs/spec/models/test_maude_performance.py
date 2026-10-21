@@ -10,6 +10,56 @@ import tempfile
 import unittest
 
 from equations.maude_native import NATIVE_DIRECTORY, source_identity
+from equations.maude_runner import GuardError
+
+sys.path.insert(0, str(NATIVE_DIRECTORY))
+
+import experiment
+
+
+class CommittedBaselineTests(unittest.TestCase):
+    def repository(self, temporary):
+        root = Path(temporary)
+        replay = root / "docs/spec/models/replay.py"
+        replay.parent.mkdir(parents=True)
+        replay.write_text("committed\n")
+        for command in (
+            ["init", "-q"], ["add", "."],
+            ["-c", "user.name=fixture", "-c", "user.email=fixture@invalid",
+             "-c", "commit.gpgsign=false", "commit", "-q", "-m", "baseline"],
+        ):
+            subprocess.run(["git", "-C", str(root), *command], check=True, capture_output=True, timeout=10)
+        return root, replay
+
+    def test_baseline_state_is_independent_of_the_working_directory(self):
+        with tempfile.TemporaryDirectory() as temporary, tempfile.TemporaryDirectory() as elsewhere:
+            root, replay = self.repository(temporary)
+            replay.write_text("edited\n")
+            previous = os.getcwd()
+            os.chdir(elsewhere)
+            try:
+                edited = experiment.committed_baseline(root)
+                replay.write_text("committed\n")
+                restored = experiment.committed_baseline(root)
+            finally:
+                os.chdir(previous)
+
+        self.assertFalse(edited)
+        self.assertTrue(restored)
+
+    def test_unavailable_baseline_state_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            with self.assertRaisesRegex(GuardError, "committed replay baseline unavailable"):
+                experiment.committed_baseline(Path(temporary))
+
+    def test_acceptance_requires_a_committed_baseline(self):
+        with self.assertRaisesRegex(GuardError, "requires a committed replay baseline"):
+            experiment.baseline_label(3, committed=False)
+
+    def test_screening_labels_an_uncommitted_baseline(self):
+        self.assertEqual(experiment.baseline_label(3, committed=True), experiment.COMMITTED_BASELINE)
+        self.assertEqual(experiment.baseline_label(1, committed=True), experiment.COMMITTED_BASELINE)
+        self.assertEqual(experiment.baseline_label(1, committed=False), experiment.WORKING_TREE_BASELINE)
 
 
 class NativePerformanceCommandTests(unittest.TestCase):
@@ -253,7 +303,7 @@ class NativePerformanceCommandTests(unittest.TestCase):
             ("seconds", {"baseline": [0.12] * 3, "other_guard": [0.169] * 3}),
             ("platform", None), ("logical_cpus", True),
             ("physical_memory_bytes", 0), ("proxy_sha256", "bad"),
-            ("baseline_revision", "bad"),
+            ("baseline_revision", "bad"), ("baseline", experiment.WORKING_TREE_BASELINE),
         )
         for field, value in changes:
             report = self.report()

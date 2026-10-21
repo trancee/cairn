@@ -3,10 +3,13 @@ import sys
 from unittest.mock import patch
 import io
 import json
+import re
 import replay
 from pathlib import Path
 
-from replay import ReplayError, check_result, compare_replay, main, run, select_certificate
+from replay import (
+    ReplayError, audit_partition, check_result, compare_replay, main, run, select_certificate,
+)
 from equations.maude_native import source_identity
 
 
@@ -356,6 +359,114 @@ class CorrespondenceTests(unittest.TestCase):
     def test_extra_lemma_is_rejected(self):
         with self.assertRaisesRegex(ReplayError, "lemma inventory"):
             compare_replay(EXPORT, EXPORT, "witness")
+
+
+PARTITION_EXPORT = """
+theory Example
+begin
+rule Pair:
+  [ Fr(~x) ] --[ Done(~x) ]-> [ Out(~x) ]
+lemma origin [sources]:
+  all-traces "All x #i. Done(x)@i ==> Ex #j. Done(x)@j"
+by contradiction
+lemma executable [heuristic={witness}]:
+  exists-trace "Ex x #i. Done(x)@i"
+SOLVED
+lemma helper [reuse]:
+  all-traces "All x #i. Done(x)@i ==> Ex #j. Done(x)@j"
+by contradiction
+lemma lock_stage_order [use_induction]:
+  all-traces "All x #i. Done(x)@i ==> Ex #j. Done(x)@j"
+by sorry
+lemma safety:
+  all-traces "All x #i. Done(x)@i ==> Ex #j. Done(x)@j"
+by contradiction
+end
+""".lstrip()
+
+
+class PartitionTests(unittest.TestCase):
+    def test_contexts_cover_every_declaration_with_its_full_proof_context(self):
+        contexts = audit_partition(PARTITION_EXPORT)
+
+        self.assertEqual(contexts, {
+            "complete_safety": ("origin", "helper", "safety"),
+            "executable": ("origin", "executable"),
+        })
+
+    def test_sources_lemma_after_a_reused_lemma_keeps_its_reuse_free_context(self):
+        source = PARTITION_EXPORT[PARTITION_EXPORT.index("lemma origin"):
+                                  PARTITION_EXPORT.index("lemma executable")]
+        export = PARTITION_EXPORT.replace(source, "").replace(
+            "lemma lock_stage_order", source + "lemma lock_stage_order")
+
+        contexts = audit_partition(export)
+
+        self.assertEqual(contexts["executable"], ("executable", "origin"))
+
+    def test_reused_witness_is_rejected(self):
+        export = PARTITION_EXPORT.replace("[heuristic={witness}]", "[reuse, heuristic={witness}]")
+
+        with self.assertRaisesRegex(ReplayError, "executable: excluded claim is reused"):
+            audit_partition(export)
+
+    def test_reused_compositional_claim_is_rejected(self):
+        export = PARTITION_EXPORT.replace("[use_induction]", "[reuse, use_induction]")
+
+        with self.assertRaisesRegex(ReplayError, "lock_stage_order: excluded claim is reused"):
+            audit_partition(export)
+
+    def test_unassigned_existential_claim_is_rejected(self):
+        export = PARTITION_EXPORT.replace("lemma executable", "lemma other")
+
+        with self.assertRaisesRegex(ReplayError, "uncovered declaration: other"):
+            audit_partition(export)
+
+    def test_witness_after_a_reused_lemma_is_rejected(self):
+        witness = PARTITION_EXPORT[PARTITION_EXPORT.index("lemma executable"):
+                                   PARTITION_EXPORT.index("lemma helper")]
+        export = PARTITION_EXPORT.replace(witness, "").replace(
+            "lemma lock_stage_order", witness + "lemma lock_stage_order")
+
+        with self.assertRaisesRegex(ReplayError, "executable: reuse context differs"):
+            audit_partition(export)
+
+    def test_command_audits_the_exported_partition_without_proof_search(self):
+        def native(command, timeout):
+            if command[0] == "env":
+                report = Path(command[1].split("=", 1)[1])
+                report.write_text(json.dumps({
+                    "event": "version", "pid": 1337, "source_id": source_identity(),
+                }) + "\n")
+            if "--version" in command:
+                return "tamarin-prover 1.12.0,\nMaude version 3.5.1\n"
+            destination = next(arg[9:] for arg in command if arg.startswith("--output="))
+            Path(destination).write_text(PARTITION_EXPORT)
+            return ""
+
+        with patch.object(
+            sys, "argv", ["replay.py", "--disclosure-sources", "--audit-partition"],
+        ), patch("replay.run", side_effect=native) as execute, patch(
+            "sys.stdout", new_callable=io.StringIO,
+        ) as output:
+            result = main()
+
+        self.assertEqual(result, 0)
+        self.assertEqual(execute.call_count, 2)
+        self.assertIn("--defines=DISCLOSURE_SOURCES", execute.call_args.args[0])
+        self.assertIn(
+            "Full-context partition: 5 declarations, 2 contexts, 1 compositional; "
+            "reuse/source contexts preserved", output.getvalue(),
+        )
+
+    def test_workflow_replays_every_partition_context_and_the_audit(self):
+        workflow = (Path(__file__).resolve().parents[3] / ".github/workflows/lifecycle.yml").read_text()
+        replays = set(re.findall(r"^ +replay: '([^']*)'$", workflow, re.M))
+
+        self.assertIn("--disclosure-sources --audit-partition", replays)
+        for context in ("complete_safety", *replay.EXISTENTIAL_TARGETS):
+            with self.subTest(context=context):
+                self.assertIn(f"--disclosure-sources --target {context}", replays)
 
 
 class ResultTests(unittest.TestCase):

@@ -37,6 +37,7 @@ fi
 if [ "${REPLAY:-0}" = 1 ]; then
   python3 docs/spec/models/replay.py --timeout 180
   python3 docs/spec/models/replay.py --disclosure-sources --timeout 180
+  python3 docs/spec/models/replay.py --disclosure-sources --audit-partition
   for target in executable initiator_candidate_recovery fresh_epoch_after_compromise; do
     python3 docs/spec/models/replay.py --disclosure-sources --target "$target" --timeout 240
   done

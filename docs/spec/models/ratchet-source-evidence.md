@@ -68,9 +68,17 @@ safety suite. All 19 formal jobs passed on revision `85aa105` in
 including the clean Lean source projection, complete safety suite, all
 witnesses, refined-origin replays and both guard-mutation regressions.
 
-**Remaining limits:** one full assembled invocation was system-killed with
-exit 137 before a summary; independent certificate contexts do not establish
-that invocation's completion. Default activation is not performed.
+**Full-context acceptance (2026-10-21):** one full assembled invocation was
+system-killed with exit 137 before a summary. Diagnosis shows heap residency
+adds up across the four witness certificates (1.21 GB alone, 4.02 GB for two),
+exceeding the 5 GiB ceiling; Maude used about 1% of CPU. The
+`--disclosure-sources --audit-partition` gate proves that the `complete_safety`
+and four witness contexts keep each lemma's sources and earlier reuse
+lemmas. Under [ADR 0017](../../adr/0017-split-full-context-acceptance.md)
+those contexts are accepted as full-context certificate checking; no single
+process completes it.
+
+**Remaining limits:** default activation is not performed.
 An ephemeral full-context variant hiding all 36 ordinary non-source reuse
 hints from the four existential witnesses timed out at 240 seconds with
 a 5 GiB heap ceiling. All lemmas, rules and restrictions were retained;
