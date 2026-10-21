@@ -990,9 +990,10 @@ The Lean finite-variant theorem above is discharged for the native query
 algebra. Correspondence with Tamarin/Maude sorted AC unification, backend
 narrowing/variant generation and the importer is not discharged by this command.
 The native guard checks the soundness of each returned `unify`/`match`
-solution and, for sum-free queries the verified syntactic unifier decides,
-the completeness of the family (below). Completeness for queries with natural
-sums, or that the syntactic procedure leaves `unsupported`, stays trusted.
+solution and, for queries the verified syntactic unifier decides, the
+completeness of the family (below). Natural sums are decided by cancelling
+AC-equal summands; completeness for queries the procedure leaves
+`unsupported` stays trusted.
 
 ## Native stream boundary
 
@@ -1032,15 +1033,19 @@ unchanged subject. Equality compares flattened, sorted sums, the procedure
 `QueryACCanonical.lean` proves decides `NativeQueryAC`. A non-solution rejects
 the entire reply.
 
-For queries without `tamtplus`, the guard also runs the Lean-mirrored
-syntactic unifier or matcher. If it returns `solved`, `No unifier.` or
+The guard also runs the Lean-mirrored syntactic unifier or matcher.
+Natural sums are flattened and AC-equal summands cancelled greedily: both
+sides empty succeeds, one side empty fails, and a single remaining summand
+on one side is unified with the rebuilt other side. Matching cancels only
+variable-free pattern summands and never reverses the equation; any other
+remainder is `unsupported`. If it returns `solved`, `No unifier.` or
 `No match.` rejects the entire reply. For `unify`, some returned solution must
 generalize the most general unifier: matching its bindings (generated
 variables bindable) against the unifier's (original variables constant) must
 not fail. By `native_complete_family_cover_iff` this decides completeness of
 the already-certified family. `failed` needs no extra check: every returned
 solution already fails the certificate. `unsupported` keeps family
-completeness trusted, as do all queries with natural sums.
+completeness trusted.
 There is no per-solution filtering or success fallback.
 
 `CAIRN_MAUDE_BINARY` selects the underlying executable, otherwise `maude` is

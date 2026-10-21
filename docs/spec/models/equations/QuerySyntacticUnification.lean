@@ -8,9 +8,12 @@ namespace Cairn.Equations
 /-! Verified syntactic sorted unification and matching for native query systems.
 
 Sort intersections in the native lattice are one of their arguments or empty, so a system without
-natural sums has at most one most general unifier and no fresh variables. `failed` and `solved`
-carry completeness proofs; `unsupported` (fuel, size, an addition head, or a sort refinement that
-needs a new variable) makes no claim. -/
+natural sums has at most one most general unifier and no fresh variables. Natural sums are
+flattened and AC-equal summands cancelled (in matching, only variable-free pattern summands);
+an empty remainder solves or refutes the equation, and a single remaining summand becomes an
+ordinary equation against the rebuilt remainder. `failed` and `solved` carry completeness proofs;
+`unsupported` (fuel, size, two or more remaining summands on both sides, or a sort refinement
+that needs a new variable) makes no claim. -/
 
 inductive NativeSyntacticResult where
   | solved (bindings : NativeBindingList)
@@ -63,6 +66,28 @@ def nativeSyntacticVariable (recurse : NativeEquationSystem → NativeSyntacticR
       else if (nativeSortRequirements sort value).isNone then .failed else .unsupported
     | none => if (nativeSortRequirements sort value).isNone then .failed else .unsupported
 
+-- Removes the first summand that `cancels` pairs with `term`.
+def nativeSumTake (cancels : NativeQueryTerm → NativeQueryTerm → Bool) (term : NativeQueryTerm) :
+    List NativeQueryTerm → Option (List NativeQueryTerm)
+  | [] => none
+  | first :: rest =>
+    if cancels term first then some rest else (nativeSumTake cancels term rest).map (first :: ·)
+
+-- Natural sums form a cancellative commutative semigroup, so paired summands can be dropped.
+def nativeSumCancel (cancels : NativeQueryTerm → NativeQueryTerm → Bool) :
+    List NativeQueryTerm → List NativeQueryTerm → List NativeQueryTerm × List NativeQueryTerm
+  | [], right => ([], right)
+  | first :: rest, right =>
+    match nativeSumTake cancels first right with
+    | some remaining => nativeSumCancel cancels rest remaining
+    | none =>
+      let result := nativeSumCancel cancels rest right
+      (first :: result.1, result.2)
+
+-- A subject variable is a constant, so only a variable-free pattern summand is its own instance.
+def nativeGroundCancels (pattern subject : NativeQueryTerm) : Bool :=
+  (nativeQueryVariables pattern).isEmpty && nativeACEqual pattern subject
+
 def nativeSyntacticUnify : Nat → NativeEquationSystem → NativeSyntacticResult
   | 0, _ => .unsupported
   | _ + 1, [] => .solved []
@@ -75,7 +100,15 @@ def nativeSyntacticUnify : Nat → NativeEquationSystem → NativeSyntacticResul
         nativeSyntacticVariable (nativeSyntacticUnify fuel) sort index left rest
       | none, none =>
         if nativeQueryHead left ≠ nativeQueryHead right then .failed
-        else if nativeQueryHead left = .naturalAdd then .unsupported
+        else if nativeQueryHead left = .naturalAdd then
+          match nativeSumCancel nativeACEqual (nativeACSummands left) (nativeACSummands right) with
+          | ([], []) => nativeSyntacticUnify fuel rest
+          | ([], _ :: _) | (_ :: _, []) => .failed
+          | ([kept], other :: others) =>
+            nativeSyntacticUnify fuel ((kept, nativeACRebuild (other :: others)) :: rest)
+          | (first :: second :: kept, [other]) =>
+            nativeSyntacticUnify fuel ((nativeACRebuild (first :: second :: kept), other) :: rest)
+          | (_ :: _ :: _, _ :: _ :: _) => .unsupported
         else nativeSyntacticUnify fuel (nativeChildEquations left right ++ rest)
 
 def nativeBindingLookup (key : NativeVariableKey) : NativeBindingList → Option NativeQueryTerm
@@ -99,7 +132,14 @@ def nativeSyntacticMatch :
         else .failed
     | none =>
       if nativeQueryHead pattern ≠ nativeQueryHead subject then .failed
-      else if nativeQueryHead pattern = .naturalAdd then .unsupported
+      else if nativeQueryHead pattern = .naturalAdd then
+        match nativeSumCancel nativeGroundCancels (nativeACSummands pattern)
+            (nativeACSummands subject) with
+        | ([], []) => nativeSyntacticMatch fuel rest bindings
+        | ([], _ :: _) | (_ :: _, []) => .failed
+        | ([kept], other :: others) =>
+          nativeSyntacticMatch fuel ((kept, nativeACRebuild (other :: others)) :: rest) bindings
+        | (_ :: _ :: _, _ :: _) => .unsupported
       else nativeSyntacticMatch fuel (nativeChildEquations pattern subject ++ rest) bindings
 
 def NativeSyntacticSpec (equations : NativeEquationSystem) (variables : List NativeVariableKey) :
@@ -212,6 +252,208 @@ private theorem spec_congr
 private theorem complete_empty (none : ∀ assignment, ¬NativeACSystemUnifier equations assignment)
     (variables : List NativeVariableKey) : NativeCompleteACSystemOn equations variables [] :=
   ⟨by simp, fun solution solved => (none solution solved).elim⟩
+
+private theorem word_substitution (assignment : QuerySort → Nat → NativeQueryTerm)
+    (term : NativeQueryTerm) :
+    nativeACAtomWord (substituteNativeQuery assignment term) =
+      (nativeACSummands term).flatMap
+        (fun summand => nativeACAtomWord (substituteNativeQuery assignment summand)) := by
+  induction term with
+  | naturalAdd _ _ left right =>
+    simp only [substituteNativeQuery, nativeACAtomWord, nativeACSummands, List.flatMap_append,
+      left, right]
+  | atom | naturalAtom | nodeAtom | queryVariable | naturalOne | roleA | roleB |
+      unary | binary | kdf | list | cons | nil => simp [nativeACSummands]
+
+private theorem word_rebuild (assignment : QuerySort → Nat → NativeQueryTerm) :
+    ∀ (terms : List NativeQueryTerm), terms ≠ [] →
+      nativeACAtomWord (substituteNativeQuery assignment (nativeACRebuild terms)) =
+        terms.flatMap (fun summand => nativeACAtomWord (substituteNativeQuery assignment summand))
+  | [], empty => absurd rfl empty
+  | [_], _ => by simp [nativeACRebuild]
+  | first :: second :: rest, _ => by
+    simp only [nativeACRebuild, substituteNativeQuery, nativeACAtomWord]
+    rw [word_rebuild assignment (second :: rest) (by simp)]
+    simp only [List.flatMap_cons]
+
+private theorem word_plain (term : NativeQueryTerm) :
+    nativeACAtomWord term = (nativeACSummands term).flatMap nativeACAtomWord := by
+  simpa only [native_substitution_identity] using word_substitution NativeQueryTerm.queryVariable term
+
+private theorem word_rebuild_plain (terms : List NativeQueryTerm) (nonempty : terms ≠ []) :
+    nativeACAtomWord (nativeACRebuild terms) = terms.flatMap nativeACAtomWord := by
+  simpa only [native_substitution_identity] using
+    word_rebuild NativeQueryTerm.queryVariable terms nonempty
+
+private theorem take_perm {cancels : NativeQueryTerm → NativeQueryTerm → Bool} :
+    ∀ {terms remaining : List NativeQueryTerm}, nativeSumTake cancels term terms = some remaining →
+      ∃ partner, cancels term partner = true ∧ terms.Perm (partner :: remaining)
+  | [], _, taken => by simp [nativeSumTake] at taken
+  | first :: rest, remaining, taken => by
+    unfold nativeSumTake at taken
+    split at taken
+    · rename_i paired
+      cases taken
+      exact ⟨first, paired, .refl _⟩
+    · obtain ⟨tail, found, equal⟩ := Option.map_eq_some_iff.mp taken
+      subst equal
+      obtain ⟨partner, paired, permutation⟩ := take_perm found
+      exact ⟨partner, paired, (permutation.cons first).trans (.swap _ _ _)⟩
+
+private theorem cancel_common {cancels : NativeQueryTerm → NativeQueryTerm → Bool}
+    {words subjectWords : NativeQueryTerm → List NativeACClass}
+    (related : ∀ term partner, cancels term partner = true →
+      (words term).Perm (subjectWords partner)) :
+    ∀ (left right : List NativeQueryTerm), ∃ common : List NativeACClass,
+      (left.flatMap words).Perm (common ++ (nativeSumCancel cancels left right).1.flatMap words) ∧
+        (right.flatMap subjectWords).Perm
+          (common ++ (nativeSumCancel cancels left right).2.flatMap subjectWords)
+  | [], right => ⟨[], by simp [nativeSumCancel]⟩
+  | first :: rest, right => by
+    unfold nativeSumCancel
+    split
+    · rename_i remaining taken
+      obtain ⟨partner, paired, permutation⟩ := take_perm taken
+      obtain ⟨common, leftPerm, rightPerm⟩ := cancel_common related rest remaining
+      refine ⟨subjectWords partner ++ common, ?_, ?_⟩
+      · rw [List.flatMap_cons, List.append_assoc]
+        exact (related first partner paired).append leftPerm
+      · rw [List.append_assoc]
+        refine (permutation.flatMap_right subjectWords).trans ?_
+        rw [List.flatMap_cons]
+        exact rightPerm.append_left _
+    · obtain ⟨common, leftPerm, rightPerm⟩ := cancel_common related rest right
+      refine ⟨common, ?_, rightPerm⟩
+      simp only [List.flatMap_cons]
+      exact (leftPerm.append_left (words first)).trans (List.perm_append_comm_assoc _ _ _)
+
+private theorem cancel_iff {cancels : NativeQueryTerm → NativeQueryTerm → Bool}
+    {words subjectWords : NativeQueryTerm → List NativeACClass}
+    (related : ∀ term partner, cancels term partner = true →
+      (words term).Perm (subjectWords partner)) (left right : List NativeQueryTerm) :
+    (left.flatMap words).Perm (right.flatMap subjectWords) ↔
+      ((nativeSumCancel cancels left right).1.flatMap words).Perm
+        ((nativeSumCancel cancels left right).2.flatMap subjectWords) := by
+  obtain ⟨common, leftPerm, rightPerm⟩ := cancel_common related left right
+  constructor
+  · intro permutation
+    exact (List.perm_append_left_iff common).mp
+      (leftPerm.symm.trans (permutation.trans rightPerm))
+  · intro permutation
+    exact leftPerm.trans (((List.perm_append_left_iff common).mpr permutation).trans rightPerm.symm)
+
+private theorem unify_sum_iff (assignment : QuerySort → Nat → NativeQueryTerm)
+    (left right : NativeQueryTerm) :
+    NativeQueryAC (substituteNativeQuery assignment left) (substituteNativeQuery assignment right) ↔
+      ((nativeSumCancel nativeACEqual (nativeACSummands left) (nativeACSummands right)).1.flatMap
+          fun summand => nativeACAtomWord (substituteNativeQuery assignment summand)).Perm
+        ((nativeSumCancel nativeACEqual (nativeACSummands left) (nativeACSummands right)).2.flatMap
+          fun summand => nativeACAtomWord (substituteNativeQuery assignment summand)) := by
+  rw [native_ac_atom_word_iff, word_substitution, word_substitution]
+  exact cancel_iff (fun _ _ paired => native_ac_atom_word_iff.mp
+    (native_ac_substitution assignment (native_ac_equal_iff.mp paired))) _ _
+
+private theorem match_sum_iff (assignment : QuerySort → Nat → NativeQueryTerm)
+    (pattern subject : NativeQueryTerm) :
+    NativeQueryAC (substituteNativeQuery assignment pattern) subject ↔
+      ((nativeSumCancel nativeGroundCancels (nativeACSummands pattern)
+          (nativeACSummands subject)).1.flatMap
+          fun summand => nativeACAtomWord (substituteNativeQuery assignment summand)).Perm
+        ((nativeSumCancel nativeGroundCancels (nativeACSummands pattern)
+          (nativeACSummands subject)).2.flatMap nativeACAtomWord) := by
+  rw [native_ac_atom_word_iff, word_substitution, word_plain subject]
+  refine cancel_iff (fun term partner paired => ?_) _ _
+  simp only [nativeGroundCancels, Bool.and_eq_true, List.isEmpty_iff] at paired
+  have fixed := native_substitution_assignment_ac_on (term := term) (first := assignment)
+    (second := NativeQueryTerm.queryVariable) (by
+      intro sort index member
+      rw [paired.1] at member
+      cases member)
+  rw [native_substitution_identity] at fixed
+  exact native_ac_atom_word_iff.mp (.transitive fixed (native_ac_equal_iff.mp paired.2))
+
+-- A sum with no summand left over is never the image of a nonempty sum.
+private theorem cancelled_empty {words subjectWords : NativeQueryTerm → List NativeACClass}
+    (nonempty : ∀ term, words term ≠ []) (subjectNonempty : ∀ term, subjectWords term ≠ [])
+    (shape : (left = [] ∧ right ≠ []) ∨ (left ≠ [] ∧ right = [])) :
+    ¬(left.flatMap words).Perm (right.flatMap subjectWords) := by
+  intro permutation
+  rcases shape with ⟨rfl, nonemptyRight⟩ | ⟨nonemptyLeft, rfl⟩
+  · obtain ⟨term, rest, rfl⟩ := List.exists_cons_of_ne_nil nonemptyRight
+    have empty := permutation.symm.eq_nil
+    simp only [List.flatMap_cons, List.append_eq_nil_iff] at empty
+    exact subjectNonempty term empty.1
+  · obtain ⟨term, rest, rfl⟩ := List.exists_cons_of_ne_nil nonemptyLeft
+    have empty := permutation.eq_nil
+    simp only [List.flatMap_cons, List.append_eq_nil_iff] at empty
+    exact nonempty term empty.1
+
+private theorem word_nonempty_substituted (assignment : QuerySort → Nat → NativeQueryTerm) :
+    ∀ term, nativeACAtomWord (substituteNativeQuery assignment term) ≠ [] :=
+  fun _ => native_ac_atom_word_nonempty _
+
+private theorem unify_cancel_trivial
+    (cancelled : nativeSumCancel nativeACEqual (nativeACSummands left) (nativeACSummands right) =
+      ([], [])) (assignment : QuerySort → Nat → NativeQueryTerm) :
+    NativeQueryAC (substituteNativeQuery assignment left) (substituteNativeQuery assignment right) := by
+  rw [unify_sum_iff, cancelled]
+
+private theorem unify_cancel_failed
+    (cancelled : nativeSumCancel nativeACEqual (nativeACSummands left) (nativeACSummands right) =
+      (kept, others))
+    (shape : (kept = [] ∧ others ≠ []) ∨ (kept ≠ [] ∧ others = []))
+    (assignment : QuerySort → Nat → NativeQueryTerm) :
+    ¬NativeQueryAC (substituteNativeQuery assignment left) (substituteNativeQuery assignment right) := by
+  rw [unify_sum_iff, cancelled]
+  exact cancelled_empty (word_nonempty_substituted assignment) (word_nonempty_substituted assignment)
+    shape
+
+private theorem unify_cancel_equation
+    (cancelled : nativeSumCancel nativeACEqual (nativeACSummands left) (nativeACSummands right) =
+      (kept, others)) (keptNonempty : kept ≠ []) (othersNonempty : others ≠ [])
+    (assignment : QuerySort → Nat → NativeQueryTerm) :
+    NativeQueryAC (substituteNativeQuery assignment left) (substituteNativeQuery assignment right) ↔
+      NativeQueryAC (substituteNativeQuery assignment (nativeACRebuild kept))
+        (substituteNativeQuery assignment (nativeACRebuild others)) := by
+  rw [unify_sum_iff, cancelled, native_ac_atom_word_iff, word_rebuild assignment _ keptNonempty,
+    word_rebuild assignment _ othersNonempty]
+
+private theorem match_cancel_trivial
+    (cancelled : nativeSumCancel nativeGroundCancels (nativeACSummands pattern)
+      (nativeACSummands subject) = ([], [])) (assignment : QuerySort → Nat → NativeQueryTerm) :
+    NativeQueryAC (substituteNativeQuery assignment pattern) subject := by
+  rw [match_sum_iff, cancelled]
+  exact .nil
+
+private theorem match_cancel_failed
+    (cancelled : nativeSumCancel nativeGroundCancels (nativeACSummands pattern)
+      (nativeACSummands subject) = (kept, others))
+    (shape : (kept = [] ∧ others ≠ []) ∨ (kept ≠ [] ∧ others = []))
+    (assignment : QuerySort → Nat → NativeQueryTerm) :
+    ¬NativeQueryAC (substituteNativeQuery assignment pattern) subject := by
+  rw [match_sum_iff, cancelled]
+  exact cancelled_empty (word_nonempty_substituted assignment) native_ac_atom_word_nonempty shape
+
+private theorem match_cancel_equation
+    (cancelled : nativeSumCancel nativeGroundCancels (nativeACSummands pattern)
+      (nativeACSummands subject) = (kept, others)) (keptNonempty : kept ≠ [])
+    (othersNonempty : others ≠ []) (assignment : QuerySort → Nat → NativeQueryTerm) :
+    NativeQueryAC (substituteNativeQuery assignment pattern) subject ↔
+      NativeQueryAC (substituteNativeQuery assignment (nativeACRebuild kept))
+        (nativeACRebuild others) := by
+  rw [match_sum_iff, cancelled, native_ac_atom_word_iff, word_rebuild assignment _ keptNonempty,
+    word_rebuild_plain _ othersNonempty]
+
+private theorem unify_cancel_spec
+    (cancelled : nativeSumCancel nativeACEqual (nativeACSummands left) (nativeACSummands right) =
+      (kept, others)) (keptNonempty : kept ≠ []) (othersNonempty : others ≠ [])
+    (holds : NativeSyntacticSpec ((nativeACRebuild kept, nativeACRebuild others) :: rest) variables
+      result) :
+    NativeSyntacticSpec ((left, right) :: rest) variables result :=
+  spec_congr (fun assignment => by
+    rw [native_system_cons_iff, native_system_cons_iff]
+    unfold NativeACUnifier
+    rw [unify_cancel_equation cancelled keptNonempty othersNonempty assignment]) holds
 
 private theorem bind_spec (recurse : NativeEquationSystem → NativeSyntacticResult)
     (inductive_spec : ∀ equations variables,
@@ -331,7 +573,26 @@ theorem native_syntactic_unify_spec :
         · rename_i head
           have head := Classical.not_not.mp head
           split
-          · trivial
+          · split
+            · rename_i cancelled
+              exact spec_congr (fun assignment => by
+                  rw [native_system_cons_iff]
+                  exact ⟨And.right, fun solved =>
+                    ⟨⟨solved.1, unify_cancel_trivial cancelled assignment⟩, solved⟩⟩)
+                (inductive_spec rest variables)
+            · rename_i cancelled
+              exact complete_empty (fun assignment solved => unify_cancel_failed cancelled
+                (.inl ⟨rfl, by simp⟩) assignment (native_system_cons_iff.mp solved).1.2) variables
+            · rename_i cancelled
+              exact complete_empty (fun assignment solved => unify_cancel_failed cancelled
+                (.inr ⟨by simp, rfl⟩) assignment (native_system_cons_iff.mp solved).1.2) variables
+            · rename_i cancelled
+              exact unify_cancel_spec (kept := [_]) cancelled (by simp) (by simp)
+                (inductive_spec _ variables)
+            · rename_i cancelled
+              exact unify_cancel_spec (others := [_]) cancelled (by simp) (by simp)
+                (inductive_spec _ variables)
+            · trivial
           · rename_i notAddition
             exact spec_congr (fun _ => decompose_iff leftRigid rightRigid head notAddition)
               (inductive_spec _ variables)
@@ -432,7 +693,23 @@ private theorem match_sound :
       · rename_i head
         have head := Classical.not_not.mp head
         split at solved
-        · simp at solved
+        · split at solved
+          · rename_i cancelled
+            obtain ⟨sorted, extends_, matched⟩ :=
+              match_sound fuel rest bindings result values solved
+            refine ⟨sorted, extends_, ?_⟩
+            simp only [List.forall_mem_cons]
+            exact ⟨match_cancel_trivial cancelled _, matched⟩
+          · simp at solved
+          · simp at solved
+          · rename_i cancelled
+            obtain ⟨sorted, extends_, matched⟩ :=
+              match_sound fuel _ bindings result values solved
+            refine ⟨sorted, extends_, ?_⟩
+            simp only [List.forall_mem_cons] at matched ⊢
+            exact ⟨(match_cancel_equation (kept := [_]) cancelled (by simp) (by simp) _).mpr
+              matched.1, matched.2⟩
+          · simp at solved
         · rename_i notAddition
           obtain ⟨sorted, extends_, matched⟩ :=
             match_sound fuel _ bindings result values solved
@@ -491,7 +768,18 @@ private theorem match_failed :
       · rename_i head
         have head := Classical.not_not.mp head
         split at failed
-        · simp at failed
+        · split at failed
+          · exact match_failed fuel rest bindings failed assignment sorted consistent matched.2
+          · rename_i cancelled
+            exact match_cancel_failed cancelled (.inl ⟨rfl, by simp⟩) assignment matched.1
+          · rename_i cancelled
+            exact match_cancel_failed cancelled (.inr ⟨by simp, rfl⟩) assignment matched.1
+          · rename_i cancelled
+            refine match_failed fuel _ bindings failed assignment sorted consistent ?_
+            simp only [List.forall_mem_cons]
+            exact ⟨(match_cancel_equation (kept := [_]) cancelled (by simp) (by simp) _).mp
+              matched.1, matched.2⟩
+          · simp at failed
         · rename_i notAddition
           refine match_failed fuel _ bindings failed assignment sorted consistent ?_
           simp only [List.forall_mem_append]

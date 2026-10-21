@@ -2,6 +2,18 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer; SDK/application=not implemented.
 
+## Sum cancellation guard (2026-10-22)
+
+The verified syntactic unifier and matcher now handle natural sums by
+cancelling AC-equal summands, proved sound and complete in
+`QuerySyntacticUnification.lean`. The native guard therefore decides family
+completeness for `tamtplus` queries that cancel to at most one open summand;
+previously every real Tamarin `unify`/`match` query contained `tamtplus` and
+was unchecked. All 184 distinct queries sampled from real Tamarin runs, replayed
+through Maude 3.5.1 with `-no-wrap`, are accepted. Other sum shapes remain
+`unsupported` and trusted
+([details](docs/spec/models/equations/README.md#native-stream-boundary)).
+
 ## Syntactic unifier completeness guard (2026-10-21)
 
 For `unify`/`match` queries without `tamtplus`, the native guard now rejects

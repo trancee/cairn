@@ -142,6 +142,13 @@ fn children(tree: &Tree) -> &[Tree] {
     }
 }
 
+fn occurs_any(tree: &Tree) -> bool {
+    match tree {
+        Tree::Variable(_) => true,
+        Tree::Apply(_, children) => children.iter().any(occurs_any),
+    }
+}
+
 fn occurs(key: &str, tree: &Tree) -> bool {
     match tree {
         Tree::Variable(name) => name == key,
@@ -250,13 +257,83 @@ fn push_children(stack: &mut Vec<(Tree, Tree)>, left: &Tree, right: &Tree) {
     }
 }
 
+fn summands(tree: &Tree) -> Vec<Tree> {
+    let mut found = Vec::new();
+    let mut pending = vec![tree];
+    while let Some(node) = pending.pop() {
+        match node {
+            Tree::Apply(name, children) if name == "tamtplus" => {
+                pending.extend(children.iter().rev());
+            }
+            _ => found.push(node.clone()),
+        }
+    }
+    found
+}
+
+// `nativeACRebuild` on a nonempty list.
+fn rebuild(mut terms: Vec<Tree>) -> Option<Tree> {
+    let mut sum = terms.pop()?;
+    while let Some(summand) = terms.pop() {
+        sum = Tree::Apply("tamtplus".to_owned(), vec![summand, sum]);
+    }
+    Some(sum)
+}
+
+enum Sum {
+    Solved,
+    Failed,
+    Equation(Tree, Tree),
+    Unsupported,
+}
+
+// `nativeSumCancel`, then the remainder cases shared by unification and matching; matching
+// (`reversible` false) has no case for a single remaining subject summand.
+fn cancel_sums(
+    left: &Tree,
+    right: &Tree,
+    reversible: bool,
+    cancels: impl Fn(&Tree, &Tree) -> Result<bool>,
+) -> Result<Sum> {
+    let mut others = summands(right);
+    let mut kept = Vec::new();
+    for term in summands(left) {
+        let mut partner = None;
+        for (position, other) in others.iter().enumerate() {
+            if cancels(&term, other)? {
+                partner = Some(position);
+                break;
+            }
+        }
+        match partner {
+            Some(position) => {
+                others.remove(position);
+            }
+            None => kept.push(term),
+        }
+    }
+    Ok(match (kept.len(), others.len()) {
+        (0, 0) => Sum::Solved,
+        (0, _) | (_, 0) => Sum::Failed,
+        (1, _) => match (kept.pop(), rebuild(others)) {
+            (Some(kept), Some(others)) => Sum::Equation(kept, others),
+            _ => Sum::Unsupported,
+        },
+        (_, 1) if reversible => match (rebuild(kept), others.pop()) {
+            (Some(kept), Some(other)) => Sum::Equation(kept, other),
+            _ => Sum::Unsupported,
+        },
+        _ => Sum::Unsupported,
+    })
+}
+
 // The stack's last entry is the head of Lean's equation list.
-pub fn unify(mut fuel: usize, equations: Vec<(Tree, Tree)>) -> Outcome {
+pub fn unify(mut fuel: usize, equations: Vec<(Tree, Tree)>) -> Result<Outcome> {
     let mut stack: Vec<_> = equations.into_iter().rev().collect();
     let mut eliminated: Vec<(String, Tree)> = Vec::new();
     loop {
         if fuel == 0 {
-            return Outcome::Unsupported;
+            return Ok(Outcome::Unsupported);
         }
         let Some((left, right)) = stack.pop() else {
             break;
@@ -269,20 +346,26 @@ pub fn unify(mut fuel: usize, equations: Vec<(Tree, Tree)>) -> Outcome {
             (Tree::Variable(key), value) | (value, Tree::Variable(key)) => (key, value),
             _ => {
                 if head(&left) != head(&right) {
-                    return Outcome::Failed;
+                    return Ok(Outcome::Failed);
                 }
                 if head(&left) == "tamtplus" {
-                    return Outcome::Unsupported;
+                    match cancel_sums(&left, &right, true, equivalent)? {
+                        Sum::Solved => {}
+                        Sum::Failed => return Ok(Outcome::Failed),
+                        Sum::Equation(first, second) => stack.push((first, second)),
+                        Sum::Unsupported => return Ok(Outcome::Unsupported),
+                    }
+                    continue;
                 }
                 push_children(&mut stack, &left, &right);
                 continue;
             }
         };
         let Some(sort) = variable_sort(key) else {
-            return Outcome::Unsupported;
+            return Ok(Outcome::Unsupported);
         };
         let binding = if occurs(key, value) {
-            return Outcome::Failed;
+            return Ok(Outcome::Failed);
         } else if sorted(sort, value) {
             (key.clone(), value.clone())
         } else if let Tree::Variable(other) = value
@@ -290,9 +373,9 @@ pub fn unify(mut fuel: usize, equations: Vec<(Tree, Tree)>) -> Outcome {
         {
             (other.clone(), Tree::Variable(key.clone()))
         } else if refinable(sort, value) {
-            return Outcome::Unsupported;
+            return Ok(Outcome::Unsupported);
         } else {
-            return Outcome::Failed;
+            return Ok(Outcome::Failed);
         };
         let single = [binding];
         let mut budget = SIZE_LIMIT;
@@ -302,7 +385,7 @@ pub fn unify(mut fuel: usize, equations: Vec<(Tree, Tree)>) -> Outcome {
                 substitute(first, &single, &mut budget),
                 substitute(second, &single, &mut budget),
             ) else {
-                return Outcome::Unsupported;
+                return Ok(Outcome::Unsupported);
             };
             residual.push((first, second));
         }
@@ -315,11 +398,11 @@ pub fn unify(mut fuel: usize, equations: Vec<(Tree, Tree)>) -> Outcome {
     while let Some((key, value)) = eliminated.pop() {
         let mut budget = SIZE_LIMIT;
         let Some(value) = substitute(&value, &composed, &mut budget) else {
-            return Outcome::Unsupported;
+            return Ok(Outcome::Unsupported);
         };
         composed.insert(0, (key, value));
     }
-    Outcome::Solved(composed)
+    Ok(Outcome::Solved(composed))
 }
 
 fn equivalent(left: &Tree, right: &Tree) -> Result<bool> {
@@ -351,7 +434,14 @@ pub fn matcher(mut fuel: usize, pairs: Vec<(Tree, Tree)>) -> Result<Outcome> {
         } else if head(&pattern) != head(&subject) {
             return Ok(Outcome::Failed);
         } else if head(&pattern) == "tamtplus" {
-            return Ok(Outcome::Unsupported);
+            let ground =
+                |term: &Tree, other: &Tree| Ok(!occurs_any(term) && equivalent(term, other)?);
+            match cancel_sums(&pattern, &subject, false, ground)? {
+                Sum::Solved => {}
+                Sum::Failed => return Ok(Outcome::Failed),
+                Sum::Equation(first, second) => stack.push((first, second)),
+                Sum::Unsupported => return Ok(Outcome::Unsupported),
+            }
         } else {
             push_children(&mut stack, &pattern, &subject);
         }
@@ -360,16 +450,14 @@ pub fn matcher(mut fuel: usize, pairs: Vec<(Tree, Tree)>) -> Result<Outcome> {
     Ok(Outcome::Solved(bindings))
 }
 
-// A sum-free query's decisive Lean result: its most general unifier or a witness matcher.
+// A query's decisive Lean result: its most general unifier or a witness matcher.
 pub struct Principal {
     variables: Vec<String>,
     bindings: Vec<(String, Tree)>,
 }
 
 pub fn principal(query: &Query) -> Result<Option<Principal>> {
-    if !matches!(query.kind, Kind::Unify | Kind::Match)
-        || query.sides.iter().any(|side| side.contains("tamtplus"))
-    {
+    if !matches!(query.kind, Kind::Unify | Kind::Match) {
         return Ok(None);
     }
     let mut pairs = Vec::new();
@@ -380,7 +468,7 @@ pub fn principal(query: &Query) -> Result<Option<Principal>> {
         pairs.push((left, right));
     }
     let outcome = if query.kind == Kind::Unify {
-        unify(FUEL, pairs)
+        unify(FUEL, pairs)?
     } else {
         matcher(FUEL, pairs)?
     };
@@ -479,7 +567,10 @@ mod tests {
         for entry in CORPUS.lines() {
             match entry.split('\t').collect::<Vec<_>>().as_slice() {
                 ["UNIFY", problem, status, bindings] => {
-                    let found = line(unify(FUEL, pairs(problem, " =? ")));
+                    let Ok(outcome) = unify(FUEL, pairs(problem, " =? ")) else {
+                        panic!("unifier could not compare {problem}");
+                    };
+                    let found = line(outcome);
                     assert_eq!(found, format!("{status}\t{bindings}"), "{problem}");
                     unified += 1;
                 }

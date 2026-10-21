@@ -215,8 +215,22 @@ private def nativeSyntacticTerms : List NativeQueryTerm := [
   .naturalAdd (natural 0) .naturalOne, .nil, .list .nil, .cons (nodeVariable 0) .nil
 ]
 
+-- Sums sharing, lacking and nesting summands exercise every cancellation remainder.
+private def nativeSumTerms : List NativeQueryTerm :=
+  let one := NativeQueryTerm.naturalOne
+  [ one, natural 0, .naturalAtom 0,
+    .naturalAdd one one, .naturalAdd one (.naturalAdd one one), .naturalAdd (.naturalAdd one one) one,
+    .naturalAdd (natural 0) one, .naturalAdd one (natural 0), .naturalAdd (natural 0) (.naturalAdd one one),
+    .naturalAdd (natural 1) one, .naturalAdd (natural 0) (natural 1), .naturalAdd (.naturalAtom 0) one,
+    .naturalAdd (.naturalAtom 0) (.naturalAtom 1), .naturalAdd (natural 0) (.naturalAtom 0),
+    .naturalAdd (.naturalAdd (.naturalAtom 0) one) (natural 1), .naturalAdd (fresh 0) one,
+    .naturalAdd one (.naturalAdd (.naturalAtom 0) one) ]
+
+private def allPairs (terms : List NativeQueryTerm) : List (List (NativeQueryTerm × NativeQueryTerm)) :=
+  terms.flatMap fun left => terms.map fun right => [(left, right)]
+
 def nativeUnifySystems : List NativeEquationSystem :=
-  nativeSyntacticTerms.flatMap (fun left => nativeSyntacticTerms.map fun right => [(left, right)]) ++ [
+  allPairs nativeSyntacticTerms ++ allPairs nativeSumTerms ++ [
     [(.binary .pair (message 0) (message 1), .binary .pair (.atom .messageAtom 1) (.unary .hash (message 0)))],
     [(.binary .pair (message 0) (message 1), .binary .senc (message 0) (message 1))],
     [(.unary .hash (message 0), message 1)],
@@ -239,7 +253,7 @@ def nativeUnifySystems : List NativeEquationSystem :=
   ]
 
 def nativeMatchProblems : List (List (NativeQueryTerm × NativeQueryTerm)) :=
-  nativeSyntacticTerms.flatMap (fun pattern => nativeSyntacticTerms.map fun subject => [(pattern, subject)]) ++ [
+  allPairs nativeSyntacticTerms ++ allPairs nativeSumTerms ++ [
     [(.binary .pair (message 0) (message 0), .binary .pair (message 1) (message 1))],
     [(.binary .pair (message 0) (message 0), .binary .pair (message 1) (message 2))],
     [(.binary .pair (message 0) (message 0), .binary .pair (.naturalAdd (natural 1) .naturalOne)
@@ -298,6 +312,16 @@ def nativeSyntaxLines : List String :=
   !nativeACEqual term (nativeACRebuild (nativeACSummands term).tail)
 #guard ["UNIFY", "MATCH"].all fun tag => ["SOLVED", "FAILED", "UNSUPPORTED"].all fun status =>
   nativeSyntacticLines.any fun line => line.startsWith tag && (line.splitOn "\t")[2]? == some status
+#guard [true, false].all fun solved => (allPairs nativeSumTerms).any fun system =>
+  match system, nativeSyntacticUnify nativeSyntacticFuel system with
+  | [(.naturalAdd _ _, .naturalAdd _ _)], .solved (_ :: _) => solved
+  | [(.naturalAdd _ _, .naturalAdd _ _)], .failed => !solved
+  | _, _ => false
+#guard [true, false].all fun solved => (allPairs nativeSumTerms).any fun pairs =>
+  match pairs, nativeSyntacticMatch nativeSyntacticFuel pairs [] with
+  | [(.naturalAdd _ _, .naturalAdd _ _)], .solved (_ :: _) => solved
+  | [(.naturalAdd _ _, .naturalAdd _ _)], .failed => !solved
+  | _, _ => false
 #guard (nativeUnifySystems.filter fun system =>
   match nativeSyntacticUnify nativeSyntacticFuel system with
   | .unsupported => false
