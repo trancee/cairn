@@ -31,7 +31,7 @@ python3 docs/spec/models/equations/native-proxy/experiment.py \
 checks. On native Linux it includes one diagnostic-only full-export screening
 pair with process sampling; macOS instead checks explicit unsupported-platform
 rejection. `scripts/check.sh` builds the guard, runs Rust formatting/strict Clippy
-and these checks, native clock/validation unit tests, then the existing model/lifecycle/Lean gates.
+and these checks, native clock/validation/syntax-corpus unit tests, then the existing model/lifecycle/Lean gates.
 Linux-only phase process controls are skipped on macOS, which instead
 exercises explicit unsupported-platform rejection.
 

@@ -38,6 +38,9 @@ certify Maude's variant generator.
 A corpus differential against native `get variants` is
 [recorded there too](equations/README.md#native-variant-differential); it is
 evidence, not a certificate.
+The native module text is rendered by Lean with a proved parse/render round
+trip, and the Rust recognizer is checked against a Lean syntax corpus
+([module correspondence](equations/README.md#native-module-correspondence)).
 
 ## Why executed queries now need a guard
 
