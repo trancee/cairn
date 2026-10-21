@@ -76,6 +76,50 @@ class CompiledValidationTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertIn(reply, result.stdout)
 
+    def test_incomplete_syntactic_solution_families_reject_the_whole_reply(self):
+        cases = (
+            ("unify in MSG : x0:Msg =? p(0) .", "No unifier.\n"),
+            ("unify in MSG : x0:Msg =? x1:Msg /\\ x1:Msg =? tamXCh(x2:Msg) .", "No unifier.\n"),
+            ("unify in MSG : tamXCpair(x0:Msg,p(0)) =? tamXCpair(x1:Msg,p(0)) .",
+             "Unifier 1\nx0:Msg --> p(0)\nx1:Msg --> p(0)\n"),
+            ("unify in MSG : tamXCpair(x0:Msg,f(0)) =? tamXCpair(x1:Fresh,f(0)) .",
+             "Unifier 1\nx0:Msg --> f(0)\nx1:Fresh --> f(0)\n"),
+            ("unify in MSG : tamXCpair(x0:Msg,x1:Msg) =? tamXCpair(x2:Msg,x2:Msg) .",
+             "Unifier 1\nx0:Msg --> tamXCh(#1:Msg)\nx1:Msg --> tamXCh(#1:Msg)\n"
+             "x2:Msg --> tamXCh(#1:Msg)\n"),
+            ("match in MSG : tamXCh(x0:Msg) <=? tamXCh(tamXCroleA) .", "No match.\n"),
+        )
+        for command, reply in cases:
+            with self.subTest(command=command):
+                result = native_stream(NATIVE_MODULE + command + "\n", reply + "Maude> ", proxy=self.proxy)
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertNotIn(reply, result.stdout)
+                self.assertIn("solution family is incomplete", result.stderr)
+
+    def test_complete_syntactic_solution_families_are_forwarded(self):
+        cases = (
+            ("unify in MSG : x0:Fresh =? p(0) .", "No unifier.\n"),
+            ("unify in MSG : x0:Msg =? tamXCh(x0:Msg) .", "No unifier.\n"),
+            ("unify in MSG : x0:Node =? x1:Msg .", "No unifier.\n"),
+            ("unify in MSG : x0:Msg =? x1:Fresh .",
+             "Unifier 1\nx0:Msg --> #1:Fresh\nx1:Fresh --> #1:Fresh\n"),
+            ("unify in MSG : tamXCpair(x0:Msg,x1:Msg) =? tamXCpair(x2:Msg,x2:Msg) .",
+             "Unifier 1\nx0:Msg --> #1:Msg\nx1:Msg --> #1:Msg\nx2:Msg --> #1:Msg\n"),
+            ("unify in MSG : x0:Msg =? tamXCh(x1:Msg) /\\ x1:Msg =? p(0) .",
+             "Unifier 1\nx0:Msg --> tamXCh(p(0))\nx1:Msg --> p(0)\n"),
+            ("match in MSG : tamXCh(x0:Fresh) <=? tamXCh(x1:Msg) .", "No match.\n"),
+            ("match in MSG : tamXCpair(x0:Msg,x0:Msg) <=? tamXCpair(tamXCroleA,tamXCroleB) .",
+             "No match.\n"),
+            ("unify in MSG : tamtplus(x0:TamNat,tamXCtone) =? tamtplus(t(0),t(1)) .", "No unifier.\n"),
+        )
+        for command, reply in cases:
+            with self.subTest(command=command):
+                result = native_stream(NATIVE_MODULE + command + "\n", reply + "Maude> ", proxy=self.proxy)
+
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn(reply, result.stdout)
+
     def test_repeated_query_revalidates_the_complete_changed_reply(self):
         valid = "result Msg: tamXCroleA\n"
         changed = (

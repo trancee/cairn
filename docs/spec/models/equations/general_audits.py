@@ -107,4 +107,9 @@ MODULES = (
         "native_rule_templates_complete", "native_maude_function_heads_complete",
     )),
     ("QueryACCanonical", ("native_ac_canonical_related", "native_ac_canonical_iff", "native_ac_equal_iff")),
+    ("QuerySyntacticUnification", (
+        "native_syntactic_unify_spec", "native_syntactic_match_solved", "native_syntactic_match_failed",
+        "native_ac_instance_match_iff", "native_complete_family_cover_iff",
+        "native_complete_empty_family_iff",
+    )),
 )

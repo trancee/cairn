@@ -27,7 +27,7 @@ python3 docs/spec/models/equations/native-proxy/experiment.py \
   --proxy target/native-proxy/release/cairn-maude-proxy --workload startup
 ```
 
-`check.py --proxy <executable>` runs the 39 CLI/native-stream/process/proof
+`check.py --proxy <executable>` runs the 41 CLI/native-stream/process/proof
 checks. On native Linux it includes one diagnostic-only full-export screening
 pair with process sampling; macOS instead checks explicit unsupported-platform
 rejection. `scripts/check.sh` builds the guard, runs Rust formatting/strict Clippy

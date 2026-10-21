@@ -5,7 +5,10 @@ use crate::{
     error::{Error::Rejected, Result},
     query::{Kind, Query},
     syntax::{Sort, lines, term},
+    unifier,
 };
+
+const INCOMPLETE: &str = "native reply: solution family is incomplete";
 
 fn value(
     query: &Query,
@@ -81,10 +84,15 @@ pub fn validate(query: &Query, reply: &str) -> Result<()> {
         }
         return value(query, text, sort, Some(upper), false, &mut BTreeMap::new());
     }
+    let principal = unifier::principal(query)?;
     if query.kind == Kind::Unify && lines == ["No unifier."]
         || query.kind == Kind::Match && lines == ["No match."]
     {
-        return Ok(());
+        return if principal.is_some() {
+            Err(Rejected(INCOMPLETE))
+        } else {
+            Ok(())
+        };
     }
     if query.kind == Kind::Variants {
         if lines.len() < 2
@@ -103,6 +111,7 @@ pub fn validate(query: &Query, reply: &str) -> Result<()> {
     };
     let mut position = 0;
     let mut count = 0usize;
+    let mut family = Vec::new();
     while position < lines.len() {
         let mut fresh = BTreeMap::new();
         count = count
@@ -164,10 +173,17 @@ pub fn validate(query: &Query, reply: &str) -> Result<()> {
         }
         if matches!(query.kind, Kind::Unify | Kind::Match) {
             certificate::check(query, &bindings)?;
+            family.push(bindings);
         }
     }
     if count == 0 {
         return Err(Rejected("native reply: missing solutions"));
+    }
+    if query.kind == Kind::Unify
+        && let Some(principal) = principal
+        && !principal.covered(&family)?
+    {
+        return Err(Rejected(INCOMPLETE));
     }
     Ok(())
 }

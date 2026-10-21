@@ -2,6 +2,17 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer; SDK/application=not implemented.
 
+## Syntactic unifier completeness guard (2026-10-21)
+
+For `unify`/`match` queries without `tamtplus`, the native guard now rejects
+incomplete solution families. `QuerySyntacticUnification.lean` proves a
+fuelled sorted unifier and matcher return a most general unifier or a refuted
+system; the Rust mirror agrees with 751 Lean `UNIFY`/`MATCH` corpus lines.
+`No unifier.`/`No match.` with a Lean solution, or a family none of whose
+members generalizes the unifier, rejects the entire reply. Completeness for
+natural-sum queries remains trusted
+([details](docs/spec/models/equations/README.md#native-stream-boundary)).
+
 ## Native unifier soundness certificate (2026-10-21)
 
 The native guard rejects any `unify` or `match` reply containing a solution
