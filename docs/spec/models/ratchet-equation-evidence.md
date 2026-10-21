@@ -634,9 +634,10 @@ sorted AC unification/variant backend and its supported combination
 remain part of the trusted tool boundary. The native guard rejects any
 returned `unify`/`match` solution that fails an AC-equality check proved in
 Lean ([`QueryACCanonical.lean`](equations/README.md#native-module-correspondence)),
-and rejects incomplete families for sum-free queries the verified syntactic
-unifier decides ([`QuerySyntacticUnification.lean`](equations/README.md#native-module-correspondence)),
-so only completeness of families for queries with natural sums stays trusted.
+and rejects incomplete families for queries the verified syntactic unifier
+decides, including natural sums that cancel to one open summand
+([`QuerySyntacticUnification.lean`](equations/README.md#native-module-correspondence)),
+so only completeness of families for queries it leaves `unsupported` stays trusted.
 
 Independent acceptance of the exact mixed message/natural theory, or a
 formal combination certificate, is still outstanding. This document

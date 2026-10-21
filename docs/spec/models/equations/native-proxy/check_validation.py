@@ -120,6 +120,65 @@ class CompiledValidationTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertIn(reply, result.stdout)
 
+    def test_incomplete_sum_solution_families_reject_the_whole_reply(self):
+        cases = (
+            ("match in MSG : list(cons(tamtplus(t(0),tamXCtone,tamXCtone),nil)) <=? "
+             "list(cons(tamtplus(t(0),tamXCtone,tamXCtone),nil)) .", "No match.\n"),
+            ("match in MSG : tamXCpair(x0:Msg,tamtplus(t(0),tamXCtone)) <=? "
+             "tamXCpair(p(0),tamtplus(tamXCtone,t(0))) .", "No match.\n"),
+            ("match in MSG : tamtplus(x0:TamNat,tamXCtone) <=? tamtplus(tamXCtone,tamXCtone,t(1)) .",
+             "No match.\n"),
+            ("unify in MSG : tamtplus(x0:Fresh,tamXCtone) =? tamtplus(x0:Fresh,tamXCtone) .",
+             "No unifier.\n"),
+            ("unify in MSG : tamtplus(tamXCtone,tamXCtone) =? tamtplus(x0:TamNat,tamXCtone) .",
+             "No unifier.\n"),
+            ("unify in MSG : tamtplus(t(0),t(1)) =? tamtplus(t(1),t(0)) .", "No unifier.\n"),
+            ("unify in MSG : tamtplus(x0:TamNat,tamXCtone,tamXCtone) =? tamtplus(x1:TamNat,tamXCtone) .",
+             "Unifier 1\nx0:TamNat --> tamXCtone\nx1:TamNat --> tamtplus(tamXCtone, tamXCtone)\n"),
+            ("unify in MSG : tamtplus(tamXCtone,tamXCtone) =? tamtplus(tamXCtone,tamXCtone) /\\ "
+             "tamtplus(x0:TamNat,tamXCtone) =? tamtplus(x1:TamNat,tamXCtone) .", "No unifier.\n"),
+        )
+        for command, reply in cases:
+            with self.subTest(command=command):
+                result = native_stream(NATIVE_MODULE + command + "\n", reply + "Maude> ", proxy=self.proxy)
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertNotIn(reply, result.stdout)
+                self.assertIn("solution family is incomplete", result.stderr)
+
+    def test_real_sum_replies_are_forwarded(self):
+        cases = (
+            ("match in MSG : list(cons(tamtplus(t(0),tamXCtone,tamXCtone),nil)) <=? "
+             "list(cons(tamtplus(t(0),tamXCtone,tamXCtone),nil)) .", "Matcher 1\nempty substitution\n"),
+            ("match in MSG : list(cons(tamtplus(t(0),tamXCtone,tamXCtone,tamXCtone),nil)) <=? "
+             "list(cons(tamtplus(t(0),tamXCtone,tamXCtone),nil)) .", "No match.\n"),
+            ("match in MSG : tamXCpair(x0:Msg,tamtplus(t(0),tamXCtone)) <=? "
+             "tamXCpair(p(0),tamtplus(tamXCtone,t(0))) .", "Matcher 1\nx0:Msg --> p(0)\n"),
+            ("match in MSG : tamtplus(x0:TamNat,tamXCtone) <=? tamtplus(tamXCtone,tamXCtone,t(1)) .",
+             "Matcher 1\nx0:TamNat --> tamtplus(tamXCtone, t(1))\n"),
+            ("unify in MSG : tamtplus(x0:Fresh,tamXCtone) =? tamtplus(x0:Fresh,tamXCtone) .",
+             "Unifier 1\nx0:Fresh --> #1:Fresh\n"),
+            ("unify in MSG : tamtplus(tamXCtone,tamXCtone) =? tamtplus(x0:TamNat,tamXCtone) .",
+             "Unifier 1\nx0:TamNat --> tamXCtone\n"),
+            ("unify in MSG : tamtplus(tamXCtone,tamXCtone) =? tamXCtone .", "No unifier.\n"),
+            ("unify in MSG : tamtplus(tamXCtone,tamXCtone) =? "
+             "tamtplus(tamXCtone,tamXCtone,tamXCtone) .", "No unifier.\n"),
+            ("unify in MSG : tamtplus(x0:TamNat,tamXCtone) =? tamtplus(x1:TamNat,tamXCtone) .",
+             "Unifier 1\nx0:TamNat --> #1:TamNat\nx1:TamNat --> #1:TamNat\n"),
+            ("unify in MSG : tamtplus(x0:TamNat,tamXCtone,tamXCtone) =? tamtplus(x1:TamNat,tamXCtone) .",
+             "Unifier 1\nx0:TamNat --> #1:TamNat\nx1:TamNat --> tamtplus(tamXCtone, #1:TamNat)\n"),
+            ("unify in MSG : tamtplus(x0:TamNat,tamXCtone,tamXCtone,tamXCtone) =? "
+             "tamtplus(tamXCtone,tamXCtone) .", "No unifier.\n"),
+            ("unify in MSG : tamtplus(x0:Fresh,tamXCtone) =? tamtplus(x1:TamNat,x2:TamNat) .",
+             "No unifier.\n"),
+        )
+        for command, reply in cases:
+            with self.subTest(command=command):
+                result = native_stream(NATIVE_MODULE + command + "\n", reply + "Maude> ", proxy=self.proxy)
+
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn(reply, result.stdout)
+
     def test_repeated_query_revalidates_the_complete_changed_reply(self):
         valid = "result Msg: tamXCroleA\n"
         changed = (

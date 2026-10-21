@@ -476,7 +476,7 @@ def main() -> int:
         print("PASS: guarded native query terms have finite complete variant families.")
         print("PASS: the native module text and six rule templates are rendered by Lean; parse∘render = id.")
         print("PASS: AC equality of native query terms is decided by an executable canonical form.")
-        print("PASS: sum-free native systems have a verified most general unifier or refutation and cover check.")
+        print("PASS: native systems whose sums cancel to one open summand have a verified most general unifier or refutation and cover check.")
         print("Scope: typed image algebra + Lean native-query FVP + enforced native stream membership; not a Maude variant-generator certificate.")
         print("Trust boundary: Tamarin/Maude + Rust stream guard + Python evidence/signature/translation + Lean kernel.")
         return 0
