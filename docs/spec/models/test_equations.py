@@ -392,6 +392,7 @@ class EquationCommandTests(unittest.TestCase):
         self.assertIn("PASS: homogeneous semigroup candidates are nonempty, sound and complete", result.stdout)
         self.assertIn("PASS: rigid-column semigroup families preserve constants", result.stdout)
         self.assertIn("PASS: full-AST sorted AC systems generate finite complete families", result.stdout)
+        self.assertIn("PASS: guarded native query terms have finite complete variant families", result.stdout)
         self.assertNotIn("FAIL:", result.stderr)
 
     def test_unrestricted_sorted_generation_reports_are_required_before_success(self):
@@ -404,6 +405,7 @@ class EquationCommandTests(unittest.TestCase):
             ("plan-congruence", "native_raw_render_bindings_congr"),
             ("residual-freshness", "native_sorted_binding_family_fresh"),
             ("general-ac-completeness", "native_sorted_ac_system_family_complete"),
+            ("finite-variants", "native_finite_variants_complete"),
         ):
             with self.subTest(group=group):
                 result = self.run_with_axiom_reports(*(item for item in REPORT_GROUPS if item != group))

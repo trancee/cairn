@@ -2,6 +2,21 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer; SDK/application=not implemented.
 
+## Native finite variants (2026-10-21)
+
+[`QueryVariants.lean`](docs/spec/models/equations/QueryVariants.lean) proves
+in Lean that the guarded six-rule relation on the full native query AST has finite,
+sound and complete variant families modulo natural AC, for sorted,
+normalized instances. Variants come from destructor rule-pattern schemes
+with fresh `Message` variables plus the existing complete sorted AC-unifier
+families; no narrowing-lifting hypothesis is assumed
+([details](docs/spec/models/equations/README.md#native-finite-variants)).
+Its five theorem audits depend only on `propext`, `Classical.choice` and
+`Quot.sound`. The equation command and its 43 model tests pass after intended
+missing-report reds. Correspondence with Tamarin/Maude variant generation,
+importer correctness, native bookkeeping `NAT` and the full kind-completed
+carrier remain open. No protocol, wire, profile or SDK change is authorized.
+
 ## Unexposed epoch transfer increment (2026-10-18)
 
 The owner approved a narrow waiver of the strict S9 formal-model gate:
