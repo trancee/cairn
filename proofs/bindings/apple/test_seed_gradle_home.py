@@ -75,13 +75,15 @@ class SeedGradleHomeTest(unittest.TestCase):
 
 
 class SeedWiringTest(unittest.TestCase):
-    def test_probe_user_seeds_fixture_targets_outside_its_deadline(self):
+    def test_supervised_probe_user_seeds_fixture_targets_outside_its_deadline(self):
         arm = re.search(r"^    fixture-targets\)\n(.*?)^      ;;$", RUNNER.read_text(),
                         re.MULTILINE | re.DOTALL).group(1)
-        seeding = arm.index('sudo -n -u "$user"')
+        seeding = arm.index('uid-supervisor.py" --seconds 60 "$work/proof-output/gradle-warm-seed.log"')
         command = re.match(r'(?:\\\n|[^\n])*', arm[seeding:]).group(0)
 
-        self.assertLess(seeding, arm.index("uid-supervisor.py"))
+        # Direct sudo skips the supervisor's UID cleanup and left distnoted behind.
+        self.assertNotIn("sudo", arm)
+        self.assertLess(seeding, arm.index('"$work/proof-output/fixture-targets.log"'))
         self.assertIn('/usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume"',
                       command)
         self.assertIn('-D PRIVATE_IPC=false -f "$work/build.sb"', command)
