@@ -108,6 +108,11 @@ uses the ordinary record path. The file and operation counts are unchanged.
 Different kinds/PIDs, partial cycles and noncanonical JSON retain ordinary
 validation. Missing/duplicate/unknown fields, invalid states, malformed data
 and incomplete shutdown still fail under the existing rules.
+A report whose final record lacks its newline may still be in flight after the
+proof tool exits: a Linux reader can see a partly written batch. Within the
+existing `5`-second shutdown window the parent rereads it instead of failing at
+once; if it is still truncated at the deadline, it fails with
+`truncated native boundary records` as before.
 See the [decision and measurement limits](../../../../adr/0010-compositional-lifecycle-verification.md#amortized-native-operation-evidence-2026-10-17).
 
 ## Child-resource diagnostics

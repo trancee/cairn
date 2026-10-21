@@ -224,6 +224,25 @@ class NativeStreamBoundaryTests(unittest.TestCase):
                 with self.subTest(report=report), self.assertRaisesRegex(GuardError, reason):
                     run_guarded_tamarin([str(executable), "--parse-only", "fixture.spthy"], 30)
 
+    def test_in_flight_final_record_is_awaited_within_the_shutdown_window(self):
+        version = f'{{"event":"version","pid":1337,"source_id":"{source_identity()}"}}'
+        with tempfile.TemporaryDirectory() as temporary:
+            executable = Path(temporary) / "tamarin-prover"
+            executable.write_text(
+                f"#!{sys.executable}\nimport os, subprocess, sys\n"
+                "report = os.environ['CAIRN_MAUDE_GUARD_REPORT']\n"
+                f"open(report, 'w').write({version!r})\n"
+                "subprocess.Popen([sys.executable, '-c', 'import sys, time; time.sleep(0.5); "
+                "open(sys.argv[1], \"a\").write(\"\\\\n\")', report], start_new_session=True, "
+                "stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n"
+                "print('attested proof success')\n",
+            )
+            executable.chmod(0o755)
+
+            output = run_guarded_tamarin([str(executable), "--parse-only", "fixture.spthy"], 30)
+
+        self.assertIn("attested proof success", output)
+
     def test_duplicate_evidence_fields_cannot_hide_native_failure(self):
         report = '{"event":"failure","event":"version","pid":1337}\n'
         with tempfile.TemporaryDirectory() as temporary:
