@@ -1094,9 +1094,13 @@ the entire reply.
 The guard also runs the Lean-mirrored syntactic unifier or matcher.
 Natural sums are flattened and AC-equal summands cancelled greedily: both
 sides empty succeeds, one side empty fails, and a single remaining summand
-on one side is unified with the rebuilt other side. Matching cancels only
-variable-free pattern summands and never reverses the equation; any other
-remainder is `unsupported`. If it returns `solved`, `No unifier.` or
+on one side is unified with the rebuilt other side. With two or more
+summands left on both sides, unification fails when one original side is
+natural in every sorted instance (only `TamNat` variables, `tamXCtone` and
+`t(n)` leaves) and the other in none (a summand of a `Fresh`, `Pub` or `Node`
+variable, a non-natural atom or a constructor): AC equality preserves natural
+decoding. Matching cancels only variable-free pattern summands and never
+reverses the equation; any other remainder is `unsupported`. If it returns `solved`, `No unifier.` or
 `No match.` rejects the entire reply. For `unify`, some returned solution must
 generalize the most general unifier: matching its bindings (generated
 variables bindable) against the unifier's (original variables constant) must

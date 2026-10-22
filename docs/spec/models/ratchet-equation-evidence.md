@@ -635,7 +635,8 @@ remain part of the trusted tool boundary. The native guard rejects any
 returned `unify`/`match` solution that fails an AC-equality check proved in
 Lean ([`QueryACCanonical.lean`](equations/README.md#native-module-correspondence)),
 and rejects incomplete families for queries the verified syntactic unifier
-decides, including natural sums that cancel to one open summand
+decides, including natural sums that cancel to one open summand or
+whose sides are sort-disjoint (always versus never natural)
 ([`QuerySyntacticUnification.lean`](equations/README.md#native-module-correspondence)),
 so only completeness of families for queries it leaves `unsupported` stays trusted.
 It also rejects a `reduce` result of a message query unless it is AC-equal to

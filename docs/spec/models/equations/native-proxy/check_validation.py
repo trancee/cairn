@@ -112,6 +112,8 @@ class CompiledValidationTests(unittest.TestCase):
             ("match in MSG : tamXCpair(x0:Msg,x0:Msg) <=? tamXCpair(tamXCroleA,tamXCroleB) .",
              "No match.\n"),
             ("unify in MSG : tamtplus(x0:TamNat,tamXCtone) =? tamtplus(t(0),t(1)) .", "No unifier.\n"),
+            ("unify in MSG : tamtplus(x0:Fresh,tamXCtone) =? tamtplus(x1:TamNat,x2:TamNat) .",
+             "No unifier.\n"),
         )
         for command, reply in cases:
             with self.subTest(command=command):

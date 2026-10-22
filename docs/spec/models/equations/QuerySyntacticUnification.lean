@@ -11,9 +11,11 @@ Sort intersections in the native lattice are one of their arguments or empty, so
 natural sums has at most one most general unifier and no fresh variables. Natural sums are
 flattened and AC-equal summands cancelled (in matching, only variable-free pattern summands);
 an empty remainder solves or refutes the equation, and a single remaining summand becomes an
-ordinary equation against the rebuilt remainder. `failed` and `solved` carry completeness proofs;
-`unsupported` (fuel, size, two or more remaining summands on both sides, or a sort refinement
-that needs a new variable) makes no claim. -/
+ordinary equation against the rebuilt remainder. With two or more remaining summands on both
+sides, a sum that is natural in every sorted instance cannot equal one that is natural in none.
+`failed` and `solved` carry completeness proofs; `unsupported` (fuel, size, other sums with two or
+more remaining summands on both sides, or a sort refinement that needs a new variable) makes no
+claim. -/
 
 inductive NativeSyntacticResult where
   | solved (bindings : NativeBindingList)
@@ -88,6 +90,17 @@ def nativeSumCancel (cancels : NativeQueryTerm → NativeQueryTerm → Bool) :
 def nativeGroundCancels (pattern subject : NativeQueryTerm) : Bool :=
   (nativeQueryVariables pattern).isEmpty && nativeACEqual pattern subject
 
+-- Every sorted instance is natural: the requirements only restate each variable's own sort.
+def nativeAlwaysNatural (term : NativeQueryTerm) : Bool :=
+  match nativeSortRequirements .natural term with
+  | some constraints => constraints.all fun constraint => constraint.1.1 = constraint.2
+  | none => false
+
+-- One side is natural in every sorted instance and the other in none.
+def nativeSortRefuted (left right : NativeQueryTerm) : Bool :=
+  (nativeSortRequirements .natural left).isNone && nativeAlwaysNatural right ||
+    (nativeSortRequirements .natural right).isNone && nativeAlwaysNatural left
+
 def nativeSyntacticUnify : Nat → NativeEquationSystem → NativeSyntacticResult
   | 0, _ => .unsupported
   | _ + 1, [] => .solved []
@@ -108,7 +121,7 @@ def nativeSyntacticUnify : Nat → NativeEquationSystem → NativeSyntacticResul
             nativeSyntacticUnify fuel ((kept, nativeACRebuild (other :: others)) :: rest)
           | (first :: second :: kept, [other]) =>
             nativeSyntacticUnify fuel ((nativeACRebuild (first :: second :: kept), other) :: rest)
-          | (_ :: _ :: _, _ :: _ :: _) => .unsupported
+          | (_ :: _ :: _, _ :: _ :: _) => if nativeSortRefuted left right then .failed else .unsupported
         else nativeSyntacticUnify fuel (nativeChildEquations left right ++ rest)
 
 def nativeBindingLookup (key : NativeVariableKey) : NativeBindingList → Option NativeQueryTerm
@@ -531,6 +544,41 @@ private theorem variable_spec (recurse : NativeEquationSystem → NativeSyntacti
           exact refuted (Option.isNone_iff_eq_none.mp missing)
         · trivial
 
+private theorem always_natural (sorted : NativeSortedAssignment assignment)
+    (always : nativeAlwaysNatural term = true) :
+    NativeSortedValue .natural (substituteNativeQuery assignment term) := by
+  rw [native_sort_requirements_iff assignment sorted]
+  unfold nativeAlwaysNatural at always
+  split at always
+  · rename_i constraints found
+    rw [found]
+    intro constraint inside
+    rw [← of_decide_eq_true (List.all_eq_true.1 always constraint inside)]
+    exact sorted _ _
+  · cases always
+
+private theorem never_natural (sorted : NativeSortedAssignment assignment)
+    (never : (nativeSortRequirements .natural term).isNone = true) :
+    ¬NativeSortedValue .natural (substituteNativeQuery assignment term) := by
+  rw [native_sort_requirements_iff assignment sorted, Option.isNone_iff_eq_none.1 never]
+  simp [NativeSortRequirementsHold]
+
+private theorem natural_ac (equivalent : NativeQueryAC left right)
+    (natural : NativeSortedValue .natural left) : NativeSortedValue .natural right := by
+  cases natural with
+  | natural decoded =>
+    obtain ⟨_, found, _⟩ := native_ac_natural_image equivalent decoded
+    exact .natural found
+
+private theorem sort_refuted (refuted : nativeSortRefuted left right = true)
+    (sorted : NativeSortedAssignment assignment)
+    (equivalent : NativeQueryAC (substituteNativeQuery assignment left)
+      (substituteNativeQuery assignment right)) : False := by
+  simp only [nativeSortRefuted, Bool.or_eq_true, Bool.and_eq_true] at refuted
+  rcases refuted with ⟨never, always⟩ | ⟨never, always⟩
+  · exact never_natural sorted never (natural_ac (.symmetric equivalent) (always_natural sorted always))
+  · exact never_natural sorted never (natural_ac equivalent (always_natural sorted always))
+
 theorem native_syntactic_unify_spec :
     ∀ (fuel : Nat) (equations : NativeEquationSystem) (variables : List NativeVariableKey),
       NativeSyntacticSpec equations variables (nativeSyntacticUnify fuel equations)
@@ -592,7 +640,11 @@ theorem native_syntactic_unify_spec :
             · rename_i cancelled
               exact unify_cancel_spec (others := [_]) cancelled (by simp) (by simp)
                 (inductive_spec _ variables)
-            · trivial
+            · split
+              · rename_i refuted
+                exact complete_empty (fun assignment solved =>
+                  sort_refuted refuted solved.1 (native_system_cons_iff.mp solved).1.2) variables
+              · trivial
           · rename_i notAddition
             exact spec_congr (fun _ => decompose_iff leftRigid rightRigid head notAddition)
               (inductive_spec _ variables)

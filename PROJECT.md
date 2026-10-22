@@ -2,6 +2,19 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer; SDK/application=not implemented.
 
+## Sum sort refutation (2026-10-22)
+
+The verified syntactic unifier now refutes natural-sum equations that keep two
+or more summands on both sides when one side is natural in every sorted
+instance and the other in none, proved in `QuerySyntacticUnification.lean`
+from AC equality preserving natural decoding. This decides the last
+`unsupported` shape seen in real traffic,
+`tamtplus(x0:Fresh,tamXCtone) =? tamtplus(x1:TamNat,x2:TamNat)`, so all 181
+distinct `unify`/`match` queries sampled from real Tamarin runs are now
+decided; replayed through Maude 3.5.1, all are accepted. Other multi-summand
+remainders stay `unsupported` and trusted
+([details](docs/spec/models/equations/README.md#native-stream-boundary)).
+
 ## Variant certificate (2026-10-22)
 
 The native guard now checks `get variants` replies. Each member must be
