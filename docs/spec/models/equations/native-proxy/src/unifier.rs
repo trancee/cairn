@@ -221,6 +221,13 @@ fn refinable(expected: Sort, tree: &Tree) -> bool {
     }
 }
 
+// `nativeSortRefuted`: `natural` is `nativeAlwaysNatural`, since its requirements restate only
+// natural variables' own sort.
+fn sort_refuted(left: &Tree, right: &Tree) -> bool {
+    !refinable(Sort::Natural, left) && natural(right)
+        || !refinable(Sort::Natural, right) && natural(left)
+}
+
 pub fn lookup<'a>(key: &str, bindings: &'a [(String, Tree)]) -> Option<&'a Tree> {
     bindings
         .iter()
@@ -353,6 +360,9 @@ pub fn unify(mut fuel: usize, equations: Vec<(Tree, Tree)>) -> Result<Outcome> {
                         Sum::Solved => {}
                         Sum::Failed => return Ok(Outcome::Failed),
                         Sum::Equation(first, second) => stack.push((first, second)),
+                        Sum::Unsupported if sort_refuted(&left, &right) => {
+                            return Ok(Outcome::Failed);
+                        }
                         Sum::Unsupported => return Ok(Outcome::Unsupported),
                     }
                     continue;

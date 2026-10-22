@@ -231,6 +231,21 @@ private def nativeSumTerms : List NativeQueryTerm :=
 private def allPairs (terms : List NativeQueryTerm) : List (List (NativeQueryTerm × NativeQueryTerm)) :=
   terms.flatMap fun left => terms.map fun right => [(left, right)]
 
+-- Two open summands on both sides: refuted only when one side is natural in every sorted
+-- instance and the other in none.
+def nativeSortRefutedSystems : List NativeEquationSystem := [
+  [(.naturalAdd (fresh 0) .naturalOne, .naturalAdd (natural 1) (natural 2))],
+  [(.naturalAdd (natural 1) (natural 2), .naturalAdd (fresh 0) .naturalOne)],
+  [(.naturalAdd (fresh 0) .naturalOne, .naturalAdd (natural 1) (.naturalAtom 0))],
+  [(.naturalAdd (.unary .hash (message 0)) .naturalOne, .naturalAdd (natural 1) (natural 2)),
+    (message 3, .roleA)],
+  [(.naturalAdd (fresh 0) .naturalOne, .naturalAdd (message 1) (natural 2))],
+  [(.naturalAdd (message 0) .naturalOne, .naturalAdd (natural 1) (natural 2))],
+  [(.naturalAdd (fresh 0) (fresh 1), .naturalAdd (fresh 2) .naturalOne)],
+  [(.naturalAdd (natural 0) (.naturalAtom 0), .naturalAdd (natural 1) (natural 2))],
+  [(.naturalAdd (fresh 0) .naturalOne, .naturalAdd (natural 1) (.naturalAdd (natural 2) (fresh 3)))]
+]
+
 def nativeUnifySystems : List NativeEquationSystem :=
   allPairs nativeSyntacticTerms ++ allPairs nativeSumTerms ++ [
     [(.binary .pair (message 0) (message 1), .binary .pair (.atom .messageAtom 1) (.unary .hash (message 0)))],
@@ -252,7 +267,7 @@ def nativeUnifySystems : List NativeEquationSystem :=
     [(.naturalAdd (natural 0) (natural 1), .naturalAdd (natural 0) (natural 1))],
     [(.unary .hash (.naturalAdd (natural 0) .naturalOne), .unary .hash (message 1))],
     [(.unary .hash (.naturalAdd (natural 0) .naturalOne), .unary .hash (.naturalAdd .naturalOne (natural 0)))]
-  ]
+  ] ++ nativeSortRefutedSystems
 
 def nativeMatchProblems : List (List (NativeQueryTerm × NativeQueryTerm)) :=
   allPairs nativeSyntacticTerms ++ allPairs nativeSumTerms ++ [
@@ -397,6 +412,13 @@ def nativeSyntaxLines : List String :=
   | [(.naturalAdd _ _, .naturalAdd _ _)], .solved (_ :: _) => solved
   | [(.naturalAdd _ _, .naturalAdd _ _)], .failed => !solved
   | _, _ => false
+#guard (nativeSortRefutedSystems.map fun system =>
+  match nativeSyntacticUnify nativeSyntacticFuel system with
+  | .failed => "FAILED"
+  | .unsupported => "UNSUPPORTED"
+  | .solved _ => "SOLVED") ==
+  ["FAILED", "FAILED", "FAILED", "FAILED", "UNSUPPORTED", "UNSUPPORTED", "UNSUPPORTED", "UNSUPPORTED",
+    "UNSUPPORTED"]
 #guard (nativeUnifySystems.filter fun system =>
   match nativeSyntacticUnify nativeSyntacticFuel system with
   | .unsupported => false
