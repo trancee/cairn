@@ -414,3 +414,21 @@ Limit changes, each justified by the added work rather than relaxed gates:
 
 The sandbox, network, integrity, scratch-size and cleanup boundaries are
 unchanged. The isolation cell does not prepare or verify root inputs.
+
+Observed in run
+[`39830482224`](https://github.com/trancee/cairn/actions/runs/39830482224)
+at `f871a15`. The first attempt lost the completed preflight job state
+(GitHub kept reporting it as in progress), so both cells failed closed at
+the preflight wait. The full rerun then passed with unchanged revision and
+limits:
+
+- `repository-bindings` took 3 min 5 s, and the root trace with finalize
+  took 1 min 39 s. Analysis took 1 min 13 s, and the `codeql` cell 22 min 38 s.
+- Compiled coverage contains all five tracked root `.kt` files plus the root
+  `commonMain`, `jvmMain` and `androidMain` generated bindings, alongside the
+  fixture sources.
+- The bundled suite reports zero results across 76 rules.
+
+The SARIF artifact list still enumerates only files under the fixture source
+root. Root findings are mapped by the tested normalizer, but no actual root
+result has been observed yet.

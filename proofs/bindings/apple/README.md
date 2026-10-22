@@ -307,6 +307,9 @@ The checksum-pinned SDK archives carry no SDK-manager metadata, so the
 license-free `android-sdk/*.package.xml` files let AGP find them. The coverage
 gate and SARIF mapper take the root build as a second owning root: root
 sources map to repository paths, and both builds' generated bindings are required.
+Run [`39830482224`](https://github.com/trancee/cairn/actions/runs/39830482224)
+compiled all five tracked root `.kt` files and the root generated bindings into
+the database. The suite reported zero results.
 
 `.github/workflows/codeql.yml` runs existing Actions/Python/Rust default
 suites; `.github/workflows/codeql-kotlin.yml` calls this strict Kotlin lane.
