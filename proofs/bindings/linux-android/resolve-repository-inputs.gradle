@@ -15,8 +15,9 @@ gradle.projectsEvaluated {
                 }
             }
             // AGP downloads its resource compiler through a graph that is not a project configuration.
+            def host = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("mac") ? "osx" : "linux"
             def aapt2 = gradle.rootProject.configurations.detachedConfiguration(
-                gradle.rootProject.dependencies.create("com.android.tools.build:aapt2:9.3.1-15703166:linux")
+                gradle.rootProject.dependencies.create("com.android.tools.build:aapt2:9.3.1-15703166:${host}")
             )
             resolvedCount += aapt2.resolve().size()
             if (resolvedCount == 0) {

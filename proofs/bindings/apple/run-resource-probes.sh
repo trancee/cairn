@@ -263,9 +263,25 @@ if [ "$#" -eq 3 ]; then
         -D PRIVATE_IPC=true -f "$jvm_profile" \
         /bin/bash "${jvm_command[@]}"
       ;;
+    repository-bindings)
+      "$python" -I "$scripts/uid-supervisor.py" --seconds 900 --diagnose-after 840 \
+        "$work/proof-output/repository-bindings.log" \
+        /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+        -D PRIVATE_IPC=true -f "$work/build.sb" \
+        /bin/bash "$tools/check-repository-build.sh" "$tools" bindings
+      "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
+      ;;
+    repository-codeql)
+      "$python" -I "$scripts/uid-supervisor.py" --seconds 900 --diagnose-after 840 \
+        "$work/proof-output/repository-codeql.log" \
+        /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+        -D PRIVATE_IPC=true -f "$work/codeql.sb" \
+        /bin/bash "$tools/check-codeql-repository.sh" "$tools"
+      "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
+      ;;
     codeql-analysis)
       analysis_result=0
-      "$python" -I "$scripts/uid-supervisor.py" --seconds 300 \
+      "$python" -I "$scripts/uid-supervisor.py" --seconds 600 \
         "$work/proof-output/codeql-analysis.log" \
         /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
         -D PRIVATE_IPC=false -f "$work/codeql.sb" \

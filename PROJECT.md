@@ -26,9 +26,11 @@ KMP target and host proof matrix:
 
 Commands and prerequisites are in the
 [Linux/Android README](proofs/bindings/linux-android/README.md#repository-root-build-lane).
-Gradle runs only in that lane; there is no local Gradle gate yet. Strict
-Kotlin CodeQL still covers only the `proofs/bindings` fixture. This does not
-complete S0 or issue 44.
+Gradle runs only in that lane and in the strict Kotlin CodeQL cell; there is
+no local Gradle gate yet. Strict Kotlin CodeQL traces the root build's compile
+tasks alongside the `proofs/bindings` fixture
+([ADR 0015 amendment](docs/adr/0015-build-backed-kotlin-codeql.md#root-gradle-build-extraction-adr-0020)).
+This does not complete S0 or issue 44.
 
 ## Crypto seam completion (2026-10-22)
 

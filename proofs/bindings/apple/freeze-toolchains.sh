@@ -45,6 +45,8 @@ if [ -d "$prepared/codeql" ]; then
   cp "$scripts/verify-codeql-sources.py" "$destination/verify-codeql-sources.py"
   cp "$scripts/normalize-codeql-sarif.py" "$destination/normalize-codeql-sarif.py"
   cp "$scripts/check-codeql-startup.sh" "$destination/check-codeql-startup.sh"
+  cp "$scripts/check-repository-build.sh" "$destination/check-repository-build.sh"
+  cp "$scripts/check-codeql-repository.sh" "$destination/check-codeql-repository.sh"
 fi
 mkdir "$destination/generator-tools"
 cp "$scripts/generator-cargo.sh" "$destination/generator-tools/cargo"

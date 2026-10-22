@@ -101,8 +101,10 @@ which is acceptable because no SDK consumers have been released.
 - iOS targets are deferred to the Apple-lane increment, so no iOS code
   merges without a build proof. That increment must deliver:
   - device and simulator-arm64 framework builds;
-  - the iOS 15 floor check;
-  - strict Kotlin CodeQL over the root sources.
+  - the iOS 15 floor check.
+- Strict Kotlin CodeQL over the root JVM/Android sources is part of this
+  increment (see the ADR 0015 amendment). It must be extended to iOS sources
+  when the iOS targets land.
 
 **Linux/Android lane.**
 - `proofs/bindings/linux-android/prepare-repository-inputs.sh` runs on the
@@ -140,6 +142,6 @@ which is acceptable because no SDK consumers have been released.
 - S0 now has the root Gradle/UniFFI wiring with Linux/Android proof. S0 and
   issue 44 stay open for the Apple lane, Compose UI execution, release
   builds, physical hardware and the oldest/newest-device demonstration.
-- Strict Kotlin CodeQL still analyzes only the `proofs/bindings` fixture.
-  The root Kotlin is unscanned until the Apple-lane increment extends it.
+- Strict Kotlin CodeQL traces the fixture and the root Gradle build into one
+  database, so the root JVM/Android Kotlin is scanned (ADR 0015 amendment).
 - The serde pin and MPL exceptions need review whenever UniFFI updates.

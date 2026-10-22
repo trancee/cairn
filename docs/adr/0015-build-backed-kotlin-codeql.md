@@ -370,3 +370,47 @@ the default workspace-root checkout. No workflow trigger, permission,
 language, query suite, upload policy, resource limit or Kotlin isolation
 setting changes. This is a CI dependency refresh, not a runtime/API/wire
 change or new hosted extraction/processed-scan evidence.
+
+## Root Gradle build extraction (ADR 0020)
+
+The owner chose to extend this lane to the root Gradle build in PR #33 rather
+than leave the root Kotlin unscanned. The same database (source root still
+`/opt/cairn-apple-tools/fixture`) now traces two builds before one finalize:
+
+1. `jvm`: the fixture build, unchanged except that finalization moves out.
+2. `repository-bindings` (build sandbox, private IPC, 900 seconds):
+   `check-repository-build.sh bindings` assembles `repository-build` in
+   bounded scratch from frozen inputs and runs `:sdk:buildBindings` offline.
+3. `repository-codeql` (CodeQL sandbox, private IPC, 900 seconds):
+   `check-codeql-repository.sh` traces the five compile tasks
+   (`:sdk:compileKotlinJvm`, `:sdk:compileTestKotlinJvm`,
+   `:sdk:compileAndroidMain`, `:app:compileAndroidMain`,
+   `:androidApp:compileDebugKotlin`), then finalizes.
+
+The frozen root inputs are prepared only in the `codeql` cell under
+`/opt/cairn-apple-tools/repository-inputs`, covered by the separate
+`repository-inputs.sha256` manifest:
+
+- the tracked root sources;
+- Rust `1.99.0`;
+- Ubique `1.3.2` source pinned by commit;
+- a Cargo vendor tree;
+- the resolved Gradle `modules-2` cache, including macOS AAPT2;
+- an Android SDK built from checksum-pinned platform `37.0` and build-tools
+  `36.0.0` archives plus license-free `package.xml` metadata;
+- a generator adapter derived from the fixture's.
+
+The coverage gate and SARIF mapper accept the root build as a second owning
+root. Root sources map to repository paths and generated bindings of either
+build are required. Every other path still fails.
+
+Limit changes, each justified by the added work rather than relaxed gates:
+
+| Limit | Before | After | Reason |
+|---|---|---|---|
+| `repository-bindings`, `repository-codeql` | none | 900 s each | the root build compiles generator, Rust core and five Kotlin compilations; an offline Linux guest needed 6 min 15 s at one worker |
+| `codeql-analysis` | 300 s | 600 s | the suite now evaluates the root sources as well |
+| `prepare` job | 30 min | 45 min | the added preparation and both traced builds run in the `codeql` cell |
+
+The sandbox, network, integrity, scratch-size and cleanup boundaries are
+unchanged. The isolation cell does not prepare or verify root inputs.

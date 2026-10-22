@@ -6,6 +6,8 @@ ISOLATION = [
     "allocator-inputs", "fixture-rust",
 ]
 BINDINGS = ["install-bindgen", "build-bindings", "jvm"]
+# The root Gradle build is traced into the same database as the fixture.
+REPOSITORY = ["repository-bindings", "repository-codeql"]
 
 # Each scope is (needs CodeQL, runs boundary probes, ordered probe list) for
 # one bounded cell. The CodeQL lane runs "codeql" and "isolation" as parallel
@@ -13,7 +15,7 @@ BINDINGS = ["install-bindgen", "build-bindings", "jvm"]
 PLANS = {
     "full": (False, True, ["toolchains", *SETUP, *ISOLATION, *BINDINGS, "native-binaries"]),
     "codeql": (True, False, [
-        "codeql-startup", "toolchains", *SETUP, *BINDINGS, "codeql-analysis",
+        "codeql-startup", "toolchains", *SETUP, *BINDINGS, *REPOSITORY, "codeql-analysis",
     ]),
     "isolation": (True, True, ["codeql-startup", "toolchains", *SETUP, *ISOLATION]),
 }

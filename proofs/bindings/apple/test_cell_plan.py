@@ -28,9 +28,10 @@ class CellPlanTest(unittest.TestCase):
             "fixture-rust", "install-bindgen", "build-bindings", "jvm", "native-binaries",
         ])
 
-    def test_codeql_cell_runs_only_setup_and_the_traced_binding_path(self):
+    def test_codeql_cell_runs_only_setup_and_the_traced_binding_paths(self):
         self.assertEqual(plan.probes("codeql"), [
-            "codeql-startup", "toolchains", *SETUP, *BINDING_PATH, "codeql-analysis",
+            "codeql-startup", "toolchains", *SETUP, *BINDING_PATH,
+            "repository-bindings", "repository-codeql", "codeql-analysis",
         ])
         self.assertTrue(set(ISOLATION_ONLY).isdisjoint(plan.probes("codeql")))
 
@@ -67,7 +68,7 @@ class CellPlanTest(unittest.TestCase):
         unsplit = [
             "codeql-startup", "toolchains", *SETUP, "native-tool", "native-compilation",
             "native-cinterop", "native-linkage", "allocator-inputs", "fixture-rust",
-            *BINDING_PATH, "codeql-analysis",
+            *BINDING_PATH, "repository-bindings", "repository-codeql", "codeql-analysis",
         ]
         covered = set(plan.probes("codeql")) | set(plan.probes("isolation"))
 
