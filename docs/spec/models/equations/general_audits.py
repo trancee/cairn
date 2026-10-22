@@ -115,4 +115,5 @@ MODULES = (
     ("QueryNormalization", (
         "native_sorted_normalize_spec", "native_sorted_reduce_certificate", "native_sorted_reduce_normal",
     )),
+    ("QueryVariantCertificate", ("native_variant_member_sound", "native_variant_family_complete")),
 )

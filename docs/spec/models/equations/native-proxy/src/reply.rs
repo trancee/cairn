@@ -6,10 +6,37 @@ use crate::{
     query::{Kind, Query},
     reduction,
     syntax::{Sort, lines, term},
-    unifier,
+    unifier, variants,
 };
 
 const INCOMPLETE: &str = "native reply: solution family is incomplete";
+
+// Variant certificates make no claim when the query or a member leaves the parsed fragment.
+fn member(
+    term: Option<&unifier::Tree>,
+    text: &str,
+    bindings: &BTreeMap<&str, &str>,
+) -> Result<Option<variants::Member>> {
+    let Some(term) = term else {
+        return Ok(None);
+    };
+    let (Some(value), Some(bindings)) = (
+        unifier::parse(text),
+        bindings
+            .iter()
+            .map(|(key, value)| unifier::parse(value).map(|value| ((*key).to_owned(), value)))
+            .collect::<Option<Vec<_>>>(),
+    ) else {
+        return Ok(None);
+    };
+    let member = variants::Member { value, bindings };
+    if variants::sound(term, &member, text)? == Some(false) {
+        return Err(Rejected(
+            "native reply: variant is not the normal form of its instance",
+        ));
+    }
+    Ok(Some(member))
+}
 
 fn value(
     query: &Query,
@@ -128,8 +155,13 @@ pub fn validate(query: &Query, reply: &str) -> Result<()> {
     let mut position = 0;
     let mut count = 0usize;
     let mut family = Vec::new();
+    let variant_term = (query.kind == Kind::Variants)
+        .then(|| query.sides.first().and_then(|side| unifier::parse(side)))
+        .flatten();
+    let mut members = Some(Vec::new());
     while position < lines.len() {
         let mut fresh = BTreeMap::new();
+        let mut top = "";
         count = count
             .checked_add(1)
             .ok_or(Rejected("native reply: solution counter overflow"))?;
@@ -151,6 +183,7 @@ pub fn validate(query: &Query, reply: &str) -> Result<()> {
                 .and_then(|line| sorted_value(line))
                 .ok_or(Rejected("native reply: missing variant term"))?;
             value(query, text, sort, Some(upper), false, &mut fresh)?;
+            top = text;
             position += 1;
         }
         let mut bindings = BTreeMap::new();
@@ -190,6 +223,12 @@ pub fn validate(query: &Query, reply: &str) -> Result<()> {
         if matches!(query.kind, Kind::Unify | Kind::Match) {
             certificate::check(query, &bindings)?;
             family.push(bindings);
+        } else {
+            let member = member(variant_term.as_ref(), top, &bindings)?;
+            members = members.zip(member).map(|(mut members, member)| {
+                members.push(member);
+                members
+            });
         }
     }
     if count == 0 {
@@ -200,6 +239,11 @@ pub fn validate(query: &Query, reply: &str) -> Result<()> {
         && !principal.covered(&family)?
     {
         return Err(Rejected(INCOMPLETE));
+    }
+    if let (Some(term), Some(members)) = (&variant_term, &members)
+        && variants::complete(term, members)? == Some(false)
+    {
+        return Err(Rejected("native reply: variant family is incomplete"));
     }
     Ok(())
 }

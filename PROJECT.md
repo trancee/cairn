@@ -2,6 +2,19 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer; SDK/application=not implemented.
 
+## Variant certificate (2026-10-22)
+
+The native guard now checks `get variants` replies. Each member must be
+AC-equal to the normal form of its own instance, and when the verified
+syntactic unifier decides every destructor-rule scheme, every solved scheme
+whose instantiated value is normal must be generalized by some member. `QueryVariantCertificate.lean` proves this
+soundness and completeness for sorted, normalized assignments. The Rust scheme
+mirror agrees with 67 Lean `VARIANT` corpus lines; all 42 distinct
+`get variants` queries sampled from real Tamarin runs, replayed through
+Maude 3.5.1, are accepted. Families with an `unsupported` scheme stay trusted
+for completeness
+([details](docs/spec/models/equations/README.md#native-module-correspondence)).
+
 ## Reduce normal-form certificate (2026-10-22)
 
 The native guard now rejects a `reduce` reply for a message query unless the
@@ -10,7 +23,7 @@ result is AC-equal to the normal form computed by `nativeSortedNormalize`.
 that, by convergence modulo AC, AC-equality to it decides correct reduction.
 The Rust mirror agrees with 551 Lean `REDUCE` corpus lines; all 10 distinct
 `reduce` queries sampled from real Tamarin runs, replayed through Maude 3.5.1,
-are accepted. `get variants` replies remain trusted
+are accepted
 ([details](docs/spec/models/equations/README.md#native-module-correspondence)).
 
 ## Sum cancellation guard (2026-10-22)

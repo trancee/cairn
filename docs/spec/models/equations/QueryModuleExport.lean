@@ -5,6 +5,7 @@ import QueryKind
 import QueryACCanonical
 import QuerySyntacticUnification
 import QueryNormalization
+import QueryVariantCertificate
 
 namespace Cairn.Equations
 
@@ -322,6 +323,32 @@ def nativeReduceLines : List String :=
 private def nativeReduceChanges (term : NativeQueryTerm) : Bool :=
   nativeMaudeTerm (nativeSortedNormalize term) != nativeMaudeTerm term
 
+-- Destructors over every argument sort, nested and inside the `list(cons(...))` frames Tamarin
+-- sends, so schemes are solved, failed and unsupported.
+private def nativeVariantTerms : List NativeQueryTerm :=
+  let sum := NativeQueryTerm.naturalAdd (natural 0) (natural 1)
+  [ .unary .hash (message 0), .unary .flip (message 0), .unary .flip .roleA,
+    .unary .flip (.unary .flip (message 0)), .unary .flip (publicVariable 0),
+    .unary .fst (message 0), .unary .snd (message 0), .unary .fst (.unary .snd (message 0)),
+    .unary .fst (fresh 0), .unary .snd (.binary .pair (message 0) (message 1)),
+    .binary .sdec (message 0) (message 1), .binary .sdec (message 0) (fresh 1),
+    .binary .sdec (.binary .senc (message 0) (message 1)) (message 1),
+    .binary .sdec (.binary .senc (message 2) sum) (.naturalAdd (natural 3) (natural 4)),
+    .binary .sdec (.binary .senc (message 2) sum) (.naturalAdd (natural 1) (natural 0)),
+    .binary .sdec (message 2) (.naturalAdd (natural 0) .naturalOne),
+    .binary .kdec (message 0) (fresh 1), .binary .kdec (.binary .kem (message 0) (message 1)) (message 2),
+    .binary .kdec (.unary .hash (message 0)) (message 1),
+    .binary .pair (.unary .flip (message 0)) (.unary .fst (message 1)),
+    .kdf (.unary .flip (message 0)) (natural 1) (.binary .kdec (message 2) (fresh 3)),
+    .list (.cons (.atom .publicAtom 0) (.cons (.unary .flip (message 1)) (.cons (.nodeAtom 0) .nil))),
+    .list (.cons (fresh 2) (.cons (.binary .kdec (message 3) (fresh 2)) (.cons (message 4) .nil))),
+    .list (.cons (message 0) (.cons (.unary .hash (message 1)) .nil)) ]
+
+def nativeVariantLines : List String :=
+  nativeVariantTerms.flatMap fun term => (nativeVariantSchemeResults term).map fun (scheme, result) =>
+    resultLine s!"VARIANT\t{nativeMaudeTerm term}\t{nativeMaudeTerm scheme.1}"
+      (problemText "=?" (nativeVariantSystem term scheme)) result
+
 def nativeSyntaxLines : List String :=
   let accepted := (nativeSyntaxCorpus ++ nativeKindCorpus).filterMap fun term =>
     (nativeExpectedKind term).map fun sort =>
@@ -342,7 +369,7 @@ def nativeSyntaxLines : List String :=
       let text := String.ofList characters
       if (nativeMaudeParse text).isNone then some s!"REJECT\t{text}" else none
   accepted.eraseDups ++ flat ++ illSorted ++ rejected.eraseDups ++ nativeACPairLines ++
-    nativeSyntacticLines ++ nativeReduceLines
+    nativeSyntacticLines ++ nativeReduceLines ++ nativeVariantLines
 
 #guard nativeSyntaxCorpus.all fun term => (nativeExpectedSort term).isSome
 #guard nativeKindCorpus.all fun term =>
@@ -383,6 +410,11 @@ def nativeSyntaxLines : List String :=
 #guard [true, false].all fun changes => nativeReduceDecryptions.any fun term => match term with
   | .binary .kdec _ (.naturalAdd _ _) => nativeReduceChanges term == changes
   | _ => false
+
+#guard ["SOLVED", "FAILED", "UNSUPPORTED"].all fun status =>
+  nativeVariantLines.any (·.splitOn "\t" |>.contains status)
+#guard nativeVariantTerms.all fun term => (nativeExpectedKind term).isSome
+#guard (nativeVariantTerms.filter fun term => (nativeVariantSchemeResults term).length ≥ 3).length ≥ 8
 
 #eval do
   IO.print nativeMaudeModule

@@ -116,4 +116,5 @@ GENERAL_REPORT_GROUPS = {
     "reduce-certificate": (
         "native_sorted_normalize_spec", "native_sorted_reduce_certificate", "native_sorted_reduce_normal",
     ),
+    "variant-certificate": ("native_variant_member_sound", "native_variant_family_complete"),
 }

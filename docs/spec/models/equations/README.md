@@ -998,6 +998,41 @@ argument or AC key checks, swapping projections, skipping child normalization,
 fixing `flip` or omitting `kdec` fails it. This is corpus evidence for the
 Rust mirror, not a proof.
 
+`QueryVariantCertificate.lean` certifies `get variants` replies against the
+finite variant schemes of `QueryVariants.lean`. A reply member is a value and
+a substitution of the query's variables. Its audited theorems:
+
+- `native_variant_member_sound`: a member whose value is AC-equal to the
+  normal form of its own instance is a variant: the instance reaches a normal
+  form AC-equal to the value;
+- `native_variant_family_complete`: if the syntactic unifier decides every
+  scheme's `nativeVariantSystem`, and for each solved scheme whose value,
+  instantiated by the most general unifier, is normal (AC-equal to its
+  `nativeSortedNormalize`), some member matches (`NativeACMatcher`) that
+  unifier on the query variables together with the instantiated value, then
+  every sorted, normalized assignment is an instance of some member, up to
+  AC, and its normal form is that instance of the member's value.
+
+The export adds 67 `VARIANT` lines over 24 protocol-shaped terms: each
+scheme's value, exact system and unifier result (56 solved, 10 failed,
+1 unsupported). The Rust unit test
+`schemes_agree_with_the_lean_variant_corpus` requires
+`native-proxy/src/variants.rs` to reproduce every line in order. This is
+corpus evidence for the Rust mirror, not a proof.
+
+Schemes with a reducible instantiated value need no member: a rewrite lifts
+through every sorted instance, so such a scheme never supplies a normal form.
+The guard rejects a member that is not the normal form of its instance and a
+family that leaves a solved scheme with a normal value uncovered. It makes no
+completeness claim when a scheme is `unsupported`, the scheme count exceeds
+4096, or a query variable is not a canonical `x<index>:<Sort>` name. The
+converse is unproved: a correct Maude family might, in principle, fail to
+match a scheme's most general unifier if that unifier's bindings are not
+normalized. Such a false
+rejection would cost availability, not soundness. None occurs in the 42
+distinct `get variants` queries sampled from real Tamarin runs, replayed
+through Maude 3.5.1, or in the guarded Tamarin runs of the model suite.
+
 The source bridge trusts Tamarin's export, the reviewed signature/term translation
 and their regressions. It is not a verified Tamarin/Maude importer, a proof of
 native bookkeeping `NAT`, the entire kind-completed carrier or finite variants.
@@ -1014,7 +1049,9 @@ verified normal form, the soundness of each returned `unify`/`match`
 solution and, for queries the verified syntactic unifier decides, the
 completeness of the family (below). Natural sums are decided by cancelling
 AC-equal summands; completeness for queries the procedure leaves
-`unsupported` stays trusted.
+`unsupported` stays trusted. Each `get variants` member must be the normal
+form of its instance, and the family must cover every scheme when all schemes
+are decided; otherwise variant completeness stays trusted.
 
 ## Native stream boundary
 

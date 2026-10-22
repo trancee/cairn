@@ -221,14 +221,14 @@ fn refinable(expected: Sort, tree: &Tree) -> bool {
     }
 }
 
-fn lookup<'a>(key: &str, bindings: &'a [(String, Tree)]) -> Option<&'a Tree> {
+pub fn lookup<'a>(key: &str, bindings: &'a [(String, Tree)]) -> Option<&'a Tree> {
     bindings
         .iter()
         .find_map(|(bound, value)| (bound == key).then_some(value))
 }
 
 // Substitutes within a node budget; `None` once the result would exceed it.
-fn substitute(tree: &Tree, bindings: &[(String, Tree)], budget: &mut usize) -> Option<Tree> {
+pub fn substitute(tree: &Tree, bindings: &[(String, Tree)], budget: &mut usize) -> Option<Tree> {
     match tree {
         Tree::Variable(name) => {
             let value = lookup(name, bindings).unwrap_or(tree);

@@ -227,6 +227,97 @@ class CompiledValidationTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertIn(reply, result.stdout)
 
+    def test_variant_families_missing_a_variant_reject_the_reply(self):
+        flip = "get variants in MSG : list(cons(tamXCflip(x0:Msg),nil)) .\n"
+        stay = "Variant 1\nrewrites: 0\nTOP: list(cons(tamXCflip(#1:Msg), nil))\nx0:Msg --> #1:Msg\n\n"
+        role_b = "Variant 2\nrewrites: 2\nTOP: list(cons(tamXCroleB, nil))\nx0:Msg --> tamXCroleA\n\n"
+        role_a = "Variant 2\nrewrites: 2\nTOP: list(cons(tamXCroleA, nil))\nx0:Msg --> tamXCroleB\n\n"
+        fst = "get variants in MSG : list(cons(tamXCfst(x0:Msg),nil)) .\n"
+        fst_stay = "Variant 1\nrewrites: 0\nTOP: list(cons(tamXCfst(#1:Msg), nil))\nx0:Msg --> #1:Msg\n\n"
+        cases = (
+            (flip, stay + role_b),
+            (flip, stay + role_a),
+            (flip, role_b.replace("Variant 2", "Variant 1") + role_a),
+            (fst, fst_stay),
+            ("get variants in MSG : list(cons(x2:Fresh,cons(tamXCkdec(x3:Msg,x2:Fresh),nil))) .\n",
+             "Variant 1\nrewrites: 0\nTOP: list(cons(#1:Fresh, cons(tamXCkdec(#2:Msg, #1:Fresh), nil)))\n"
+             "x2:Fresh --> #1:Fresh\nx3:Msg --> #2:Msg\n\n"),
+        )
+        for command, reply in cases:
+            with self.subTest(command=command, reply=reply):
+                result = native_stream(
+                    NATIVE_MODULE + command, reply + "No more variants.\nrewrites: 2\nMaude> ", proxy=self.proxy
+                )
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertNotIn(reply, result.stdout)
+                self.assertIn("variant family is incomplete", result.stderr)
+
+    def test_variant_families_with_an_undecided_scheme_make_no_completeness_claim(self):
+        command = (
+            "get variants in MSG : list(cons(tamXCsdec(tamXCsenc(x2:Msg,tamtplus(x0:TamNat,x1:TamNat)),"
+            "tamtplus(x3:TamNat,x4:TamNat)),nil)) .\n"
+        )
+        reply = (
+            "Variant 1\nrewrites: 7\nTOP: list(cons(%1:Msg, nil))\nx2:Msg --> %1:Msg\n"
+            "x0:TamNat --> %2:TamNat\nx1:TamNat --> %3:TamNat\nx3:TamNat --> %2:TamNat\n"
+            "x4:TamNat --> %3:TamNat\n\nNo more variants.\nrewrites: 7\n"
+        )
+
+        result = native_stream(NATIVE_MODULE + command, reply + "Maude> ", proxy=self.proxy)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(reply, result.stdout)
+
+    def test_variants_other_than_the_normal_form_of_their_instance_reject_the_reply(self):
+        cases = (
+            ("get variants in MSG : list(cons(tamXCflip(x0:Msg),nil)) .\n",
+             "Variant 1\nrewrites: 0\nTOP: list(cons(tamXCflip(#1:Msg), nil))\nx0:Msg --> #1:Msg\n\n"
+             "Variant 2\nrewrites: 2\nTOP: list(cons(tamXCroleA, nil))\nx0:Msg --> tamXCroleA\n\n"
+             "Variant 3\nrewrites: 2\nTOP: list(cons(tamXCroleA, nil))\nx0:Msg --> tamXCroleB\n\n"),
+            ("get variants in MSG : list(cons(tamXCfst(x0:Msg),nil)) .\n",
+             "Variant 1\nrewrites: 0\nTOP: list(cons(tamXCfst(#1:Msg), nil))\nx0:Msg --> #1:Msg\n\n"
+             "Variant 2\nrewrites: 1\nTOP: list(cons(%2:Msg, nil))\nx0:Msg --> tamXCpair(%1:Msg, %2:Msg)\n\n"),
+            ("get variants in MSG : list(cons(tamXCh(x0:Msg),nil)) .\n",
+             "Variant 1\nrewrites: 0\nTOP: list(cons(tamXCh(#2:Msg), nil))\nx0:Msg --> #1:Msg\n\n"),
+        )
+        for command, reply in cases:
+            with self.subTest(command=command, reply=reply):
+                result = native_stream(
+                    NATIVE_MODULE + command, reply + "No more variants.\nrewrites: 2\nMaude> ", proxy=self.proxy
+                )
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertNotIn(reply, result.stdout)
+                self.assertIn("variant is not the normal form of its instance", result.stderr)
+
+    def test_real_variant_families_are_forwarded(self):
+        cases = (
+            ("get variants in MSG : list(cons(tamXCflip(x0:Msg),nil)) .\n",
+             "Variant 1\nrewrites: 0\nTOP: list(cons(tamXCflip(#1:Msg), nil))\nx0:Msg --> #1:Msg\n\n"
+             "Variant 2\nrewrites: 2\nTOP: list(cons(tamXCroleB, nil))\nx0:Msg --> tamXCroleA\n\n"
+             "Variant 3\nrewrites: 2\nTOP: list(cons(tamXCroleA, nil))\nx0:Msg --> tamXCroleB\n\n"),
+            ("get variants in MSG : list(cons(tamXCfst(x0:Msg),nil)) .\n",
+             "Variant 1\nrewrites: 0\nTOP: list(cons(tamXCfst(#1:Msg), nil))\nx0:Msg --> #1:Msg\n\n"
+             "Variant 2\nrewrites: 1\nTOP: list(cons(%1:Msg, nil))\nx0:Msg --> tamXCpair(%1:Msg, %2:Msg)\n\n"),
+            ("get variants in MSG : list(cons(x2:Fresh,cons(tamXCkdec(x3:Msg,x2:Fresh),nil))) .\n",
+             "Variant 1\nrewrites: 0\nTOP: list(cons(#1:Fresh, cons(tamXCkdec(#2:Msg, #1:Fresh), nil)))\n"
+             "x2:Fresh --> #1:Fresh\nx3:Msg --> #2:Msg\n\n"
+             "Variant 2\nrewrites: 1\nTOP: list(cons(%2:Fresh, cons(%1:Msg, nil)))\n"
+             "x2:Fresh --> %2:Fresh\nx3:Msg --> tamXCkem(%1:Msg, tamXCpk(%2:Fresh))\n\n"),
+            ("get variants in MSG : list(cons(tamXCh(x0:Msg),nil)) .\n",
+             "Variant 1\nrewrites: 0\nTOP: list(cons(tamXCh(#1:Msg), nil))\nx0:Msg --> #1:Msg\n\n"),
+            ("get variants in MSG : list(cons(x0:Fresh,cons(tamXCflip(tamXCroleA),nil))) .\n",
+             "Variant 1\nrewrites: 1\nTOP: list(cons(#1:Fresh, cons(tamXCroleB, nil)))\nx0:Fresh --> #1:Fresh\n\n"),
+        )
+        for command, reply in cases:
+            with self.subTest(command=command):
+                reply += "No more variants.\nrewrites: 2\n"
+                result = native_stream(NATIVE_MODULE + command, reply + "Maude> ", proxy=self.proxy)
+
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn(reply, result.stdout)
+
     def test_repeated_query_revalidates_the_complete_changed_reply(self):
         valid = "result Msg: tamXCroleA\n"
         changed = (

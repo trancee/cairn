@@ -640,8 +640,12 @@ decides, including natural sums that cancel to one open summand
 so only completeness of families for queries it leaves `unsupported` stays trusted.
 It also rejects a `reduce` result of a message query unless it is AC-equal to
 the Lean-verified normal form
-([`QueryNormalization.lean`](equations/README.md#native-module-correspondence));
-`get variants` replies remain trusted.
+([`QueryNormalization.lean`](equations/README.md#native-module-correspondence)).
+It rejects a `get variants` member that is not the normal form of its
+instance, and a family that leaves a variant scheme uncovered when the
+syntactic unifier decides every scheme
+([`QueryVariantCertificate.lean`](equations/README.md#native-module-correspondence));
+completeness of other variant families stays trusted.
 
 Independent acceptance of the exact mixed message/natural theory, or a
 formal combination certificate, is still outstanding. This document

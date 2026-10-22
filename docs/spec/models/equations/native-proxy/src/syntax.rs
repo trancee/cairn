@@ -345,7 +345,9 @@ mod tests {
                     assert!(term(text, true).is_err(), "recognizer accepted {text}");
                     rejected += 1;
                 }
-                ["EQUAL" | "DISTINCT" | "REDUCE", _, _] | ["UNIFY" | "MATCH", _, _, _] => {}
+                ["EQUAL" | "DISTINCT" | "REDUCE", _, _]
+                | ["UNIFY" | "MATCH", _, _, _]
+                | ["VARIANT", _, _, _, _, _] => {}
                 _ => panic!("malformed corpus line {line}"),
             }
         }
