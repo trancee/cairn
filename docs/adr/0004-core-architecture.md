@@ -34,7 +34,7 @@ CairnCore.handle(event: Event) -> List<Action>   // plus read-only queries (cont
   - Kotlin must finish a `Persist` before executing any later action from the same batch; this is how ADR 0002's atomicity rule is enforced.
 - **Crypto backend seam.** A Rust trait `CryptoBackend` covers X-Wing, ML-KEM-768, X25519, HKDF/HMAC/SHA-384, AES-256-GCM and random number generation. It is selected at compile time by a Cargo feature, with two adapters from day one:
   - `aws-lc-rs`, a non-FIPS build now; its FIPS build when a certificate covers mobile;
-  - a reference adapter (`mlkem-native` + RustCrypto) used for differential testing.
+  - a reference adapter (RustCrypto, *amended by [ADR 0018](0018-kem-backend-increment.md); originally `mlkem-native` + RustCrypto*) used for differential testing.
 
   Known-answer tests (ACVP/CAVP) and Wycheproof vectors run against both.
 - **Secret hygiene.**
@@ -85,3 +85,12 @@ app/    Compose Multiplatform reference app
 ## Migration
 
 No released SDK consumers exist. The binding-generator choice changes build integration and generated Kotlin/runtime dependencies, not the Rust protocol or wire contract. Switching generators again before release requires replacing the Gradle integration and revalidating every generated target. Changing the `Event`/`Action` FFI surface is a breaking SDK change and needs a major SDK version.
+
+## Amendments
+
+2026-10-22, from [ADR 0018](0018-kem-backend-increment.md):
+- The reference adapter is RustCrypto only. AWS-LC imports its ML-KEM from
+  `mlkem-native`, so a `mlkem-native` reference would not be independent.
+- Both adapters store decapsulation keys in the FIPS 203 expanded form, with
+  X-Wing's `dk_M ‖ sk_X ‖ pk_X` as permitted by draft-11 §5.5.1, because the
+  `aws-lc-rs` safe API cannot import seeds.

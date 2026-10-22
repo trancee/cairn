@@ -1,4 +1,7 @@
-use cairn_crypto::{AwsLc, CryptoBackend, Reference};
+use cairn_crypto::{
+    AwsLc, CryptoBackend, MLKEM768_CIPHERTEXT_LEN, MLKEM768_DECAPSULATION_KEY_LEN,
+    MlKem768DecapsulationKey, Reference,
+};
 use crabgrind::memcheck::{MemState, mark_memory, vbits};
 
 fn mark(bytes: &[u8], state: MemState) {
@@ -48,6 +51,72 @@ fn check<B: CryptoBackend>() {
     }
 }
 
+/// Marks `dk_PKE` and `z`; `ek` and `H(ek)` are public inputs to the FIPS 203 §7.3 check.
+fn mark_mlkem768_secret_key(key: &[u8]) {
+    mark(&key[..1152], MemState::Undefined);
+    mark(
+        &key[2368..MLKEM768_DECAPSULATION_KEY_LEN],
+        MemState::Undefined,
+    );
+}
+
+/// Decapsulation of valid and implicitly rejected ciphertexts.
+///
+/// The X25519 scalar stays defined: cairn-r1 mandates aborting on an all-zero X25519 output,
+/// a public-by-design branch that Memcheck cannot declassify without instrumenting the library.
+fn check_kem<B: CryptoBackend>() {
+    let (public, key) = Reference::mlkem768_generate_deterministic(&[1; 32], &[2; 32]);
+    let (ciphertext, _) = Reference::mlkem768_encapsulate_deterministic(&public, &[3; 32])
+        .expect("ML-KEM encapsulation failed");
+    let key = MlKem768DecapsulationKey::from_bytes(key.as_bytes());
+    mark_mlkem768_secret_key(key.as_bytes());
+    let mut tampered = ciphertext;
+    tampered[MLKEM768_CIPHERTEXT_LEN - 1] ^= 1;
+    for ciphertext in [ciphertext, tampered] {
+        let secret = B::mlkem768_decapsulate(&key, std::hint::black_box(&ciphertext))
+            .expect("ML-KEM decapsulation failed");
+        std::hint::black_box(&secret);
+        require_taint(&secret[..]);
+    }
+
+    let (public, key) = Reference::xwing_generate_deterministic(&[4; 32]);
+    let (ciphertext, _) = Reference::xwing_encapsulate_deterministic(&public, &[5; 64])
+        .expect("X-Wing encapsulation failed");
+    mark_mlkem768_secret_key(key.as_bytes());
+    let mut tampered = ciphertext;
+    tampered[0] ^= 1;
+    for ciphertext in [ciphertext, tampered] {
+        let secret = B::xwing_decapsulate(&key, std::hint::black_box(&ciphertext))
+            .expect("X-Wing decapsulation failed");
+        std::hint::black_box(&secret);
+        require_taint(&secret[..]);
+    }
+}
+
+/// Encapsulation from a secret ML-KEM message; the X25519 ephemeral stays defined as above.
+fn check_reference_encapsulation() {
+    let (public, _) = Reference::xwing_generate_deterministic(&[6; 32]);
+    let (ml_kem_public, _) = Reference::mlkem768_generate_deterministic(&[7; 32], &[8; 32]);
+    let message = [9; 32];
+    let mut seed = [10; 64];
+    mark(&message, MemState::Undefined);
+    mark(&seed[..32], MemState::Undefined);
+    seed = std::hint::black_box(seed);
+    let (ciphertext, secret) = Reference::mlkem768_encapsulate_deterministic(
+        &ml_kem_public,
+        std::hint::black_box(&message),
+    )
+    .expect("ML-KEM encapsulation failed");
+    std::hint::black_box((&ciphertext, &secret));
+    require_taint(&ciphertext);
+    require_taint(&secret[..]);
+    let (ciphertext, secret) = Reference::xwing_encapsulate_deterministic(&public, &seed)
+        .expect("X-Wing encapsulation failed");
+    std::hint::black_box((&ciphertext, &secret));
+    require_taint(&ciphertext);
+    require_taint(&secret[..]);
+}
+
 fn main() {
     assert!(
         crabgrind::valgrind::running_mode().is_valgrind(),
@@ -69,8 +138,15 @@ fn main() {
             let index = usize::from(std::hint::black_box(&secret)[0]);
             std::hint::black_box(std::hint::black_box(&table)[index]);
         }
-        Some("aws-lc") => check::<AwsLc>(),
-        Some("reference") => check::<Reference>(),
+        Some("aws-lc") => {
+            check::<AwsLc>();
+            check_kem::<AwsLc>();
+        }
+        Some("reference") => {
+            check::<Reference>();
+            check_kem::<Reference>();
+            check_reference_encapsulation();
+        }
         _ => panic!("expected aws-lc, reference, negative-control or negative-index"),
     }
 }
