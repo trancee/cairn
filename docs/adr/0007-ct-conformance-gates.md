@@ -88,3 +88,11 @@ This is the first version. Adding gates is non-breaking. Removing or downgrading
 - The X-Wing combiner taint check marks ML-KEM secrets, not the X25519
   scalars. The mandated all-zero X25519 abort is a public-by-design branch
   that Memcheck cannot declassify without instrumenting the library.
+
+2026-10-22, from [ADR 0019](0019-crypto-seam-completion.md) (no gate removed):
+- The pinned ACVP-Server commit has no AES-256-GCM case with a 96-bit IV
+  and a 128-bit tag. NIST CAVP GCMVS static vectors provide the AES-256-GCM
+  known answers in its place, until an applicable ACVP corpus is pinned.
+- Memcheck taints AES-GCM sealing only. Opening and X25519 agreement branch
+  on public-by-design verdicts (tag match, all-zero output) that Memcheck
+  cannot declassify inside the providers.

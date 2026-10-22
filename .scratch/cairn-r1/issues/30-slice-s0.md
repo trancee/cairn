@@ -17,3 +17,9 @@ host-only under [ADR 0018](../../../docs/adr/0018-kem-backend-increment.md).
 ACVP, Wycheproof, X-Wing vectors and differential tests are now on, subject
 to the `aws-lc-rs` KAT limits recorded there. Gradle/UniFFI wiring and the
 device demonstration are not done, so S0 remains incomplete (see issue 46).
+
+2026-10-22: AES-256-GCM, standalone X25519 and RNG complete the
+`CryptoBackend` trait host-only, under
+[ADR 0019](../../../docs/adr/0019-crypto-seam-completion.md). AES-256-GCM
+known answers use NIST CAVP in place of ACVP, which has no applicable case.
+Gradle/UniFFI wiring and the device demonstration remain open.

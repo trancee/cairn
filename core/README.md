@@ -72,8 +72,9 @@ The internal harness uses `libfuzzer-sys` (MIT/Apache-2.0 and NCSA) and its
 
 `aws-lc-rs` provides the ADR-selected non-FIPS adapter with maintained native
 cryptographic primitives; `sha2`, `hmac`, `hkdf`, `ml-kem`, `x25519-dalek`,
-`sha3` and `shake` provide the independent RustCrypto reference adapter
-([ADR 0018](../docs/adr/0018-kem-backend-increment.md)), and `getrandom`
+`sha3`, `shake` and `aes-gcm` provide the independent RustCrypto reference
+adapter ([ADR 0018](../docs/adr/0018-kem-backend-increment.md),
+[ADR 0019](../docs/adr/0019-crypto-seam-completion.md)), and `getrandom`
 supplies its OS randomness. They are permissively licensed and lock their
 native/transitive dependencies in `Cargo.lock`. `zeroize` wipes returned
 HMAC/HKDF buffers on drop and enables supported RustCrypto state wiping.
@@ -190,6 +191,40 @@ the reference adapter's expanded keys, and X-Wing decapsulation. Both adapters
 are tested in all six cross-adapter generate/encapsulate/decapsulate role
 assignments. These vectors do not confer ACVP certification.
 
+### AES-256-GCM, X25519 and randomness vectors
+
+The pinned ACVP-Server commit has no AES-256-GCM case with a 96-bit IV and a
+128-bit tag. Both adapters therefore run every such case from the NIST CAVP
+GCMVS static vectors
+([`gcmtestvectors.zip`](https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/mac/gcmtestvectors.zip),
+SHA-256 recorded in `cavp-gcm256/NOTICE`): 375 encryption cases and 375
+decryption cases, 191 of which must fail. Regenerate them with
+`python3 core/cairn-crypto/tests/vectors/extract_gcm.py gcmtestvectors.zip OUTPUT_DIRECTORY`.
+The script checks the archive and member digests, keeps only
+`Keylen = 256`, `IVlen = 96` and `Taglen = 128` groups, and converts CRLF to
+LF. The `.rsp` files keep CAVS trailing spaces (`.gitattributes`).
+
+| CAVP file | SHA-256 |
+|---|---|
+| `gcmEncryptExtIV256.rsp` | `cbce90b1b4241ea7fe49baa2eadd26da3ad5715b6cc25a104dc8f704a81796a7` |
+| `gcmDecrypt256.rsp` | `5670fe3fbae43110d9ecf4283616445a147d0f6b0a02aa985734028d4a5a8fb1` |
+
+The Wycheproof files are copied unchanged from the commit above.
+
+| File | SHA-256 | Cases |
+|---|---|---:|
+| `aes_gcm_test.json` | `985e5ecc172e181eaf49e89508b9470dcf478002eb7e8559c707eb42dc97dfe7` | 316 |
+| `x25519_test.json` | `35c3f5231cf25cc640b524d403461deee9e49441d5d915a3a25b2c8ff5adbe7d` | 518 |
+
+The 66 AES-GCM cases with 32-byte keys, 12-byte IVs and 16-byte tags run
+(39 valid, 27 invalid); the 250 other-size cases cannot be expressed through
+the fixed-size API and are counted. All 487 X25519 agreement cases, including
+RFC 7748 "acceptable" inputs, must match. The 31 all-zero cases must return
+`ZeroSharedSecret`. The tests also cover rejection with the wrong AAD or
+nonce, truncated sealed input, cross-adapter differential sealing and
+agreement, and `X25519(sk, 9)` public keys. `fill_random` has sanity tests
+only, no known answer.
+
 ## Foundation secret-taint harness
 
 `ct/` is a separate, internal workspace, excluded from maintained-library
@@ -234,8 +269,15 @@ X25519 abort is a deliberately public branch. A mutation that also marked
 `H(ek)` was flagged at the `aws-lc-rs` adapter's public hash check, so the
 harness does reach the KEM code.
 
+AES-256-GCM sealing is checked on both adapters with a tainted key and
+plaintext; the `ciphertext ‖ tag` output must be tainted. Opening and
+standalone X25519 are not marked. A trial run with a tainted opening key was
+flagged at both providers' tag-verdict branch (`e_aes.c:1188`, `aes-gcm`
+`lib.rs:311`), which is public by design
+([ADR 0019](../docs/adr/0019-crypto-seam-completion.md)).
+
 This does not check the unimplemented protocol-labelled KDF, comparisons
-or AEAD in ADR 0007.
+or protocol AEAD framing in ADR 0007.
 It does not prove mobile constant-time behavior, all inputs,
 variable-latency arithmetic, or exhaustive provider-path coverage.
 
@@ -254,10 +296,11 @@ Provider errors have typed `From` conversions into `CryptoError`.
 The conversion tests induce genuine provider HKDF length errors; the HMAC
 length error is constructed explicitly because HMAC accepts arbitrary key
 lengths. The `getrandom` error is constructed, and AWS-LC `KeyRejected` is
-induced by a 1-byte decapsulation key. This proves the public conversion
+induced by a 1-byte decapsulation key. The `aes-gcm` error is induced by
+opening an empty buffer. This proves the public conversion
 contract, not that failures occur within valid backend calls. LLVM records
-100% source lines (614/614) and branches (52/52) locally, but misses 27 of
-626 regions, all of them `?` error propagation through provider calls. Thus the
+100% source lines (705/705) and branches (52/52) locally, but misses 36 of
+709 regions, all of them `?` error propagation through provider calls. Thus the
 coverage result does not prove all adapter error paths executed.
 
 ## Apple cross-build smoke

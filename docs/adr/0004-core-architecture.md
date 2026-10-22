@@ -94,3 +94,8 @@ No released SDK consumers exist. The binding-generator choice changes build inte
 - Both adapters store decapsulation keys in the FIPS 203 expanded form, with
   X-Wing's `dk_M ‖ sk_X ‖ pk_X` as permitted by draft-11 §5.5.1, because the
   `aws-lc-rs` safe API cannot import seeds.
+
+2026-10-22, from [ADR 0019](0019-crypto-seam-completion.md):
+- The seam now covers AES-256-GCM seal/open, standalone X25519 and
+  `fill_random` on both adapters. AES-256-GCM known answers come from NIST
+  CAVP rather than ACVP.

@@ -1,4 +1,4 @@
-//! Host-only symmetric and KEM foundation; not the complete ADR 0004 backend.
+//! Host-only ADR 0004 primitive backends; no protocol logic.
 
 use zeroize::Zeroizing;
 
@@ -11,6 +11,8 @@ pub enum CryptoError {
     InvalidKey,
     /// An X25519 exchange produced the all-zero output, so the peer value was low order.
     ZeroSharedSecret,
+    /// AES-256-GCM rejected the tag, or the sealed input was shorter than a tag.
+    AuthenticationFailed,
 }
 
 impl core::fmt::Display for CryptoError {
@@ -20,6 +22,7 @@ impl core::fmt::Display for CryptoError {
             Self::BackendFailure => "cryptographic backend failure",
             Self::InvalidKey => "invalid KEM key",
             Self::ZeroSharedSecret => "all-zero X25519 shared secret",
+            Self::AuthenticationFailed => "AEAD authentication failed",
         })
     }
 }
@@ -55,6 +58,14 @@ impl From<getrandom::Error> for CryptoError {
     }
 }
 
+/// Only reachable through internal failure: plaintext and AAD lengths are far below GCM limits.
+#[cfg(feature = "reference")]
+impl From<aes_gcm::Error> for CryptoError {
+    fn from(_: aes_gcm::Error) -> Self {
+        Self::BackendFailure
+    }
+}
+
 #[cfg(feature = "reference")]
 impl From<hkdf::InvalidLength> for CryptoError {
     fn from(_: hkdf::InvalidLength) -> Self {
@@ -70,6 +81,10 @@ pub const XWING_ENCAPSULATION_KEY_LEN: usize = MLKEM768_ENCAPSULATION_KEY_LEN + 
 pub const XWING_DECAPSULATION_KEY_LEN: usize = MLKEM768_DECAPSULATION_KEY_LEN + 64;
 pub const XWING_CIPHERTEXT_LEN: usize = MLKEM768_CIPHERTEXT_LEN + 32;
 pub const SHARED_SECRET_LEN: usize = 32;
+pub const X25519_KEY_LEN: usize = 32;
+pub const AES256GCM_KEY_LEN: usize = 32;
+pub const AES256GCM_NONCE_LEN: usize = 12;
+pub const AES256GCM_TAG_LEN: usize = 16;
 
 /// Shared secret produced by encapsulation or decapsulation.
 pub type SharedSecret = Zeroizing<[u8; SHARED_SECRET_LEN]>;
@@ -100,6 +115,11 @@ macro_rules! secret_key {
 secret_key!(
     /// FIPS 203 expanded decapsulation key: `dk_PKE || ek || H(ek) || z`.
     MlKem768DecapsulationKey([u8; MLKEM768_DECAPSULATION_KEY_LEN])
+);
+
+secret_key!(
+    /// RFC 7748 X25519 scalar; clamped when used.
+    X25519SecretKey([u8; X25519_KEY_LEN])
 );
 
 secret_key!(
@@ -212,6 +232,31 @@ pub trait CryptoBackend {
         key: &XWingDecapsulationKey,
         ciphertext: &[u8; XWING_CIPHERTEXT_LEN],
     ) -> Result<SharedSecret, CryptoError>;
+
+    fn x25519_generate() -> Result<(X25519SecretKey, [u8; X25519_KEY_LEN]), CryptoError>;
+    /// RFC 7748 X25519; the all-zero output returns `ZeroSharedSecret` (spec §2.1).
+    fn x25519(
+        key: &X25519SecretKey,
+        public: &[u8; X25519_KEY_LEN],
+    ) -> Result<SharedSecret, CryptoError>;
+
+    /// AES-256-GCM encryption returning `ciphertext || tag`. Callers own nonce uniqueness.
+    fn aes256gcm_seal(
+        key: &[u8; AES256GCM_KEY_LEN],
+        nonce: &[u8; AES256GCM_NONCE_LEN],
+        aad: &[u8],
+        plaintext: &[u8],
+    ) -> Result<Vec<u8>, CryptoError>;
+    /// Verifies and decrypts `ciphertext || tag`; no plaintext is returned on failure.
+    fn aes256gcm_open(
+        key: &[u8; AES256GCM_KEY_LEN],
+        nonce: &[u8; AES256GCM_NONCE_LEN],
+        aad: &[u8],
+        sealed: &[u8],
+    ) -> Result<Zeroizing<Vec<u8>>, CryptoError>;
+
+    /// Fills `output` from the operating-system CSPRNG.
+    fn fill_random(output: &mut [u8]) -> Result<(), CryptoError>;
 }
 
 /// Non-FIPS AWS-LC adapter.
@@ -359,6 +404,63 @@ impl CryptoBackend for AwsLc {
             x25519_public,
         );
         Ok(aws_lc_sha3_256(&input[..]))
+    }
+
+    fn x25519_generate() -> Result<(X25519SecretKey, [u8; X25519_KEY_LEN]), CryptoError> {
+        let mut scalar = Zeroizing::new([0; X25519_KEY_LEN]);
+        aws_lc_rs::rand::fill(&mut scalar[..])?;
+        let public = aws_lc_x25519_public(&scalar)?;
+        Ok((X25519SecretKey::from_bytes(&scalar), public))
+    }
+
+    fn x25519(
+        key: &X25519SecretKey,
+        public: &[u8; X25519_KEY_LEN],
+    ) -> Result<SharedSecret, CryptoError> {
+        aws_lc_x25519(key.as_bytes(), public)
+    }
+
+    fn aes256gcm_seal(
+        key: &[u8; AES256GCM_KEY_LEN],
+        nonce: &[u8; AES256GCM_NONCE_LEN],
+        aad: &[u8],
+        plaintext: &[u8],
+    ) -> Result<Vec<u8>, CryptoError> {
+        use aws_lc_rs::aead;
+        let key = aead::LessSafeKey::new(aead::UnboundKey::new(&aead::AES_256_GCM, key)?);
+        let mut sealed = Vec::with_capacity(plaintext.len() + AES256GCM_TAG_LEN);
+        sealed.extend_from_slice(plaintext);
+        key.seal_in_place_append_tag(
+            aead::Nonce::assume_unique_for_key(*nonce),
+            aead::Aad::from(aad),
+            &mut sealed,
+        )?;
+        Ok(sealed)
+    }
+
+    fn aes256gcm_open(
+        key: &[u8; AES256GCM_KEY_LEN],
+        nonce: &[u8; AES256GCM_NONCE_LEN],
+        aad: &[u8],
+        sealed: &[u8],
+    ) -> Result<Zeroizing<Vec<u8>>, CryptoError> {
+        use aws_lc_rs::aead;
+        let key = aead::LessSafeKey::new(aead::UnboundKey::new(&aead::AES_256_GCM, key)?);
+        let mut buffer = Zeroizing::new(sealed.to_vec());
+        let length = key
+            .open_in_place(
+                aead::Nonce::assume_unique_for_key(*nonce),
+                aead::Aad::from(aad),
+                &mut buffer,
+            )
+            .map_err(|_| CryptoError::AuthenticationFailed)?
+            .len();
+        buffer.truncate(length);
+        Ok(buffer)
+    }
+
+    fn fill_random(output: &mut [u8]) -> Result<(), CryptoError> {
+        Ok(aws_lc_rs::rand::fill(output)?)
     }
 }
 
@@ -511,6 +613,51 @@ impl CryptoBackend for Reference {
                 x25519_public,
             )[..],
         ))
+    }
+
+    fn x25519_generate() -> Result<(X25519SecretKey, [u8; X25519_KEY_LEN]), CryptoError> {
+        let mut scalar = Zeroizing::new([0; X25519_KEY_LEN]);
+        getrandom::fill(&mut scalar[..])?;
+        let public = x25519_dalek::x25519(*scalar, x25519_dalek::X25519_BASEPOINT_BYTES);
+        Ok((X25519SecretKey::from_bytes(&scalar), public))
+    }
+
+    fn x25519(
+        key: &X25519SecretKey,
+        public: &[u8; X25519_KEY_LEN],
+    ) -> Result<SharedSecret, CryptoError> {
+        reference_x25519(key.as_bytes(), public)
+    }
+
+    fn aes256gcm_seal(
+        key: &[u8; AES256GCM_KEY_LEN],
+        nonce: &[u8; AES256GCM_NONCE_LEN],
+        aad: &[u8],
+        plaintext: &[u8],
+    ) -> Result<Vec<u8>, CryptoError> {
+        use aes_gcm::{AeadInOut, KeyInit};
+        let mut sealed = Vec::with_capacity(plaintext.len() + AES256GCM_TAG_LEN);
+        sealed.extend_from_slice(plaintext);
+        aes_gcm::Aes256Gcm::new(key.into()).encrypt_in_place(nonce.into(), aad, &mut sealed)?;
+        Ok(sealed)
+    }
+
+    fn aes256gcm_open(
+        key: &[u8; AES256GCM_KEY_LEN],
+        nonce: &[u8; AES256GCM_NONCE_LEN],
+        aad: &[u8],
+        sealed: &[u8],
+    ) -> Result<Zeroizing<Vec<u8>>, CryptoError> {
+        use aes_gcm::{AeadInOut, KeyInit};
+        let mut buffer = Zeroizing::new(sealed.to_vec());
+        aes_gcm::Aes256Gcm::new(key.into())
+            .decrypt_in_place(nonce.into(), aad, &mut *buffer)
+            .map_err(|_| CryptoError::AuthenticationFailed)?;
+        Ok(buffer)
+    }
+
+    fn fill_random(output: &mut [u8]) -> Result<(), CryptoError> {
+        Ok(getrandom::fill(output)?)
     }
 }
 

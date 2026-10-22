@@ -1,6 +1,22 @@
 # PROJECT
 
-state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer + host-only ML-KEM-768/X-Wing backends; SDK/application=not implemented.
+state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer + host-only ML-KEM-768/X-Wing/AES-256-GCM/X25519/RNG backends; SDK/application=not implemented.
+
+## Crypto seam completion (2026-10-22)
+
+[ADR 0019](docs/adr/0019-crypto-seam-completion.md) adds AES-256-GCM
+seal/open, standalone X25519 and `fill_random` to both host-only
+`CryptoBackend` adapters. With this, every primitive listed in ADR 0004 is
+covered. AES-256-GCM known answers come from NIST CAVP GCMVS, because the
+pinned ACVP commit has no applicable case; ADR 0004/0007 are amended.
+Wycheproof AES-GCM and X25519 also run on both adapters
+([vectors](core/README.md#aes-256-gcm-x25519-and-randomness-vectors)).
+
+Local evidence: `check-rust.sh` (fmt, clippy, tests, cargo-deny on all three
+workspaces), the feature matrix, 100% line/branch coverage, `cargo careful`,
+iOS and Android release cross-builds, and `core/ct` Memcheck on Linux ARM64
+(sealing tainted; opening and X25519 agreement are not, by design). This is
+not mobile constant-time evidence and does not complete S0.
 
 ## ML-KEM-768 and X-Wing backend increment (2026-10-22)
 
@@ -1034,8 +1050,9 @@ acceptance is implied.
 - **Languages/toolchains:** Markdown specification and Tamarin `.spthy` models;
   model commands use Tamarin 1.12.0 and Maude 3.5.1.
   The `core/` Cargo workspace pins Rust 1.99.0 for the public wire codecs and
-  partial SHA-384/HMAC/HKDF/ML-KEM-768/X-Wing backend seam (AWS-LC and RustCrypto;
-  [ADR 0018](docs/adr/0018-kem-backend-increment.md) adds the KEMs).
+  host-only SHA-384/HMAC/HKDF/ML-KEM-768/X-Wing/X25519/AES-256-GCM/RNG backend seam
+  (AWS-LC and RustCrypto; [ADR 0018](docs/adr/0018-kem-backend-increment.md) adds the
+  KEMs, [ADR 0019](docs/adr/0019-crypto-seam-completion.md) the rest).
   [Core documentation](core/README.md) lists the feature selection, vectors,
   dependencies, commands and remaining gates; [ADR 0012](docs/adr/0012-rust-foundation-increment.md)
   bounds this increment. No protocol state machines or FFI exist yet.
