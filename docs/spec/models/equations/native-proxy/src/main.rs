@@ -11,6 +11,7 @@ mod syntax;
 mod unifier;
 mod unix;
 mod validation;
+mod variants;
 
 mod inventory {
     include!(concat!(env!("OUT_DIR"), "/inventory.rs"));
