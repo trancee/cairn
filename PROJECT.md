@@ -2,6 +2,24 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer; SDK/application=not implemented.
 
+## Tamarin `<<loop>>` diagnosis (2026-10-22)
+
+Intermittent `tamarin-prover: <<loop>>` aborts in saved-certificate replay
+still occur on `main` (2 of the 40 lifecycle runs before 2026-10-22, in
+`replay-default-witness` and `replay-candidate-recovery-witness`, about 0.3%
+of replay jobs). Each aborted after `Theory closed`, 27–29 s into the proof
+command, with derivation checks complete, so the `--derivcheck-timeout`
+`System.Timeout` path is excluded. Tamarin 1.12.0 is built
+`-threaded -N -feager-blackholing` and closes theory items in parallel sparks
+over shared thunks that call Maude through `unsafePerformIO`, so a GHC
+runtime scheduling race is the working hypothesis, not established. No
+reproduction: 0/120 amplified macOS attempts (`+RTS -N16 -C0`, 8 concurrent)
+and 0/563 hosted `ubuntu-24.04` attempts (289 default `-N`, 274 `-N1`; run
+[39754776585](https://github.com/trancee/cairn/actions/runs/39754776585)),
+too few to discriminate at the base rate. Reported upstream as
+[tamarin-prover/tamarin-prover#973](https://github.com/tamarin-prover/tamarin-prover/issues/973).
+No retry, RTS workaround or gate change was added.
+
 ## Sum sort refutation (2026-10-22)
 
 The verified syntactic unifier now refutes natural-sum equations that keep two
