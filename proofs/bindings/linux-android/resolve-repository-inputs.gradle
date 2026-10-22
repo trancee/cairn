@@ -1,0 +1,28 @@
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+
+// Resolves downloaded inputs of the root build without compiling project code.
+gradle.projectsEvaluated {
+    gradle.rootProject.tasks.register("cairnResolveRepositoryInputs") {
+        doLast {
+            def resolvedCount = 0
+            gradle.rootProject.allprojects.each { project ->
+                project.configurations.findAll { it.canBeResolved }.each { configuration ->
+                    def artifacts = configuration.incoming.artifactView {
+                        componentFilter { it instanceof ModuleComponentIdentifier }
+                    }.files.files
+                    resolvedCount += artifacts.size()
+                    println("INPUTS: ${project.path}:${configuration.name} external artifacts ${artifacts.size()}")
+                }
+            }
+            // AGP downloads its resource compiler through a graph that is not a project configuration.
+            def aapt2 = gradle.rootProject.configurations.detachedConfiguration(
+                gradle.rootProject.dependencies.create("com.android.tools.build:aapt2:9.3.1-15703166:linux")
+            )
+            resolvedCount += aapt2.resolve().size()
+            if (resolvedCount == 0) {
+                throw new GradleException("FAIL: no external repository dependency artifacts resolved")
+            }
+            println("PASS: repository external dependency artifacts resolved without project compilation")
+        }
+    }
+}

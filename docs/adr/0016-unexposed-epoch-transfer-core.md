@@ -73,3 +73,11 @@ No published API, wire format, protocol label, runtime dependency or
 constant-time claim changes. Later increments add KEM completion, mixing,
 record encoding and persistence. Exposure through `cairn-ffi` or any profile
 activation requires the model ticket to resolve or a new owner decision.
+
+## Amendments
+
+2026-10-22, from [ADR 0020](0020-root-gradle-wire-ffi.md): by owner decision,
+`cairn-ffi` exposes `IncomingObject`, `ObjectKind`, `ChunkOutcome` and a typed
+`TransferError` for the binding proof only. The SDK, wire use, persistence and
+profile activation still do not use them, and the model-ticket gate on
+ratchet use is unchanged.

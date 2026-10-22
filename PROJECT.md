@@ -1,6 +1,34 @@
 # PROJECT
 
-state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer + host-only ML-KEM-768/X-Wing/AES-256-GCM/X25519/RNG backends; SDK/application=not implemented.
+state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer + host-only ML-KEM-768/X-Wing/AES-256-GCM/X25519/RNG backends + root Gradle build with interim wire FFI (JVM/Android); protocol SDK/application=not implemented.
+
+## Root Gradle build and interim wire FFI (2026-10-22)
+
+[ADR 0020](docs/adr/0020-root-gradle-wire-ffi.md) adds the following:
+- `core/cairn-ffi`: the UniFFI surface. It exports the wire codec, a typed
+  `WireError`, and `IncomingObject` with a typed `TransferError`. It exposes
+  no secrets.
+- The root Gradle build: `:sdk`, `:app` and `:androidApp`.
+- The tuple: Ubique `1.3.2`, Kotlin `2.4.21`, Gradle `9.7.0` wrapper, AGP
+  `9.3.1`, Compose Multiplatform `1.12.2` and Rust `1.99.0`.
+
+iOS targets are deferred to the Apple-lane increment. Android host tests are
+off because of an upstream wiring gap.
+
+KMP target and host proof matrix:
+
+| Module | Target | Host | Task | Proof | Limitations |
+|---|---|---|---|---|---|
+| `:sdk` | JVM | Linux x86_64 guest, offline sandbox | `:sdk:jvmTest` | runtime: 5 binding tests (round trip, typed `WireException`, LEB128, object lifetime, typed `TransferException`) | no Kotlin coverage engine yet |
+| `:sdk` | Android | same | `:androidApp:assembleDebug` (`-PandroidAbis=x86_64,arm64-v8a`) | APK has `libcairn_ffi.so`, `libuniffi_runtime.so` and `libjnidispatch.so` per ABI | debug only; armeabi-v7a not packaged |
+| `:app`, `:androidApp` | Android API 26 x86_64 | fresh emulator, private network | `run-isolated-android.sh … .CoreStatusInstrumentation` | runtime: `coreStatus()` through `:app` → `:sdk` → Rust | Compose UI not driven; no release build or physical device |
+| all | iOS | — | — | none | deferred (ADR 0020) |
+
+Commands and prerequisites are in the
+[Linux/Android README](proofs/bindings/linux-android/README.md#repository-root-build-lane).
+Gradle runs only in that lane; there is no local Gradle gate yet. Strict
+Kotlin CodeQL still covers only the `proofs/bindings` fixture. This does not
+complete S0 or issue 44.
 
 ## Crypto seam completion (2026-10-22)
 

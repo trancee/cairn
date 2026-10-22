@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 0 ]; then
-  echo 'Usage: sudo bash run-isolated-android.sh' >&2
-  exit 2
-fi
+case "$#" in
+  0)
+    apk=/srv/cairn-generator-scratch/android-interop/androidConsumer/build/outputs/apk/debug/androidConsumer-debug.apk
+    package=ch.trancee.cairn.consumer
+    instrumentation=.SmokeInstrumentation
+    expected='PASS: Android value, boundary, typed error and object lifetime'
+    ;;
+  4) apk=$1 package=$2 instrumentation=$3 expected=$4 ;;
+  *)
+    echo 'Usage: sudo bash run-isolated-android.sh [APK PACKAGE INSTRUMENTATION PASS_TEXT]' >&2
+    exit 2
+    ;;
+esac
 seed=/opt/cairn-binding-seeds/fresh-api26-avd
 runtime=/home/builder/cairn-disposable-runtime
 evidence=/opt/cairn-binding-seeds/disposable-runtime-proof
@@ -45,9 +54,7 @@ sed -i "s|^path=.*|path=$runtime/avd/cairn-api26-x86_64.avd|" \
   "$runtime/avd/cairn-api26-x86_64.ini"
 install -d -o builder -g builder -m 0700 "$runtime/artifacts" \
   "$runtime/tmp" "$runtime/var-tmp"
-install -o builder -g builder -m 0600 \
-  /srv/cairn-generator-scratch/android-interop/androidConsumer/build/outputs/apk/debug/androidConsumer-debug.apk \
-  "$runtime/artifacts/androidConsumer-debug.apk"
+install -o builder -g builder -m 0600 "$apk" "$runtime/artifacts/proof-debug.apk"
 
 systemd-run --unit=cairn-isolated-android-proof --wait --pipe --collect \
   -p User=builder -p Group=builder -p SupplementaryGroups=kvm \
@@ -70,6 +77,8 @@ systemd-run --unit=cairn-isolated-android-proof --wait --pipe --collect \
     HOME="$runtime" ANDROID_USER_HOME="$runtime" \
     ANDROID_AVD_HOME="$runtime/avd" \
     ANDROID_HOME=/opt/cairn-toolchains/android-sdk \
+    PROOF_PACKAGE="$package" PROOF_INSTRUMENTATION="$instrumentation" \
+    PROOF_EXPECTED="$expected" \
   /bin/bash -se <<'RUN'
 set -euo pipefail
 sdk="$ANDROID_HOME"
@@ -158,19 +167,19 @@ test "$(timeout 10s "$adb" -s "$serial" shell -T \
 test "$(timeout 10s "$adb" -s "$serial" shell -T \
   getprop ro.product.cpu.abi </dev/null | tr -d '\r')" = x86_64
 packages=$(timeout 10s "$adb" -s "$serial" shell -T \
-  pm list packages --user 0 ch.trancee.cairn.consumer </dev/null)
-if printf '%s\n' "$packages" | grep -Fxq 'package:ch.trancee.cairn.consumer'; then
-  echo 'Smoke package already installed in fresh AVD' >&2
+  pm list packages --user 0 "$PROOF_PACKAGE" </dev/null)
+if printf '%s\n' "$packages" | grep -Fxq "package:$PROOF_PACKAGE"; then
+  echo 'Proof package already installed in fresh AVD' >&2
   exit 1
 fi
 echo 'PROOF: fresh package state verified; installing APK'
 timeout 60s "$adb" -s "$serial" install --user 0 \
-  "$HOME/artifacts/androidConsumer-debug.apk" </dev/null
+  "$HOME/artifacts/proof-debug.apk" </dev/null
 timeout 60s "$adb" -s "$serial" shell -T \
-  am instrument --user 0 -w -r ch.trancee.cairn.consumer/.SmokeInstrumentation \
+  am instrument --user 0 -w -r "$PROOF_PACKAGE/$PROOF_INSTRUMENTATION" \
   </dev/null 2>&1 | tee "$HOME/artifacts/isolated-instrumentation.txt"
 grep -Fx 'INSTRUMENTATION_CODE: -1' "$HOME/artifacts/isolated-instrumentation.txt"
-grep -F 'PASS: Android value, boundary, typed error and object lifetime' \
+grep -F "$PROOF_EXPECTED" \
   "$HOME/artifacts/isolated-instrumentation.txt"
 if grep -Eq 'INSTRUMENTATION_FAILED|INSTRUMENTATION_ABORTED|shortMsg=' \
   "$HOME/artifacts/isolated-instrumentation.txt"; then

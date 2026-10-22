@@ -82,3 +82,26 @@ fn length_prefix_rejects_truncation_capacity_and_length_overflow() {
         Ok((&maximum[2..], 65_537))
     );
 }
+
+#[test]
+fn wire_errors_have_redacted_diagnostics() {
+    let diagnostics = [
+        WireError::Truncated,
+        WireError::NonMinimal,
+        WireError::Overflow,
+        WireError::BufferTooSmall,
+        WireError::LengthOverflow,
+    ]
+    .map(|error| error.to_string());
+
+    assert_eq!(
+        diagnostics,
+        [
+            "wire field truncated",
+            "wire integer not minimal",
+            "wire integer overflow",
+            "wire output buffer too small",
+            "wire field length overflow",
+        ]
+    );
+}

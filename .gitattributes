@@ -3,3 +3,7 @@
 core/fuzz/corpus/** binary
 # CAVS response files keep upstream empty-value assignments ("CT = ")
 core/cairn-crypto/tests/vectors/cavp-gcm256/*.rsp whitespace=-trailing-space
+# Gradle Wrapper: scripts keep their platform line endings; the JAR is checksum-pinned
+gradlew text eol=lf
+*.bat text eol=crlf
+*.jar binary

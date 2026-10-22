@@ -256,3 +256,21 @@ then; no protocol implementation is authorized by this split.
   results matched prior checks, and disposable cleanup passed. This removes
   retained installed-app state from runtime evidence; final VM isolation,
   Compose/release/hardware and Apple gates are unchanged.
+
+- 2026-10-22 ([ADR 0020](../../../docs/adr/0020-root-gradle-wire-ffi.md)):
+  the owner updated the baseline to Ubique plugin/runtime/bindgen `1.3.2`
+  (tag commit `0a901a3`), Kotlin `2.4.21`, AGP `9.3.1`, Gradle `9.7.0`,
+  Compose Multiplatform `1.12.2` and Rust `1.99.0`; UniFFI `0.32.0` and the
+  JDK 25/21 split are unchanged. The repository root build (`:sdk`, `:app`,
+  `:androidApp`) passed the Linux/Android lane from
+  `proofs/bindings/linux-android/{prepare,build}-repository-*.sh`: an offline
+  systemd sandbox build with `PrivateNetwork` and resource limits,
+  `:sdk:jvmTest` 5/5 (generated call, `WireException`/`TransferException`,
+  `IncomingObject` lifetime and post-`close()` rejection), APK native entries
+  for `x86_64` and `arm64-v8a`, and API 26 instrumentation through the
+  `:app` boundary
+  (`stream=PASS: field=cairn rejected=Truncated progress=600 closed=true`).
+  The AGP host-test classpath omits Ubique's host library, so Android host
+  tests are not used. iOS targets are deferred to the Apple-lane increment.
+  Compose UI rendering, release builds, hardware and the Apple lane remain
+  open; this ticket stays open.

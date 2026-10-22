@@ -1,5 +1,5 @@
 [workspace]
-members = ["cairn-wire", "cairn-crypto", "cairn-proto"]
+members = ["cairn-wire", "cairn-crypto", "cairn-proto", "cairn-ffi"]
 resolver = "3"
 
 [workspace.package]

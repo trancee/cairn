@@ -13,6 +13,20 @@ pub enum WireError {
     LengthOverflow,
 }
 
+impl core::fmt::Display for WireError {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter.write_str(match self {
+            Self::Truncated => "wire field truncated",
+            Self::NonMinimal => "wire integer not minimal",
+            Self::Overflow => "wire integer overflow",
+            Self::BufferTooSmall => "wire output buffer too small",
+            Self::LengthOverflow => "wire field length overflow",
+        })
+    }
+}
+
+impl core::error::Error for WireError {}
+
 /// Encode a public u32 as minimal unsigned LEB128 without partial writes.
 pub fn encode_leb128(value: u32, output: &mut [u8]) -> Result<usize, WireError> {
     let length = ((32 - value.leading_zeros()).max(1) as usize).div_ceil(7);

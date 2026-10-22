@@ -1,7 +1,8 @@
 # Rust foundation API
 
-Scope: unreleased `cairn-wire`, `cairn-crypto` and `cairn-proto` at crate
-version `0.1.0`. There is no session, transport or FFI API.
+Scope: unreleased `cairn-wire`, `cairn-crypto`, `cairn-proto` and `cairn-ffi`
+at crate version `0.1.0`. There is no session or transport API; the FFI is an
+interim binding-proof surface.
 
 ## `cairn-wire`
 
@@ -24,6 +25,8 @@ caller must enforce full consumption.
 `NonMinimal` rejects redundant integer bytes. `Overflow` rejects an
 integer exceeding `u32`. `BufferTooSmall` means output capacity is
 insufficient. `LengthOverflow` means the field length does not fit `u16`.
+`WireError` implements `Display` and `core::error::Error` with fixed,
+input-free messages, for example `wire field truncated`.
 
 For a runnable example, use the
 [wire roundtrip tutorial](../tutorials/first-wire-roundtrip.md).
@@ -71,7 +74,7 @@ This dependency-free `no_std` + `alloc` crate implements the epoch identifiers
 and durable KEM object transfer of
 [spec §9](../spec/cairn-r1.md#9-post-quantum-ratchet). It moves public
 ML-KEM-768 objects only: it performs no KEM operation, record encoding or
-persistence, and nothing calls it yet
+persistence. Only the binding proof in `cairn-ffi` calls it
 ([ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md)).
 
 | Type or operation | Contract | Errors |
@@ -104,3 +107,23 @@ Callers must persist appended bytes and their progress before sending
 KEM_PROGRESS, and persist an outgoing object before its first chunk.
 The duplicate check uses ordinary equality because KEM objects are public.
 The crate-level documentation contains an executable transfer example.
+
+## `cairn-ffi`
+
+This crate is the UniFFI `0.32.0` surface for the Kotlin `:sdk` module. The
+generated package is `ch.trancee.cairn.ffi`. It is an interim surface that
+`CairnCore` will replace ([ADR 0020](../adr/0020-root-gradle-wire-ffi.md)),
+and it carries public bytes only.
+
+| Export | Contract | Errors (Kotlin) |
+|---|---|---|
+| `encode_leb128(value: u32) -> Vec<u8>` | Minimal unsigned LEB128 | None |
+| `decode_leb128(input: Vec<u8>) -> DecodedLeb128 { value, consumed }` | As `cairn_wire::decode_leb128` | `WireException.Truncated`, `.NonMinimal`, `.Overflow` |
+| `encode_length_prefixed(value: Vec<u8>) -> Vec<u8>` | `u16` big-endian length, then the value | `WireException.LengthOverflow` |
+| `decode_length_prefixed(input: Vec<u8>) -> DecodedField { value, consumed }` | Copies one field | `WireException.Truncated` |
+| `IncomingObject(epoch: u32, kind: ObjectKind)` | A Rust-owned receiver. Methods: `epoch`, `kind`, `next_offset`, `accept_chunk(epoch, kind, offset, chunk) -> ChunkOutcome` and `completed() -> Vec<u8>?` | `TransferException.Invalid` (`pq_transfer_invalid`); the object is unchanged |
+
+`ObjectKind` (`ENCAPSULATION_KEY`, `CIPHERTEXT`) and `ChunkOutcome`
+(`APPENDED`, `DUPLICATE`) mirror `cairn-proto`. Kotlin must `close()` an
+`IncomingObject`; calls after `close()` throw `IllegalStateException`. A
+poisoned lock is recovered, because a rejected chunk never mutates state.
