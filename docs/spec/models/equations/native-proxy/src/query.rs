@@ -63,6 +63,7 @@ pub fn validate(command: &str) -> Result<Query> {
     let mut sides = Vec::new();
     if matches!(kind, Kind::Reduce | Kind::Variants) {
         terms.push(term(body, true)?);
+        sides.push(body.to_owned());
     } else {
         let equations: Vec<_> = if kind == Kind::Unify {
             body.split("/\\").collect()

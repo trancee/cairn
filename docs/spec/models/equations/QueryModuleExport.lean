@@ -4,6 +4,7 @@ import QueryPrincipalSort
 import QueryKind
 import QueryACCanonical
 import QuerySyntacticUnification
+import QueryNormalization
 
 namespace Cairn.Equations
 
@@ -274,6 +275,53 @@ def nativeSyntacticLines : List String :=
   nativeMatchProblems.map fun pairs => resultLine "MATCH" (problemText "<=?" pairs)
     (nativeSyntacticMatch nativeSyntacticFuel pairs [])
 
+-- Root redex shapes over proper and improper arguments, AC-equal and distinct keys, nesting
+-- and near-miss shapes, so every guard of every rule both fires and blocks.
+private def nativeReduceArguments : List NativeQueryTerm := [
+  message 0, .atom .publicAtom 1, fresh 2, .naturalAdd (natural 0) .naturalOne,
+  .roleA, .nodeAtom 0, .nil, .naturalAdd (fresh 0) .naturalOne ]
+
+private def nativeReduceKeys : List NativeQueryTerm := [
+  message 1, .atom .freshAtom 1, .naturalAdd (.naturalAtom 0) .naturalOne,
+  .naturalAdd .naturalOne (.naturalAtom 0), .nodeAtom 1 ]
+
+private def nativeReduceFlips : List NativeQueryTerm :=
+  (nativeReduceArguments ++ [NativeQueryTerm.roleB, .unary .flip .roleA]).map (.unary .flip ·)
+
+private def nativeReduceProjections : List NativeQueryTerm :=
+  nativeReduceArguments.flatMap fun left => nativeReduceArguments.flatMap fun right =>
+    [UnarySymbol.fst, .snd].map fun symbol => .unary symbol (.binary .pair left right)
+
+private def nativeReduceDecryptions : List NativeQueryTerm :=
+  nativeReduceArguments.flatMap fun payload => nativeReduceKeys.flatMap fun first =>
+    nativeReduceKeys.flatMap fun second => [
+      .binary .sdec (.binary .senc payload first) second,
+      .binary .kdec (.binary .kem payload (.unary .pk first)) second ]
+
+private def nativeReduceNested : List NativeQueryTerm := [
+  .unary .hash (.unary .fst (.binary .pair (.unary .flip .roleB) (.unary .snd (message 0)))),
+  .unary .fst (.binary .pair (.unary .fst (.binary .pair (message 0) (message 1))) (message 2)),
+  .binary .sdec (.binary .senc (.unary .snd (.binary .pair (message 0) (message 1))) (message 2))
+    (.unary .fst (.binary .pair (message 2) .roleA)),
+  .binary .kdec (.binary .kem (message 0) (.unary .pk (.unary .flip .roleA))) .roleB,
+  .list (.cons (.unary .flip .roleA) (.cons (.nodeAtom 0) .nil)),
+  .kdf (.unary .flip .roleB) (.naturalAdd (natural 0) .naturalOne)
+    (.unary .fst (.binary .pair .roleA .roleB)),
+  .unary .fst (.binary .pair (.list .nil) (message 0)),
+  .unary .flip (.unary .hash .roleA),
+  .unary .fst (.binary .senc (message 0) (message 1)),
+  .binary .sdec (.binary .kem (message 0) (message 1)) (message 1),
+  .binary .kdec (.binary .kem (message 0) (message 1)) (message 1),
+  .binary .kdec (.binary .kem (message 0) (.unary .hash (message 1))) (message 1),
+  .binary .pair (message 0) (.binary .pair (.unary .hash (message 1)) (.unary .hash (message 2))) ]
+
+def nativeReduceLines : List String :=
+  (nativeReduceFlips ++ nativeReduceProjections ++ nativeReduceDecryptions ++ nativeReduceNested).map
+    fun term => s!"REDUCE\t{nativeMaudeTerm term}\t{nativeMaudeTerm (nativeSortedNormalize term)}"
+
+private def nativeReduceChanges (term : NativeQueryTerm) : Bool :=
+  nativeMaudeTerm (nativeSortedNormalize term) != nativeMaudeTerm term
+
 def nativeSyntaxLines : List String :=
   let accepted := (nativeSyntaxCorpus ++ nativeKindCorpus).filterMap fun term =>
     (nativeExpectedKind term).map fun sort =>
@@ -294,7 +342,7 @@ def nativeSyntaxLines : List String :=
       let text := String.ofList characters
       if (nativeMaudeParse text).isNone then some s!"REJECT\t{text}" else none
   accepted.eraseDups ++ flat ++ illSorted ++ rejected.eraseDups ++ nativeACPairLines ++
-    nativeSyntacticLines
+    nativeSyntacticLines ++ nativeReduceLines
 
 #guard nativeSyntaxCorpus.all fun term => (nativeExpectedSort term).isSome
 #guard nativeKindCorpus.all fun term =>
@@ -326,6 +374,15 @@ def nativeSyntaxLines : List String :=
   match nativeSyntacticUnify nativeSyntacticFuel system with
   | .unsupported => false
   | _ => true).length ≥ 300
+
+#guard [nativeReduceFlips, nativeReduceProjections, nativeReduceDecryptions, nativeReduceNested].all
+  fun terms => terms.any nativeReduceChanges && terms.any (!nativeReduceChanges ·)
+#guard [true, false].all fun changes => nativeReduceDecryptions.any fun term => match term with
+  | .binary .sdec _ (.naturalAdd _ _) => nativeReduceChanges term == changes
+  | _ => false
+#guard [true, false].all fun changes => nativeReduceDecryptions.any fun term => match term with
+  | .binary .kdec _ (.naturalAdd _ _) => nativeReduceChanges term == changes
+  | _ => false
 
 #eval do
   IO.print nativeMaudeModule

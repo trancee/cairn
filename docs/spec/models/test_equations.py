@@ -448,6 +448,7 @@ class EquationCommandTests(unittest.TestCase):
             ("module-correspondence", "native_maude_parse_render"),
             ("ac-canonical", "native_ac_canonical_iff"),
             ("syntactic-unification", "native_syntactic_unify_spec"),
+            ("reduce-certificate", "native_sorted_reduce_certificate"),
         ):
             with self.subTest(group=group):
                 result = self.run_with_axiom_reports(*(item for item in REPORT_GROUPS if item != group))

@@ -179,6 +179,54 @@ class CompiledValidationTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertIn(reply, result.stdout)
 
+    def test_reductions_other_than_the_normal_form_reject_the_reply(self):
+        cases = (
+            ("reduce tamXCroleA .", "result Msg: tamXCroleB\n"),
+            ("reduce tamXCflip(tamXCroleA) .", "result Msg: tamXCroleA\n"),
+            ("reduce tamXCflip(tamXCroleA) .", "result Msg: tamXCflip(tamXCroleA)\n"),
+            ("reduce tamXCfst(tamXCpair(p(0),p(1))) .", "result Pub: p(1)\n"),
+            ("reduce tamXCsdec(tamXCsenc(p(0),tamtplus(t(0),tamXCtone)),tamtplus(tamXCtone,t(0))) .",
+             "result Msg: tamXCsdec(tamXCsenc(p(0), tamtplus(tamXCtone, t(0))), tamtplus(tamXCtone, t(0)))\n"),
+            ("reduce tamXCsdec(tamXCsenc(p(0),p(1)),p(2)) .", "result Pub: p(0)\n"),
+            ("reduce tamXCkdec(tamXCkem(x0:Msg,tamXCpk(x1:Fresh)),x1:Fresh) .",
+             "result Msg: tamXCkdec(tamXCkem(x0:Msg, tamXCpk(x1:Fresh)), x1:Fresh)\n"),
+            ("reduce tamXCh(tamXCfst(tamXCpair(tamXCflip(tamXCroleB),tamXCsnd(x0:Msg)))) .",
+             "result Msg: tamXCh(tamXCflip(tamXCroleB))\n"),
+            ("reduce tamtplus(t(1),tamXCtone,t(0)) .", "result TamNat: tamtplus(tamXCtone, t(0))\n"),
+        )
+        for command, reply in cases:
+            with self.subTest(command=command, reply=reply):
+                result = native_stream(NATIVE_MODULE + command + "\n", reply + "Maude> ", proxy=self.proxy)
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertNotIn(reply, result.stdout)
+                self.assertIn("result is not the normal form", result.stderr)
+
+    def test_real_normal_form_reductions_are_forwarded(self):
+        cases = (
+            ("reduce tamXCflip(tamXCroleA) .", "result Msg: tamXCroleB\n"),
+            ("reduce tamXCfst(tamXCpair(p(0),p(1))) .", "result Pub: p(0)\n"),
+            ("reduce tamXCsnd(tamXCpair(p(0),tamXCh(f(1)))) .", "result Msg: tamXCh(f(1))\n"),
+            ("reduce tamXCsdec(tamXCsenc(p(0),tamtplus(t(0),tamXCtone)),tamtplus(tamXCtone,t(0))) .",
+             "result Pub: p(0)\n"),
+            ("reduce tamXCsdec(tamXCsenc(p(0),p(1)),p(2)) .",
+             "result Msg: tamXCsdec(tamXCsenc(p(0), p(1)), p(2))\n"),
+            ("reduce tamXCkdec(tamXCkem(x0:Msg,tamXCpk(x1:Fresh)),x1:Fresh) .", "result Msg: x0:Msg\n"),
+            ("reduce tamXCkdec(x0:Msg,x1:Fresh) .", "result Msg: tamXCkdec(x0:Msg, x1:Fresh)\n"),
+            ("reduce tamXCflip(x0:Msg) .", "result Msg: tamXCflip(x0:Msg)\n"),
+            ("reduce tamtplus(t(1),tamXCtone,t(0)) .", "result TamNat: tamtplus(tamXCtone, t(0), t(1))\n"),
+            ("reduce tamXCh(tamXCfst(tamXCpair(tamXCflip(tamXCroleB),tamXCsnd(x0:Msg)))) .",
+             "result Msg: tamXCh(tamXCroleA)\n"),
+            ("reduce tamXCpair(x0:Msg,tamXCpair(tamXCh(x1:Msg),tamXCh(x2:Msg))) .",
+             "result Msg: tamXCpair(x0:Msg, tamXCpair(tamXCh(x1:Msg), tamXCh(x2:Msg)))\n"),
+        )
+        for command, reply in cases:
+            with self.subTest(command=command):
+                result = native_stream(NATIVE_MODULE + command + "\n", reply + "Maude> ", proxy=self.proxy)
+
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn(reply, result.stdout)
+
     def test_repeated_query_revalidates_the_complete_changed_reply(self):
         valid = "result Msg: tamXCroleA\n"
         changed = (
@@ -269,7 +317,7 @@ class CompiledValidationTests(unittest.TestCase):
         command = "reduce tamXCroleA ."
         cases = [
             (f"reduce {term} .\n", f"result Msg: {term}\n"),
-            (command + "\n", f"result Msg: {term}\n"),
+            (f"reduce tamXCfst(tamXCpair({term},tamXCroleA)) .\n", f"result Msg: {term}\n"),
             *(
                 ("reduce " + " " * (size - len(command)) + "tamXCroleA .\n",
                  "result Msg: tamXCroleA\n")

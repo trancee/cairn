@@ -5,6 +5,7 @@ mod input;
 mod native;
 mod profile;
 mod query;
+mod reduction;
 mod reply;
 mod syntax;
 mod unifier;

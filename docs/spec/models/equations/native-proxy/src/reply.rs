@@ -4,6 +4,7 @@ use crate::{
     certificate,
     error::{Error::Rejected, Result},
     query::{Kind, Query},
+    reduction,
     syntax::{Sort, lines, term},
     unifier,
 };
@@ -63,6 +64,20 @@ fn rewrites(line: &str) -> bool {
         .is_some_and(|count| !count.is_empty() && count.bytes().all(|byte| byte.is_ascii_digit()))
 }
 
+// `native_sorted_reduce_certificate`: a message query's reduction must be AC-equal to the verified
+// normal form; queries beyond `SIZE_LIMIT` or outside messages make no claim.
+fn reduced(query: &Query, text: &str) -> Result<()> {
+    let Some(term) = query.sides.first().and_then(|side| unifier::parse(side)) else {
+        return Ok(());
+    };
+    if !unifier::message(&term)
+        || certificate::equivalent(&unifier::render(&reduction::normalize(&term)?), text)?
+    {
+        return Ok(());
+    }
+    Err(Rejected("native reply: result is not the normal form"))
+}
+
 pub fn validate(query: &Query, reply: &str) -> Result<()> {
     if !reply.is_ascii() {
         return Err(Rejected("native reply: non-ASCII syntax"));
@@ -82,7 +97,8 @@ pub fn validate(query: &Query, reply: &str) -> Result<()> {
         if lines.len() != 1 {
             return Err(Rejected("native reply: malformed reduction result"));
         }
-        return value(query, text, sort, Some(upper), false, &mut BTreeMap::new());
+        value(query, text, sort, Some(upper), false, &mut BTreeMap::new())?;
+        return reduced(query, text);
     }
     let principal = unifier::principal(query)?;
     if query.kind == Kind::Unify && lines == ["No unifier."]
