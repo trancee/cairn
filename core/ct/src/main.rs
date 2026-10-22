@@ -1,6 +1,6 @@
 use cairn_crypto::{
-    AwsLc, CryptoBackend, MLKEM768_CIPHERTEXT_LEN, MLKEM768_DECAPSULATION_KEY_LEN,
-    MlKem768DecapsulationKey, Reference,
+    AES256GCM_KEY_LEN, AES256GCM_NONCE_LEN, AwsLc, CryptoBackend, MLKEM768_CIPHERTEXT_LEN,
+    MLKEM768_DECAPSULATION_KEY_LEN, MlKem768DecapsulationKey, Reference,
 };
 use crabgrind::memcheck::{MemState, mark_memory, vbits};
 
@@ -48,6 +48,28 @@ fn check<B: CryptoBackend>() {
                 }
             }
         }
+    }
+}
+
+/// AES-256-GCM sealing under a secret key and plaintext.
+///
+/// Opening is not checked: both providers branch on the constant-time tag comparison
+/// verdict, a public-by-design result that Memcheck cannot declassify inside the library.
+fn check_aead<B: CryptoBackend>() {
+    for length in [0, 1, 15, 16, 17, 64, 255] {
+        let key = [0x11; AES256GCM_KEY_LEN];
+        let plaintext = vec![0x22; length];
+        mark(&key, MemState::Undefined);
+        mark(&plaintext, MemState::Undefined);
+        let sealed = B::aes256gcm_seal(
+            std::hint::black_box(&key),
+            &[0x33; AES256GCM_NONCE_LEN],
+            b"cairn-ct aad",
+            std::hint::black_box(&plaintext),
+        )
+        .expect("AES-GCM sealing failed");
+        std::hint::black_box(&sealed);
+        require_taint(&sealed);
     }
 }
 
@@ -141,10 +163,12 @@ fn main() {
         Some("aws-lc") => {
             check::<AwsLc>();
             check_kem::<AwsLc>();
+            check_aead::<AwsLc>();
         }
         Some("reference") => {
             check::<Reference>();
             check_kem::<Reference>();
+            check_aead::<Reference>();
             check_reference_encapsulation();
         }
         _ => panic!("expected aws-lc, reference, negative-control or negative-index"),

@@ -1,3 +1,5 @@
 # Tamarin proof output carries trailing spaces
 *.inc whitespace=-trailing-space
 core/fuzz/corpus/** binary
+# CAVS response files keep upstream empty-value assignments ("CT = ")
+core/cairn-crypto/tests/vectors/cavp-gcm256/*.rsp whitespace=-trailing-space

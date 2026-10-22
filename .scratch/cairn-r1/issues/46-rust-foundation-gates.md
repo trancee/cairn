@@ -226,3 +226,46 @@ Not done in this increment:
 - mobile constant-time and device proof.
 
 This ticket stays open.
+
+2026-10-22 (seam completion, [ADR 0019](../../../docs/adr/0019-crypto-seam-completion.md)):
+
+The user approved option A: AES-256-GCM seal/open, standalone X25519 and
+`fill_random` on both adapters.
+
+Tests:
+
+- `core/cairn-crypto/tests/primitives.rs` was red first, failing to compile
+  on the missing API.
+- The first green run exposed two test-harness errors, both now fixed:
+  blank lines left over from block splitting broke the CAVS parser, and the
+  expected X25519 counts were wrong (actual: 487 agreement, 31 all-zero).
+- All 17 primitive tests pass, plus a new `aes-gcm` error-conversion test.
+
+The ACVP AES-GCM gap is closed with NIST CAVP GCMVS static vectors (375
+encryption and 375 decryption cases), together with Wycheproof AES-GCM
+(66 applicable cases) and X25519 (518 cases).
+
+All of the following pass on macOS ARM64:
+
+- `bash scripts/check-rust.sh` (deny on the main, `fuzz` and `ct`
+  workspaces);
+- the no-default, aws-lc-only and reference-only feature tests;
+- `cargo +nightly-2026-10-08 llvm-cov --branch`: lines 705/705, branches
+  52/52, regions 673/709, with every missed region a `?`;
+- `cargo +nightly-2026-10-08 careful test -p cairn-crypto --all-features`;
+- release builds for iOS device and simulator;
+- the `cargo ndk` release build for arm64-v8a/armeabi-v7a/x86_64 at API 26.
+
+`bash scripts/check-ct.sh` reports 0 Memcheck errors on both adapters in a
+`rust:1.99.0-slim-bookworm` ARM64 container, with AES-GCM sealing tainted.
+A trial run with a tainted opening key was flagged at both providers'
+tag-verdict branch, so opening is documented as not marked.
+
+Still not done:
+
+- AWS-LC key generation and encapsulation KATs;
+- taint tracking for key generation, X25519 scalars and AES-GCM opening;
+- a randomness KAT and the seeded test generator (protocol layer);
+- mobile constant-time and device proof.
+
+This ticket stays open.

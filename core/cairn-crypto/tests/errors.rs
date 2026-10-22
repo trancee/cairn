@@ -55,3 +55,14 @@ fn aws_lc_key_rejection_translates_to_secret_free_backend_failure() {
     };
     assert_eq!(CryptoError::from(error), CryptoError::BackendFailure);
 }
+
+#[cfg(feature = "reference")]
+#[test]
+fn rustcrypto_aead_error_translates_to_secret_free_backend_failure() {
+    use aes_gcm::{AeadInOut, KeyInit};
+    let cipher = aes_gcm::Aes256Gcm::new(&[0; 32].into());
+    let error = cipher
+        .decrypt_in_place(&[0; 12].into(), b"", &mut Vec::new())
+        .unwrap_err();
+    assert_eq!(CryptoError::from(error), CryptoError::BackendFailure);
+}

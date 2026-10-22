@@ -1,0 +1,19 @@
+Source: National Institute of Standards and Technology (NIST), Cryptographic
+Algorithm Validation Program, GCM Validation System (CAVS 14.0).
+Landing page: https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/cavp-testing-block-cipher-modes
+Archive: https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/mac/gcmtestvectors.zip
+Retrieved 2026-10-22T13:14:55Z; SHA-256
+f9fc479e134cde2980b3bb7cddbcb567b2cd96fd753835243ed067699f26a023.
+Members: gcmEncryptExtIV256.rsp (SHA-256
+4448b4998c3f58cd9f5542ddf7c573189a721ff3d3ac24cd5177bb4910a787f8) and
+gcmDecrypt256.rsp (SHA-256
+ed318735a517d5a85c82d2846c23dcf56e57a352fb0f0a163d9e7617a7bd12ad).
+Governing document: gcmvs.pdf on the same page.
+Modified 2026-10-22: extract_gcm.py keeps only groups with Keylen = 256,
+IVlen = 96 and Taglen = 128 (375 encrypt and 375 decrypt cases, 191 of them
+FAIL), converts CRLF to LF and drops the blank lines that separated the
+original preamble. Group headers and case lines are otherwise unchanged.
+Other key, IV and tag sizes are excluded because the Cairn API does not
+accept them. These are static regression vectors, not a CAVP or CMVP
+validation. Works of the U.S. Government are not subject to copyright
+protection within the United States.
