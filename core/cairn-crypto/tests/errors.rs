@@ -22,6 +22,10 @@ fn rustcrypto_length_errors_translate_to_secret_free_backend_failure() {
         CryptoError::from(hmac::digest::InvalidLength),
         CryptoError::BackendFailure
     );
+    assert_eq!(
+        CryptoError::from(getrandom::Error::UNEXPECTED),
+        CryptoError::BackendFailure
+    );
 }
 
 #[cfg(feature = "aws-lc")]
@@ -37,6 +41,16 @@ fn aws_lc_expansion_error_translates_to_secret_free_backend_failure() {
     let key = salt.extract(b"input");
     let error = match key.expand(&[b"info"], ExcessiveLength) {
         Ok(_) => panic!("provider accepted excessive HKDF output length"),
+        Err(error) => error,
+    };
+    assert_eq!(CryptoError::from(error), CryptoError::BackendFailure);
+}
+
+#[cfg(feature = "aws-lc")]
+#[test]
+fn aws_lc_key_rejection_translates_to_secret_free_backend_failure() {
+    let error = match aws_lc_rs::kem::DecapsulationKey::new(&aws_lc_rs::kem::ML_KEM_768, &[0; 1]) {
+        Ok(_) => panic!("provider accepted a one-byte ML-KEM decapsulation key"),
         Err(error) => error,
     };
     assert_eq!(CryptoError::from(error), CryptoError::BackendFailure);

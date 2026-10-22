@@ -183,3 +183,46 @@ Post-merge at `65fc089`: Rust run 37973820517 passed. Lifecycle run
 `Recv failure: Connection reset by peer`. The proof step was not reached.
 This does not reproduce the earlier Tamarin runtime crash; no post-merge
 formal success or counterexample is established by that job.
+
+2026-10-22 (KEM increment, [ADR 0018](../../../docs/adr/0018-kem-backend-increment.md)):
+
+The user approved track C option A: host-only ML-KEM-768 and X-Wing
+draft-11 in `CryptoBackend`, with a RustCrypto reference adapter and the
+`aws-lc-rs` safe API.
+
+Tests:
+
+- `core/cairn-crypto/tests/kem.rs` was red first, failing to compile on the
+  missing API.
+- All 25 KEM tests then pass.
+
+Two AWS-LC gaps were exposed and closed with explicit checks on public data:
+
+- opaque failures for keys that fail the FIPS 203 §7.3 hash check;
+- acceptance of unreduced encapsulation keys (§7.2 modulus check).
+
+All of the following pass on macOS ARM64:
+
+- `cargo fmt --check`;
+- workspace clippy with `--all-features -D warnings`;
+- the no-default, aws-lc-only and reference-only feature builds;
+- `cargo deny check`;
+- `cargo +nightly-2026-10-08 llvm-cov --branch`: lines 614/614, branches
+  52/52, regions 599/626, with every missed region a `?`;
+- `cargo +nightly-2026-10-08 careful test -p cairn-crypto --all-features`;
+- release builds for iOS device and simulator;
+- the `cargo ndk` release build for arm64-v8a/armeabi-v7a/x86_64 at API 26.
+
+`bash scripts/check-ct.sh` reports 0 Memcheck errors on both adapters in a
+`rust:1.99.0-slim-bookworm` ARM64 container. A mutation that also marked the
+public `H(ek)` was flagged at the AWS-LC hash check.
+
+Not done in this increment:
+
+- AWS-LC key generation and encapsulation KATs (blocked by the safe API);
+- taint tracking for key generation and X25519 scalars;
+- a standalone X25519 operation and its Wycheproof vectors;
+- AES-GCM and RNG trait operations;
+- mobile constant-time and device proof.
+
+This ticket stays open.

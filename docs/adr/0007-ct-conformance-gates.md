@@ -8,7 +8,7 @@ version: cairn-r1
 
 ## Context
 
-The [threat model](../spec/threat-model.md) requires the implementation to be constant-time with respect to secrets against software timing observation. [ADR 0004](0004-core-architecture.md) has two `CryptoBackend` adapters: `aws-lc-rs`, and a reference adapter (`mlkem-native` + RustCrypto).
+The [threat model](../spec/threat-model.md) requires the implementation to be constant-time with respect to secrets against software timing observation. [ADR 0004](0004-core-architecture.md) has two `CryptoBackend` adapters: `aws-lc-rs`, and a reference adapter (RustCrypto since [ADR 0018](0018-kem-backend-increment.md)).
 
 The [tooling research](../research/2026-10-05-ct-conformance-tooling.md) found:
 - No available tool verifies constant-time behaviour of the actual Android-NDK or iOS binaries; Valgrind, dudect and Microwalk run on Linux hosts.
@@ -75,3 +75,16 @@ The inventory of vector sources and pinned versions lives with the test harness 
 ## Migration
 
 This is the first version. Adding gates is non-breaking. Removing or downgrading a blocking gate requires amending this ADR.
+
+## Amendments
+
+2026-10-22, from [ADR 0018](0018-kem-backend-increment.md) (no gate removed):
+- The `aws-lc-rs` safe API has no seeded key generation or derandomized
+  encapsulation. ACVP keyGen/encapsulation, Wycheproof seed/encapsulation
+  outputs and X-Wing key generation/encapsulation vectors therefore run on the
+  reference adapter only. AWS-LC runs ACVP decapsulation and key checks,
+  Wycheproof decapsulation and encapsulation-key accept/reject decisions,
+  X-Wing decapsulation, and cross-adapter interoperability.
+- The X-Wing combiner taint check marks ML-KEM secrets, not the X25519
+  scalars. The mandated all-zero X25519 abort is a public-by-design branch
+  that Memcheck cannot declassify without instrumenting the library.

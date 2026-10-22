@@ -1,6 +1,31 @@
 # PROJECT
 
-state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer; SDK/application=not implemented.
+state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer + host-only ML-KEM-768/X-Wing backends; SDK/application=not implemented.
+
+## ML-KEM-768 and X-Wing backend increment (2026-10-22)
+
+[ADR 0018](docs/adr/0018-kem-backend-increment.md) adds host-only ML-KEM-768
+and X-Wing draft-11 key generation, encapsulation and decapsulation to
+`cairn-crypto`. The reference adapter is now RustCrypto (`ml-kem` 0.3.3,
+`x25519-dalek` 3.0.0); ADR 0004/0007 are amended. Both adapters use expanded
+decapsulation keys. Both enforce the FIPS 203 §7.2/§7.3 key checks, and both
+reject an all-zero X25519 output with `ZeroSharedSecret`.
+
+Vectors are pinned in [`core/README.md`](core/README.md#ml-kem-768-and-x-wing-vectors):
+the ACVP ML-KEM-768 subset, four Wycheproof ML-KEM-768 files, and 32 X-Wing
+cases on which BoringSSL and CIRCL agree. The `aws-lc-rs` safe API runs only
+the decapsulation, key-check and interoperability subset.
+
+Local evidence:
+
+- fmt, clippy (`-D warnings`), the feature matrix and cargo-deny pass;
+- 100% line/branch coverage;
+- `cargo careful` passes;
+- iOS and Android release cross-builds pass;
+- `core/ct` Memcheck passes on Linux ARM64.
+
+None of this is mobile constant-time evidence, and it does not complete S0
+or authorize S1.
 
 ## Tamarin `<<loop>>` diagnosis (2026-10-22)
 
@@ -1009,7 +1034,8 @@ acceptance is implied.
 - **Languages/toolchains:** Markdown specification and Tamarin `.spthy` models;
   model commands use Tamarin 1.12.0 and Maude 3.5.1.
   The `core/` Cargo workspace pins Rust 1.99.0 for the public wire codecs and
-  partial SHA-384/HMAC/HKDF backend seam (AWS-LC and RustCrypto).
+  partial SHA-384/HMAC/HKDF/ML-KEM-768/X-Wing backend seam (AWS-LC and RustCrypto;
+  [ADR 0018](docs/adr/0018-kem-backend-increment.md) adds the KEMs).
   [Core documentation](core/README.md) lists the feature selection, vectors,
   dependencies, commands and remaining gates; [ADR 0012](docs/adr/0012-rust-foundation-increment.md)
   bounds this increment. No protocol state machines or FFI exist yet.
@@ -1038,7 +1064,7 @@ acceptance is implied.
   gates remain incomplete ([issue 46](.scratch/cairn-r1/issues/46-rust-foundation-gates.md)).
   The standalone `core/ct` Memcheck driver (`bash scripts/check-ct.sh`)
   passes both primitive adapters in Linux x86-64/Rosetta and native ARM64
-  containers, with required branch/address controls and output-taint checks.
+  containers (KEM decapsulation: native ARM64 locally, x86-64 in CI), with required branch/address controls and output-taint checks.
   Hosted native taint jobs also pass with Valgrind 3.22.0.
   Mobile constant-time behavior and unimplemented protocol glue remain
   outside that result.

@@ -71,8 +71,10 @@ The internal harness uses `libfuzzer-sys` (MIT/Apache-2.0 and NCSA) and its
 ## Dependencies and vectors
 
 `aws-lc-rs` provides the ADR-selected non-FIPS adapter with maintained native
-cryptographic primitives; `sha2`, `hmac` and `hkdf` provide the independent
-RustCrypto reference adapter. They are permissively licensed and lock their
+cryptographic primitives; `sha2`, `hmac`, `hkdf`, `ml-kem`, `x25519-dalek`,
+`sha3` and `shake` provide the independent RustCrypto reference adapter
+([ADR 0018](../docs/adr/0018-kem-backend-increment.md)), and `getrandom`
+supplies its OS randomness. They are permissively licensed and lock their
 native/transitive dependencies in `Cargo.lock`. `zeroize` wipes returned
 HMAC/HKDF buffers on drop and enables supported RustCrypto state wiping.
 The standard library has no cryptographic primitives or guaranteed wiping
@@ -141,6 +143,53 @@ algorithms or ACVP certification.
 | `prompt.json` | `cb6f72df9664c24679be8a6d409dc42bc0e4b1cd15d31ff0d509f46c4135cc74` |
 | `expectedResults.json` | `cbb0b99eb6601f8f7f5214a512c66f0e9ca0ed41ce3c01b0fc53e977ea879b02` |
 
+### ML-KEM-768 and X-Wing vectors
+
+The ML-KEM-768 ACVP subset comes from the same ACVP-Server commit
+(`ML-KEM-keyGen-FIPS203`, `ML-KEM-encapDecap-FIPS203`). It keeps 25 keyGen
+cases, plus 25 encapsulation, 10 decapsulation, 10 decapsulation-key-check
+and 10 encapsulation-key-check cases. Regenerate it with
+`python3 core/cairn-crypto/tests/vectors/extract_mlkem.py UPSTREAM_DIRECTORY OUTPUT_DIRECTORY`.
+The `NOTICE` file records the selection.
+
+| ACVP ML-KEM-768 file | SHA-256 |
+|---|---|
+| `keyGen/prompt.json` | `edf1190a26d4f9e43a3beab38033fe0c7e6f15d6f81440ce8ffd82e5ccbd844a` |
+| `keyGen/expectedResults.json` | `91f8b2b4cb63e7cb6c5fe68d3889604a2058c8f69084e6361b74654a2ebd768e` |
+| `encapDecap/prompt.json` | `9953cd1df05e5103523dd33427c39cc5e8edfc33b86dc1ec0c2fef445c99587f` |
+| `encapDecap/expectedResults.json` | `c214269deaab1258475caa552bc209abea8c21b4c448bf7052ca29849229b360` |
+
+The Wycheproof ML-KEM-768 files are copied unchanged from the commit above.
+
+| File | SHA-256 | Cases |
+|---|---|---:|
+| `mlkem_768_test.json` | `c59c067ae794c343df575dd90f6f7458f51881b11a22d6e9d8677c8d9ee21e90` | 201 |
+| `mlkem_768_encaps_test.json` | `9d4381f94c40853bba430245b94968b7390d9175aacd9f1ae4e250a71c78b713` | 265 |
+| `mlkem_768_keygen_seed_test.json` | `fde5abe284396f4cb3c4610b90d680f0b57782e94c3365c97aee59e24881ebe4` | 100 |
+| `mlkem_768_semi_expanded_decaps_test.json` | `e4438ab7d4dd7b6ace7165e45aeed4403082f981f86300c8369f69d3d071060a` | 9 |
+
+`xwing_draft11.json` (SHA-256
+`988904a5a7cc28c3bd138ac7b08c10cf366b01307cd6059901f841d81eb6794a`) has 32
+cases: the three draft-11 Appendix C cases and 29 SHAKE256-derived inputs.
+`xwing/generate.py` checks the draft text's SHA-256
+(`1353f61f0d706199d86b6802eab83cabbb5195b2d99fb35bca20f5e4f83db786`), then
+runs BoringSSL `4f3b183c5d4a8f8fcaba4c0ab4435df181df6978` and CIRCL `v1.6.5`
+in a digest-pinned `golang:1.25-bookworm` image. It writes the file only if
+the two outputs are byte-identical and the Appendix C cases match the draft.
+With Docker available, regenerate it with
+`python3 core/cairn-crypto/tests/vectors/xwing/generate.py DRAFT_11_TXT core/cairn-crypto/tests/vectors/xwing_draft11.json`.
+Low-order X25519 points are excluded because the two oracles disagree on
+them. Seven low-order u-coordinates are tested separately and must return
+`ZeroSharedSecret` on both adapters.
+
+The reference adapter runs every case above. `aws-lc-rs` cannot seed key
+generation or derandomize encapsulation through its safe API. It therefore
+runs ACVP decapsulation and key checks, Wycheproof semi-expanded
+decapsulation and encapsulation-key decisions, Wycheproof decapsulation using
+the reference adapter's expanded keys, and X-Wing decapsulation. Both adapters
+are tested in all six cross-adapter generate/encapsulate/decapsulate role
+assignments. These vectors do not confer ACVP certification.
+
 ## Foundation secret-taint harness
 
 `ct/` is a separate, internal workspace, excluded from maintained-library
@@ -175,8 +224,18 @@ post-taint memory reads and output shadow-bit checks confirm propagation.
 The workflow runs the same driver on native Linux x86-64/ARM64 runners;
 both hosted jobs pass with Valgrind 3.22.0 in the run linked above.
 
-This checks existing primitive adapters, not the unimplemented
-protocol-labelled KDF, comparisons, AEAD or X-Wing glue in ADR 0007.
+The harness also covers ML-KEM-768 and X-Wing decapsulation on both
+adapters, including implicitly rejected ciphertexts and the X-Wing combiner
+glue. It marks the ML-KEM secret key (`dk_PKE` and `z`, not the public
+`ek ‖ H(ek)`), and the reference adapter's encapsulation message and
+X-Wing ephemeral ML-KEM seed. Key generation and X25519 scalars are not
+marked: the matrix seed drives rejection sampling, and the mandated all-zero
+X25519 abort is a deliberately public branch. A mutation that also marked
+`H(ek)` was flagged at the `aws-lc-rs` adapter's public hash check, so the
+harness does reach the KEM code.
+
+This does not check the unimplemented protocol-labelled KDF, comparisons
+or AEAD in ADR 0007.
 It does not prove mobile constant-time behavior, all inputs,
 variable-latency arithmetic, or exhaustive provider-path coverage.
 
@@ -194,9 +253,11 @@ Track the foundation gate completion in
 Provider errors have typed `From` conversions into `CryptoError`.
 The conversion tests induce genuine provider HKDF length errors; the HMAC
 length error is constructed explicitly because HMAC accepts arbitrary key
-lengths. This proves the public conversion contract, not that failures
-occur within valid backend calls. LLVM records 100% source lines and
-branches locally, but misses four `?` error-propagation regions. Thus the
+lengths. The `getrandom` error is constructed, and AWS-LC `KeyRejected` is
+induced by a 1-byte decapsulation key. This proves the public conversion
+contract, not that failures occur within valid backend calls. LLVM records
+100% source lines (614/614) and branches (52/52) locally, but misses 27 of
+626 regions, all of them `?` error propagation through provider calls. Thus the
 coverage result does not prove all adapter error paths executed.
 
 ## Apple cross-build smoke
