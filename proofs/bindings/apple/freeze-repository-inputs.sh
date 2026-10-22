@@ -18,7 +18,7 @@ sed -e 's|/opt/cairn-apple-tools/rust/bin/cargo|/opt/cairn-apple-tools/repositor
   -e 's|/opt/cairn-apple-tools/ubique/bindgen|/opt/cairn-apple-tools/repository-inputs/ubique/bindgen|' \
   "$scripts/generator-cargo.sh" > "$destination/generator-tools/cargo"
 grep -Fq "$destination/rust/bin/cargo install --debug" "$destination/generator-tools/cargo"
-grep -Fq "\"$destination/ubique/bindgen\"" "$destination/generator-tools/cargo"
+grep -Fq "= $destination/ubique/bindgen ]" "$destination/generator-tools/cargo"
 chmod 0755 "$destination/generator-tools/cargo"
 chown -R root:wheel "$destination"
 chmod -R a+rX,a-w "$destination"
