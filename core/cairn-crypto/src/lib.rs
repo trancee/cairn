@@ -1,5 +1,11 @@
-//! Host-only ADR 0004 primitive backends; no protocol logic.
+#![no_std]
 
+//! ADR 0004 primitive backends; no protocol logic.
+//! The seam is `no_std` with `alloc` so `cairn-proto` can use it (ADR 0022).
+
+extern crate alloc;
+
+use alloc::vec::Vec;
 use zeroize::Zeroizing;
 
 /// An operation failed without exposing secret material in its diagnostic.
@@ -27,7 +33,7 @@ impl core::fmt::Display for CryptoError {
     }
 }
 
-impl std::error::Error for CryptoError {}
+impl core::error::Error for CryptoError {}
 
 #[cfg(feature = "aws-lc")]
 impl From<aws_lc_rs::error::Unspecified> for CryptoError {
@@ -789,9 +795,10 @@ fn reference_x25519(scalar: &[u8; 32], public: &[u8; 32]) -> Result<SharedSecret
     Ok(Zeroizing::new(shared.to_bytes()))
 }
 
+#[cfg(any(feature = "aws-lc", feature = "reference"))]
 fn hkdf_output(length: usize) -> Result<Zeroizing<Vec<u8>>, CryptoError> {
     if length > 255 * 48 {
         return Err(CryptoError::InvalidOutputLength);
     }
-    Ok(Zeroizing::new(vec![0; length]))
+    Ok(Zeroizing::new(alloc::vec![0; length]))
 }

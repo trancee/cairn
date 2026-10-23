@@ -107,3 +107,10 @@ No released SDK consumers exist. The binding-generator choice changes build inte
 - The root build adds `:androidApp` beside `:sdk` and `:app`. `cairn-ffi`
   exports an interim wire and chunk-reassembly surface until `CairnCore`
   exists. iOS targets are deferred to the Apple-lane increment.
+
+2026-10-23, from [ADR 0022](0022-cairn-core-contract.md):
+- The concrete `Event` and `Action` sets, identifiers, queries and the
+  version-1 Persist blob are defined there. Every event carries a monotonic
+  and a wall-clock time.
+- `cairn-crypto` is `no_std` + `alloc`, and `cairn-proto` depends on its
+  adapter-free build.

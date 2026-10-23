@@ -1,0 +1,172 @@
+---
+status: accepted
+date: 2026-10-23
+version: cairn-r1
+---
+
+# 0022: `CairnCore` contract for the walking skeleton
+
+## Context
+
+[ADR 0004](0004-core-architecture.md) fixes the shape of the core:
+`CairnCore.handle(event) -> List<Action>` plus read-only queries, a
+single-threaded sans-IO state machine, one `Persist(blob, version)` action
+and a `Restore` event. It leaves the concrete events, actions, identifiers,
+blob format and crate dependencies open.
+
+Slice S1 ([issue 31](../../.scratch/cairn-r1/issues/31-slice-s1.md)) is the
+first code that needs them: automatic admission
+([ADR 0021](0021-automatic-neighbour-admission.md)), TOFU pairing P1–P4, a
+basic Resume, CHAT DATA records and fragmentation, between two cores over an
+in-memory loopback and through UniFFI from Kotlin.
+
+Three gaps had to be closed first:
+
+- Spec §5.6 defines a stranger by beacon matching, but beacons were
+  scheduled for S6. Without them the central cannot choose between Resume
+  and admission.
+- Store-and-forward (QUEUED, ACK, receipts) belongs to S5. S1 needs a rule
+  for a message sent while no session is up.
+- The deterministic, `no_std` state machines in `cairn-proto` need the
+  `CryptoBackend` seam, which lived in a `std` crate.
+
+## Decision
+
+The owner chose the beacon, no-session and PR-shape rules below on
+2026-10-23. The remaining rules follow from ADR 0004 and the spec.
+
+### 1. Crates
+
+- `cairn-crypto` becomes `#![no_std]` with `alloc`. Its error type
+  implements `core::error::Error`. The adapters keep their dependencies,
+  which may use `std`.
+- `cairn-proto` depends on `cairn-crypto` with default features off. The
+  state machines are generic over `B: CryptoBackend` and never name an
+  adapter.
+- `cairn-ffi` instantiates the core with the `AwsLc` adapter.
+- Secret comparisons use `subtle` (ADR 0004). `cairn-proto` adds it with
+  the first comparison that needs it.
+
+### 2. Events
+
+Every event carries `Clock { mono_ms: u64, unix_s: u64 }`. `mono_ms` drives
+timers and rate limits; `unix_s` drives beacon windows and days (spec §10.1).
+
+| Event | Meaning |
+|---|---|
+| `Restore { blob: Option<bytes> }` | First event. `None` is a fresh install: the core creates the device beacon key and emits `Persist`. |
+| `LinkUp { link, gatt_role, mtu, address }` | A BLE link is connected. `gatt_role` is `Central` or `Peripheral`; `address` is opaque bytes used only for back-off. |
+| `MtuChanged { link, mtu }` | The ATT MTU changed. |
+| `BeaconRead { link, beacon: [u8; 8] }` | Central only: the value read from the peer's `beacon` characteristic (spec §4.1). |
+| `Received { link, fragment: bytes }` | One ATT value from `rx` or `tx`. |
+| `LinkDown { link }` | The link is gone. Partial frames are discarded (spec §4.5). |
+| `TimerFired { timer }` | A timer set by the core has expired. |
+| `SendChat { contact, text }` | The user sent a message. |
+
+### 3. Actions
+
+| Action | Kotlin must |
+|---|---|
+| `Send { link, fragment }` | Write or notify the fragment in order. |
+| `Disconnect { link }` | Close the link. |
+| `SetTimer { timer, at_mono_ms }` / `CancelTimer { timer }` | Schedule or cancel. |
+| `Persist { blob, version }` | Seal and store the blob before executing any later action in the batch. |
+| `ContactAdded { contact }` | Refresh the contact list. |
+| `ChatReceived { contact, msgno, text }` | Show the message. |
+| `ChatSent { contact, msgno }` | The message was sealed into DATA frames on a live session. |
+| `ChatRejected { contact, reason }` | `NoSession` or `TooLong`. |
+
+- **Ordering.** Within a batch, `Persist` precedes every `Send` that reveals
+  the state it records. For example, A persists the new contact before it
+  sends P4, and I persists `CK_{n+1}` before its first DATA frame.
+- **Peer errors.** A malformed, unexpected or failed frame produces
+  `Disconnect` (spec §4.2), never an error return. `handle` returns an error
+  only for caller contract violations: an event before `Restore`, an unknown
+  link or contact, or a blob that does not decode.
+
+### 4. Identifiers and queries
+
+- `LinkId` is a `u64` chosen by Kotlin. `TimerId` and `ContactId` are `u64`
+  values allocated by the core. `ContactId` is persisted; `pairID` and all
+  keys stay inside the core.
+- Queries: `contacts()` returns id, display label and verification state.
+  `beacon(unix_s)` returns the 8 B value for the local `beacon`
+  characteristic. It derives forward from the stored key without mutating
+  state, so a GATT read callback can call it.
+
+### 5. Minimal beacons in S1
+
+- S1 implements the spec §10.1 beacon value, the forward `BK` day ratchet,
+  the device beacon key in the pairing card, and matching of a
+  `BeaconRead` against every contact's beacons for windows `{w−1, w, w+1}`
+  in constant time.
+- The central decides from that match. On a hit it starts Resume as I; on
+  a miss it sends P0 as B if the admission limits allow, and otherwise
+  disconnects and backs off the address (spec §10.4).
+- Advertising, the advertised-beacon match, iOS beacon UUIDs, key rotation
+  on removal and BEACON_KEY/BEACON_ACK records remain in S6.
+
+### 6. Sending without a session
+
+`SendChat` for a contact with no Resume-completed link returns
+`ChatRejected { reason: NoSession }`. Nothing is held or persisted. S5 adds
+queuing. A text that does not fit one CHAT record in the 4079 B bucket
+returns `TooLong`.
+
+### 7. Persistence
+
+- `version` is the blob format version, `1` for S1. Restore rejects any
+  other version; r1 has no released blobs, so there is no migration yet.
+- The blob is one canonical encoding of the whole durable state, using the
+  `cairn-wire` encodings: the device beacon key and its day, the next
+  `ContactId`, and per contact the pairing role, mode, verification state,
+  `pairID`, `th`, `nB`, peer card, peer beacon key and day, door keys,
+  Resume index `n`, and `CK_n` (with the uncommitted `CK_{n+1}` while R
+  awaits key confirmation).
+- The core does not seal the blob; Kotlin seals it with the platform
+  keystore (ADR 0004).
+- Admission and back-off ledgers use `mono_ms` and are not persisted. A
+  process restart resets them.
+
+### 8. Testing and gates
+
+- Rust tests drive two cores through an in-memory loopback with a test-only
+  `CryptoBackend`. It draws randomness from a seeded generator and uses the
+  `Reference` deterministic key generation and encapsulation helpers. It is
+  compiled only for tests and is never exported.
+- The KMP loopback uses the real backend and asserts outcomes only.
+- S1 switches on `cairn-wire` fuzzing (frame header and reassembly, record
+  parser, S1/S2 and P0–P4 parsers) and the constant-time taint check on
+  `cairn-proto`'s secret paths: beacon and pseudonym lookup, MAC checks and
+  the padding check ([ADR 0007](0007-ct-conformance-gates.md)).
+
+### 9. Delivery
+
+S1 ships as stacked PRs:
+1. this ADR and the `no_std` seam;
+2. framing, admission and pairing;
+3. beacons, Resume, DATA/CHAT and persistence;
+4. the UniFFI `CairnCore`, the KMP loopback and the gates.
+
+## Consequences
+
+- `cairn-proto` gains its first dependency on `cairn-crypto`.
+- The FFI surface in §2–§4 is the SDK contract. Changing it after release
+  is a breaking change (ADR 0004).
+- A restart forgets admission attempts, so an attacker who can restart the
+  app can reset the hourly budget. That needs control of the device.
+- GATT UUIDs (spec §12) are still needed for the device demonstration, not
+  for the loopback.
+
+## Alternatives considered
+
+- **Kotlin tells the core whether a peer is a stranger.** Smaller S1, but
+  it deviates from spec §5.6 until S6 and moves a security decision outside
+  the core.
+- **Hold unsent messages in memory.** Silently lost on restart, and would be
+  replaced by S5 anyway.
+- **`cairn-proto` defines its own crypto trait.** Duplicates the seam and
+  its tests.
+- **Persist the admission ledgers.** Survives restarts, but adds a write
+  per attempt and depends on the wall clock for rolling windows.
+- **One S1 PR.** Too large to review.
