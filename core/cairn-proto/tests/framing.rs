@@ -1,4 +1,6 @@
-use cairn_proto::{PRE_AUTH_FRAME_LIMIT, Reassembler, ReassemblyError, fragment};
+use cairn_proto::{
+    PRE_AUTH_FRAME_LIMIT, Reassembler, ReassemblyError, SESSION_FRAME_LIMIT, fragment,
+};
 use cairn_wire::HeaderError;
 
 const MIN_ATT_MTU: u16 = 23;
@@ -96,6 +98,23 @@ fn a_frame_exactly_at_the_limit_is_accepted() {
         .map(|frame| frame.map(|frame| frame.len()));
 
     assert_eq!(result, Ok(Some(40)));
+}
+
+#[test]
+fn raising_the_limit_admits_session_sized_frames() {
+    let mut reassembler = Reassembler::new(PRE_AUTH_FRAME_LIMIT);
+    let fragments = fragment(&data_frame(SESSION_FRAME_LIMIT - 1), 512).unwrap();
+
+    reassembler.set_limit(SESSION_FRAME_LIMIT);
+    let frames: Vec<_> = fragments
+        .iter()
+        .map(|fragment| reassembler.accept(fragment).unwrap())
+        .collect();
+
+    assert_eq!(
+        frames.last().unwrap().as_ref().map(Vec::len),
+        Some(SESSION_FRAME_LIMIT)
+    );
 }
 
 #[test]

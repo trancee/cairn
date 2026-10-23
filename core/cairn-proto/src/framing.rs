@@ -69,6 +69,11 @@ impl Reassembler {
         self.partial.is_some()
     }
 
+    /// Changes the limit that later fragments are checked against (spec §4.4).
+    pub fn set_limit(&mut self, limit: usize) {
+        self.limit = limit;
+    }
+
     /// Discards any partial frame.
     pub fn reset(&mut self) {
         self.partial = None;

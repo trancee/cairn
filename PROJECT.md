@@ -229,6 +229,17 @@ Rust CI adds `cairn-proto` to its Miri step. KEM completion, mixing,
 record encoding, persistence, Resume integration, device demonstration and
 the model ticket remain open; earlier dated records stay historical.
 
+## S1 beacons, Resume and DATA/CHAT (2026-10-23)
+
+`cairn-proto`'s `Core` now matches beacons (spec §10.1), runs Resume as I
+after pairing and on a beacon hit (spec §6), and exchanges CHAT records in
+padded DATA frames (spec §7, §8). I confirms the new chain key with one empty
+DATA frame; a contact gets at most one Resume or session link at a time. The
+choices are recorded in [ADR 0022](docs/adr/0022-cairn-core-contract.md) §10.
+Tests were written first and observed red; line and branch coverage stay at
+100%. The UniFFI `CairnCore`, the KMP loopback, fuzzing and the
+constant-time taint check remain open in issue 31.
+
 ## S1 pairing core (2026-10-23)
 
 `core/cairn-proto` now depends on the backend-free `cairn-crypto` trait,

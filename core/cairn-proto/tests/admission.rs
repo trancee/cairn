@@ -4,8 +4,8 @@ mod support;
 
 use cairn_crypto::CryptoError;
 use cairn_proto::{
-    Action, ChatRejection, Clock, ContactId, Core, CoreError, Event, GattRole, LinkId, Persisted,
-    TimerId, Verification,
+    Action, Clock, ContactId, Core, CoreError, Event, GattRole, LinkId, Persisted, TimerId,
+    Verification,
 };
 use support::seeded::Seeded;
 use support::{Net, START};
@@ -66,8 +66,14 @@ fn a_central_admits_a_stranger_after_a_non_matching_beacon_read() {
         assert_eq!(contacts[0].verification, Verification::Unverified);
     }
     assert!(net.is_up(0, central), "the link survives pairing");
-    assert_eq!(first_fragment_headers(&net, 0, central), [0x00, 0x02, 0x04]);
-    assert_eq!(first_fragment_headers(&net, 1, peripheral), [0x01, 0x03]);
+    assert_eq!(
+        first_fragment_headers(&net, 0, central),
+        [0x00, 0x02, 0x04, 0x10, 0x30]
+    );
+    assert_eq!(
+        first_fragment_headers(&net, 1, peripheral),
+        [0x01, 0x03, 0x20]
+    );
 }
 
 #[test]
@@ -93,17 +99,17 @@ fn b_persists_the_contact_before_sending_p4() {
     net.run();
 
     let log = &net.devices[0].log;
-    let persist = log
-        .iter()
-        .rposition(|action| matches!(action, Action::Persist { .. }))
-        .unwrap();
     let p4 = log
         .iter()
         .position(
             |action| matches!(action, Action::Send { fragment, .. } if fragment[0] & 0x7f == 0x04),
         )
         .unwrap();
-    assert!(persist < p4);
+    let persists = log[..p4]
+        .iter()
+        .filter(|action| matches!(action, Action::Persist { .. }))
+        .count();
+    assert_eq!(persists, 2, "the fresh install, then the contact");
 }
 
 #[test]
@@ -186,6 +192,43 @@ fn a_central_with_a_pairing_in_flight_does_not_send_p0() {
     assert!(first_fragment_headers(&net, 0, second).is_empty());
     assert!(!net.is_up(0, second));
     assert_eq!(net.devices[0].core.contacts().len(), 1);
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn a_card_more_than_a_day_old_fails_pairing() {
+    let outcomes = [(1, 38), (2, 39)].map(|(days, seed)| {
+        let mut net = Net::new(2, seed);
+        net.clock.unix_s += days * 86_400;
+        net.devices[1].lag_s = days * 86_400;
+        let (central, _) = net.connect(0, 1);
+        read_beacon(&mut net, 0, central);
+        net.run();
+        (
+            net.devices[0].core.contacts().len(),
+            net.devices[1].core.contacts().len(),
+        )
+    });
+
+    assert_eq!(outcomes, [(1, 1), (0, 0)]);
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn a_contacts_beacon_resumes_even_while_a_stranger_is_pairing() {
+    let mut net = Net::new(3, 37);
+    let (paired, _) = net.connect(0, 1);
+    read_beacon(&mut net, 0, paired);
+    net.run();
+    net.drop_link(0, paired);
+    let (stranger, _) = net.connect(0, 2);
+    read_beacon(&mut net, 0, stranger);
+
+    let (contact, _) = net.connect(0, 1);
+    net.read_beacon_of(0, contact, 1);
+
+    assert_eq!(first_fragment_headers(&net, 0, contact), [0x10, 0x30]);
+    assert!(net.is_up(0, contact));
 }
 
 #[test]
@@ -292,34 +335,6 @@ fn malformed_or_unexpected_frames_close_the_link_without_a_reply() {
     }
 
     assert_eq!(outcomes, [(true, false); 4]);
-}
-
-#[test]
-#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
-fn chat_without_a_session_is_rejected() {
-    let mut net = Net::new(2, 11);
-    let (central, _) = net.connect(0, 1);
-    read_beacon(&mut net, 0, central);
-    net.run();
-
-    let actions = net.devices[0]
-        .core
-        .handle(
-            net.clock,
-            Event::SendChat {
-                contact: ContactId(0),
-                text: "hi".into(),
-            },
-        )
-        .unwrap();
-
-    assert_eq!(
-        actions,
-        [Action::ChatRejected {
-            contact: ContactId(0),
-            reason: ChatRejection::NoSession,
-        }]
-    );
 }
 
 #[test]
