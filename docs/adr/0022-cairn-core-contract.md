@@ -43,7 +43,9 @@ The owner chose the beacon, no-session and PR-shape rules below on
 - `cairn-proto` depends on `cairn-crypto` with default features off. The
   state machines are generic over `B: CryptoBackend` and never name an
   adapter.
-- `cairn-ffi` instantiates the core with the `AwsLc` adapter.
+- `cairn-ffi` instantiates the core with the `AwsLc` adapter. It mirrors
+  `Event`, `Action` and `ContactInfo` with `u64` ids, because a UniFFI custom
+  type for the id newtypes adds an error path that cannot be exercised.
 - Secret comparisons use `subtle` (ADR 0004). `cairn-proto` adds it with
   the first comparison that needs it.
 
@@ -57,7 +59,7 @@ timers and rate limits; `unix_s` drives beacon windows and days (spec §10.1).
 | `Restore { state: Option<Persisted> }` | First event. `Persisted` is `{ blob: bytes, version: u32 }`. `None` is a fresh install: the core creates the device beacon key and emits `Persist`. |
 | `LinkUp { link, gatt_role, mtu, address }` | A BLE link is connected. `gatt_role` is `Central` or `Peripheral`; `address` is opaque bytes used only for back-off. |
 | `MtuChanged { link, mtu }` | The ATT MTU changed. |
-| `BeaconRead { link, beacon: [u8; 8] }` | Central only: the value read from the peer's `beacon` characteristic (spec §4.1). |
+| `BeaconRead { link, beacon: bytes }` | Central only: the value read from the peer's `beacon` characteristic (spec §4.1). A value that is not 8 B long is peer misbehaviour: the core closes the link and backs off the address. |
 | `Received { link, fragment: bytes }` | One ATT value from `rx` or `tx`. |
 | `LinkDown { link }` | The link is gone. Partial frames are discarded (spec §4.5). |
 | `TimerFired { timer }` | A timer set by the core has expired. |
@@ -93,6 +95,10 @@ timers and rate limits; `unix_s` drives beacon windows and days (spec §10.1).
   address is not backed off. The error discards that batch's actions; the
   link's pairing state is already reset, so the link idles until its
   deadline timer fires and the core disconnects it.
+- **Poisoning.** A panic inside the core reaches Kotlin as UniFFI's
+  `InternalException` and may leave the core between invariants, so
+  `CairnCore` refuses every later call with `CoreException.Poisoned`. The
+  app must recreate the core and restore it from the last persisted blob.
 - **Unknown links.** Events for a link the core does not know, or has
   already disconnected, are ignored. Kotlin may still deliver a queued
   fragment or `LinkDown` after the core's `Disconnect`, so this is not a
@@ -168,7 +174,12 @@ S1 ships as stacked PRs:
 1. this ADR and the `no_std` seam;
 2. framing, admission, pairing and persistence;
 3. beacons, Resume and DATA/CHAT;
-4. the UniFFI `CairnCore`, the KMP loopback and the gates.
+4. the UniFFI `CairnCore`, the KMP loopback and the reference-app migration;
+5. the fuzz targets and the constant-time taint check on `cairn-proto`, behind
+   a hidden, non-default `probes` feature.
+
+The owner split the fourth PR in two on 2026-10-23, with the beacon length
+and poisoning rules above.
 
 ### 10. Resume and DATA in S1
 

@@ -1,13 +1,32 @@
 # PROJECT
 
-state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer + host-only ML-KEM-768/X-Wing/AES-256-GCM/X25519/RNG backends + root Gradle build with interim wire FFI (JVM/Android); protocol SDK/application=not implemented.
+state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer + host-only ML-KEM-768/X-Wing/AES-256-GCM/X25519/RNG backends + S1 sans-IO core (pairing, Resume, CHAT) behind the UniFFI `CairnCore` + root Gradle build (JVM/Android); BLE transport/SDK/application=not implemented.
+
+## S1 `CairnCore` FFI (2026-10-23)
+
+PR (d1) of [issue 31](.scratch/cairn-r1/issues/31-slice-s1.md) replaces the
+interim `cairn-ffi` exports with `CairnCore`
+([ADR 0022](docs/adr/0022-cairn-core-contract.md)):
+- `CairnCore` holds `Core<AwsLc>` behind a mutex. A panic poisons it, and every
+  later call throws `CoreException.Poisoned`.
+- `Event.BeaconRead` carries bytes. A wrong length closes the link and backs
+  off the address.
+- Rust tests pair, resume and chat two `CairnCore`s with the real backend,
+  and round-trip every `Event` and `Action` through the UniFFI buffers.
+- `:sdk` commonTest `CoreLoopbackTest` does the same from Kotlin.
+  `coreStatus()` and the instrumentation pass text use the loopback.
+
+Strict Kotlin CodeQL compiles the Kotlin. `:sdk:jvmTest` and the emulator
+instrumentation run only in the owner's Linux lane and are unverified for this
+change. Fuzzing and the constant-time taint check follow in PR (d2).
 
 ## Root Gradle build and interim wire FFI (2026-10-22)
 
 [ADR 0020](docs/adr/0020-root-gradle-wire-ffi.md) adds the following:
-- `core/cairn-ffi`: the UniFFI surface. It exports the wire codec, a typed
-  `WireError`, and `IncomingObject` with a typed `TransferError`. It exposes
-  no secrets.
+- `core/cairn-ffi`: the UniFFI surface. It exported the wire codec, a typed
+  `WireError`, and `IncomingObject` with a typed `TransferError`. Since
+  2026-10-23 it exports `CairnCore` instead
+  ([ADR 0022](docs/adr/0022-cairn-core-contract.md)).
 - The root Gradle build: `:sdk`, `:app` and `:androidApp`.
 - The tuple: Ubique `1.3.2`, Kotlin `2.4.21`, Gradle `9.7.0` wrapper, AGP
   `9.3.1`, Compose Multiplatform `1.12.2` and Rust `1.99.0`.
@@ -19,9 +38,9 @@ KMP target and host proof matrix:
 
 | Module | Target | Host | Task | Proof | Limitations |
 |---|---|---|---|---|---|
-| `:sdk` | JVM | Linux x86_64 guest, offline sandbox | `:sdk:jvmTest` | runtime: 5 binding tests (round trip, typed `WireException`, LEB128, object lifetime, typed `TransferException`) | no Kotlin coverage engine yet |
+| `:sdk` | JVM | Linux x86_64 guest, offline sandbox | `:sdk:jvmTest` | runtime: 4 `CairnCore` loopback tests (pair and chat, Resume after restore, typed `CoreException`, post-close rejection) | no Kotlin coverage engine yet; not rerun since the `CairnCore` cutover |
 | `:sdk` | Android | same | `:androidApp:assembleDebug` (`-PandroidAbis=x86_64,arm64-v8a`) | APK has `libcairn_ffi.so`, `libuniffi_runtime.so` and `libjnidispatch.so` per ABI | debug only; armeabi-v7a not packaged |
-| `:app`, `:androidApp` | Android API 26 x86_64 | fresh emulator, private network | `run-isolated-android.sh … .CoreStatusInstrumentation` | runtime: `coreStatus()` through `:app` → `:sdk` → Rust | Compose UI not driven; no release build or physical device |
+| `:app`, `:androidApp` | Android API 26 x86_64 | fresh emulator, private network | `run-isolated-android.sh … .CoreStatusInstrumentation` | runtime: `coreStatus()` pairs and chats two `CairnCore`s through `:app` → `:sdk` → Rust | Compose UI not driven; no release build or physical device; not rerun since the `CairnCore` cutover |
 | all | iOS | — | — | none | deferred (ADR 0020) |
 
 Commands and prerequisites are in the

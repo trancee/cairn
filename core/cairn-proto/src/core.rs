@@ -78,9 +78,11 @@ pub enum Event {
         link: LinkId,
         mtu: u16,
     },
+    /// The bytes the peer's `beacon` characteristic returned; a value that is
+    /// not 8 bytes long is peer misbehaviour.
     BeaconRead {
         link: LinkId,
-        beacon: [u8; 8],
+        beacon: Vec<u8>,
     },
     Received {
         link: LinkId,
@@ -392,12 +394,13 @@ impl<B: CryptoBackend> Core<B> {
     }
 
     /// A contact's beacon starts Resume as I; any other read is a stranger,
-    /// who is sent P0 if the admission limits allow (spec §5.6, §10.4).
+    /// who is sent P0 if the admission limits allow (spec §5.6, §10.4). A
+    /// value that is not 8 bytes long closes the link and backs off the address.
     fn beacon_read(
         &mut self,
         clock: Clock,
         id: LinkId,
-        beacon: &[u8; 8],
+        beacon: &[u8],
         actions: &mut Vec<Action>,
     ) -> Result<(), CoreError> {
         let Some(link) = self.links.get(&id) else {
@@ -407,6 +410,11 @@ impl<B: CryptoBackend> Core<B> {
             return Err(CoreError::UnexpectedBeaconRead);
         }
         let address = link.address.clone();
+        let Ok(beacon) = <&[u8; 8]>::try_from(beacon) else {
+            self.admission.back_off(clock.mono_ms, &address);
+            self.close(id, actions);
+            return Ok(());
+        };
         let contacts = &mut self.device.as_mut().expect("restored").contacts;
         // Ratcheting in place bounds each read to one step per elapsed day.
         let since = beacon::first_day(clock.unix_s);
@@ -1346,7 +1354,7 @@ mod tests {
             CLOCK,
             Event::BeaconRead {
                 link: LINK,
-                beacon: [0; 8],
+                beacon: vec![0; 8],
             },
         )
         .unwrap();

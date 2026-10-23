@@ -18,7 +18,7 @@ ANDROID = PREFIX + "androidConsumer/src/main/kotlin/Smoke.kt"
 GENERATED = str(PROJECT) + "/sdk/build/uniffi/bindings/jvmMain/kotlin/Binding.kt"
 REPOSITORY = Path("/private/tmp/cairn-proof/scratch/repository-build")
 APP = "app/src/commonMain/kotlin/ch/trancee/cairn/app/App.kt"
-SDK_TEST = "sdk/src/commonTest/kotlin/ch/trancee/cairn/sdk/CoreBindingTest.kt"
+SDK_TEST = "sdk/src/commonTest/kotlin/ch/trancee/cairn/sdk/CoreLoopbackTest.kt"
 ROOT_GENERATED = str(REPOSITORY) + "/sdk/build/uniffi/bindings/jvmMain/kotlin/cairn_ffi.kt"
 EXPECTED = [CONSUMER, ANDROID, APP, SDK_TEST]
 
