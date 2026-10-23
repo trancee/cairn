@@ -39,7 +39,8 @@ jobs:
     # waits for that same-run preflight to succeed before it starts.
     name: prepare (${{ matrix.cell }})
     runs-on: macos-26
-    timeout-minutes: 30
+    # The CodeQL cell also prepares and traces the root Gradle build (ADR 0020).
+    timeout-minutes: 45
     permissions:
       contents: read
       actions: read
@@ -60,7 +61,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/pinned-archives
-          key: apple-pinned-archives-v1-${{ inputs.codeql && 'codeql' || 'base' }}-${{ hashFiles('.github/workflows/apple-toolchain-preparation.yml', 'proofs/bindings/apple/prepare-toolchains.sh', 'proofs/bindings/apple/prepare-codeql.sh') }}
+          key: apple-pinned-archives-v1-${{ inputs.codeql && 'codeql' || 'base' }}-${{ hashFiles('.github/workflows/apple-toolchain-preparation.yml', 'proofs/bindings/apple/prepare-toolchains.sh', 'proofs/bindings/apple/prepare-codeql.sh', 'proofs/bindings/apple/prepare-repository-inputs.sh') }}
       - name: Download exact pinned JDKs
         run: |
           export CAIRN_ARCHIVE_CACHE="$RUNNER_TEMP/pinned-archives"
@@ -122,6 +123,8 @@ jobs:
         if: ${{ inputs.codeql }}
         run: /opt/cairn-apple-tools/codeql/codeql version
       - name: Prepare and freeze Gradle, Cargo and Native inputs in parallel
+        env:
+          CELL: ${{ matrix.cell }}
         run: |
           python="$(xcrun --find python3)"
           prepared="$RUNNER_TEMP/apple-preparation"
@@ -146,9 +149,21 @@ jobs:
               /bin/bash proofs/bindings/apple/freeze-native-inputs.sh "$prepared"
           ) &
           compilers=$!
+          if [ "$CELL" = codeql ]; then
+            (
+              "$python" proofs/bindings/linux-android/bounded-proof.py --seconds 1200 \
+                "$prepared/repository-preparation.log" \
+                /bin/bash proofs/bindings/apple/prepare-repository-inputs.sh "$prepared"
+              rust="$(dirname "$(dirname "$(rustup which --toolchain 1.99.0 rustc)")")"
+              sudo -n /usr/bin/env GITHUB_ACTIONS=true \
+                /bin/bash proofs/bindings/apple/freeze-repository-inputs.sh "$prepared" "$rust"
+            ) &
+            repository=$!
+          fi
           result=0
           wait "$gradle" || result=$?
           wait "$compilers" || result=$?
+          if [ "$CELL" = codeql ]; then wait "$repository" || result=$?; fi
           exit "$result"
       - name: Wait for the same-run benign preflight
         env:
@@ -165,13 +180,19 @@ jobs:
             "$RUNNER_TEMP/apple-preparation" /opt/cairn-apple-tools "$CELL" \
             2>&1 | tee "$RUNNER_TEMP/apple-preparation/toolchain-cell.log"
           preparation="$RUNNER_TEMP/apple-preparation"
+          repository=()
+          if [ "$CELL" = codeql ]; then
+            repository=(--check "$preparation/repository-inputs.sha256"
+              "$preparation/repository-integrity.log")
+          fi
           "$(xcrun --find python3)" -I proofs/bindings/apple/verify-frozen-inputs.py \
             --root /opt/cairn-apple-tools --jobs "$(sysctl -n hw.ncpu)" \
             --check "$preparation/toolchains.sha256" "$preparation/toolchain-integrity.log" \
             --check "$preparation/gradle-dependencies.sha256" "$preparation/gradle-integrity.log" \
             --check "$preparation/gradle-warm-home.sha256" "$preparation/gradle-warm-integrity.log" \
             --check "$preparation/cargo-inputs.sha256" "$preparation/cargo-integrity.log" \
-            --check "$preparation/native-inputs.sha256" "$preparation/native-integrity.log"
+            --check "$preparation/native-inputs.sha256" "$preparation/native-integrity.log" \
+            ${repository[@]+"${repository[@]}"}
       - name: Record same-run simulator payload provenance
         if: ${{ matrix.cell == 'full' }}
         run: |
@@ -235,6 +256,8 @@ jobs:
             ${{ runner.temp }}/apple-preparation/codeql-failed-analysis
             ${{ runner.temp }}/apple-preparation/native*.log
             ${{ runner.temp }}/apple-preparation/native-inputs.sha256
+            ${{ runner.temp }}/apple-preparation/repository*.log
+            ${{ runner.temp }}/apple-preparation/repository-inputs.sha256
           if-no-files-found: error
           retention-days: 7
   functional-runtime:

@@ -24,12 +24,16 @@ and validation evidence.
   identifiers and durable KEM object transfer from
   [spec §9](../docs/spec/cairn-r1.md#9-post-quantum-ratchet), under the
   narrow gate waiver in [ADR 0016](../docs/adr/0016-unexposed-epoch-transfer-core.md).
-  It is not wired into Resume, DATA records, persistence or bindings.
+  It is not wired into Resume, DATA records or persistence.
+- `cairn-ffi`: the interim UniFFI `0.32.0` binding-proof surface: the wire
+  codec, a typed `WireError`, and `IncomingObject` with a typed
+  `TransferError` ([ADR 0020](../docs/adr/0020-root-gradle-wire-ffi.md)).
+  The root Gradle `:sdk` generates Kotlin from it. No secret crosses it.
 
 Protocol-labelled KDF/MAC construction, tag verification, RNG, AEAD, X25519,
-ML-KEM, X-Wing, pairing, Resume, ratchet completion and mixing, and FFI are
-not implemented.
-The `ch.trancee.cairn` namespace is reserved for future Kotlin bindings.
+ML-KEM, X-Wing, pairing, Resume, ratchet completion and mixing, and the
+`CairnCore` FFI are not implemented.
+Kotlin bindings use the `ch.trancee.cairn` namespace (`ch.trancee.cairn.ffi`).
 Rust crate names use `cairn-`; Cargo does not have dotted namespaces.
 
 ## Validation

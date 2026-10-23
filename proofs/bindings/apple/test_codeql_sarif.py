@@ -14,6 +14,11 @@ sarif = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sarif)
 PROJECT = Path("/private/tmp/cairn-proof/scratch/fixture-targets")
 PREFIX = "proofs/bindings/linux-android/"
+REPOSITORY = Path("/private/tmp/cairn-proof/scratch/repository-build")
+
+
+def normalize(document):
+    return sarif.normalize_sarif(document, PROJECT, REPOSITORY)
 
 
 class CodeQLSarifTest(unittest.TestCase):
@@ -30,7 +35,7 @@ class CodeQLSarifTest(unittest.TestCase):
     def test_fixture_relative_locations_gain_repository_prefix(self):
         original = self.document({"uri": "consumer/Smoke.kt", "uriBaseId": "%SRCROOT%"})
 
-        result = sarif.normalize_sarif(original, PROJECT)
+        result = normalize(original)
 
         expected = {"uri": PREFIX + "consumer/Smoke.kt"}
         self.assertEqual(result["runs"][0]["artifacts"][0]["location"], expected)
@@ -43,18 +48,31 @@ class CodeQLSarifTest(unittest.TestCase):
     def test_generated_source_keeps_its_real_build_path(self):
         document = self.document({"uri": PROJECT.as_uri() + "/sdk/build/uniffi/Binding.kt"})
 
-        result = sarif.normalize_sarif(document, PROJECT)
+        result = normalize(document)
 
         self.assertEqual(
             result["runs"][0]["artifacts"][0]["location"],
             {"uri": PREFIX + "sdk/build/uniffi/Binding.kt"},
         )
 
+    def test_root_build_sources_map_to_repository_root_paths(self):
+        for uri, expected in (
+            ("file:///opt/cairn-apple-tools/repository-inputs/source/app/src/App.kt", "app/src/App.kt"),
+            (REPOSITORY.as_uri() + "/sdk/build/uniffi/bindings/cairn_ffi.kt",
+             "sdk/build/uniffi/bindings/cairn_ffi.kt"),
+        ):
+            document = self.document({"uri": uri})
+
+            with self.subTest(uri=uri):
+                result = normalize(document)
+
+                self.assertEqual(result["runs"][0]["artifacts"][0]["location"], {"uri": expected})
+
     def test_codeql_implicit_srcroot_uses_the_database_source_root(self):
         document = self.document({"uri": "consumer/Smoke.kt", "uriBaseId": "%SRCROOT%"})
         document["runs"][0].pop("originalUriBaseIds")
 
-        result = sarif.normalize_sarif(document, PROJECT)
+        result = normalize(document)
 
         self.assertEqual(
             result["runs"][0]["artifacts"][0]["location"],
@@ -64,7 +82,7 @@ class CodeQLSarifTest(unittest.TestCase):
     def test_file_uri_escaping_is_preserved(self):
         document = self.document({"uri": "file:///opt/cairn-apple-tools/fixture/consumer/A%20B.kt"})
 
-        result = sarif.normalize_sarif(document, PROJECT)
+        result = normalize(document)
 
         self.assertEqual(
             result["runs"][0]["artifacts"][0]["location"]["uri"],
@@ -77,7 +95,7 @@ class CodeQLSarifTest(unittest.TestCase):
             "uriBaseId": "%SRCROOT%",
         })
 
-        result = sarif.normalize_sarif(document, PROJECT)
+        result = normalize(document)
 
         self.assertEqual(
             result["runs"][0]["artifacts"][0]["location"]["uri"], PREFIX + "sdk/Binding.kt",
@@ -92,6 +110,8 @@ class CodeQLSarifTest(unittest.TestCase):
             {"uri": "consumer/Smoke.kt", "uriBaseId": []},
             {"uri": "consumer/A%invalid.kt"},
             {"uri": "file://unrelated/Source.kt"},
+            {"uri": "file:///opt/cairn-apple-tools/repository-inputs/rust/Source.kt"},
+            {"uri": REPOSITORY.as_uri() + "/../Source.kt"},
             {"uri": 42},
         ):
             original = self.document(location)
@@ -99,7 +119,7 @@ class CodeQLSarifTest(unittest.TestCase):
 
             with self.subTest(location=location):
                 with self.assertRaises(sarif.MappingError):
-                    sarif.normalize_sarif(original, PROJECT)
+                    normalize(original)
 
                 self.assertEqual(original, before)
 
@@ -107,7 +127,7 @@ class CodeQLSarifTest(unittest.TestCase):
         for document in (None, {}, {"version": "2.1.0", "runs": []}):
             with self.subTest(document=document):
                 with self.assertRaises(sarif.MappingError):
-                    sarif.normalize_sarif(document, PROJECT)
+                    normalize(document)
 
     def test_truncated_cli_report_does_not_create_output(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -117,7 +137,7 @@ class CodeQLSarifTest(unittest.TestCase):
 
             result = subprocess.run([
                 sys.executable, "-I", str(Path(__file__).with_name("normalize-codeql-sarif.py")),
-                str(report), str(output), str(PROJECT),
+                str(report), str(output), str(PROJECT), str(REPOSITORY),
             ], capture_output=True, text=True, timeout=5)
 
             self.assertNotEqual(result.returncode, 0)

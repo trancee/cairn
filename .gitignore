@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 target/
 core/fuzz/artifacts/
+.gradle/
+.kotlin/
+build/
+local.properties

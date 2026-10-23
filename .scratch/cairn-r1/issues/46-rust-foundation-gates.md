@@ -269,3 +269,13 @@ Still not done:
 - mobile constant-time and device proof.
 
 This ticket stays open.
+
+2026-10-22 (wire FFI, [ADR 0020](../../../docs/adr/0020-root-gradle-wire-ffi.md)):
+
+`core/cairn-ffi` (UniFFI `0.32.0`, no default features) was built
+test-first; `WireError` gained a redacted `Display` and `Error`. `cargo deny`
+allows MPL-2.0 only for the six `uniffi*` crates. On macOS ARM64,
+`bash scripts/check-rust.sh` passes, and
+`cargo +nightly-2026-10-08 llvm-cov --branch --workspace --all-features --locked`
+reports lines 777/777, branches 52/52 and regions 745/781. The outstanding
+gates above are unchanged; this ticket stays open.

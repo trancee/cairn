@@ -13,15 +13,27 @@ class MappingError(ValueError):
     pass
 
 
-def normalize_sarif(document, project):
+FIXTURE = "/opt/cairn-apple-tools/fixture/"
+
+
+def owning_roots(project, repository):
+    # Frozen read-only sources and writable build projects of both Gradle builds.
+    return (
+        (FIXTURE, "proofs/bindings/linux-android/"),
+        (str(project) + "/", "proofs/bindings/linux-android/"),
+        ("/opt/cairn-apple-tools/repository-inputs/source/", ""),
+        (str(repository) + "/", ""),
+    )
+
+
+def normalize_sarif(document, project, repository):
     if (
         not isinstance(document, dict) or document.get("version") != "2.1.0"
         or not isinstance(document.get("runs"), list) or not document["runs"]
     ):
         raise MappingError("invalid-sarif-document")
     mapped = copy.deepcopy(document)
-    roots = ("/opt/cairn-apple-tools/fixture/", str(project) + "/")
-    prefix = "proofs/bindings/linux-android/"
+    roots = owning_roots(project, repository)
     for run in mapped["runs"]:
         if (
             not isinstance(run, dict) or not isinstance(run.get("tool"), dict)
@@ -43,21 +55,23 @@ def normalize_sarif(document, project):
                 raise MappingError("invalid-uri-base")
             base = bases.get(base_id, {})
             if base_id == "%SRCROOT%" and base_id not in bases:
-                base = {"uri": "file://" + roots[0]}
+                base = {"uri": "file://" + FIXTURE}
             if "uriBaseId" in location and (
                 not isinstance(base, dict) or not isinstance(base.get("uri"), str)
             ):
                 raise MappingError("unknown-uri-base")
-            resolved = urlsplit(urljoin(base.get("uri", "file://" + roots[0]), uri))
+            resolved = urlsplit(urljoin(base.get("uri", "file://" + FIXTURE), uri))
             if (
                 resolved.scheme != "file" or resolved.netloc
                 or resolved.query or resolved.fragment
             ):
                 raise MappingError("unsupported-artifact-uri")
             path = posixpath.normpath(unquote(resolved.path, errors="strict"))
-            for root in roots:
+            for root, prefix in roots:
                 if path == root.rstrip("/") or path.startswith(root):
                     relative = path[len(root):] if path.startswith(root) else ""
+                    if not prefix + relative:
+                        raise MappingError("unmapped-artifact-path")
                     location["uri"] = quote(prefix + relative, safe="/")
                     location.pop("uriBaseId", None)
                     return
@@ -86,11 +100,11 @@ def normalize_sarif(document, project):
 
 
 def main():
-    if len(sys.argv) != 4:
-        raise SystemExit("Usage: normalize-codeql-sarif.py INPUT OUTPUT PROJECT")
+    if len(sys.argv) != 5:
+        raise SystemExit("Usage: normalize-codeql-sarif.py INPUT OUTPUT PROJECT REPOSITORY")
     try:
         result = normalize_sarif(
-            json.loads(Path(sys.argv[1]).read_text()), Path(sys.argv[3]),
+            json.loads(Path(sys.argv[1]).read_text()), Path(sys.argv[3]), Path(sys.argv[4]),
         )
         Path(sys.argv[2]).write_text(json.dumps(result))
     except (MappingError, OSError, UnicodeError, json.JSONDecodeError, RecursionError) as error:

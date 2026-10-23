@@ -498,3 +498,104 @@ default allocator forwarding in all six delivered Linux/Android Rust ELFs.
 Remaining gates include runtime reliability/final acceptance, new-target allocator evidence,
 Unicode coverage, Compose, ARM64 hardware, release/R8/page alignment,
 iOS 15 device/simulator linkage and runtime, and final runner acceptance.
+
+## Repository root build lane
+
+These scripts prove the repository's own root Gradle build (`:sdk`, `:app`,
+`:androidApp`; [ADR 0020](../../../docs/adr/0020-root-gradle-wire-ffi.md)),
+not this fixture. They reuse the guest account, toolchains and AVD seed
+described above, plus JDK 21 at `/usr/lib/jvm/java-21-openjdk-amd64`.
+
+1. Create the source archive on the workstation. It holds the tracked and
+   unignored root build files plus `core/` without `fuzz`, `ct` and `target`:
+
+   ```bash
+   git ls-files -z -co --exclude-standard -- settings.gradle.kts build.gradle.kts \
+     gradle.properties gradle rust-toolchain.toml sdk app androidApp core \
+     ':!core/fuzz' ':!core/ct' ':!core/target' > /tmp/cairn-src.list
+   COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs --null -T /tmp/cairn-src.list \
+     -czf /tmp/cairn-source.tar.gz
+   ```
+
+2. On the networked preparation guest, as root, prepare the inputs once per
+   dependency set. Rerun with a new label whenever `core/Cargo.lock`, the
+   version catalog or the build scripts change their dependency graph:
+
+   ```bash
+   sudo bash prepare-repository-inputs.sh cairn-source.tar.gz LABEL
+   ```
+
+   The script does the following:
+   - installs Rust `1.99.0` with Android standard libraries from
+     `static.rust-lang.org`, after checking each SHA-256 file and a GPG
+     signature from the Rust release key
+     `108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE`;
+   - clones Ubique `v1.3.2` and requires commit `0a901a3d…`;
+   - runs `cargo fetch --locked` for `core/` and Ubique;
+   - runs `resolve-repository-inputs.gradle`. This resolves every resolvable
+     configuration plus AAPT2 `9.3.1-15703166`, without compiling: the Cargo
+     target directory must not exist afterwards;
+   - stores `canonical-inputs/` (Cargo registry and Gradle `files-2.1`) and
+     the Gradle metadata archive under
+     `/opt/cairn-binding-seeds/repository-inputs/LABEL`, root-owned,
+     read-only and with checksum manifests. It refuses an existing label.
+
+3. Build offline from any source archive whose dependencies match LABEL:
+
+   ```bash
+   sudo bash build-repository-offline.sh cairn-source.tar.gz LABEL
+   ```
+
+   The build runs in one systemd unit with these controls:
+   - a private network with only loopback, which the unit checks;
+   - an empty environment;
+   - read-only source configuration, sources, `core/` and downloaded inputs,
+     with write probes;
+   - scratch-only writes under `/srv/cairn-repository-scratch`, which is
+     refused if it exists and deleted afterwards;
+   - limits of 12 GiB memory, 256 tasks, 400% CPU, 30 minutes and 2 GiB
+     per file.
+
+   It runs `gradle --offline --rerun-tasks --continue :sdk:jvmTest
+   :androidApp:assembleDebug` with `-PandroidAbis=x86_64,arm64-v8a`, then
+   requires `libcairn_ffi.so`, `libuniffi_runtime.so` and `libjnidispatch.so`
+   for each ABI in the APK. It retains the APK and the test-result XML under
+   `/var/lib/cairn-repository-proof/LABEL` and rechecks both input manifests.
+
+4. Run the app's core status on a fresh API 26 emulator:
+
+   ```bash
+   sudo bash run-isolated-android.sh \
+     /var/lib/cairn-repository-proof/LABEL/androidApp-debug.apk \
+     ch.trancee.cairn.android .CoreStatusInstrumentation \
+     'PASS: field=cairn rejected=Truncated progress=600 closed=true'
+   ```
+
+   With no arguments, the script still runs this fixture's consumer APK.
+
+Observed on 2026-10-22 with label `gradle-uniffi-bootstrap`:
+- Preparation passed.
+- The TDD red run failed `:app:compileAndroidMain` on the unresolved
+  `coreStatus`.
+- Before host tests were disabled, they failed with `UnsatisfiedLinkError`;
+  see ADR 0020.
+- The green run executed all 69 tasks. `jvmTest` passed 5 of 5 tests, and the
+  APK native-entry checks passed.
+- The instrumentation reported `INSTRUMENTATION_CODE: -1` with the expected
+  `PASS:` line.
+- After the iOS targets were removed, the final source rebuilt green (69
+  tasks, APK SHA-256
+  `e97b9471ed2b66e1082f06b5b3a9c219b4bd16b6ff1c6b11da946fe64336f1df`).
+  The emulator segfaulted during startup twice, before ADB connected or the
+  APK was installed; the third, unchanged run passed.
+
+Limitations:
+- Debug builds only; armeabi-v7a is not packaged.
+- Emulator `37.2.12.0` startup sometimes segfaults under nested KVM. Rerun
+  the unchanged command; a crash before ADB connects is not app evidence.
+- With no arguments, the script needs the fixture APK from its own generator
+  build in `/srv/cairn-generator-scratch`.
+- No release build, Compose UI interaction, physical device or iOS proof.
+- Gradle project metadata stays writable inside scratch.
+- Downloads during preparation are trusted at the TLS, checksum and Rust
+  signature level. Maven artifacts have no signature verification.

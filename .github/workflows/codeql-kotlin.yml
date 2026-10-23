@@ -9,9 +9,10 @@ on:
         default: false
   push:
     branches: [main]
-  # The strict cell builds only the self-contained binding fixture. Every
-  # repository input it reads is listed here; test_codeql_kotlin_triggers.py
-  # fails when a reachable workflow references an uncovered path.
+  # The strict cell builds the self-contained binding fixture and the root
+  # Gradle build. Every repository input it reads is listed here;
+  # test_codeql_kotlin_triggers.py fails when a reachable workflow or the root
+  # input preparation references an uncovered path.
   pull_request:
     branches: [main]
     paths:
@@ -21,6 +22,14 @@ on:
       - proofs/bindings/**
       - rust-toolchain.toml
       - .gitattributes
+      - settings.gradle.kts
+      - build.gradle.kts
+      - gradle.properties
+      - gradle/**
+      - sdk/**
+      - app/**
+      - androidApp/**
+      - core/**
   schedule:
     - cron: '23 6 * * 2'
 

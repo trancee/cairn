@@ -23,3 +23,8 @@ device demonstration are not done, so S0 remains incomplete (see issue 46).
 [ADR 0019](../../../docs/adr/0019-crypto-seam-completion.md). AES-256-GCM
 known answers use NIST CAVP in place of ACVP, which has no applicable case.
 Gradle/UniFFI wiring and the device demonstration remain open.
+
+2026-10-22: the root Gradle build with Ubique UniFFI wiring exists for JVM
+and Android ([ADR 0020](../../../docs/adr/0020-root-gradle-wire-ffi.md)),
+proven offline and on an API 26 emulator through the interim `cairn-ffi`
+surface. iOS wiring, `CairnCore` and the device demonstration remain open.

@@ -6,6 +6,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[3]
 WORKFLOWS = ROOT / ".github" / "workflows"
 KOTLIN = WORKFLOWS / "codeql-kotlin.yml"
+REPOSITORY_INPUTS = ROOT / "proofs" / "bindings" / "apple" / "prepare-repository-inputs.sh"
 
 
 def trigger_block(text, event):
@@ -35,6 +36,14 @@ def pull_request_paths(text):
         elif inside:
             inside = False
     return paths
+
+
+def copied_root_pathspecs(script):
+    command = re.search(r"ls-files -z --(.*?)\|", script, re.S).group(1)
+    return [
+        spec for spec in command.replace("\\\n", " ").split()
+        if not spec.startswith("':(exclude)")
+    ]
 
 
 def glob_pattern(glob):
@@ -110,6 +119,17 @@ class CodeqlKotlinTriggersTest(unittest.TestCase):
 
         uncovered = [path for path in root_inputs if not self.covered(path)]
 
+        self.assertEqual(uncovered, [])
+
+    def test_filter_covers_every_root_build_input_the_lane_copies(self):
+        specs = copied_root_pathspecs(REPOSITORY_INPUTS.read_text())
+
+        uncovered = [
+            spec for spec in specs
+            if not self.covered(spec) and not self.covered(f"{spec}/any/File.kt")
+        ]
+
+        self.assertIn("sdk", specs)
         self.assertEqual(uncovered, [])
 
     def test_main_pushes_and_weekly_scans_are_never_filtered(self):

@@ -12,5 +12,4 @@ test ! -e "$database"
   --source-root="$tools/fixture"
 "$codeql" database trace-command "$database" -- \
   /bin/bash "$tools/check-fixture-bindings.sh" "$tools" :consumer:interopSmoke --codeql
-"$codeql" database finalize "$database" --threads=2 --ram=2048
-echo 'PASS: strict offline Kotlin CodeQL database finalized'
+echo 'PASS: fixture build traced into the strict offline Kotlin CodeQL database'

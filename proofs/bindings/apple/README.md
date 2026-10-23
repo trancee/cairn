@@ -283,7 +283,7 @@ database finalization; downloaded metadata and source archive agree.
 The mandatory analysis gate queries compiled Kotlin compilation units,
 requires every tracked `.kt` source plus generated binding evidence, and runs
 the unchanged bundled Java/Kotlin security suite offline. Analysis has its
-own existing 300-second command ceiling, two threads and 2 GiB requested
+own command ceiling (300 seconds, raised to 600 when root sources joined), two threads and 2 GiB requested
 evaluator RAM; all caches/results remain in bounded scratch. Coverage and
 SARIF export require success. Compiled coverage and suite execution pass in
 run `38268914707`; mapped export passes in run `38274027100`, attempt 2.
@@ -291,6 +291,25 @@ Processed GitHub results remain unverified. This is not yet a deployed
 replacement scan or Android packaging
 proof; default Actions/Python/Rust scanning stays enabled. See
 [ADR 0015](../../../docs/adr/0015-build-backed-kotlin-codeql.md).
+
+The `codeql` cell also traces the root Gradle build into the same database
+before finalization (ADR 0015 "Root Gradle build extraction"):
+
+| Step | Script | Sandbox / limit |
+|---|---|---|
+| prepare (network, unprivileged) | `prepare-repository-inputs.sh PREPARED` | bounded 1200 s |
+| freeze (root) | `freeze-repository-inputs.sh PREPARED RUST` | writes `repository-inputs.sha256` |
+| `repository-bindings` | `check-repository-build.sh TOOLS bindings` | `build.sb`, 900 s |
+| `repository-codeql` | `check-codeql-repository.sh TOOLS` | `codeql.sb`, 900 s, then finalize |
+
+Root inputs are frozen under `/opt/cairn-apple-tools/repository-inputs`.
+The checksum-pinned SDK archives carry no SDK-manager metadata, so the
+license-free `android-sdk/*.package.xml` files let AGP find them. The coverage
+gate and SARIF mapper take the root build as a second owning root: root
+sources map to repository paths, and both builds' generated bindings are required.
+Run [`39830482224`](https://github.com/trancee/cairn/actions/runs/39830482224)
+compiled all five tracked root `.kt` files and the root generated bindings into
+the database. The suite reported zero results.
 
 `.github/workflows/codeql.yml` runs existing Actions/Python/Rust default
 suites; `.github/workflows/codeql-kotlin.yml` calls this strict Kotlin lane.
