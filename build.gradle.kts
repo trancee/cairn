@@ -1,6 +1,7 @@
 // Raises vulnerable transitive build tooling (AGP, UTP, bundletool) to patched floors.
-// Constraints only lift versions already in a graph; they add no dependency and never
-// reach published SDK metadata, because consumable configurations are left untouched.
+// Constraints only lift versions already in a graph and add no dependency. Every resolvable
+// configuration gets them, including AGP's legacy lint and UTP ones, which are also
+// consumable. Consumable-only variants, which publishing would use, stay untouched.
 buildscript {
     dependencies {
         constraints {
@@ -30,7 +31,7 @@ allprojects {
         }
     }
     configurations.configureEach {
-        if (isCanBeResolved && !isCanBeConsumed) {
+        if (isCanBeResolved) {
             extendsFrom(floors.get())
         }
     }

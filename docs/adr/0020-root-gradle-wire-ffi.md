@@ -166,11 +166,13 @@ jdom2 `2.0.6.1`, httpcomponents `4.5.14` and commons-lang3 `3.21.0`.
 The root `build.gradle.kts` applies them as dependency constraints in two places:
 
 - the root buildscript `classpath`, which carries the plugins;
-- a `cairnBuildToolFloors` dependency scope. Every resolvable, non-consumable
-  configuration in every project extends from it.
+- a `cairnBuildToolFloors` dependency scope. Every resolvable configuration in
+  every project extends from it. That includes AGP's lint and UTP
+  configurations, which are created resolvable and consumable.
 
-Constraints only lift versions that are already in a graph. They add no
-dependency and stay out of published variant metadata. Every module of a family
+Constraints only lift versions that are already in a graph, and they add no
+dependency. The consumable-only `*Elements` variants that publishing would use
+are not resolvable, so their metadata is unchanged. Every module of a family
 gets a floor: all netty modules, `bcprov`/`bcpkix`/`bcutil`, and
 `httpclient`/`httpmime`. That keeps each family on one version.
 `resolve-repository-inputs.gradle` fails the input preparation if any floored
