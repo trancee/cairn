@@ -1,9 +1,9 @@
 # `cairn-r1` protocol specification
 
-Status: **draft 0.6** (ticket *Formal model: PQ ratchet mixing*, 2026-10-05). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
+Status: **draft 0.7** (automatic neighbour admission, [ADR 0021](../adr/0021-automatic-neighbour-admission.md), 2026-10-23). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
 
 This document consolidates, and is normative over:
-- [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md);
+- [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md), as amended by [ADR 0021](../adr/0021-automatic-neighbour-admission.md);
 - the [wire-format draft](../research/2026-10-05-wire-format-draft.md);
 - the [threat model](threat-model.md).
 
@@ -15,11 +15,11 @@ Vocabulary follows [`GLOSSARY.md`](../../GLOSSARY.md).
 
 ## 1. Overview
 
-Two **peers** run **pairing** once (§5) and become **contacts**. Every BLE connection between contacts starts with a **Resume** (§6), which derives the **session** keys. Data frames (§7) then carry real-time messages, **queued messages** (§8), receipts and the chunks of the post-quantum ratchet (§9). Contacts find each other through **beacons** (§10) and may ring each other with a **doorbell** (§10.3). The BLE transport is specified in §4.
+Two **peers** run **pairing** once (§5), automatically on first discovery, and become **contacts** (neighbours). Every BLE connection between contacts starts with a **Resume** (§6), which derives the **session** keys. Data frames (§7) then carry real-time messages, **queued messages** (§8), receipts and the chunks of the post-quantum ratchet (§9). Contacts find each other through **beacons** (§10) and may ring each other with a **doorbell** (§10.3). The BLE transport is specified in §4.
 
 ```
 Pairing (once)                Resume (each connection)         Data
-X-Wing + QR/SAS/TOFU ──RK──►  CK_n + X25519, 57 B / 49 B ──SK──► AES-256-GCM, 17 B
+X-Wing + auto TOFU   ──RK──►  CK_n + X25519, 57 B / 49 B ──SK──► AES-256-GCM, 17 B
                                         ▲ mix completed PQ epoch      │ ML-KEM-768 chunks in padding
                                         └─────────────────────────────┘
 ```
@@ -59,15 +59,15 @@ No other algorithms are used. There is no suite negotiation.
 
 ### 2.3 Roles
 
-- **Pairing role A** shows the QR code and sends P1. **Pairing role B** sends P2. The role is fixed per contact and stored.
-- In SAS and TOFU modes there is no QR: the phone whose user picks the peer from the nearby list is B, and the picked phone is A [OI-20].
+- **Pairing role A** sends P1. **Pairing role B** sends P0 and P2. The role is fixed per contact and stored.
+- On an admission link the GATT central is B and the peripheral is A (§5.6). This supersedes the user-pick rule of OI-20 [OI-27].
 - **I** (initiator) and **R** (responder) are Resume roles: I is the GATT central of the connection.
 
 ## 3. Versioning
 
 - The protocol version is `0x01` for `cairn-r1`.
-- It appears explicitly only in the QR payload and P1. Elsewhere it is implied by the GATT service UUID (§4.1) and by the `"cairn-r1 "` prefix of every KDF and MAC label.
-- A peer MUST abort pairing when P1's or the QR's version differs from its own. There is no negotiation and no downgrade.
+- It appears explicitly only in P1. Elsewhere it is implied by the GATT service UUID (§4.1) and by the `"cairn-r1 "` prefix of every KDF and MAC label.
+- A peer MUST abort pairing when P1's version differs from its own. There is no negotiation and no downgrade.
 - Each contact stores the version it paired under. Any change to a layout, label or primitive requires a new version, a new service UUID and re-pairing (ADR 0005).
 
 ## 4. Transport (ADR 0003)
@@ -90,7 +90,7 @@ Every frame and every fragment begins with one header byte:
 ```
 bit 7     MORE   1 = more fragments of this frame follow (GATT only; 0 on L2CAP CoC)
 bits 6–4  type   0 PAIR   1 S1   2 S2   3 DATA   4–7 reserved
-bits 3–0  sub    PAIR: step 1–4;  S1/S2: bit 0 = KCI; S1 bit 1 = MIX (*provisional*, §9) [OI-4]; other bits 0;  DATA: 0
+bits 3–0  sub    PAIR: step 0–4 [OI-27];  S1/S2: bit 0 = KCI; S1 bit 1 = MIX (*provisional*, §9) [OI-4]; other bits 0;  DATA: 0
 ```
 
 A receiver MUST close the link without sending anything when it sees:
@@ -131,27 +131,26 @@ If two contacts hold two links, the link where pairing role A is the central sur
 
 ## 5. Pairing
 
-Pairing MUST only be accepted while the local user has the pairing screen open (threat model §5). It is the one place where an asymmetric operation may run before authentication.
+Pairing is automatic: a device admits every stranger it discovers as a **neighbour**, within the admission limits of §5.6 and without user action ([ADR 0021](../adr/0021-automatic-neighbour-admission.md)) [OI-27]. It is the one place where an asymmetric operation may run before authentication.
 
 ### 5.1 Messages
 
 | Msg | Dir | Body after `hdr` | Size |
 |---|---|---|---:|
-| QR | A shows | `ver(1) ‖ qh(32) ‖ token(16)` | 49 |
+| P0 | B→A | `r(16)` | 17 |
 | P1 | A→B | `ver(1) ‖ mode(1) ‖ commit(32) ‖ ek_A(1216)` | 1251 |
 | P2 | B→A | `ct(1120) ‖ nB(16)` | 1137 |
 | P3 | A→B | `nA(16) ‖ Seal(K_card_A, 0^12, hdr ‖ th, confirm_A(16) ‖ card_A)` | ≤ 135 |
 | P4 | B→A | `Seal(K_card_B, 0^12, hdr ‖ th, confirm_B(16) ‖ card_B)` | ≤ 119 |
 
-- `mode` is `0x01` QR, `0x02` SAS or `0x03` TOFU. Any other value aborts.
-- B MUST abort unless `mode` equals the mode its user selected; scanning the QR selects QR mode [OI-19].
-- The sizes are maxima for a card with a 48 B name and no KCI key (86 B plaintext, §5.4) [OI-1]. A KCI card adds 1184 B.
+- P0 is B's admission request (§5.6); `r = rand(16)` is used only for the tie-break. P0 is not part of `th`.
+- `mode` MUST be `0x03` TOFU. B MUST abort on any other value [OI-19, OI-27]. The values `0x01` (QR) and `0x02` (SAS) are retired and abort.
+- The sizes are maxima for a card with a 48 B name and no KCI key (86 B plaintext, §5.4) [OI-1]. With the default empty name, P3 ≤ 87 B and P4 ≤ 71 B. A KCI card adds 1184 B.
 
 ### 5.2 Computation
 
 ```
-A:  (ek_A, dk_A) ← XWing.KeyGen();  nA ← rand(16);  token ← rand(16)   (QR mode only)
-    qh     = Trunc32(H(ek_A))
+A:  (ek_A, dk_A) ← XWing.KeyGen();  nA ← rand(16)
     commit = Trunc32(H(lp("cairn-r1 commit") ‖ nA))
 B:  (ct, ss) ← XWing.Encaps(ek_A);  nB ← rand(16)
 A:  ss ← XWing.Decaps(dk_A, ct)
@@ -161,28 +160,20 @@ RK                        = KDF(ss, th, "rk", "", 32)
 K_conf_A, K_conf_B        = KDF(RK, "", "conf A", "", 32), KDF(RK, "", "conf B", "", 32)
 K_card_A, K_card_B        = KDF(RK, "", "card A", "", 32), KDF(RK, "", "card B", "", 32)
 confirm_A = MAC(K_conf_A, "P3", th)
-confirm_B = MAC(K_conf_B, "P4", th ‖ token)   # token = empty unless mode = QR
+confirm_B = MAC(K_conf_B, "P4", th)           # the retired QR mode appended token here [OI-27]
 ```
 
 - Each side MUST verify the peer's AEAD and confirmation MAC and abort on failure.
-- In QR mode, B MUST check `qh` against the scanned QR before sending P2.
 - **Abort** means: erase all pairing state, persist nothing, and close the link.
-- The pairing session times out 120 s after the QR is shown or the search starts, if P4 hasn't been verified (ADR 0009).
+- Pairing MUST complete within the 5 s link limit of §4.4.
 
 ### 5.3 Verification codes
 
 ```
 SAS  = Digits(H(lp("cairn-r1 sas") ‖ th ‖ nB), 6)     # shown as "ddd ddd"
-QRC  = Digits(H(lp("cairn-r1 qrc") ‖ th ‖ nB), 4)
 ```
 
-| Mode | Before the contact is stored |
-|---|---|
-| QR | Both phones show `QRC`; A's user confirms it (10^-4) |
-| SAS | Both phones show `SAS`; both users confirm (2^-20) |
-| TOFU | No comparison; the contact is stored as **Unverified** |
-
-- A mismatch aborts pairing (ADR 0009).
+- Every neighbour is stored as **Unverified**; there is no comparison at pairing [OI-27].
 - A later **Verify** of an Unverified contact recomputes `SAS` from the stored `th` and `nB` on both sides. A mismatch then marks the contact **Compromised**: sending to it is blocked until the contact is removed (ADR 0009).
 
 ### 5.4 Contact card
@@ -195,6 +186,7 @@ caps bits: 0 coc, 1 kci, 2–7 reserved (MUST be 0)
 ```
 
 - `BK_day` is the sender's current device beacon key for day `bk_day` (§10.2).
+- `name_len` is 0 by default. A non-empty name is sent only if the user opted in to sharing a display name with new neighbours (ADR 0021).
 - The KCI profile is chosen at pairing only. It is active iff both cards set `kci` and carry `static_ek`. Enabling it later requires re-pairing [OI-12].
 
 ### 5.5 Pairing output (persisted per contact)
@@ -206,7 +198,23 @@ K_door_A→B  = KDF(RK, "", "door A", "", 32);  K_door_B→A = KDF(RK, "", "door
 ```
 
 - The stored contact record also holds: pairing role, mode, verification state (Verified / Unverified / Compromised), `th` and `nB` (for a later Verify), the peer card, version, Resume index `n = 0`, and the peer's beacon key.
-- `RK`, `ss`, `dk_A`, `nA`, `nB`-derived keys and `token` MUST be erased once the contact is persisted. `th` and `nB` are kept; neither is secret on its own.
+- `RK`, `ss`, `dk_A`, `nA` and `nB`-derived keys MUST be erased once the contact is persisted. `th` and `nB` are kept; neither is secret on its own.
+
+### 5.6 Admission [OI-27]
+
+- **Stranger.** A peer whose advertised beacon matches no contact and whose `beacon` read (§4.1) also matches none.
+- **Roles.** On an admission link the GATT central is pairing role B and the peripheral is pairing role A.
+- **Request.** After a non-matching `beacon` read, B MAY send P0 on the same link if the limits below allow. A answers with P1 only if the limits allow; otherwise it closes the link without a response.
+- **One pairing in flight.** A device MUST have at most one pairing in flight, as A or B. While it has one, it MUST NOT send P0 and MUST close any further link that sends P0.
+- **Tie-break.** If a device receives P0 while its own P0 is unanswered, it compares the two `r` values as unsigned big-endian integers:
+  - incoming `r` larger: close its own outgoing link and answer the incoming P0;
+  - incoming `r` smaller: close the incoming link;
+  - equal: close both.
+- **Limits** (per device, both roles):
+  - at most 10 neighbours admitted per rolling hour;
+  - at most 30 pairing attempts started or answered per rolling hour;
+  - at most 256 neighbours in total; at the cap, admission stops and nothing is evicted;
+  - an address whose attempt failed or was refused is not tried again for 1 h.
 
 ## 6. Resume
 
@@ -384,8 +392,8 @@ door = Trunc8(HMAC(K_door_me→peer, lp("cairn-r1 door") ‖ u64(w)))
 
 ### 10.4 Connect policy (ADR 0008)
 
-- Connect to an unknown or beaconless peer only if there is something to send, or a contact has not been seen for 10 min.
-- At most one attempt per address per 2 min. After 3 non-matching `beacon` reads, back off that address for 1 h.
+- Connect to an unknown or beaconless peer only if there is something to send, a contact has not been seen for 10 min, or admission (§5.6) is within its limits.
+- At most one attempt per address per 2 min. After a non-matching `beacon` read, either admit the stranger on the same link (§5.6) or disconnect; after 3 non-matching reads without admission, back off that address for 1 h [OI-27].
 
 ## 11. Implementation requirements
 
@@ -406,7 +414,7 @@ door = Trunc8(HMAC(K_door_me→peer, lp("cairn-r1 door") ‖ u64(w)))
 
 ## 13. Consolidation issues (resolved 2026-10-05)
 
-OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: Resume*, OI-19 to OI-20 from *Formal model: SAS pairing*, and OI-21 to OI-26 from the in-progress *Formal model: PQ ratchet mixing*. The user accepted every proposal. OI-4 is accepted as *provisional*, pending *Formal model: PQ ratchet mixing*; OI-22 supersedes its classical fallback. The affected ADRs carry amendment notes.
+OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: Resume*, OI-19 to OI-20 from *Formal model: SAS pairing*, OI-21 to OI-26 from the in-progress *Formal model: PQ ratchet mixing*, and OI-27 from the owner's mesh redirection (ADR 0021). The user accepted every proposal. OI-4 is accepted as *provisional*, pending *Formal model: PQ ratchet mixing*; OI-22 supersedes its classical fallback. The affected ADRs carry amendment notes.
 
 | # | Issue | Resolution |
 |---|---|---|
@@ -435,9 +443,12 @@ OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: R
 | OI-23 | I can erase an epoch at S2 while R still retains the old CK after lost DATA; without per-candidate epoch metadata, recovery can mix an epoch twice or roll back its position | Store post-mix epoch positions with CK candidates; defer R's epoch erasure until branch confirmation; commit CK, position and erasure atomically (§6, §9). No extra packets (user's choice, 2026-10-05) |
 | OI-24 | PQ healing after state compromise is not explicitly conditioned on a fresh exchange that a continuously active attacker did not replace | Claim conditional fresh honest-epoch healing, retaining stolen-key knowledge; do not claim recovery under continued active interception (§9, threat model) (user's choice, 2026-10-05) |
 | OI-25 | Chunk offsets alone do not tell the sender which bytes survived a disconnect or a lost acknowledgement | Authenticated cumulative `0D KEM_PROGRESS(epoch, kind, next_offset)` after durable storage; re-advertise progress and pending EPOCH_DONE after Resume; resend immutable unacknowledged chunks (§7.3, §9) (user's choice, 2026-10-05) |
+| OI-27 | Owner redirection to a peer-to-peer BLE mesh (2026-10-23): pairing must start automatically for every discovered peer. With no pairing screen, A can't tell which incoming link to send P1 on, OI-20's user-pick role rule has no user, and both devices can connect to each other at once | Automatic TOFU admission (§5.6): central is B and sends `P0 = hdr ‖ r(16)`; one pairing in flight with an `r` tie-break; admission limits 10/h admitted, 30/h attempts, 256 total, no eviction; only `mode = 0x03`; QR and SAS pairing retired, Verify remains; empty card name by default. +17 B once per admission. Verified models unchanged (ADR 0021) (user's choice, 2026-10-23) |
 | OI-26 | Reassembly semantics for gaps, overlaps and retransmitted chunks are unspecified | Contiguous append only; exact duplicates wholly within the stored prefix are accepted; gaps, conflicting/cross-frontier overlaps, wrong epochs and bounds violations fail closed without partial mutation (§9) (user's choice, 2026-10-05) |
 
 ## 14. Change log
+
+- 0.7 (2026-10-23): accepted OI-27 (automatic neighbour admission, ADR 0021): new P0 frame and §5.6; QR and SAS pairing modes retired; card name empty by default; connect policy admits strangers. Multi-hop relaying remains unspecified (issue 47).
 
 - 0.6 (2026-10-05): accepted OI-25 (durable cumulative KEM_PROGRESS) and OI-26 (strict contiguous reassembly); specified retransmission, reconnect receipts and fail-closed validation. Ratchet gate remains closed.
 - 0.5 (2026-10-05): accepted OI-21 (non-wrapping LEB128 epochs), OI-22 (mandatory MIX), OI-23 (CK-bound recovery metadata) and OI-24 (conditional honest-epoch healing). All four public-`pairID` Resume profiles subsequently re-verified; composed ratchet proof remains pending.

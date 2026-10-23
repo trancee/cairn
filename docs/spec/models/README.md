@@ -6,7 +6,7 @@ Symbolic models of `cairn-r1` ([spec](../cairn-r1.md)). Under the strict formal-
 |---|---|---|
 | [`resume.spthy`](resume.spthy) | §6 Resume | All four profiles verified with public `pairID` |
 | [`ratchet.spthy`](ratchet.spthy) | §9 | Opt-in refined sources complete; 56 safety certificates and four witnesses replay separately; full assembled/equation acceptance incomplete |
-| [`sas.spthy`](sas.spthy) | §5 Pairing (QR, SAS, TOFU, Verify) | Verified (draft 0.4) |
+| [`sas.spthy`](sas.spthy) | §5 Pairing (TOFU, Verify; QR and SAS branches retired) | Verified (draft 0.4) |
 
 ## Evidence index
 
@@ -663,6 +663,8 @@ boundaries, crash atomicity, exhaustion and platform persistence remain
 implementation-test obligations even after a symbolic proof succeeds.
 
 ## Pairing (`sas.spthy`)
+
+Since draft 0.7 ([ADR 0021](../../adr/0021-automatic-neighbour-admission.md)), pairing is always TOFU and Verify is the only upgrade. The model keeps its QR and SAS branches: removing modes only removes protocol branches, so the TOFU and Verify lemmas still apply. P0 and the admission tie-break are unauthenticated availability mechanisms outside `th` and are not modelled.
 
 Run from this directory:
 

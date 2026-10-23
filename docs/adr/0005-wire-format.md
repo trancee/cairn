@@ -179,3 +179,6 @@ This is the first version. Any layout change requires a new protocol version: a 
 - **Migration:** this extends the unreleased draft; no released contacts
   exist. Update future parsers/vectors to spec §7.3/§9. A released layout
   change would require the protocol-version migration described above.
+
+2026-10-23, from [ADR 0021](0021-automatic-neighbour-admission.md) (OI-27):
+- Pairing gains `P0 = hdr ‖ r(16)` (17 B, PAIR sub 0), sent by the GATT central before P1. QR and SAS pairing are retired, so the QR payload and the 4-digit code are no longer used; P1–P4 layouts are unchanged and `mode` is always TOFU.

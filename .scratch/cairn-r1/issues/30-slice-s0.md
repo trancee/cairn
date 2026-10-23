@@ -1,7 +1,7 @@
 # Slice S0: Bootstrap
 
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: 44
 
 ## Question
@@ -28,3 +28,15 @@ Gradle/UniFFI wiring and the device demonstration remain open.
 and Android ([ADR 0020](../../../docs/adr/0020-root-gradle-wire-ffi.md)),
 proven offline and on an API 26 emulator through the interim `cairn-ffi`
 surface. iOS wiring, `CairnCore` and the device demonstration remain open.
+
+2026-10-23: re-scoped by the owner. The `CairnCore` surface is protocol
+logic, so it moves to S1. iOS targets and the iOS CodeQL lane move to
+[issue 48](48-apple-lane-ios-targets.md). The device demonstration moves to
+the first slice that runs on the device lab.
+
+## Answer
+
+S0 is resolved for host, JVM and Android: the Cargo workspace, the complete
+`CryptoBackend` seam (ADRs 0018, 0019) and the root Gradle/UniFFI build
+(ADR 0020) exist with their gates green. Remaining work is tracked in issue 48
+and in the device demonstration of later slices.

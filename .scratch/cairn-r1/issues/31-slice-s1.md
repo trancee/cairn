@@ -6,8 +6,12 @@ Blocked by: 26, 30
 
 ## Question
 
-Build TOFU pairing (P1–P4) and CHAT DATA frames between two `CairnCore` instances over an in-memory loopback, driven through UniFFI from a KMP test. This harness is deterministic, with seeded randomness, and later slices reuse it. Switch on the gates for `cairn-wire` fuzzing and the constant-time taint check on `cairn-proto`.
+Build automatic admission (P0, the tie-break and the admission limits from spec §5.6), TOFU pairing (P1–P4), a basic Resume (spec §6, non-KCI, no rate limits or concurrent Resume) and CHAT DATA frames between two `CairnCore` instances over an in-memory loopback, driven through UniFFI from a KMP test. Rust tests use seeded randomness through a test-only `CryptoBackend`; the KMP loopback uses the real RNG and asserts outcomes. Later slices reuse the harness. Switch on the gates for `cairn-wire` fuzzing and the constant-time taint check on `cairn-proto`.
 
 Done when every applicable gate is green, tests were written first (TDD), the relevant spec sections are referenced, and the slice is demonstrated on the oldest and newest core-matrix devices of each platform pair involved, with results noted here. Strict formal-model gate: a slice blocked by a model ticket doesn't start until that ticket resolves.
 
 ## Comments
+
+2026-10-23: re-scoped by the owner. Pairing starts automatically for every
+stranger ([ADR 0021](../../../docs/adr/0021-automatic-neighbour-admission.md)), and a basic Resume moves here from S7 because DATA keys
+come only from Resume. A `CairnCore` contract ADR comes first.
