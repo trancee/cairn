@@ -1,5 +1,8 @@
 //! An in-memory loopback between cores (issue 31).
 
+// Each test binary compiles this module and uses a different subset of it.
+#![allow(dead_code)]
+
 pub mod seeded;
 
 use cairn_proto::{Action, Clock, Core, Event, GattRole, LinkId, Persisted, TimerId};
@@ -18,11 +21,17 @@ pub struct Device {
     pub log: Vec<Action>,
     pub persisted: Option<Persisted>,
     pub timers: BTreeMap<TimerId, u64>,
+    /// Seconds this device's wall clock runs behind the network's.
+    pub lag_s: u64,
 }
+
+/// Sees each sent fragment with its sender; `false` drops it.
+pub type Intercept = Box<dyn FnMut(usize, &mut Vec<u8>) -> bool>;
 
 pub struct Net {
     pub devices: Vec<Device>,
     pub clock: Clock,
+    pub intercept: Option<Intercept>,
     /// Each link end and the peer end it delivers to.
     ends: BTreeMap<(usize, LinkId), (usize, LinkId)>,
     queue: VecDeque<(usize, Action)>,
@@ -39,9 +48,11 @@ impl Net {
                     log: Vec::new(),
                     persisted: None,
                     timers: BTreeMap::new(),
+                    lag_s: 0,
                 })
                 .collect(),
             clock: START,
+            intercept: None,
             ends: BTreeMap::new(),
             queue: VecDeque::new(),
             next_link: 0,
@@ -55,9 +66,13 @@ impl Net {
 
     /// Delivers `event` and queues the resulting actions.
     pub fn inject(&mut self, device: usize, event: Event) {
+        let clock = Clock {
+            unix_s: self.clock.unix_s - self.devices[device].lag_s,
+            ..self.clock
+        };
         let actions = self.devices[device]
             .core
-            .handle(self.clock, event)
+            .handle(clock, event)
             .expect("the harness keeps the caller contract");
         self.queue
             .extend(actions.into_iter().map(|action| (device, action)));
@@ -96,7 +111,12 @@ impl Net {
         while let Some((device, action)) = self.queue.pop_front() {
             self.devices[device].log.push(action.clone());
             match action {
-                Action::Send { link, fragment } => {
+                Action::Send { link, mut fragment } => {
+                    if let Some(intercept) = &mut self.intercept
+                        && !intercept(device, &mut fragment)
+                    {
+                        continue;
+                    }
                     if let Some(&(peer, peer_link)) = self.ends.get(&(device, link)) {
                         self.inject(
                             peer,
@@ -123,6 +143,39 @@ impl Net {
                 _ => {}
             }
         }
+    }
+
+    /// The central reads the peripheral's current `beacon` characteristic.
+    pub fn read_beacon_of(&mut self, central: usize, link: LinkId, peripheral: usize) {
+        let beacon = self.devices[peripheral]
+            .core
+            .beacon(self.clock.unix_s - self.devices[peripheral].lag_s)
+            .unwrap();
+        self.inject(
+            central,
+            Event::BeaconRead {
+                link,
+                beacon: beacon.to_vec(),
+            },
+        );
+        self.run();
+    }
+
+    /// `device` loses the link; its peer is not told and keeps its end.
+    pub fn lose(&mut self, device: usize, link: LinkId) {
+        if let Some(peer_end) = self.ends.remove(&(device, link)) {
+            self.ends.remove(&peer_end);
+        }
+        self.inject(device, Event::LinkDown { link });
+        self.run();
+    }
+
+    /// Both ends see the link go down.
+    pub fn drop_link(&mut self, device: usize, link: LinkId) {
+        let (peer, peer_link) = self.ends[&(device, link)];
+        self.lose(device, link);
+        self.inject(peer, Event::LinkDown { link: peer_link });
+        self.run();
     }
 
     pub fn is_up(&self, device: usize, link: LinkId) -> bool {

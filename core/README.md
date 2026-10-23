@@ -29,20 +29,19 @@ and validation evidence.
   backend-free `cairn-crypto` trait, `cairn-wire`, `subtle` and `zeroize`.
   It implements fragmentation and reassembly (spec §4), automatic neighbour
   admission with rate limits and the P0 tie-break (spec §10.4), P1–P4 TOFU
-  pairing (spec §5) and the version-1 persistence blob. Beacons, Resume and
-  DATA/CHAT are not implemented yet. It also holds the post-quantum epoch
+  pairing (spec §5), beacons (spec §10.1), Resume (spec §6), DATA frames
+  with CHAT records (spec §7, §8) and the version-1 persistence blob. It
+  also holds the post-quantum epoch
   identifiers and durable KEM object transfer from
   [spec §9](../docs/spec/cairn-r1.md#9-post-quantum-ratchet), under the
   narrow gate waiver in [ADR 0016](../docs/adr/0016-unexposed-epoch-transfer-core.md),
   which are not wired into a session.
-- `cairn-ffi`: the interim UniFFI `0.32.0` binding-proof surface: the wire
-  codec, a typed `WireError`, and `IncomingObject` with a typed
-  `TransferError` ([ADR 0020](../docs/adr/0020-root-gradle-wire-ffi.md)).
-  The root Gradle `:sdk` generates Kotlin from it. No secret crosses it.
+- `cairn-ffi`: the UniFFI `0.32.0` `CairnCore`, which runs `Core` with the
+  `AwsLc` adapter ([ADR 0022](../docs/adr/0022-cairn-core-contract.md)).
+  The root Gradle `:sdk` generates Kotlin from it. Keys stay in Rust; the
+  `Persist` blob and chat text cross by design.
 
-Protocol-labelled KDF/MAC construction, tag verification, pairing, Resume,
-ratchet completion and mixing, and the `CairnCore` FFI are not implemented.
-ADR 0022 fixes the `CairnCore` contract that slice S1 implements.
+Post-quantum ratchet completion and mixing are not implemented.
 Kotlin bindings use the `ch.trancee.cairn` namespace (`ch.trancee.cairn.ffi`).
 Rust crate names use `cairn-`; Cargo does not have dotted namespaces.
 

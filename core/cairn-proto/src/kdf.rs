@@ -26,13 +26,22 @@ pub(crate) fn mac<B: CryptoBackend>(
     label: &[u8],
     parts: &[&[u8]],
 ) -> Result<[u8; 16], CryptoError> {
+    tag::<B, 16>(key, label, parts)
+}
+
+/// `TruncN(HMAC(key, lp("cairn-r1 " ‖ label) ‖ x))`: MACs, beacons and pseudonyms.
+pub(crate) fn tag<B: CryptoBackend, const N: usize>(
+    key: &[u8],
+    label: &[u8],
+    parts: &[&[u8]],
+) -> Result<[u8; N], CryptoError> {
     let mut input = labelled(label);
     for part in parts {
         input.extend_from_slice(part);
     }
-    let tag = B::hmac_sha384(key, &input)?;
-    let mut truncated = [0; 16];
-    truncated.copy_from_slice(&tag[..16]);
+    let digest = B::hmac_sha384(key, &input)?;
+    let mut truncated = [0; N];
+    truncated.copy_from_slice(&digest[..N]);
     Ok(truncated)
 }
 

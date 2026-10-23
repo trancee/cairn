@@ -27,3 +27,18 @@ tie-break, P1–P4 pairing and the version-1 persistence blob behind the
 `Core` event loop. Persistence moved from PR (c) to PR (b) because the
 contact record is what pairing produces. Two cores pair over a seeded
 in-memory loopback in `core/cairn-proto/tests/admission.rs`.
+
+2026-10-23: PR (c) adds beacons, Resume and DATA/CHAT to `Core`. The owner
+chose an empty DATA frame from I as key confirmation. Concurrent Resume
+(OI-17) and Resume rate limits stay deferred; meanwhile a new link for a
+contact that already has a Resume or session link is closed. See
+[ADR 0022](../../../docs/adr/0022-cairn-core-contract.md) §10 and
+`core/cairn-proto/tests/session.rs`.
+
+2026-10-23: PR (d) is split in two. PR (d1) exports `CairnCore` through
+UniFFI, adds Rust and KMP loopbacks with the real backend and migrates the
+reference app. It also makes `BeaconRead` carry bytes (a wrong length closes
+the link and backs off the address), and a panic poisons the core so later
+calls fail with `CoreException.Poisoned`. PR (d2) adds the fuzz targets and
+the constant-time taint check behind a hidden `probes` feature. See
+[ADR 0022](../../../docs/adr/0022-cairn-core-contract.md) §3 and §9.

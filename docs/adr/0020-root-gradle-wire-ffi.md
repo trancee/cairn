@@ -65,8 +65,10 @@ declared only in settings (`FAIL_ON_PROJECT_REPOS`), with `google()` limited
 to the AndroidX, Android and Google groups. Lanes may substitute a
 pre-provisioned generator through `-Pcairn.uniffi.bindgen=<path>`.
 
-**Interim FFI surface.** `cairn-ffi` exports only public byte-level APIs and
-no secrets:
+**Interim FFI surface.** Superseded on 2026-10-23: `CairnCore`
+([ADR 0022](0022-cairn-core-contract.md)) replaced it, and the
+`run-isolated-android.sh` pass text became the `CairnCore` loopback status.
+`cairn-ffi` exported only public byte-level APIs and no secrets:
 - `encode_leb128` and `decode_leb128`;
 - `encode_length_prefixed` and `decode_length_prefixed`;
 - `WireError` as a typed error;

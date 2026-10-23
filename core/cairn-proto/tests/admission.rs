@@ -4,8 +4,8 @@ mod support;
 
 use cairn_crypto::CryptoError;
 use cairn_proto::{
-    Action, ChatRejection, Clock, ContactId, Core, CoreError, Event, GattRole, LinkId, Persisted,
-    TimerId, Verification,
+    Action, Clock, ContactId, Core, CoreError, Event, GattRole, LinkId, Persisted, TimerId,
+    Verification,
 };
 use support::seeded::Seeded;
 use support::{Net, START};
@@ -17,7 +17,7 @@ fn read_beacon(net: &mut Net, device: usize, link: LinkId) {
         device,
         Event::BeaconRead {
             link,
-            beacon: STRANGER_BEACON,
+            beacon: STRANGER_BEACON.to_vec(),
         },
     );
 }
@@ -66,8 +66,14 @@ fn a_central_admits_a_stranger_after_a_non_matching_beacon_read() {
         assert_eq!(contacts[0].verification, Verification::Unverified);
     }
     assert!(net.is_up(0, central), "the link survives pairing");
-    assert_eq!(first_fragment_headers(&net, 0, central), [0x00, 0x02, 0x04]);
-    assert_eq!(first_fragment_headers(&net, 1, peripheral), [0x01, 0x03]);
+    assert_eq!(
+        first_fragment_headers(&net, 0, central),
+        [0x00, 0x02, 0x04, 0x10, 0x30]
+    );
+    assert_eq!(
+        first_fragment_headers(&net, 1, peripheral),
+        [0x01, 0x03, 0x20]
+    );
 }
 
 #[test]
@@ -93,17 +99,17 @@ fn b_persists_the_contact_before_sending_p4() {
     net.run();
 
     let log = &net.devices[0].log;
-    let persist = log
-        .iter()
-        .rposition(|action| matches!(action, Action::Persist { .. }))
-        .unwrap();
     let p4 = log
         .iter()
         .position(
             |action| matches!(action, Action::Send { fragment, .. } if fragment[0] & 0x7f == 0x04),
         )
         .unwrap();
-    assert!(persist < p4);
+    let persists = log[..p4]
+        .iter()
+        .filter(|action| matches!(action, Action::Persist { .. }))
+        .count();
+    assert_eq!(persists, 2, "the fresh install, then the contact");
 }
 
 #[test]
@@ -186,6 +192,43 @@ fn a_central_with_a_pairing_in_flight_does_not_send_p0() {
     assert!(first_fragment_headers(&net, 0, second).is_empty());
     assert!(!net.is_up(0, second));
     assert_eq!(net.devices[0].core.contacts().len(), 1);
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn a_card_more_than_a_day_old_fails_pairing() {
+    let outcomes = [(1, 38), (2, 39)].map(|(days, seed)| {
+        let mut net = Net::new(2, seed);
+        net.clock.unix_s += days * 86_400;
+        net.devices[1].lag_s = days * 86_400;
+        let (central, _) = net.connect(0, 1);
+        read_beacon(&mut net, 0, central);
+        net.run();
+        (
+            net.devices[0].core.contacts().len(),
+            net.devices[1].core.contacts().len(),
+        )
+    });
+
+    assert_eq!(outcomes, [(1, 1), (0, 0)]);
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn a_contacts_beacon_resumes_even_while_a_stranger_is_pairing() {
+    let mut net = Net::new(3, 37);
+    let (paired, _) = net.connect(0, 1);
+    read_beacon(&mut net, 0, paired);
+    net.run();
+    net.drop_link(0, paired);
+    let (stranger, _) = net.connect(0, 2);
+    read_beacon(&mut net, 0, stranger);
+
+    let (contact, _) = net.connect(0, 1);
+    net.read_beacon_of(0, contact, 1);
+
+    assert_eq!(first_fragment_headers(&net, 0, contact), [0x10, 0x30]);
+    assert!(net.is_up(0, contact));
 }
 
 #[test]
@@ -296,34 +339,6 @@ fn malformed_or_unexpected_frames_close_the_link_without_a_reply() {
 
 #[test]
 #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
-fn chat_without_a_session_is_rejected() {
-    let mut net = Net::new(2, 11);
-    let (central, _) = net.connect(0, 1);
-    read_beacon(&mut net, 0, central);
-    net.run();
-
-    let actions = net.devices[0]
-        .core
-        .handle(
-            net.clock,
-            Event::SendChat {
-                contact: ContactId(0),
-                text: "hi".into(),
-            },
-        )
-        .unwrap();
-
-    assert_eq!(
-        actions,
-        [Action::ChatRejected {
-            contact: ContactId(0),
-            reason: ChatRejection::NoSession,
-        }]
-    );
-}
-
-#[test]
-#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
 fn caller_contract_violations_are_errors() {
     let mut fresh = Core::<Seeded>::new();
     let not_restored = fresh.handle(START, Event::LinkDown { link: LinkId(0) });
@@ -346,7 +361,7 @@ fn caller_contract_violations_are_errors() {
         START,
         Event::BeaconRead {
             link: LinkId(1),
-            beacon: STRANGER_BEACON,
+            beacon: STRANGER_BEACON.to_vec(),
         },
     );
     fresh
@@ -354,7 +369,7 @@ fn caller_contract_violations_are_errors() {
         .unwrap();
     let read = Event::BeaconRead {
         link: LinkId(3),
-        beacon: STRANGER_BEACON,
+        beacon: STRANGER_BEACON.to_vec(),
     };
     fresh.handle(START, read.clone()).unwrap();
     let second_beacon_read = fresh.handle(START, read);
@@ -472,7 +487,7 @@ fn events_for_unknown_links_and_stale_timers_are_ignored() {
         },
         Event::BeaconRead {
             link: unknown,
-            beacon: STRANGER_BEACON,
+            beacon: STRANGER_BEACON.to_vec(),
         },
         Event::Received {
             link: unknown,
@@ -538,7 +553,7 @@ fn crossing_p0s_with_equal_nonces_close_both_links() {
                 START,
                 Event::BeaconRead {
                     link: own,
-                    beacon: STRANGER_BEACON,
+                    beacon: STRANGER_BEACON.to_vec(),
                 },
             )
             .unwrap(),
@@ -627,7 +642,7 @@ fn backend_failures_are_returned_to_the_caller() {
             START,
             Event::BeaconRead {
                 link: LinkId(1),
-                beacon: STRANGER_BEACON,
+                beacon: STRANGER_BEACON.to_vec(),
             },
         )
         .unwrap(),
@@ -678,7 +693,7 @@ fn a_central_does_not_send_p0_to_a_backed_off_address() {
     let mut core = restored(START);
     let read = |link| Event::BeaconRead {
         link,
-        beacon: STRANGER_BEACON,
+        beacon: STRANGER_BEACON.to_vec(),
     };
     let timer = core
         .handle(START, link_up(LinkId(1), GattRole::Central, 185))
@@ -696,6 +711,44 @@ fn a_central_does_not_send_p0_to_a_backed_off_address() {
 
     let retry = core.handle(START, read(LinkId(2))).unwrap();
 
+    assert!(sent(&retry).is_empty());
+    assert!(retry.contains(&Action::Disconnect { link: LinkId(2) }));
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn a_beacon_of_the_wrong_length_closes_the_link_and_backs_off_the_address() {
+    Seeded::seed(37);
+    let mut core = restored(START);
+    core.handle(START, link_up(LinkId(1), GattRole::Central, 185))
+        .unwrap();
+    core.handle(START, link_up(LinkId(2), GattRole::Central, 185))
+        .unwrap();
+
+    let short = core.handle(
+        START,
+        Event::BeaconRead {
+            link: LinkId(1),
+            beacon: STRANGER_BEACON[..7].to_vec(),
+        },
+    );
+    let retry = core
+        .handle(
+            START,
+            Event::BeaconRead {
+                link: LinkId(2),
+                beacon: STRANGER_BEACON.to_vec(),
+            },
+        )
+        .unwrap();
+
+    assert_eq!(
+        short,
+        Ok(vec![
+            Action::CancelTimer { timer: TimerId(0) },
+            Action::Disconnect { link: LinkId(1) }
+        ])
+    );
     assert!(sent(&retry).is_empty());
     assert!(retry.contains(&Action::Disconnect { link: LinkId(2) }));
 }

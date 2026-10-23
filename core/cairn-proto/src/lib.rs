@@ -3,8 +3,9 @@
 //! Sans-IO state machines for Cairn R1.
 //!
 //! [`Core`] is the event loop of ADR 0022: fragmentation (spec §4), neighbour
-//! admission and P0–P4 pairing (spec §5, §10.4) and the version-1 [`Persisted`]
-//! blob. Beacons, Resume and DATA/CHAT follow. The post-quantum epoch
+//! admission and P0–P4 pairing (spec §5, §10.4), beacons (spec §10.1), Resume
+//! (spec §6), DATA with CHAT records (spec §7, §8) and the version-1
+//! [`Persisted`] blob. The post-quantum epoch
 //! identifiers and durable chunk transfer of spec §9 (OI-21, OI-25, OI-26) are
 //! not yet wired into a session; see ADR 0016.
 //!
@@ -28,12 +29,15 @@
 extern crate alloc;
 
 mod admission;
+mod beacon;
 mod card;
 mod core;
+mod data;
 mod epoch;
 mod framing;
 mod kdf;
 mod pairing;
+mod resume;
 mod state;
 mod transfer;
 

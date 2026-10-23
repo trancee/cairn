@@ -43,7 +43,9 @@ The owner chose the beacon, no-session and PR-shape rules below on
 - `cairn-proto` depends on `cairn-crypto` with default features off. The
   state machines are generic over `B: CryptoBackend` and never name an
   adapter.
-- `cairn-ffi` instantiates the core with the `AwsLc` adapter.
+- `cairn-ffi` instantiates the core with the `AwsLc` adapter. It mirrors
+  `Event`, `Action` and `ContactInfo` with `u64` ids, because a UniFFI custom
+  type for the id newtypes adds an error path that cannot be exercised.
 - Secret comparisons use `subtle` (ADR 0004). `cairn-proto` adds it with
   the first comparison that needs it.
 
@@ -57,7 +59,7 @@ timers and rate limits; `unix_s` drives beacon windows and days (spec §10.1).
 | `Restore { state: Option<Persisted> }` | First event. `Persisted` is `{ blob: bytes, version: u32 }`. `None` is a fresh install: the core creates the device beacon key and emits `Persist`. |
 | `LinkUp { link, gatt_role, mtu, address }` | A BLE link is connected. `gatt_role` is `Central` or `Peripheral`; `address` is opaque bytes used only for back-off. |
 | `MtuChanged { link, mtu }` | The ATT MTU changed. |
-| `BeaconRead { link, beacon: [u8; 8] }` | Central only: the value read from the peer's `beacon` characteristic (spec §4.1). |
+| `BeaconRead { link, beacon: bytes }` | Central only: the value read from the peer's `beacon` characteristic (spec §4.1). A value that is not 8 B long is peer misbehaviour: the core closes the link and backs off the address. |
 | `Received { link, fragment: bytes }` | One ATT value from `rx` or `tx`. |
 | `LinkDown { link }` | The link is gone. Partial frames are discarded (spec §4.5). |
 | `TimerFired { timer }` | A timer set by the core has expired. |
@@ -74,11 +76,13 @@ timers and rate limits; `unix_s` drives beacon windows and days (spec §10.1).
 | `ContactAdded { contact }` | Refresh the contact list. |
 | `ChatReceived { contact, msgno, text }` | Show the message. |
 | `ChatSent { contact, msgno }` | The message was sealed into DATA frames on a live session. |
-| `ChatRejected { contact, reason }` | `NoSession` or `TooLong`. |
+| `ChatRejected { contact, reason }` | `NoSession`, `TooLong` or `Exhausted`. |
 
 - **Ordering.** Within a batch, `Persist` precedes every `Send` that reveals
   the state it records. For example, A persists the new contact before it
-  sends P4, and I persists `CK_{n+1}` before its first DATA frame.
+  sends P4, I persists `CK_{n+1}` before its first DATA frame, R persists
+  its pending `CK_{n+1}` before S2, and a sender persists a `msgno` before
+  the DATA frame that carries it.
 - **Peer errors.** A malformed, unexpected or failed frame produces
   `Disconnect` (spec §4.2), never an error return. `handle` returns an error
   only for caller contract violations and local failures. Contract
@@ -91,6 +95,10 @@ timers and rate limits; `unix_s` drives beacon windows and days (spec §10.1).
   address is not backed off. The error discards that batch's actions; the
   link's pairing state is already reset, so the link idles until its
   deadline timer fires and the core disconnects it.
+- **Poisoning.** A panic inside the core reaches Kotlin as UniFFI's
+  `InternalException` and may leave the core between invariants, so
+  `CairnCore` refuses every later call with `CoreException.Poisoned`. The
+  app must recreate the core and restore it from the last persisted blob.
 - **Unknown links.** Events for a link the core does not know, or has
   already disconnected, are ignored. Kotlin may still deliver a queued
   fragment or `LinkDown` after the core's `Disconnect`, so this is not a
@@ -116,15 +124,21 @@ timers and rate limits; `unix_s` drives beacon windows and days (spec §10.1).
 - The central decides from that match. On a hit it starts Resume as I; on
   a miss it sends P0 as B if the admission limits allow, and otherwise
   disconnects and backs off the address (spec §10.4).
+- A hit for a contact that already has a link in Resume or in session
+  closes the new link (§10).
+- A day before a key's stored day, for example after the wall clock moved
+  back, uses the stored key; keys only ratchet forward.
 - Advertising, the advertised-beacon match, iOS beacon UUIDs, key rotation
   on removal and BEACON_KEY/BEACON_ACK records remain in S6.
 
-### 6. Sending without a session
+### 6. Sending
 
 `SendChat` for a contact with no Resume-completed link returns
 `ChatRejected { reason: NoSession }`. Nothing is held or persisted. S5 adds
 queuing. A text that does not fit one CHAT record in the 4079 B bucket
-returns `TooLong`.
+returns `TooLong`. A contact that has already been sent `msgno` 2^32 − 1
+returns `Exhausted`; `msgno` never wraps (spec §8). A session whose DATA
+counter is exhausted is closed and the chat returns `NoSession`.
 
 ### 7. Persistence
 
@@ -135,8 +149,8 @@ returns `TooLong`.
   device beacon key and its day, the next
   `ContactId`, and per contact the pairing role, mode, verification state,
   `pairID`, `th`, `nB`, peer card, peer beacon key and day, door keys,
-  Resume index `n`, and `CK_n` (with the uncommitted `CK_{n+1}` while R
-  awaits key confirmation).
+  Resume index `n`, `CK_n` (with the uncommitted `CK_{n+1}` while R
+  awaits key confirmation), and the last `msgno` sent to the contact.
 - The core does not seal the blob; Kotlin seals it with the platform
   keystore (ADR 0004).
 - Admission and back-off ledgers use `mono_ms` and are not persisted. A
@@ -160,7 +174,43 @@ S1 ships as stacked PRs:
 1. this ADR and the `no_std` seam;
 2. framing, admission, pairing and persistence;
 3. beacons, Resume and DATA/CHAT;
-4. the UniFFI `CairnCore`, the KMP loopback and the gates.
+4. the UniFFI `CairnCore`, the KMP loopback and the reference-app migration;
+5. the fuzz targets and the constant-time taint check on `cairn-proto`, behind
+   a hidden, non-default `probes` feature.
+
+The owner split the fourth PR in two on 2026-10-23, with the beacon length
+and poisoning rules above.
+
+### 10. Resume and DATA in S1
+
+Decided while building PR 3; the owner chose the key confirmation.
+
+- **Resume after pairing.** After P4, B (the central) sends S1 on the same
+  link as I, under a fresh 5 s deadline. Later links resume on a beacon hit.
+- **Key confirmation.** I sends one empty DATA frame (a 32 B all-zero
+  plaintext, 49 B on the wire) right after a valid S2. R commits its pending
+  `CK_{n+1}` when the first DATA frame opens, so it does not wait for the
+  first real message (spec §6, §7).
+- **Retries.** A device that still holds a pending `CK_{n+1}` from an
+  unconfirmed Resume as R tries it on even attempts and `CK_n` on odd ones,
+  so either side's loss converges. The attempt counter is in memory and
+  resets when the chain key changes.
+- **One link per contact.** A new link for a contact that already has a
+  Resume or a session on another link is closed, at the central's beacon
+  hit and at R's S1 match. This stands in for the concurrent-Resume rule
+  (OI-17), which issue 31 defers. Cost: a session R thinks is live blocks a
+  new one until its `LinkDown`.
+- **Session frames.** Establishing a session raises the reassembly limit
+  from 2560 B to 4096 B (spec §4.4).
+- **Beacon keys.** The card sent at pairing carries the device key ratcheted
+  to the current day in memory; the stored device key is not advanced. A
+  received card whose `bk_day` is more than one day from the local day fails
+  pairing, because spec §5 makes it the sender's current key and an old day
+  would cost a ratchet step per day on every read. Each beacon read ratchets
+  the stored contact keys forward to the day of window `w−1` in place; the
+  next `Persist` records them. Erasing old keys belongs to S6 with key
+  rotation.
+- **Deferred.** Resume rate limits and the full OI-17 rule.
 
 ## Consequences
 
@@ -184,3 +234,10 @@ S1 ships as stacked PRs:
 - **Persist the admission ledgers.** Survives restarts, but adds a write
   per attempt and depends on the wall clock for rolling windows.
 - **One S1 PR.** Too large to review.
+- **Confirm with the first real message.** No extra frame, but R keeps two
+  candidate keys until the user sends something, and a quiet session never
+  confirms.
+- **A dedicated confirmation record.** Needs a new record type for what an
+  empty padded DATA frame already proves.
+- **The full concurrent-Resume rule now.** Issue 31 defers it with rate
+  limits; closing the new link is safe and simple.

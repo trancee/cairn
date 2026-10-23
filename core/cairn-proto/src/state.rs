@@ -39,6 +39,8 @@ pub(crate) struct Contact {
     /// Resume index `n` of `chain_key` (spec §6).
     pub(crate) resume_index: u64,
     pub(crate) chain_key: Zeroizing<[u8; 32]>,
+    /// The last CHAT `msgno` sent to this contact; 0 before the first.
+    pub(crate) sent_msgno: u32,
     /// `CK_{n+1}` while R awaits I's key confirmation.
     pub(crate) pending_chain_key: Option<Zeroizing<[u8; 32]>>,
 }
@@ -67,8 +69,14 @@ impl Contact {
             door_b_to_a,
             resume_index: 0,
             chain_key,
+            sent_msgno: 0,
             pending_chain_key: None,
         }
+    }
+
+    /// The next CHAT number; `None` once 2^32 − 1 has been sent (spec §8).
+    pub(crate) fn next_msgno(&self) -> Option<u32> {
+        self.sent_msgno.checked_add(1)
     }
 }
 
@@ -147,6 +155,7 @@ fn encode_contact(contact: &Contact, blob: &mut Vec<u8>) {
     blob.extend_from_slice(&contact.door_b_to_a[..]);
     blob.extend_from_slice(&contact.resume_index.to_be_bytes());
     blob.extend_from_slice(&contact.chain_key[..]);
+    blob.extend_from_slice(&contact.sent_msgno.to_be_bytes());
     match &contact.pending_chain_key {
         None => blob.push(0),
         Some(key) => {
@@ -181,6 +190,7 @@ fn decode_contact(reader: &mut Reader<'_>) -> Result<Contact, InvalidBlob> {
     let door_b_to_a = Zeroizing::new(reader.array()?);
     let resume_index = u64::from_be_bytes(reader.array()?);
     let chain_key = Zeroizing::new(reader.array()?);
+    let sent_msgno = u32::from_be_bytes(reader.array()?);
     let pending_chain_key = match reader.byte()? {
         0 => None,
         1 => Some(Zeroizing::new(reader.array()?)),
@@ -198,6 +208,7 @@ fn decode_contact(reader: &mut Reader<'_>) -> Result<Contact, InvalidBlob> {
         door_b_to_a,
         resume_index,
         chain_key,
+        sent_msgno,
         pending_chain_key,
     })
 }
@@ -247,6 +258,7 @@ mod tests {
             door_b_to_a: Zeroizing::new([7; 32]),
             resume_index: 8,
             chain_key: Zeroizing::new([9; 32]),
+            sent_msgno: 12,
             pending_chain_key: pending.then(|| Zeroizing::new([10; 32])),
         }
     }
@@ -283,6 +295,20 @@ mod tests {
         assert_eq!(restored.contacts[0].verification, Verification::Verified);
         assert_eq!(restored.contacts[2].role, PairingRole::A);
         assert_eq!(restored.contacts[2].verification, Verification::Unverified);
+        assert_eq!(restored.contacts[0].sent_msgno, 12);
+    }
+
+    #[test]
+    fn chat_numbers_start_at_one_and_stop_before_wrapping() {
+        let numbers = [0, 1, u32::MAX - 1, u32::MAX].map(|sent_msgno| {
+            Contact {
+                sent_msgno,
+                ..contact(0, false)
+            }
+            .next_msgno()
+        });
+
+        assert_eq!(numbers, [Some(1), Some(2), Some(u32::MAX), None]);
     }
 
     #[test]
@@ -315,7 +341,7 @@ mod tests {
     }
 
     #[test]
-    fn a_contact_without_a_pending_key_takes_198_bytes_plus_its_card() {
+    fn a_contact_without_a_pending_key_takes_202_bytes_plus_its_card() {
         let empty = Device {
             contacts: std::vec::Vec::new(),
             ..device()
@@ -324,7 +350,7 @@ mod tests {
         let sizes = [empty.persist().blob.len(), device().persist().blob.len()];
 
         assert_eq!(sizes[0], 4 + 32 + 8 + 2);
-        assert_eq!(sizes[1] - sizes[0], 3 * (198 + 40) + 32);
+        assert_eq!(sizes[1] - sizes[0], 3 * (202 + 40) + 32);
     }
 
     #[test]
@@ -340,7 +366,7 @@ mod tests {
         let mut bad_verification = blob.clone();
         bad_verification[46 + 10] = 3;
         let mut bad_pending_flag = blob.clone();
-        bad_pending_flag[46 + 238 - 1] = 2;
+        bad_pending_flag[46 + 242 - 1] = 2;
         let mut bad_card = blob.clone();
         bad_card[46 + 93] = 0xff;
         let mut stale_next = blob.clone();
