@@ -1,16 +1,51 @@
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+
+// Numeric dotted prefix only; every floored version is numeric up to its qualifier.
+List<Integer> cairnVersionKey(String version) {
+    version.tokenize('.-').takeWhile { it.isInteger() }.collect { it as Integer }
+}
+
+boolean cairnBelow(String version, String floor) {
+    def actual = cairnVersionKey(version)
+    def required = cairnVersionKey(floor)
+    for (int i = 0; i < Math.max(actual.size(), required.size()); i++) {
+        def a = i < actual.size() ? actual[i] : 0
+        def r = i < required.size() ? required[i] : 0
+        if (a != r) {
+            return a < r
+        }
+    }
+    false
+}
 
 // Resolves downloaded inputs of the root build without compiling project code.
 gradle.projectsEvaluated {
     gradle.rootProject.tasks.register("cairnResolveRepositoryInputs") {
         doLast {
             def resolvedCount = 0
+            def floors = gradle.rootProject.extensions.getByType(VersionCatalogsExtension).named("libs")
+                .findBundle("build.tool.floors").orElseThrow { new GradleException("FAIL: build-tool-floors bundle missing") }
+                .get().collectEntries { ["${it.group}:${it.name}".toString(), it.version] }
+            def belowFloor = [] as SortedSet
+            def checkFloors = { String owner, Set<ResolvedComponentResult> components ->
+                components.each { component ->
+                    def id = component.moduleVersion
+                    def floor = floors["${id.group}:${id.name}".toString()]
+                    if (floor != null && cairnBelow(id.version, floor)) {
+                        belowFloor << "${owner} ${id} < ${floor}".toString()
+                    }
+                }
+            }
+            checkFloors("${gradle.rootProject.path}:buildscript:classpath",
+                gradle.rootProject.buildscript.configurations.getByName("classpath").incoming.resolutionResult.allComponents)
             gradle.rootProject.allprojects.each { project ->
                 project.configurations.findAll { it.canBeResolved }.each { configuration ->
                     def artifacts = configuration.incoming.artifactView {
                         componentFilter { it instanceof ModuleComponentIdentifier }
                     }.files.files
                     resolvedCount += artifacts.size()
+                    checkFloors("${project.path}:${configuration.name}", configuration.incoming.resolutionResult.allComponents)
                     println("INPUTS: ${project.path}:${configuration.name} external artifacts ${artifacts.size()}")
                 }
             }
@@ -20,6 +55,10 @@ gradle.projectsEvaluated {
                 gradle.rootProject.dependencies.create("com.android.tools.build:aapt2:9.3.1-15703166:${host}")
             )
             resolvedCount += aapt2.resolve().size()
+            if (!belowFloor.isEmpty()) {
+                throw new GradleException("FAIL: build tooling resolved below security floors:\n" + belowFloor.join("\n"))
+            }
+            println("PASS: build tooling resolved at or above ${floors.size()} security floors")
             if (resolvedCount == 0) {
                 throw new GradleException("FAIL: no external repository dependency artifacts resolved")
             }

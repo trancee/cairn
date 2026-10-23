@@ -2,6 +2,15 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer + host-only ML-KEM-768/X-Wing/AES-256-GCM/X25519/RNG backends + root Gradle build with interim wire FFI (JVM/Android); protocol SDK/application=not implemented.
 
+## Build-tool security floors (2026-10-23)
+
+[ADR 0020 amendment](docs/adr/0020-root-gradle-wire-ffi.md#amendment-build-tool-security-floors-2026-10-23):
+- 50 transitive Dependabot alerts and failing `dependency_not_found` security-update jobs came from AGP `9.3.1` build tooling: netty, Bouncy Castle, jose4j, jdom2, httpclient and commons-lang3.
+- The catalog bundle `build-tool-floors` sets patched floors. Root `build.gradle.kts` constrains the buildscript `classpath` and every resolvable, non-consumable project configuration.
+- `resolve-repository-inputs.gradle` now fails if any floored module resolves below its floor.
+- Proof is the strict CodeQL cell's input preparation. The alerts close only after `main`'s automatic dependency submission reruns.
+- The Linux lane needs a fresh `prepare-repository-inputs.sh` label, because the floors change the dependency set.
+
 ## Root Gradle build and interim wire FFI (2026-10-22)
 
 [ADR 0020](docs/adr/0020-root-gradle-wire-ffi.md) adds the following:

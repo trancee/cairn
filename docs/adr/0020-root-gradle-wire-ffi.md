@@ -145,3 +145,43 @@ which is acceptable because no SDK consumers have been released.
 - Strict Kotlin CodeQL traces the fixture and the root Gradle build into one
   database, so the root JVM/Android Kotlin is scanned (ADR 0015 amendment).
 - The serde pin and MPL exceptions need review whenever UniFFI updates.
+
+## Amendment: build-tool security floors (2026-10-23)
+
+GitHub's automatic Gradle dependency submission reported 50 Dependabot alerts
+against `settings.gradle.kts`. Every alert is transitive build tooling of the
+AGP `9.3.1` tuple; none ships in an SDK or app artifact:
+
+- netty `4.1.93`/`4.1.110` via `grpc-netty` (UTP and the emulator protocol);
+- Bouncy Castle `1.79` via apkzlib, builder and sdk-common;
+- jose4j `0.9.5` via bundletool, jdom2 `2.0.6` via jetifier;
+- httpclient `4.5.6` via httpmime, commons-lang3 `3.16.0` via commons-compress.
+
+Dependabot security updates cannot fix them: the jobs fail with
+`dependency_not_found`, because no manifest declares these modules.
+
+**Decision.** The `build-tool-floors` bundle in `gradle/libs.versions.toml` lists
+patched floors: netty `4.1.139.Final`, Bouncy Castle `1.86`, jose4j `0.9.7`,
+jdom2 `2.0.6.1`, httpcomponents `4.5.14` and commons-lang3 `3.21.0`.
+The root `build.gradle.kts` applies them as dependency constraints in two places:
+
+- the root buildscript `classpath`, which carries the plugins;
+- a `cairnBuildToolFloors` dependency scope. Every resolvable, non-consumable
+  configuration in every project extends from it.
+
+Constraints only lift versions that are already in a graph. They add no
+dependency and stay out of published variant metadata. Every module of a family
+gets a floor: all netty modules, `bcprov`/`bcpkix`/`bcutil`, and
+`httpclient`/`httpmime`. That keeps each family on one version.
+`resolve-repository-inputs.gradle` fails the input preparation if any floored
+module resolves below its floor. The task runs in both the strict CodeQL cell
+and the Linux lane.
+
+Remove a floor once the tuple's AGP brings that version or newer itself.
+
+**Alternatives.**
+- **Dismiss the alerts as build-only.** Rejected: that weakens the gate, and
+  build tooling runs with repository access.
+- **Exclude configurations from dependency submission.** Rejected for the same
+  reason.
+- **Upgrade AGP.** Out of scope: that is a separate tuple decision.

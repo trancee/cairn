@@ -534,7 +534,8 @@ described above, plus JDK 21 at `/usr/lib/jvm/java-21-openjdk-amd64`.
    - runs `cargo fetch --locked` for `core/` and Ubique;
    - runs `resolve-repository-inputs.gradle`. This resolves every resolvable
      configuration plus AAPT2 `9.3.1-15703166`, without compiling: the Cargo
-     target directory must not exist afterwards;
+     target directory must not exist afterwards. It fails if any module in the
+     `build-tool-floors` catalog bundle resolves below its floor;
    - stores `canonical-inputs/` (Cargo registry and Gradle `files-2.1`) and
      the Gradle metadata archive under
      `/opt/cairn-binding-seeds/repository-inputs/LABEL`, root-owned,
