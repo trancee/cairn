@@ -1102,9 +1102,13 @@ acceptance is implied.
   [`docs/spec/models/README.md`](docs/spec/models/README.md#tooling).
 - **Environment:** before running Tamarin, replay or `act`, read
   [`docs/spec/models/ENVIRONMENT.md`](docs/spec/models/ENVIRONMENT.md);
-  `scripts/check.sh` runs the fast gates (also the pre-commit hook and CI).
-  `bash scripts/check-rust.sh` runs Rust format/clippy/tests and cargo-deny;
-  the pre-commit hook additionally calls it. Miri/careful use the pinned
+  `scripts/check.sh` runs the fast gates.
+  `bash scripts/check-rust.sh` runs Rust format/clippy/tests and cargo-deny.
+  The pre-commit hook and the `pull_request` triggers of the Rust, lifecycle
+  and CodeQL workflows run only the gates the changed paths can affect, from
+  the shared `SCOPES` in `scripts/check_scopes.py`; a docs-only commit runs
+  only the whitespace and scope tests. `CAIRN_FULL_CHECK=1` makes the hook run
+  every gate; pushes to `main`, schedules and manual runs always run all. Miri/careful use the pinned
   nightly in the Rust workflow. Local source line/branch coverage is now
   100% for both crates; error-propagation regions remain uncovered.
   Other ADR 0007

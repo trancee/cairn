@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 from equations.maude_native import NATIVE_DIRECTORY, source_identity
 from equations.maude_runner import GuardError
@@ -28,8 +29,27 @@ class CommittedBaselineTests(unittest.TestCase):
             ["-c", "user.name=fixture", "-c", "user.email=fixture@invalid",
              "-c", "commit.gpgsign=false", "commit", "-q", "-m", "baseline"],
         ):
-            subprocess.run(["git", "-C", str(root), *command], check=True, capture_output=True, timeout=10)
+            subprocess.run(
+                ["git", "-C", str(root), *command], check=True, capture_output=True, timeout=10,
+                env=experiment.git_environment(),
+            )
         return root, replay
+
+    def test_fixture_repository_ignores_inherited_git_environment(self):
+        with tempfile.TemporaryDirectory() as sentinel, tempfile.TemporaryDirectory() as temporary:
+            clean = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+            subprocess.run(["git", "init", "-q", sentinel], check=True, capture_output=True, timeout=10, env=clean)
+            sentinel_git = str(Path(sentinel) / ".git")
+            inherited = {"GIT_DIR": sentinel_git, "GIT_INDEX_FILE": str(Path(sentinel_git) / "index")}
+            with unittest.mock.patch.dict(os.environ, inherited):
+                self.repository(temporary)
+
+            sentinel_head = subprocess.run(
+                ["git", "-C", sentinel, "rev-parse", "--verify", "-q", "HEAD"],
+                capture_output=True, timeout=10, env=clean,
+            )
+
+        self.assertNotEqual(sentinel_head.returncode, 0)
 
     def test_baseline_state_is_independent_of_the_working_directory(self):
         with tempfile.TemporaryDirectory() as temporary, tempfile.TemporaryDirectory() as elsewhere:

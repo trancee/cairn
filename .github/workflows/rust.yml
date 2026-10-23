@@ -4,6 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
+    # Must equal SCOPES in scripts/check_scopes.py (scripts/test_check_scopes.py).
+    paths:
+      - core/**
+      - rust-toolchain.toml
+      - scripts/check-rust.sh
+      - scripts/check-ct.sh
+      - .github/workflows/rust.yml
   merge_group:
   workflow_dispatch:
 
