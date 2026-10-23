@@ -42,6 +42,10 @@ cross-builds require the platform SDK, the Android NDK where applicable,
 and the Rust target libraries.
 
 For workflow changes, run `actionlint .github/workflows/*.yml`.
+The pre-commit hook selects these checks from the staged paths
+(`scripts/check_scopes.py`); run `CAIRN_FULL_CHECK=1 git commit` to force all.
+When you add a gate input outside the listed paths, add it to `SCOPES` and to
+the matching workflow `paths`; `scripts/test_check_scopes.py` checks they agree.
 The fast script can skip unavailable optional tools. A skip does not mean
 that the corresponding check passed.
 

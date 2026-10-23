@@ -250,7 +250,10 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   formatting/all-target strict Clippy, native clock/validation unit tests and 37 native CLI/process cases, then runs
   whitespace, unit tests and `actionlint`,
   plus lifecycle/source-projection and equation convergence/boundedness proofs when pinned
-  Lean is available. The pre-commit hook and CI both call it.
+  Lean is available. The pre-commit hook calls it when staged paths are in the
+  `models` or `workflows` scope of `scripts/check_scopes.py` (actionlint only
+  for workflows); the lifecycle workflow runs it on the same pull-request paths
+  and on every push to `main`.
 - `REPLAY=1 scripts/check.sh` adds the default/refined witness replays,
   eight refined-origin replays and both guard-mutation regressions.
 - `python3 docs/spec/models/mutation.py --timeout 180` replays the default
@@ -263,6 +266,7 @@ Facts that no config file states. Read before running Tamarin, replay or `act`.
   mutation only adds the two tail rules without stored-prefix premises;
   the mandatory-mix guard remains present. It also has its own lifecycle job.
 - Enable the hook once per clone: `git config core.hooksPath .githooks`.
+  It prints the selected gates; `CAIRN_FULL_CHECK=1 git commit` runs all of them.
 - Disclosure-profile replay requires complete refined deconstructions.
   `--target complete_safety` replays all completed safety claims except the
   three Lean-checked serialization claims. The four existential targets are

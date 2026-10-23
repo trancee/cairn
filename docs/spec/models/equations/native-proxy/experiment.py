@@ -51,17 +51,26 @@ class BudgetExceeded(GuardError):
     """A structurally valid current-source report exceeds its approved budget."""
 
 
+def git_environment() -> dict[str, str]:
+    """Drop repository-local variables, such as those a Git hook exports."""
+    local = subprocess.run(
+        ["git", "rev-parse", "--local-env-vars"], text=True, capture_output=True, check=True,
+        env={key: value for key, value in os.environ.items() if not key.startswith("GIT_")},
+    ).stdout.split()
+    return {key: value for key, value in os.environ.items() if key not in local}
+
+
 def committed_baseline(root: Path, timeout: float | None = None) -> bool:
     # Outside a repository, git diff silently switches to --no-index mode.
     toplevel = subprocess.run(
         ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
-        text=True, capture_output=True, timeout=timeout,
+        text=True, capture_output=True, timeout=timeout, env=git_environment(),
     )
     if toplevel.returncode != 0 or Path(toplevel.stdout.strip()).resolve() != root.resolve():
         raise GuardError("native guard committed replay baseline unavailable")
     result = subprocess.run(
         ["git", "-C", str(root), "diff", "--quiet", "HEAD", "--", "docs/spec/models/replay.py"],
-        capture_output=True, timeout=timeout,
+        capture_output=True, timeout=timeout, env=git_environment(),
     )
     if result.returncode not in (0, 1):
         raise GuardError("native guard committed replay baseline unavailable")

@@ -4,6 +4,17 @@ on:
   push:
     branches: [main]
   pull_request:
+    # Must equal SCOPES in scripts/check_scopes.py (scripts/test_check_scopes.py).
+    paths:
+      - docs/spec/models/**
+      - '!docs/spec/models/**/*.md'
+      - rust-toolchain.toml
+      - scripts/check.sh
+      - scripts/check_scopes.py
+      - scripts/test_check_scopes.py
+      - .githooks/**
+      - .github/workflows/lifecycle.yml
+      - .github/workflows/**
   merge_group:
   workflow_dispatch:
 

@@ -19,6 +19,7 @@ python3 docs/spec/models/equations/native-proxy/check.py \
 python3 docs/spec/models/check_certificates.py
 python3 -m unittest discover -s docs/spec/models -p 'test_*.py'
 python3 -m unittest discover -s docs/spec/models/lifecycle -p 'test_*.py'
+python3 -m unittest discover -s scripts -p 'test_*.py'
 
 if command -v actionlint >/dev/null; then
   actionlint .github/workflows/*.yml
