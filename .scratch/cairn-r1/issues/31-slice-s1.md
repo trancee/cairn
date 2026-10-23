@@ -42,3 +42,10 @@ the link and backs off the address), and a panic poisons the core so later
 calls fail with `CoreException.Poisoned`. PR (d2) adds the fuzz targets and
 the constant-time taint check behind a hidden `probes` feature. See
 [ADR 0022](../../../docs/adr/0022-cairn-core-contract.md) §3 and §9.
+
+2026-10-23: PR (d2), #41, landed the gates. `core/ct` taints every
+`cairn-proto` secret comparison through `probes`. The `framing`, `records`
+and `session` fuzz targets run per PR. The `session` fuzzer found peer
+X-Wing faults (an ML-KEM modulus failure, or a low-order X25519 share)
+surfacing as `CoreError::Crypto`. They now fail pairing as malformed. See
+[ADR 0022](../../../docs/adr/0022-cairn-core-contract.md) §8.
