@@ -63,6 +63,9 @@ cargo +nightly-2026-10-08 careful test -p cairn-crypto --all-features --locked
 cargo +nightly-2026-10-08 careful test -p cairn-proto --locked
 cargo install cargo-fuzz --version 0.13.2 --locked
 cargo +nightly-2026-10-08 fuzz run wire_encoding -- -max_total_time=60 -max_len=65540 -seed=20261009
+cargo +nightly-2026-10-08 fuzz run framing -- -max_total_time=60 -seed=20261023
+cargo +nightly-2026-10-08 fuzz run records -- -max_total_time=60 -seed=20261024
+cargo +nightly-2026-10-08 fuzz run session -- -max_total_time=60 -seed=20261025
 ```
 
 The Rust workflow runs the ordinary gates on Linux x86-64, Linux ARM64 and
@@ -86,6 +89,18 @@ smoke completed 57,843,345 executions in 61 seconds without a crash; this is
 not exhaustive parser or platform proof.
 The internal harness uses `libfuzzer-sys` (MIT/Apache-2.0 and NCSA) and its
 `arbitrary` dependency; neither is a runtime dependency of the SDK.
+
+`framing` feeds arbitrary fragments to a `Reassembler` and round-trips
+well-formed frames through `fragment` at every MTU. `records` checks CHAT
+record parsing and the padded encoding through the hidden `probes` feature
+of `cairn-proto`. `session` compiles the `cairn-proto` test loopback and its
+seeded backend. It pairs, resumes and chats two cores while the input drops,
+truncates, corrupts or replaces fragments in flight. Any `CoreError` from a
+contract-valid event, or a received chat the peer did not send, is a crash.
+Its first run found peer X-Wing inputs surfacing as `CoreError::Crypto`; see
+[ADR 0022](../docs/adr/0022-cairn-core-contract.md) §8. On macOS ARM64 each
+new target ran 60 s, and `session` a further 180 s, without a crash. The
+retained corpora are `cargo fuzz cmin` minimised.
 
 ## Dependencies and vectors
 
@@ -287,6 +302,13 @@ marked: the matrix seed drives rejection sampling, and the mandated all-zero
 X25519 abort is a deliberately public branch. A mutation that also marked
 `H(ek)` was flagged at the `aws-lc-rs` adapter's public hash check, so the
 harness does reach the KEM code.
+
+Both backend modes also run `cairn-proto`'s secret comparisons through its
+hidden `probes` feature. They taint beacon keys, Resume chain keys, the
+expected P3/P4 confirmation and DATA padding, and require each verdict and
+found index to stay tainted. Beacon days, windows, attempt numbers and wire
+bytes are public. This passed under Valgrind 3.22.0 in a native Linux ARM64
+Ubuntu 24.04 container.
 
 AES-256-GCM sealing is checked on both adapters with a tainted key and
 plaintext; the `ciphertext ‖ tag` output must be tainted. Opening and

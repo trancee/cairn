@@ -96,3 +96,14 @@ This is the first version. Adding gates is non-breaking. Removing or downgrading
 - Memcheck taints AES-GCM sealing only. Opening and X25519 agreement branch
   on public-by-design verdicts (tag match, all-zero output) that Memcheck
   cannot declassify inside the providers.
+
+2026-10-23, from [ADR 0022](0022-cairn-core-contract.md) §8 (no gate removed):
+- Memcheck covers `cairn-proto`'s secret comparisons on both backends:
+  beacon and pseudonym search, the S1 and S2 MACs, the P3/P4 confirmation
+  and DATA padding. A hidden `probes` feature exposes them. The AES-GCM open
+  verdict before the P3/P4 confirmation remains public by design.
+- The per-PR fuzz smoke runs four targets: `wire_encoding`, `framing`,
+  `records` and `session`. `session` is the S1 state-machine fuzzer. It
+  drives two sans-IO `Core`s, not the UniFFI `CairnCore`, and checks that
+  `handle` keeps its contract and that received chats are authentic.
+  Monotonic counters and bounded memory are not yet asserted.

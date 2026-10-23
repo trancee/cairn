@@ -2,6 +2,25 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer + host-only ML-KEM-768/X-Wing/AES-256-GCM/X25519/RNG backends + S1 sans-IO core (pairing, Resume, CHAT) behind the UniFFI `CairnCore` + root Gradle build (JVM/Android); BLE transport/SDK/application=not implemented.
 
+## S1 fuzzing and constant-time gates (2026-10-23)
+
+PR (d2) of [issue 31](.scratch/cairn-r1/issues/31-slice-s1.md) completes the
+S1 gates ([ADR 0022](docs/adr/0022-cairn-core-contract.md) §8):
+- Each secret comparison in `cairn-proto` is a branch-free inner function
+  returning `subtle::Choice`, declassified once by its caller. A hidden,
+  non-default `probes` feature exposes them.
+- `core/ct` taints beacon keys, chain keys, the P3/P4 confirmation and DATA
+  padding, and requires tainted verdicts and indices on both backends.
+- New fuzz targets `framing`, `records` and `session` (a two-core loopback
+  with corrupted fragments) run in the per-PR fuzz job alongside
+  `wire_encoding`.
+- Fix: the `session` target found that a peer X-Wing key failing the ML-KEM
+  modulus check, or a low-order X25519 share in P1 or P2, surfaced as
+  `CoreError::Crypto`. It now fails pairing as a malformed frame.
+
+Valgrind 3.22.0 passed `check-ct.sh` in a local Linux ARM64 container. The
+x86-64 lane and the hosted fuzz runs are CI evidence.
+
 ## S1 `CairnCore` FFI (2026-10-23)
 
 PR (d1) of [issue 31](.scratch/cairn-r1/issues/31-slice-s1.md) replaces the
@@ -18,7 +37,7 @@ interim `cairn-ffi` exports with `CairnCore`
 
 Strict Kotlin CodeQL compiles the Kotlin. `:sdk:jvmTest` and the emulator
 instrumentation run only in the owner's Linux lane and are unverified for this
-change. Fuzzing and the constant-time taint check follow in PR (d2).
+change. Fuzzing and the constant-time taint check landed in PR (d2), above.
 
 ## Build-tool security floors (2026-10-23)
 

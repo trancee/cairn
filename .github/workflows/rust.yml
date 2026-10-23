@@ -242,3 +242,9 @@ jobs:
         run: |
           cargo +nightly-2026-10-08 fuzz run wire_encoding -- \
             -max_total_time=60 -max_len=65540 -seed=20261009
+      - name: Fuzz framing, CHAT records and two-core sessions
+        working-directory: core
+        run: |
+          cargo +nightly-2026-10-08 fuzz run framing -- -max_total_time=60 -seed=20261023
+          cargo +nightly-2026-10-08 fuzz run records -- -max_total_time=60 -seed=20261024
+          cargo +nightly-2026-10-08 fuzz run session -- -max_total_time=60 -seed=20261025

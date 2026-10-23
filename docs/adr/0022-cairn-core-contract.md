@@ -163,10 +163,32 @@ counter is exhausted is closed and the chat returns `NoSession`.
   `Reference` deterministic key generation and encapsulation helpers. It is
   compiled only for tests and is never exported.
 - The KMP loopback uses the real backend and asserts outcomes only.
-- S1 switches on `cairn-wire` fuzzing (frame header and reassembly, record
-  parser, S1/S2 and P0–P4 parsers) and the constant-time taint check on
-  `cairn-proto`'s secret paths: beacon and pseudonym lookup, MAC checks and
-  the padding check ([ADR 0007](0007-ct-conformance-gates.md)).
+- S1 switches on fuzzing of the frame header and reassembly, the record
+  parser and the S1/S2 and P0–P4 parsers, plus the constant-time taint check
+  on `cairn-proto`'s secret paths: beacon and pseudonym lookup, MAC checks and
+  the padding check ([ADR 0007](0007-ct-conformance-gates.md)). As built:
+  - `core/fuzz` targets `framing` (arbitrary fragments, and the
+    `fragment`/`Reassembler` round trip at every MTU) and `records` (parse
+    invariants and the `chat_plaintext` round trip).
+  - The `session` target drives two `Core`s through the test loopback,
+    pairing, resuming and chatting. The input drops, truncates, corrupts or
+    replaces fragments in flight. It reaches the P0–P4 and S1/S2 parsers
+    through `handle`, not through standalone parser targets. It fails if
+    `handle` returns an error for a contract-valid event, or if a received
+    chat is not one the peer sent under that number.
+  - Each secret comparison is a branch-free inner function returning a
+    `subtle::Choice`. The protocol declassifies it with one `bool::from`.
+    The hidden `probes` feature exposes these functions to the `core/ct`
+    Memcheck harness, which taints beacon keys, chain keys, the expected P3/P4
+    confirmation and DATA padding. It requires each verdict and found index to
+    stay tainted on both backends.
+  - The AES-GCM tag verdict that guards the P3/P4 confirmation is public by
+    design and stays unchecked, as in ADR 0019.
+- A peer's X-Wing key in P1 that fails the ML-KEM modulus check, or an X25519
+  share in P1 or P2 that gives an all-zero secret, fails pairing as a
+  malformed frame. The link closes and the peer address backs off. Only local
+  backend failures reach the caller as `CoreError::Crypto`. The `session`
+  fuzz target found this; a pairing unit test pins it.
 
 ### 9. Delivery
 

@@ -82,8 +82,7 @@ pub(crate) fn parse(plaintext: &[u8]) -> Result<Vec<Chat>, Malformed> {
     let mut rest = plaintext;
     while let Some((&kind, after)) = rest.split_first() {
         if kind == END {
-            let padding = after.iter().fold(0u8, |acc, byte| acc | byte);
-            return if bool::from(padding.ct_eq(&0)) {
+            return if bool::from(padding_is_zero(after)) {
                 Ok(chats)
             } else {
                 Err(Malformed)
@@ -107,6 +106,11 @@ pub(crate) fn parse(plaintext: &[u8]) -> Result<Vec<Chat>, Malformed> {
         rest = &after[body.len()..];
     }
     Ok(chats)
+}
+
+/// Whether `padding` is all zero, in constant time over its length.
+pub(crate) fn padding_is_zero(padding: &[u8]) -> subtle::Choice {
+    padding.iter().fold(0u8, |acc, byte| acc | byte).ct_eq(&0)
 }
 
 /// The keys and counters of one established session (spec §7.1).

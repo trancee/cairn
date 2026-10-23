@@ -135,8 +135,23 @@ name = "cairn-ct"
 version = "0.0.0"
 dependencies = [
  "cairn-crypto",
+ "cairn-proto",
  "crabgrind",
 ]
+
+[[package]]
+name = "cairn-proto"
+version = "0.1.0"
+dependencies = [
+ "cairn-crypto",
+ "cairn-wire",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
+name = "cairn-wire"
+version = "0.1.0"
 
 [[package]]
 name = "cc"
