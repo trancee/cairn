@@ -54,7 +54,7 @@ timers and rate limits; `unix_s` drives beacon windows and days (spec §10.1).
 
 | Event | Meaning |
 |---|---|
-| `Restore { blob: Option<bytes> }` | First event. `None` is a fresh install: the core creates the device beacon key and emits `Persist`. |
+| `Restore { state: Option<Persisted> }` | First event. `Persisted` is `{ blob: bytes, version: u32 }`. `None` is a fresh install: the core creates the device beacon key and emits `Persist`. |
 | `LinkUp { link, gatt_role, mtu, address }` | A BLE link is connected. `gatt_role` is `Central` or `Peripheral`; `address` is opaque bytes used only for back-off. |
 | `MtuChanged { link, mtu }` | The ATT MTU changed. |
 | `BeaconRead { link, beacon: [u8; 8] }` | Central only: the value read from the peer's `beacon` characteristic (spec §4.1). |
@@ -70,7 +70,7 @@ timers and rate limits; `unix_s` drives beacon windows and days (spec §10.1).
 | `Send { link, fragment }` | Write or notify the fragment in order. |
 | `Disconnect { link }` | Close the link. |
 | `SetTimer { timer, at_mono_ms }` / `CancelTimer { timer }` | Schedule or cancel. |
-| `Persist { blob, version }` | Seal and store the blob before executing any later action in the batch. |
+| `Persist { state: Persisted }` | Seal and store the blob before executing any later action in the batch. |
 | `ContactAdded { contact }` | Refresh the contact list. |
 | `ChatReceived { contact, msgno, text }` | Show the message. |
 | `ChatSent { contact, msgno }` | The message was sealed into DATA frames on a live session. |
@@ -81,15 +81,28 @@ timers and rate limits; `unix_s` drives beacon windows and days (spec §10.1).
   sends P4, and I persists `CK_{n+1}` before its first DATA frame.
 - **Peer errors.** A malformed, unexpected or failed frame produces
   `Disconnect` (spec §4.2), never an error return. `handle` returns an error
-  only for caller contract violations: an event before `Restore`, an unknown
-  link or contact, or a blob that does not decode.
+  only for caller contract violations and local failures. Contract
+  violations are: an event before `Restore`, a second `Restore`, an unknown
+  contact, a blob that does not decode, a reused `LinkId`, a beacon read on a
+  peripheral link or a second one on the same link, and an ATT MTU below 23
+  in `LinkUp` or `MtuChanged` (`InvalidMtu`).
+- **Local failures.** A `CryptoBackend` failure, such as the platform RNG
+  failing, returns `CoreError::Crypto`. It is not blamed on the peer, so the
+  address is not backed off. The error discards that batch's actions; the
+  link's pairing state is already reset, so the link idles until its
+  deadline timer fires and the core disconnects it.
+- **Unknown links.** Events for a link the core does not know, or has
+  already disconnected, are ignored. Kotlin may still deliver a queued
+  fragment or `LinkDown` after the core's `Disconnect`, so this is not a
+  contract violation.
 
 ### 4. Identifiers and queries
 
 - `LinkId` is a `u64` chosen by Kotlin. `TimerId` and `ContactId` are `u64`
   values allocated by the core. `ContactId` is persisted; `pairID` and all
   keys stay inside the core.
-- Queries: `contacts()` returns id, display label and verification state.
+- Queries: `contacts()` returns id, the name the neighbour shared in its
+  card (empty if none; the app derives a local label) and verification state.
   `beacon(unix_s)` returns the 8 B value for the local `beacon`
   characteristic. It derives forward from the stored key without mutating
   state, so a GATT read callback can call it.
@@ -117,8 +130,9 @@ returns `TooLong`.
 
 - `version` is the blob format version, `1` for S1. Restore rejects any
   other version; r1 has no released blobs, so there is no migration yet.
-- The blob is one canonical encoding of the whole durable state, using the
-  `cairn-wire` encodings: the device beacon key and its day, the next
+- The blob is one canonical, strictly decoded encoding (fixed-width
+  big-endian integers, no trailing bytes) of the whole durable state: the
+  device beacon key and its day, the next
   `ContactId`, and per contact the pairing role, mode, verification state,
   `pairID`, `th`, `nB`, peer card, peer beacon key and day, door keys,
   Resume index `n`, and `CK_n` (with the uncommitted `CK_{n+1}` while R
@@ -144,8 +158,8 @@ returns `TooLong`.
 
 S1 ships as stacked PRs:
 1. this ADR and the `no_std` seam;
-2. framing, admission and pairing;
-3. beacons, Resume, DATA/CHAT and persistence;
+2. framing, admission, pairing and persistence;
+3. beacons, Resume and DATA/CHAT;
 4. the UniFFI `CairnCore`, the KMP loopback and the gates.
 
 ## Consequences

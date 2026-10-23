@@ -238,6 +238,17 @@ Rust CI adds `cairn-proto` to its Miri step. KEM completion, mixing,
 record encoding, persistence, Resume integration, device demonstration and
 the model ticket remain open; earlier dated records stay historical.
 
+## S1 pairing core (2026-10-23)
+
+`core/cairn-proto` now depends on the backend-free `cairn-crypto` trait,
+`cairn-wire`, `subtle` and `zeroize`, and implements the `Core` event loop of
+[ADR 0022](docs/adr/0022-cairn-core-contract.md): spec §4 framing, spec §10.4
+admission limits and P0 tie-break, spec §5 P1–P4 TOFU pairing and the
+version-1 persistence blob. Tests were written first and observed red; two
+cores pair over a seeded in-memory loopback. The ADR 0016 epoch-transfer
+waiver still covers the unwired spec §9 code. Beacons, Resume, DATA/CHAT and
+the FFI surface remain open in issue 31.
+
 ## Current typed equation convergence/image evidence (2026-10-18)
 
 The [equation checker](docs/spec/models/equations/README.md) kernel-checks

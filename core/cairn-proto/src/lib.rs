@@ -1,10 +1,12 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 //! Sans-IO state machines for Cairn R1.
 //!
-//! This increment covers only post-quantum epoch identifiers and the durable
-//! chunk transfer of spec §9 (OI-21, OI-25, OI-26). It is not wired into any
-//! session, FFI or wire path; see ADR 0016.
+//! [`Core`] is the event loop of ADR 0022: fragmentation (spec §4), neighbour
+//! admission and P0–P4 pairing (spec §5, §10.4) and the version-1 [`Persisted`]
+//! blob. Beacons, Resume and DATA/CHAT follow. The post-quantum epoch
+//! identifiers and durable chunk transfer of spec §9 (OI-21, OI-25, OI-26) are
+//! not yet wired into a session; see ADR 0016.
 //!
 //! ```
 //! use cairn_proto::{ChunkOutcome, Epoch, IncomingObject, OutgoingObject, PairingRole};
@@ -25,10 +27,25 @@
 
 extern crate alloc;
 
+mod admission;
+mod card;
+mod core;
 mod epoch;
+mod framing;
+mod kdf;
+mod pairing;
+mod state;
 mod transfer;
 
+pub use crate::core::{
+    Action, ChatRejection, Clock, ContactId, ContactInfo, Core, CoreError, Event, GattRole, LinkId,
+    TimerId, Verification,
+};
 pub use epoch::{Epoch, EpochExhausted, ObjectKind, PairingRole};
+pub use framing::{
+    MtuTooSmall, PRE_AUTH_FRAME_LIMIT, Reassembler, ReassemblyError, SESSION_FRAME_LIMIT, fragment,
+};
+pub use state::Persisted;
 pub use transfer::{
     ChunkOutcome, IncomingObject, ObjectLengthInvalid, OutgoingChunk, OutgoingObject,
     ProgressRejected, TransferInvalid,

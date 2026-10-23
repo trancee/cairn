@@ -7,5 +7,15 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[dependencies]
+cairn-crypto = { path = "../cairn-crypto", version = "0.1.0", default-features = false }
+subtle = { version = "2.6", default-features = false }
+zeroize = { version = "1.8", default-features = false }
+cairn-wire = { path = "../cairn-wire", version = "0.1.0" }
+
+[dev-dependencies]
+cairn-crypto = { path = "../cairn-crypto", version = "0.1.0", default-features = false, features = ["reference"] }
+zeroize = "1.8"
+
 [lints]
 workspace = true

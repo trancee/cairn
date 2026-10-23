@@ -3,6 +3,10 @@
 //! Canonical public-field encodings from Cairn R1 §2.2.
 //! These variable-length operations are not suitable for secret integers.
 
+mod header;
+
+pub use header::{FrameType, Header, HeaderError};
+
 /// A malformed input or insufficient output capacity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WireError {
