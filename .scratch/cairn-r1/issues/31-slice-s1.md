@@ -15,3 +15,8 @@ Done when every applicable gate is green, tests were written first (TDD), the re
 2026-10-23: re-scoped by the owner. Pairing starts automatically for every
 stranger ([ADR 0021](../../../docs/adr/0021-automatic-neighbour-admission.md)), and a basic Resume moves here from S7 because DATA keys
 come only from Resume. A `CairnCore` contract ADR comes first.
+
+2026-10-23: the contract is [ADR 0022](../../../docs/adr/0022-cairn-core-contract.md).
+The owner chose minimal beacons in S1 (the §10.1 value, day ratchet and
+constant-time match on the `beacon` read; advertising stays in S6),
+`ChatRejected(NoSession)` instead of queuing, and four stacked PRs.

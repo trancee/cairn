@@ -7,6 +7,8 @@ cargo fmt --manifest-path fuzz/Cargo.toml --all --check
 cargo fmt --manifest-path ct/Cargo.toml --all --check
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo test --workspace --all-features --locked
+# The adapter-free seam is what cairn-proto links (ADR 0022).
+cargo clippy -p cairn-crypto --lib --no-default-features --locked -- -D warnings
 for backend in aws-lc reference; do
   cargo clippy -p cairn-crypto --all-targets --no-default-features --features "$backend" --locked -- -D warnings
   cargo test -p cairn-crypto --no-default-features --features "$backend" --locked

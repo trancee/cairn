@@ -15,11 +15,14 @@ and validation evidence.
   [spec §2.2](../docs/spec/cairn-r1.md#22-conventions). Decoders consume one
   field and report its byte count; callers must enforce complete-frame
   consumption. Encoders leave the output unchanged on error.
-- `cairn-crypto`: a partial `CryptoBackend` seam for SHA-384, HMAC-SHA-384
-  and raw RFC 5869 HKDF-SHA-384. `aws-lc` selects non-FIPS `aws-lc-rs`;
+- `cairn-crypto`: the `no_std` + `alloc` `CryptoBackend` seam for SHA-384,
+  HMAC-SHA-384, raw RFC 5869 HKDF-SHA-384, ML-KEM-768, X-Wing, X25519,
+  AES-256-GCM and RNG. `aws-lc` selects non-FIPS `aws-lc-rs`;
   `reference` selects RustCrypto. Both are enabled by default for differential
   tests; consumers can select one with `--no-default-features --features aws-lc`
-  or `reference`. No runtime backend fallback exists.
+  or `reference`, or none to link only the trait, as `cairn-proto` will
+  ([ADR 0022](../docs/adr/0022-cairn-core-contract.md)). No runtime backend
+  fallback exists.
 - `cairn-proto`: dependency-free `no_std` + `alloc` post-quantum epoch
   identifiers and durable KEM object transfer from
   [spec §9](../docs/spec/cairn-r1.md#9-post-quantum-ratchet), under the
@@ -30,9 +33,9 @@ and validation evidence.
   `TransferError` ([ADR 0020](../docs/adr/0020-root-gradle-wire-ffi.md)).
   The root Gradle `:sdk` generates Kotlin from it. No secret crosses it.
 
-Protocol-labelled KDF/MAC construction, tag verification, RNG, AEAD, X25519,
-ML-KEM, X-Wing, pairing, Resume, ratchet completion and mixing, and the
-`CairnCore` FFI are not implemented.
+Protocol-labelled KDF/MAC construction, tag verification, pairing, Resume,
+ratchet completion and mixing, and the `CairnCore` FFI are not implemented.
+ADR 0022 fixes the `CairnCore` contract that slice S1 implements.
 Kotlin bindings use the `ch.trancee.cairn` namespace (`ch.trancee.cairn.ffi`).
 Rust crate names use `cairn-`; Cargo does not have dotted namespaces.
 
