@@ -24,7 +24,7 @@ plugins {
 allprojects {
     val floors = configurations.dependencyScope("cairnBuildToolFloors") {
         libs.bundles.build.tool.floors.get().forEach {
-            dependencyConstraints.add(dependencies.constraints.create("${it.group}:${it.name}:${it.version}") {
+            dependencyConstraints.add(project.dependencies.constraints.create("${it.group}:${it.name}:${it.version}") {
                 because("patched floor for vulnerable transitive build tooling (ADR 0020)")
             })
         }
