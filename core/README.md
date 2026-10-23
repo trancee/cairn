@@ -14,20 +14,27 @@ and validation evidence.
   unsigned LEB128 and u16-big-endian length-prefixed fields from
   [spec §2.2](../docs/spec/cairn-r1.md#22-conventions). Decoders consume one
   field and report its byte count; callers must enforce complete-frame
-  consumption. Encoders leave the output unchanged on error.
+  consumption. Encoders leave the output unchanged on error. It also parses
+  the spec §4.2 frame header (`FrameType`, `Header`).
 - `cairn-crypto`: the `no_std` + `alloc` `CryptoBackend` seam for SHA-384,
   HMAC-SHA-384, raw RFC 5869 HKDF-SHA-384, ML-KEM-768, X-Wing, X25519,
   AES-256-GCM and RNG. `aws-lc` selects non-FIPS `aws-lc-rs`;
   `reference` selects RustCrypto. Both are enabled by default for differential
   tests; consumers can select one with `--no-default-features --features aws-lc`
-  or `reference`, or none to link only the trait, as `cairn-proto` will
+  or `reference`, or none to link only the trait, as `cairn-proto` does
   ([ADR 0022](../docs/adr/0022-cairn-core-contract.md)). No runtime backend
   fallback exists.
-- `cairn-proto`: dependency-free `no_std` + `alloc` post-quantum epoch
+- `cairn-proto`: the `no_std` + `alloc` sans-IO `Core<B: CryptoBackend>` of
+  [ADR 0022](../docs/adr/0022-cairn-core-contract.md), built on the
+  backend-free `cairn-crypto` trait, `cairn-wire`, `subtle` and `zeroize`.
+  It implements fragmentation and reassembly (spec §4), automatic neighbour
+  admission with rate limits and the P0 tie-break (spec §10.4), P1–P4 TOFU
+  pairing (spec §5) and the version-1 persistence blob. Beacons, Resume and
+  DATA/CHAT are not implemented yet. It also holds the post-quantum epoch
   identifiers and durable KEM object transfer from
   [spec §9](../docs/spec/cairn-r1.md#9-post-quantum-ratchet), under the
-  narrow gate waiver in [ADR 0016](../docs/adr/0016-unexposed-epoch-transfer-core.md).
-  It is not wired into Resume, DATA records or persistence.
+  narrow gate waiver in [ADR 0016](../docs/adr/0016-unexposed-epoch-transfer-core.md),
+  which are not wired into a session.
 - `cairn-ffi`: the interim UniFFI `0.32.0` binding-proof surface: the wire
   codec, a typed `WireError`, and `IncomingObject` with a typed
   `TransferError` ([ADR 0020](../docs/adr/0020-root-gradle-wire-ffi.md)).
@@ -51,8 +58,10 @@ rustup toolchain install nightly-2026-10-08 --profile minimal --component miri,r
 cargo install cargo-careful --version 0.4.10 --locked
 cd core
 cargo +nightly-2026-10-08 miri test -p cairn-wire --locked
-cargo +nightly-2026-10-08 miri test -p cairn-proto --locked
+RUSTFLAGS='--cfg sha2_backend="soft" --cfg keccak_backend="soft"' \
+  cargo +nightly-2026-10-08 miri test -p cairn-proto --locked
 cargo +nightly-2026-10-08 careful test -p cairn-crypto --all-features --locked
+cargo +nightly-2026-10-08 careful test -p cairn-proto --locked
 cargo install cargo-fuzz --version 0.13.2 --locked
 cargo +nightly-2026-10-08 fuzz run wire_encoding -- -max_total_time=60 -max_len=65540 -seed=20261009
 ```
@@ -63,7 +72,11 @@ macOS, plus Miri/careful on Linux. All 11 jobs passed in
 at commit `4ba4955`. A separate coverage job requires 100% source line/branch
 coverage; all three crates currently meet that threshold locally.
 Interpreter checks do not prove constant-time behavior and
-Miri does not inspect the AWS-LC C implementation.
+Miri does not inspect the AWS-LC C implementation. Following
+[ADR 0007](../docs/adr/0007-ct-conformance-gates.md), `cairn-proto` tests that
+draw randomness or generate keys are ignored under Miri and run under careful;
+the soft `sha2` and `keccak` backends keep Miri off vendor SIMD intrinsics,
+which it cannot execute on AArch64.
 
 The wire fuzz target checks canonical re-encoding of accepted input,
 public-integer roundtrips, truncation/overflow safety and unchanged buffers

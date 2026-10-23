@@ -20,3 +20,10 @@ come only from Resume. A `CairnCore` contract ADR comes first.
 The owner chose minimal beacons in S1 (the §10.1 value, day ratchet and
 constant-time match on the `beacon` read; advertising stays in S6),
 `ChatRejected(NoSession)` instead of queuing, and four stacked PRs.
+
+2026-10-23: PR (b) adds the spec §4.2 header to `cairn-wire` and, in
+`cairn-proto`, fragmentation and reassembly, the admission ledger and P0
+tie-break, P1–P4 pairing and the version-1 persistence blob behind the
+`Core` event loop. Persistence moved from PR (c) to PR (b) because the
+contact record is what pairing produces. Two cores pair over a seeded
+in-memory loopback in `core/cairn-proto/tests/admission.rs`.

@@ -79,12 +79,14 @@ jobs:
           if [[ '${{ steps.interpreter-tools.outputs.cache-hit }}' != true ]]; then
             cargo install cargo-careful --version 0.4.10 --locked
           fi
-      - name: Check wire and protocol under Miri and crypto under careful
+      - name: Check wire and protocol under Miri and crypto paths under careful
         working-directory: core
         run: |
           cargo +nightly-2026-10-08 miri test -p cairn-wire --locked
-          cargo +nightly-2026-10-08 miri test -p cairn-proto --locked
+          RUSTFLAGS='--cfg sha2_backend="soft" --cfg keccak_backend="soft"' \
+            cargo +nightly-2026-10-08 miri test -p cairn-proto --locked
           cargo +nightly-2026-10-08 careful test -p cairn-crypto --all-features --locked
+          cargo +nightly-2026-10-08 careful test -p cairn-proto --locked
   coverage:
     runs-on: ubuntu-24.04
     timeout-minutes: 30

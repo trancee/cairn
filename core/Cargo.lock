@@ -127,6 +127,12 @@ dependencies = [
 [[package]]
 name = "cairn-proto"
 version = "0.1.0"
+dependencies = [
+ "cairn-crypto",
+ "cairn-wire",
+ "subtle",
+ "zeroize",
+]
 
 [[package]]
 name = "cairn-wire"
