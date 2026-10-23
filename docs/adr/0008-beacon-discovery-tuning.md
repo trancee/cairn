@@ -79,3 +79,6 @@ This is the first version. These parameters are policy inside the core and SDK; 
 2026-10-05, from spec consolidation ([`cairn-r1` spec §13](../spec/cairn-r1.md#13-consolidation-issues-resolved-2026-10-05)):
 - The rotated beacon key travels in `BEACON_KEY` records until `BEACON_ACK` (OI-3).
 - PQ epoch cadence: ≥ 10 Resumes or ≥ 24 h since the last completed epoch (OI-11).
+
+2026-10-23, from [ADR 0021](0021-automatic-neighbour-admission.md) (OI-27):
+- The connect policy also connects to an unknown peer when automatic admission is within its limits. After a non-matching `beacon` read, the device either admits the stranger on the same link (P0, spec §5.6) or disconnects.

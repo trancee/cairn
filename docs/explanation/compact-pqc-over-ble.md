@@ -36,8 +36,9 @@ flowchart TD
 
 Each stage has a different role:
 
-- **Pairing** establishes the contact relationship using X-Wing and a
-  verification method such as QR or SAS.
+- **Pairing** establishes the contact relationship using X-Wing. Nearby
+  peers are admitted automatically on first contact (trust on first use);
+  users can upgrade a contact later by comparing a code in Verify.
 - **Resume** derives a session on later connections using existing contact
   state and a fresh X25519 exchange. Its draft messages are 57 and 49 bytes.
 - **Data and ratcheting** use symmetric encryption for messages and transport

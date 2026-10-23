@@ -11,11 +11,23 @@ A device running `cairn` that takes part in a pairwise relationship with another
 _Avoid_: Node, client, partner
 
 **Contact**:
-A peer that this device has paired with and holds shared state for.
+A peer that this device has paired with and holds shared state for. Every contact starts as a **neighbour**.
 _Avoid_: Bond, paired device, friend
 
+**Neighbour**:
+A contact admitted automatically when it was first found in BLE range, by trust on first use, and not yet verified.
+_Avoid_: Friend, follower, member
+
+**Stranger**:
+A peer in BLE range that matches no contact; finding one starts **admission**.
+_Avoid_: Unknown device, new node
+
+**Admission**:
+The automatic pairing a device starts when it finds a stranger, bounded by rate and total-contact limits.
+_Avoid_: Onboarding, join, invite
+
 **Pairing**:
-The one-time act by which two peers become contacts and establish post-quantum shared secrets, performed by `cairn` itself on top of an ordinary, unencrypted BLE connection. It is **not** Bluetooth pairing: the operating system's Bluetooth pairing and bonding are never used, no Bluetooth keys are created, and nothing appears in the system's Bluetooth settings.
+The one-time, automatic act by which two peers become contacts and establish post-quantum shared secrets, performed by `cairn` itself on top of an ordinary, unencrypted BLE connection. It is **not** Bluetooth pairing: the operating system's Bluetooth pairing and bonding are never used, no Bluetooth keys are created, and nothing appears in the system's Bluetooth settings.
 _Avoid_: Introduction, enrollment, handshake
 
 **Bluetooth pairing**:
@@ -23,11 +35,11 @@ The operating system's own link-layer key exchange (Secure Simple Pairing / LE S
 _Avoid_: Pairing (unqualified), bonding when meaning `cairn` pairing
 
 **Pairing role**:
-Which side of a contact relationship a device is (A or B), fixed once at pairing and used wherever the two sides must act asymmetrically.
+Which side of a contact relationship a device is (A or B), fixed once at pairing by the BLE connection (the connecting side is B) and used wherever the two sides must act asymmetrically.
 _Avoid_: Initiator, master, primary
 
 **Verification**:
-Confirming in person that no one sits between the two peers, by QR scan or short authentication string, either during pairing or later for an unverified contact. A contact without it is **unverified**.
+Confirming in person, after admission, that no one sat between the two peers, by comparing a short authentication string in Verify. A contact without it is **unverified**.
 _Avoid_: Authentication, trust
 
 **Resume**:

@@ -1,10 +1,10 @@
 # `cairn-r1` threat model and security goals
 
-Status: **accepted** (2026-10-05, ticket *Threat model and security goals*). This document states the goals that [ADRs 0001–0005](../adr/) must meet. Changing it requires a new review.
+Status: **accepted** (2026-10-05, ticket *Threat model and security goals*). This document states the goals that [ADRs 0001–0005](../adr/) must meet. Changing it requires a new review. Amended 2026-10-23 for automatic neighbour admission ([ADR 0021](../adr/0021-automatic-neighbour-admission.md)); the owner reviewed and accepted the consequences listed there.
 
 ## 1. System and assets
 
-Two **peers** (phones running `cairn`) **pair** once and become **contacts**. After that, every BLE connection starts with a **Resume** and carries real-time messages and **queued messages** (see [`GLOSSARY.md`](../../GLOSSARY.md)).
+Two **peers** (phones running `cairn`) **pair** once and become **contacts**. Since [ADR 0021](../adr/0021-automatic-neighbour-admission.md) (2026-10-23), pairing is automatic TOFU with every discovered peer, so every contact is an automatically admitted **neighbour** and starts Unverified. After that, every BLE connection starts with a **Resume** and carries real-time messages and **queued messages** (see [`GLOSSARY.md`](../../GLOSSARY.md)).
 
 The protected assets are:
 - message content;
@@ -22,7 +22,7 @@ The protected assets are:
 | A3 | Future active quantum attacker | A1 plus a quantum computer at attack time |
 | A4a | Device seizure, locked | Holds a locked phone, before or after the first unlock since boot |
 | A4b | Device seizure, compromised | Unlocked phone or forensic extraction: reads all app state at a point in time |
-| A5 | Malicious contact | A legitimately paired peer that acts maliciously, or whose device is A4b-compromised |
+| A5 | Malicious contact | A paired peer that acts maliciously, or whose device is A4b-compromised. Under automatic admission this includes any device that was ever nearby, within the admission limits (§5) |
 | A6 | Tracking attacker | Passive receivers at many places and times, trying to link a device across them |
 | A7 | DoS / battery drain | Floods advertisements, connections, S1 messages or pairing attempts |
 
@@ -32,9 +32,9 @@ Rows are adversaries, columns are properties. ✓ = claimed; ✗ = explicitly no
 
 | | Confidentiality | Integrity / auth | PQ forward secrecy | PCS (healing) | Unlinkability | Contact graph hidden | Availability |
 |---|---|---|---|---|---|---|---|
-| A1 | ✓ | ✓ (TOFU: ✗ at first contact) | ✓ | — | ✓ beacon and pseudonym; ✗ fixed UUID | ✓ | ✗ (best effort, §5) |
+| A1 | ✓ | ✓ after Verify; ✗ at first contact (every neighbour is TOFU) | ✓ | — | ✓ beacon and pseudonym; ✗ fixed UUID | ✓ | ✗ (best effort, §5) |
 | A2 | ✓ (NIST L3) | — | ✓ | — | — | ✓ | — |
-| A3 | ✓ | ✓ for QR/SAS; ✗ for unverified TOFU | ✓ | Conditional fresh honest-epoch healing after compromise (§3 below) | as A1 | ✓ | ✗ |
+| A3 | ✓ | ✓ after Verify; ✗ for Unverified neighbours | ✓ | Conditional fresh honest-epoch healing after compromise (§3 below) | as A1 | ✓ | ✗ |
 | A4a | ✓ via OS data protection (§4) | — | — | — | — | via OS | — |
 | A4b | ✗ for current state and stored history; ✓ for erased past keys | ✗ until healed | ✓ | ✓ classical at the next Resume (passive attacker); ✓ PQ after a fresh honest epoch whose secrets remain unexposed | — | ✗ | — |
 | A5 | ✓ for other contacts' traffic | ✓ cannot impersonate you to others; ✗ KCI toward itself unless the KCI profile is on | ✓ | ✓ | ✗ can track your device beacon | ✓ learns nothing beyond its own pairing | ✗ |
@@ -52,12 +52,10 @@ re-pairing.
 
 ### Per-mode authentication
 
-- **QR**:
-  - A is authenticated to B by `H(ek_A)` in the QR.
-  - B is authenticated to A by the QR `token` plus a **4-digit confirmation code**. Both phones show the code, which is derived from the transcript like the SAS, and A taps confirm.
-  - An attacker who photographed the QR wins with probability ≤ 10⁻⁴ per attempt.
-- **SAS**: commit-then-reveal with 6 digits. A man-in-the-middle wins with probability ≤ 10⁻⁶ ≈ 2⁻²⁰ per attempt.
-- **TOFU**:
+QR and SAS pairing are retired (ADR 0021). Every neighbour is admitted by TOFU and can be verified later.
+
+- **Verify** (SAS over the stored transcript): commit-then-reveal with 6 digits. A man-in-the-middle present at admission is detected except with probability ≤ 10⁻⁶ ≈ 2⁻²⁰.
+- **TOFU** (every admission):
   - PQ confidentiality against passive attackers only.
   - An active attacker at the first pairing can stay in the middle until the users verify by SAS or QR in person.
   - The UI must label the contact **Unverified**.
@@ -75,7 +73,7 @@ re-pairing.
 - **Device seizure:**
   - A locked phone that has not been unlocked since boot does not reveal app state (Android credential-encrypted storage; iOS data protection).
   - After the first unlock, protection is whatever the OS gives against forensic extraction. Beyond that we claim nothing.
-- **Pairing channel:** pairing users share an authentic visual channel (QR display or SAS comparison) during pairing.
+- **Verification channel:** users who run Verify share an authentic visual channel for the SAS comparison. Admission itself assumes no authentic channel.
 - **Constant time:** the implementation is constant-time with respect to secrets against software timing observation, including timing measured remotely over BLE.
 
 ## 5. Availability (best effort)
@@ -83,7 +81,8 @@ re-pairing.
 - Before authentication, an attacker can make the device do at most one MAC per S1. No asymmetric operation happens before the MAC check.
 - Rate limits apply per pseudonym, per remote address and globally.
 - A connection that has not authenticated within 5 s is dropped. ADR 0003's pre-auth frame limits apply.
-- Pairing is accepted only while the user has a pairing screen open.
+- Pairing is automatic but bounded (spec §5.6): one pairing in flight, at most 30 attempts and 10 admissions per rolling hour, at most 256 neighbours, and a 1 h back-off per failed address. An attacker can use up the hourly budget and delay legitimate admissions.
+- Any neighbour can send messages to the user; admission limits bound how many neighbours exist, not what they send.
 
 ## 6. Non-goals (explicitly not claimed)
 
@@ -93,10 +92,12 @@ re-pairing.
 - Detecting state rollback by a rooted user or the OS. Backups are excluded by design (ADR 0002).
 - Remote revocation of a lost device. Each contact removes it by hand; its state expires with the store-and-forward bounds.
 - Protection of locally stored message history against A4b.
-- Unlinkability against one's own contacts (the device beacon key is shared with them; ADR 0005).
+- Unlinkability against one's own contacts (the device beacon key is shared with them; ADR 0005). Under automatic admission this covers any device that was once admitted nearby, until the key rotates on a contact removal.
+- Sybil resistance: one adversary can be admitted as many neighbours, up to the admission limits.
 - Key commitment / multi-key AEAD robustness (ADR 0001).
 
 ## 7. Possible later work (out of scope for `cairn-r1`)
 
 - Marking a contact **stale** after N days unseen, with optional automatic removal.
 - Per-contact beacons to resist tracking by contacts (rejected for r1 in ADR 0005).
+- Multi-hop relaying through neighbours (courier and routing layer, issue 47). It adds a new adversary: a neighbour that drops, delays or tags mail it carries for others.

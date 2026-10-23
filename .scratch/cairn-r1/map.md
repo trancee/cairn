@@ -4,7 +4,7 @@ Label: `wayfinder:map`
 
 ## Destination
 
-A working `cairn` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform shell) and a minimal reference chat app that establish post-quantum, FIPS-conformant, constant-time peer-to-peer sessions over plain BLE (no Bluetooth bonding) and exchange real-time and store-and-forward messages, end-to-end on Android↔Android and Android↔iOS — preceded by a written `cairn-r1` spec + ADRs.
+A working `cairn` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform shell) and a minimal reference chat app that establish post-quantum, FIPS-conformant, constant-time peer-to-peer sessions over plain BLE (no Bluetooth bonding) and admit nearby peers automatically into a peer-to-peer neighbour mesh, and exchange real-time and store-and-forward messages, end-to-end on Android↔Android and Android↔iOS — preceded by a written `cairn-r1` spec + ADRs.
 
 ## Notes
 
@@ -28,7 +28,7 @@ A working `cairn` SDK (Rust core + Kotlin Multiplatform/Compose Multiplatform sh
   - Topology: pairwise P2P only; "pairing" = `cairn` app-layer pairing, never Bluetooth pairing/bonding (see `GLOSSARY.md`).
   - Security level: ML-KEM-768 (NIST L3).
   - Prototype platforms: Android↔Android, Android↔iOS.
-  - Protocol scope: Pairing (QR, SAS, TOFU), Resume, Data frames, PQ ratchet, Beacons, Doorbell (connectionless), KCI profile — all in.
+  - Protocol scope: Pairing (automatic TOFU admission, Verify upgrade; QR and SAS pairing retired by ADR 0021), Resume, Data frames, PQ ratchet, Beacons, Doorbell (connectionless), KCI profile — all in.
   - Shell: KMP + Compose Multiplatform over a Rust core.
   - FIPS: approved algorithms now; hybrid with X25519 allowed via an SP 800-56C/227-conformant combiner (ML-KEM is the approved component); CMVP-validated module is the later target behind a crypto backend seam. AEAD therefore AES-256-GCM.
 - Vocabulary: [`GLOSSARY.md`](../../GLOSSARY.md); decisions: [`docs/adr/`](../../docs/adr/).
@@ -112,7 +112,7 @@ verifies 54/54 complete certificates (38.7 s).
 ## Decisions so far
 
 <!-- One line per resolved ticket: title linked to its issue, followed by the decision. -->
-
+- [Automatic neighbour admission](../../docs/adr/0021-automatic-neighbour-admission.md) (2026-10-23, OI-27): every stranger in range is admitted automatically by TOFU (central is B, P0 tie-break, 10 admitted/h, 256 total); QR and SAS pairing retired, Verify is the only upgrade; S4 withdrawn, S8 is Verify only, S0 resolved, S1 adds admission and basic Resume. Based on the [mesh research note](../../docs/research/2026-10-23-ble-mesh-design.md); multi-hop in issue 47, iOS lane in issue 48.
 - [Rust foundation gate completion](issues/46-rust-foundation-gates.md): the approved public-wire/SHA-384/HMAC/HKDF foundation and public documentation were merged in PR #2 at `65fc089`; final-head Rust and formal CI passed. This is not S0 completion. Binding/device proof, protocol-labelled crypto gates and the composed-ratchet gate remain open. The intermittent Tamarin `<<loop>>` crash was not reproduced in 20 exact-input native runs; no fix or retry policy is claimed.
 - [Minimum OS versions](issues/06-minimum-os-versions.md): Android 8 (API 26) / iOS 15; a GATT-only path is mandatory and ML-KEM ships in the Rust core.
 - [FIPS-validated modules providing ML-KEM](issues/01-fips-validated-mlkem-modules.md): no module is validated on both mobile platforms yet; claim "approved algorithms" for now and keep the backend seam.
@@ -153,6 +153,6 @@ verifies 54/54 complete certificates (38.7 s).
 
 - iOS↔iOS operation (especially backgrounded discovery) — not in the prototype platform pairs.
 - Desktop (macOS/Windows/Linux) shells — deferred past this destination.
-- Group messaging, multi-hop relay, BLE Mesh.
+- Group messaging and Bluetooth SIG Mesh. Multi-hop relay between neighbours is tracked in [Mesh courier and routing](issues/47-mesh-courier-routing.md).
 - Submitting our own module for CMVP/FIPS 140-3 certification.
 - Commissioning the external review itself (selecting vendors, setting a budget): it happens after the prototype, before a non-prototype release; see [External cryptographic review](issues/24-external-review.md).

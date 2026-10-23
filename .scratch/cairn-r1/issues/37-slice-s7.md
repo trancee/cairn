@@ -11,3 +11,7 @@ Implement Resume (S1/S2, no 0-RTT) per the spec and the proven Resume model, inc
 Done when every applicable gate is green, tests were written first (TDD), the relevant spec sections are referenced, and the slice is demonstrated on the oldest and newest core-matrix devices of each platform pair involved, with results noted here. Strict formal-model gate: a slice blocked by a model ticket doesn't start until that ticket resolves.
 
 ## Comments
+
+2026-10-23: the basic Resume (S1/S2, non-KCI, MIX=0, DATA key confirmation)
+moves to [S1](31-slice-s1.md). S7 keeps the KCI variant, rate limits,
+concurrent Resume, the idle-Resume policy and epoch/desync handling.

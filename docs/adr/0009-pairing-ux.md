@@ -55,3 +55,8 @@ None; this is the first UX decision. The Compromised state adds a contact flag t
 2026-10-05, from *Formal model: SAS pairing* ([`cairn-r1` spec §13](../spec/cairn-r1.md#13-consolidation-issues-resolved-2026-10-05)):
 - In SAS and TOFU modes, the phone whose user picks the peer from the nearby list is pairing role B; the picked phone is A. This mirrors QR mode, where the scanning phone is B (OI-20).
 - The mode the user taps is authoritative: B aborts if `P1` carries a different mode (OI-19).
+
+2026-10-23, from [ADR 0021](0021-automatic-neighbour-admission.md) (OI-27):
+- Decisions 1, 3 and 5 are superseded. Every discovered peer is admitted automatically by TOFU, with no hub, no QR or SAS pairing and no 120 s pairing session. Roles follow the GATT connection: the central is B.
+- Decisions 2, 4 (the Verify mismatch case), 6 and 7 remain. Verify is the only way to verify a neighbour. Mismatch during pairing no longer exists, because nothing is compared at admission.
+- Naming: the card name is empty by default, so a neighbour without a shared name gets a locally generated label.
