@@ -1,5 +1,5 @@
 [package]
-name = "cairn-wire-fuzz"
+name = "cairn-fuzz"
 version = "0.0.0"
 edition = "2024"
 license = "Unlicense"
@@ -10,11 +10,35 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4.13"
+cairn-crypto = { version = "0.1.0", path = "../cairn-crypto", default-features = false, features = ["reference"] }
+cairn-proto = { version = "0.1.0", path = "../cairn-proto", features = ["probes"] }
 cairn-wire = { version = "0.1.0", path = "../cairn-wire" }
+zeroize = "1.8"
 
 [[bin]]
 name = "wire_encoding"
 path = "fuzz_targets/wire_encoding.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "framing"
+path = "fuzz_targets/framing.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "records"
+path = "fuzz_targets/records.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "session"
+path = "fuzz_targets/session.rs"
 test = false
 doc = false
 bench = false

@@ -82,19 +82,31 @@ impl Initiator {
 
     /// Verifies S2 and derives the session keys.
     pub(crate) fn receive_s2<B: CryptoBackend>(self, s2: &[u8]) -> Result<Keys, ResumeError> {
-        if s2.len() != S2_LEN || s2[0] != S2_HEADER {
+        let s2: &[u8; S2_LEN] = s2.try_into().map_err(|_| ResumeError::Malformed)?;
+        if s2[0] != S2_HEADER {
             return Err(ResumeError::Malformed);
         }
-        let e_r: &[u8; X25519_KEY_LEN] = s2[1..33].try_into().expect("S2 length is checked");
-        let th_s = hash::<B>(&[&self.s1, e_r]);
-        let auth_r = kdf::<B, 32>(&self.ck[..], &[], b"auth R", &[&self.ctx])?;
-        let confirm = mac::<B>(&auth_r[..], b"S2", &[&s2[..1], &th_s])?;
-        if !bool::from(confirm.ct_eq(&s2[33..])) {
+        let (confirmed, th_s) = s2_confirmed::<B>(&self.ck, &self.ctx, &self.s1, s2)?;
+        if !bool::from(confirmed) {
             return Err(ResumeError::Authentication);
         }
+        let e_r: &[u8; X25519_KEY_LEN] = s2[1..33].try_into().expect("S2 length is checked");
         let dh = B::x25519(&self.ephemeral, e_r)?;
         derive::<B>(&self.ck, &self.ctx, &dh[..], &th_s)
     }
+}
+
+/// Whether the S2 confirmation answers `s1`, in constant time, and `th_S`.
+pub(crate) fn s2_confirmed<B: CryptoBackend>(
+    ck: &[u8; 32],
+    ctx: &[u8; 24],
+    s1: &[u8; S1_LEN],
+    s2: &[u8; S2_LEN],
+) -> Result<(subtle::Choice, [u8; 48]), CryptoError> {
+    let th_s = hash::<B>(&[s1, &s2[1..33]]);
+    let auth_r = kdf::<B, 32>(ck, &[], b"auth R", &[ctx])?;
+    let confirm = mac::<B>(&auth_r[..], b"S2", &[&s2[..1], &th_s])?;
+    Ok((confirm.ct_eq(&s2[33..]), th_s))
 }
 
 /// `Trunc8(HMAC(K_id, lp("cairn-r1 pseudonym") ‖ u8(attempt)))` for I with pairing role `initiator`.
@@ -114,6 +126,15 @@ pub(crate) fn find<'a, B: CryptoBackend>(
     candidates: impl IntoIterator<Item = (Chain<'a>, PairingRole)>,
     read: &[u8; 8],
 ) -> Result<Option<usize>, CryptoError> {
+    let (hit, found) = matching::<B>(candidates, read)?;
+    Ok(bool::from(hit).then(|| usize::try_from(found).expect("indices fit usize")))
+}
+
+/// The undeclassified verdict and index of [`find`].
+pub(crate) fn matching<'a, B: CryptoBackend>(
+    candidates: impl IntoIterator<Item = (Chain<'a>, PairingRole)>,
+    read: &[u8; 8],
+) -> Result<(subtle::Choice, u64), CryptoError> {
     let mut found = 0u64;
     let mut hit = subtle::Choice::from(0);
     for (index, (chain, initiator)) in (0u64..).zip(candidates) {
@@ -123,7 +144,7 @@ pub(crate) fn find<'a, B: CryptoBackend>(
             hit |= matches;
         }
     }
-    Ok(bool::from(hit).then(|| usize::try_from(found).expect("indices fit usize")))
+    Ok((hit, found))
 }
 
 /// R's answer to an S1 already matched to `chain`: checks the MAC before any
@@ -136,16 +157,15 @@ pub(crate) fn respond<B: CryptoBackend>(
     if s1_pseudonym(s1).is_none() {
         return Err(ResumeError::Malformed);
     }
-    let auth_i = auth_i::<B>(chain, initiator)?;
-    let expected = mac::<B>(&auth_i[..], b"S1", &[&s1[..41]])?;
-    if !bool::from(expected.ct_eq(&s1[41..])) {
+    let s1: &[u8; S1_LEN] = s1.try_into().expect("S1 length is checked");
+    if !bool::from(s1_confirmed::<B>(chain, initiator, s1)?) {
         return Err(ResumeError::Authentication);
     }
     let e_i: &[u8; X25519_KEY_LEN] = s1[9..41].try_into().expect("S1 length is checked");
     let (ephemeral, e_r) = B::x25519_generate()?;
     let dh = B::x25519(&ephemeral, e_i)?;
     let context = ctx(chain);
-    let th_s = hash::<B>(&[s1, &e_r]);
+    let th_s = hash::<B>(&[&s1[..], &e_r]);
     let auth_r = kdf::<B, 32>(chain.ck, &[], b"auth R", &[&context])?;
     let mut s2 = [0; S2_LEN];
     s2[0] = S2_HEADER;
@@ -153,6 +173,17 @@ pub(crate) fn respond<B: CryptoBackend>(
     let confirm = mac::<B>(&auth_r[..], b"S2", &[&[S2_HEADER], &th_s])?;
     s2[33..].copy_from_slice(&confirm);
     Ok((derive::<B>(chain.ck, &context, &dh[..], &th_s)?, s2))
+}
+
+/// Whether the MAC of `s1` verifies on `chain`, in constant time.
+pub(crate) fn s1_confirmed<B: CryptoBackend>(
+    chain: &Chain<'_>,
+    initiator: PairingRole,
+    s1: &[u8; S1_LEN],
+) -> Result<subtle::Choice, CryptoError> {
+    let auth_i = auth_i::<B>(chain, initiator)?;
+    let expected = mac::<B>(&auth_i[..], b"S1", &[&s1[..41]])?;
+    Ok(expected.ct_eq(&s1[41..]))
 }
 
 /// The pseudonym in a well-formed S1.
@@ -169,7 +200,7 @@ fn role_label(role: PairingRole) -> &'static [u8] {
 }
 
 /// `ctx(n) = pairID ‖ u64(n)`.
-fn ctx(chain: &Chain<'_>) -> [u8; 24] {
+pub(crate) fn ctx(chain: &Chain<'_>) -> [u8; 24] {
     let mut context = [0; 24];
     context[..16].copy_from_slice(chain.pair_id);
     context[16..].copy_from_slice(&chain.n.to_be_bytes());

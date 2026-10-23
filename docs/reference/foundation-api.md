@@ -109,6 +109,11 @@ KEM_PROGRESS, and persist an outgoing object before its first chunk.
 The duplicate check uses ordinary equality because KEM objects are public.
 The crate-level documentation contains an executable transfer example.
 
+The hidden, non-default `probes` feature exposes `cairn_proto::probes` to
+the `core/ct` Memcheck harness and the `core/fuzz` targets. It returns
+undeclassified constant-time verdicts as `0` or `1`. It is not part of the
+SDK contract and may change without notice.
+
 ## `cairn-ffi`
 
 This crate is the UniFFI `0.32.0` surface for the Kotlin `:sdk` module. The

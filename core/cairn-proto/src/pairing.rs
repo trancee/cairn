@@ -40,6 +40,18 @@ impl From<CryptoError> for PairingError {
     }
 }
 
+/// A peer's X-Wing key or ciphertext failing a check aborts pairing like any
+/// malformed frame; every other error is local.
+fn peer_kem(faults: &[CryptoError]) -> impl Fn(CryptoError) -> PairingError + '_ {
+    move |error| {
+        if faults.contains(&error) {
+            PairingError::Malformed
+        } else {
+            error.into()
+        }
+    }
+}
+
 /// The per-contact pairing output that is persisted (spec §5.5).
 pub(crate) struct Paired {
     pub(crate) role: PairingRole,
@@ -128,10 +140,15 @@ fn open_card<B: CryptoBackend>(
     let (confirm, card) = plaintext
         .split_first_chunk::<16>()
         .ok_or(PairingError::Malformed)?;
-    if !bool::from(confirm.ct_eq(expected)) {
+    if !bool::from(confirmed(confirm, expected)) {
         return Err(PairingError::Authentication);
     }
     Card::decode(card).map_err(PairingError::Card)
+}
+
+/// Whether a P3/P4 confirmation equals `expected`, in constant time.
+pub(crate) fn confirmed(confirm: &[u8; 16], expected: &[u8; 16]) -> subtle::Choice {
+    confirm.ct_eq(expected)
 }
 
 fn aad(step: u8, th: &[u8; 48]) -> [u8; 49] {
@@ -185,7 +202,8 @@ impl AwaitingP2 {
             .split_first_chunk::<XWING_CIPHERTEXT_LEN>()
             .ok_or(PairingError::Malformed)?;
         let nonce_b: [u8; NONCE_LEN] = nonce_b.try_into().map_err(|_| PairingError::Malformed)?;
-        let shared = B::xwing_decapsulate(&self.decapsulation_key, ciphertext)?;
+        let shared = B::xwing_decapsulate(&self.decapsulation_key, ciphertext)
+            .map_err(peer_kem(&[CryptoError::ZeroSharedSecret]))?;
         let th = hash::<B>(&[&self.p1, p2, &self.nonce_a[..]]);
         let keys = Keys::derive::<B>(&shared[..], th)?;
         let confirm = mac::<B>(&keys.conf_a[..], b"P3", &[&th])?;
@@ -247,7 +265,10 @@ impl AwaitingP3 {
         let commitment: [u8; 32] = p1[3..35].try_into().map_err(|_| PairingError::Malformed)?;
         let public: &[u8; XWING_ENCAPSULATION_KEY_LEN] =
             p1[35..].try_into().map_err(|_| PairingError::Malformed)?;
-        let (ciphertext, shared) = B::xwing_encapsulate(public)?;
+        let (ciphertext, shared) = B::xwing_encapsulate(public).map_err(peer_kem(&[
+            CryptoError::InvalidKey,
+            CryptoError::ZeroSharedSecret,
+        ]))?;
         let nonce_b = *random::<B, NONCE_LEN>()?;
         let mut p2 = Vec::with_capacity(P2_LEN);
         p2.push(0x02);
@@ -438,6 +459,41 @@ mod tests {
         let result = a.receive_p4::<Reference>(&p4).err();
 
         assert_eq!(result, Some(PairingError::Authentication));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn peer_kem_inputs_failing_their_checks_are_malformed() {
+        let (a, p1) = AwaitingP2::start::<Reference>(card("", 1)).unwrap();
+        let (_, mut p2) = AwaitingP3::receive_p1::<Reference>(card("", 2), &p1).unwrap();
+        let mut unreduced = p1.clone();
+        unreduced[35..37].copy_from_slice(&[0xff, 0xff]);
+        let mut low_order = p1;
+        low_order[P1_LEN - 32..].fill(0);
+        p2[1 + 1088..1 + 1120].fill(0);
+
+        let errors = [
+            AwaitingP3::receive_p1::<Reference>(card("", 2), &unreduced).err(),
+            AwaitingP3::receive_p1::<Reference>(card("", 2), &low_order).err(),
+            a.receive_p2::<Reference>(&p2).err(),
+        ];
+
+        assert_eq!(errors, [Some(PairingError::Malformed); 3]);
+    }
+
+    #[test]
+    fn local_kem_failures_stay_crypto_errors() {
+        let classify = peer_kem(&[CryptoError::ZeroSharedSecret]);
+
+        let errors = [CryptoError::BackendFailure, CryptoError::InvalidKey].map(classify);
+
+        assert_eq!(
+            errors,
+            [
+                PairingError::Crypto(CryptoError::BackendFailure),
+                PairingError::Crypto(CryptoError::InvalidKey),
+            ]
+        );
     }
 
     #[test]

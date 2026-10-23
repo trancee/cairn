@@ -37,6 +37,9 @@ mod epoch;
 mod framing;
 mod kdf;
 mod pairing;
+#[cfg(feature = "probes")]
+#[doc(hidden)]
+pub mod probes;
 mod resume;
 mod state;
 mod transfer;

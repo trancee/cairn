@@ -2,6 +2,8 @@ use cairn_crypto::{
     AES256GCM_KEY_LEN, AES256GCM_NONCE_LEN, AwsLc, CryptoBackend, MLKEM768_CIPHERTEXT_LEN,
     MLKEM768_DECAPSULATION_KEY_LEN, MlKem768DecapsulationKey, Reference,
 };
+use cairn_proto::PairingRole;
+use cairn_proto::probes::{self, Candidate};
 use crabgrind::memcheck::{MemState, mark_memory, vbits};
 
 fn mark(bytes: &[u8], state: MemState) {
@@ -139,6 +141,79 @@ fn check_reference_encapsulation() {
     require_taint(&secret[..]);
 }
 
+/// The protocol's secret comparisons: beacon and pseudonym search, the Resume
+/// S1 and S2 MACs, the P3/P4 confirmation and DATA padding (ADR 0022).
+///
+/// Each verdict and found index must still carry the secret's taint: none was
+/// branched on or declassified before the caller's single `bool::from`.
+fn check_proto<B: CryptoBackend>() {
+    const NOW: u64 = 1_800_000_000;
+    let today = u32::try_from(NOW / 86_400).expect("the day fits u32");
+    let keys = [(today - 2, [0x41; 32]), (today, [0x42; 32])];
+    let hit = probes::beacon::<B>(today, &[0x42; 32], NOW / 300 + 1).expect("beacon failed");
+    for (_, key) in &keys {
+        mark(key, MemState::Undefined);
+    }
+    for read in [hit, [0; 8]] {
+        let (verdict, index) = probes::beacon_match::<B>(std::hint::black_box(&keys), NOW, &read)
+            .expect("beacon match failed");
+        std::hint::black_box((verdict, index));
+        require_taint(&[verdict]);
+        require_taint(&index.to_ne_bytes());
+    }
+
+    let candidate = |byte: u8, initiator| Candidate {
+        pair_id: [byte; 16],
+        n: u64::from(byte),
+        ck: [byte ^ 0x5a; 32],
+        initiator,
+    };
+    let candidates = [candidate(1, PairingRole::A), candidate(2, PairingRole::B)];
+    let hit = probes::pseudonym::<B>(&candidates[1], 3).expect("pseudonym failed");
+    let (s1, s2) = probes::resume::<B>(&candidates[1], 0);
+    let (mut forged_s1, mut forged_s2) = (s1, s2);
+    forged_s1[56] ^= 1;
+    forged_s2[48] ^= 1;
+    for candidate in &candidates {
+        mark(&candidate.ck, MemState::Undefined);
+    }
+    let candidates = std::hint::black_box(&candidates);
+    for read in [hit, [0; 8]] {
+        let (verdict, index) =
+            probes::pseudonym_match::<B>(candidates, &read).expect("pseudonym match failed");
+        std::hint::black_box((verdict, index));
+        require_taint(&[verdict]);
+        require_taint(&index.to_ne_bytes());
+    }
+    for s1 in [s1, forged_s1] {
+        let verdict = probes::s1_authentic::<B>(&candidates[1], &s1).expect("S1 check failed");
+        require_taint(&[std::hint::black_box(verdict)]);
+    }
+    for s2 in [s2, forged_s2] {
+        let verdict = probes::s2_authentic::<B>(&candidates[1], &s1, &s2).expect("S2 check failed");
+        require_taint(&[std::hint::black_box(verdict)]);
+    }
+}
+
+/// The P3/P4 confirmation and DATA padding checks, which use no backend.
+fn check_proto_comparisons() {
+    let expected = [0x77; 16];
+    mark(&expected, MemState::Undefined);
+    for confirm in [[0x77; 16], [0x78; 16]] {
+        let verdict = probes::card_confirmed(&confirm, std::hint::black_box(&expected));
+        require_taint(&[std::hint::black_box(verdict)]);
+    }
+    for length in [1, 31, 4078] {
+        for last in [0, 1] {
+            let mut padding = vec![0; length];
+            padding[length - 1] = last;
+            mark(&padding, MemState::Undefined);
+            let verdict = probes::padding_is_zero(std::hint::black_box(&padding));
+            require_taint(&[std::hint::black_box(verdict)]);
+        }
+    }
+}
+
 fn main() {
     assert!(
         crabgrind::valgrind::running_mode().is_valgrind(),
@@ -164,12 +239,16 @@ fn main() {
             check::<AwsLc>();
             check_kem::<AwsLc>();
             check_aead::<AwsLc>();
+            check_proto::<AwsLc>();
+            check_proto_comparisons();
         }
         Some("reference") => {
             check::<Reference>();
             check_kem::<Reference>();
             check_aead::<Reference>();
             check_reference_encapsulation();
+            check_proto::<Reference>();
+            check_proto_comparisons();
         }
         _ => panic!("expected aws-lc, reference, negative-control or negative-index"),
     }

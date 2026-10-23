@@ -56,6 +56,16 @@ pub(crate) fn find<'a, B: CryptoBackend>(
     unix_s: u64,
     read: &[u8; 8],
 ) -> Result<Option<usize>, CryptoError> {
+    let (hit, found) = matching::<B>(keys, unix_s, read)?;
+    Ok(bool::from(hit).then(|| usize::try_from(found).expect("indices fit usize")))
+}
+
+/// The undeclassified verdict and index of [`find`].
+pub(crate) fn matching<'a, B: CryptoBackend>(
+    keys: impl IntoIterator<Item = &'a DayKey>,
+    unix_s: u64,
+    read: &[u8; 8],
+) -> Result<(subtle::Choice, u64), CryptoError> {
     let now = window(unix_s);
     let mut found = 0u64;
     let mut hit = subtle::Choice::from(0);
@@ -68,7 +78,7 @@ pub(crate) fn find<'a, B: CryptoBackend>(
             hit |= matches;
         }
     }
-    Ok(bool::from(hit).then(|| usize::try_from(found).expect("indices fit usize")))
+    Ok((hit, found))
 }
 
 #[cfg(test)]

@@ -13,6 +13,10 @@ subtle = { version = "2.6", default-features = false }
 zeroize = { version = "1.8", default-features = false }
 cairn-wire = { path = "../cairn-wire", version = "0.1.0" }
 
+[features]
+# Hidden entry points for the core/ct and core/fuzz harnesses (ADR 0022).
+probes = []
+
 [dev-dependencies]
 cairn-crypto = { path = "../cairn-crypto", version = "0.1.0", default-features = false, features = ["reference"] }
 zeroize = "1.8"
