@@ -81,3 +81,6 @@ activation requires the model ticket to resolve or a new owner decision.
 `TransferError` for the binding proof only. The SDK, wire use, persistence and
 profile activation still do not use them, and the model-ticket gate on
 ratchet use is unchanged.
+
+2026-10-23, from [ADR 0022](0022-cairn-core-contract.md): `CairnCore`
+replaces the binding proof, and `cairn-ffi` no longer exports these types.

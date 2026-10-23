@@ -568,10 +568,14 @@ described above, plus JDK 21 at `/usr/lib/jvm/java-21-openjdk-amd64`.
    sudo bash run-isolated-android.sh \
      /var/lib/cairn-repository-proof/LABEL/androidApp-debug.apk \
      ch.trancee.cairn.android .CoreStatusInstrumentation \
-     'PASS: field=cairn rejected=Truncated progress=600 closed=true'
+     'PASS: paired=1+1 chat=hello rejected=NotRestored closed=true'
    ```
 
    With no arguments, the script still runs this fixture's consumer APK.
+
+   The pass text changed on 2026-10-23, when `coreStatus()` moved to the
+   `CairnCore` loopback ([ADR 0022](../../../docs/adr/0022-cairn-core-contract.md)).
+   The observations below predate that change.
 
 Observed on 2026-10-22 with label `gradle-uniffi-bootstrap`:
 - Preparation passed.

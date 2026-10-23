@@ -17,7 +17,7 @@ fn paired(seed: u64) -> (Net, LinkId, LinkId) {
         0,
         Event::BeaconRead {
             link: central,
-            beacon: STRANGER_BEACON,
+            beacon: STRANGER_BEACON.to_vec(),
         },
     );
     net.run();
@@ -206,7 +206,13 @@ fn beacons_match_neighbouring_windows_and_later_days() {
         let (link, _) = net.connect(0, 1);
         match read {
             Some(beacon) => {
-                net.inject(0, Event::BeaconRead { link, beacon });
+                net.inject(
+                    0,
+                    Event::BeaconRead {
+                        link,
+                        beacon: beacon.to_vec(),
+                    },
+                );
                 net.run();
             }
             None => net.read_beacon_of(0, link, 1),
@@ -255,7 +261,7 @@ fn an_unconfirmed_responder_alternates_its_pending_and_current_keys() {
         0,
         Event::BeaconRead {
             link: central,
-            beacon: STRANGER_BEACON,
+            beacon: STRANGER_BEACON.to_vec(),
         },
     );
     net.run();
@@ -298,7 +304,7 @@ fn tampered_resume_or_data_frames_close_the_link_without_back_off() {
             0,
             Event::BeaconRead {
                 link: central,
-                beacon: STRANGER_BEACON,
+                beacon: STRANGER_BEACON.to_vec(),
             },
         );
         net.run();
@@ -325,7 +331,7 @@ fn an_unanswered_s1_times_out() {
         0,
         Event::BeaconRead {
             link: central,
-            beacon: STRANGER_BEACON,
+            beacon: STRANGER_BEACON.to_vec(),
         },
     );
     net.run();

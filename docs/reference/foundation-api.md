@@ -1,8 +1,8 @@
 # Rust foundation API
 
 Scope: unreleased `cairn-wire`, `cairn-crypto`, `cairn-proto` and `cairn-ffi`
-at crate version `0.1.0`. There is no session or transport API; the FFI is an
-interim binding-proof surface.
+at crate version `0.1.0`. There is no BLE transport; the FFI exports the
+sans-IO `CairnCore` of slice S1.
 
 ## `cairn-wire`
 
@@ -70,11 +70,12 @@ vectors, commands and validation limitations.
 
 ## `cairn-proto`
 
-This dependency-free `no_std` + `alloc` crate implements the epoch identifiers
-and durable KEM object transfer of
-[spec §9](../spec/cairn-r1.md#9-post-quantum-ratchet). It moves public
-ML-KEM-768 objects only: it performs no KEM operation, record encoding or
-persistence. Only the binding proof in `cairn-ffi` calls it
+This `no_std` + `alloc` crate holds the sans-IO `Core` event loop, whose
+contract is [ADR 0022](../adr/0022-cairn-core-contract.md). It also implements
+the epoch identifiers and durable KEM object transfer of
+[spec §9](../spec/cairn-r1.md#9-post-quantum-ratchet), documented below. That
+transfer moves public ML-KEM-768 objects only: it performs no KEM operation,
+record encoding or persistence, and nothing calls it outside its tests
 ([ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md)).
 
 | Type or operation | Contract | Errors |
@@ -111,19 +112,26 @@ The crate-level documentation contains an executable transfer example.
 ## `cairn-ffi`
 
 This crate is the UniFFI `0.32.0` surface for the Kotlin `:sdk` module. The
-generated package is `ch.trancee.cairn.ffi`. It is an interim surface that
-`CairnCore` will replace ([ADR 0020](../adr/0020-root-gradle-wire-ffi.md)),
-and it carries public bytes only.
+generated package is `ch.trancee.cairn.ffi`. It exports one `CairnCore` per
+device, backed by `cairn-proto`'s `Core` with the `AwsLc` adapter
+([ADR 0022](../adr/0022-cairn-core-contract.md)).
 
 | Export | Contract | Errors (Kotlin) |
 |---|---|---|
-| `encode_leb128(value: u32) -> Vec<u8>` | Minimal unsigned LEB128 | None |
-| `decode_leb128(input: Vec<u8>) -> DecodedLeb128 { value, consumed }` | As `cairn_wire::decode_leb128` | `WireException.Truncated`, `.NonMinimal`, `.Overflow` |
-| `encode_length_prefixed(value: Vec<u8>) -> Vec<u8>` | `u16` big-endian length, then the value | `WireException.LengthOverflow` |
-| `decode_length_prefixed(input: Vec<u8>) -> DecodedField { value, consumed }` | Copies one field | `WireException.Truncated` |
-| `IncomingObject(epoch: u32, kind: ObjectKind)` | A Rust-owned receiver. Methods: `epoch`, `kind`, `next_offset`, `accept_chunk(epoch, kind, offset, chunk) -> ChunkOutcome` and `completed() -> Vec<u8>?` | `TransferException.Invalid` (`pq_transfer_invalid`); the object is unchanged |
+| `CairnCore()` | An unrestored core; the first event must be `Event.Restore` | None |
+| `handle(clock: Clock, event: Event) -> List<Action>` | Runs one event; execute the actions in order (ADR 0022 §2, §3) | `CoreException.NotRestored`, `.AlreadyRestored`, `.InvalidBlob`, `.DuplicateLink`, `.InvalidMtu`, `.UnexpectedBeaconRead`, `.UnknownContact`, `.Crypto`, `.Poisoned` |
+| `contacts() -> List<ContactInfo>` | Id, shared name and `Verification`; empty before `Restore` | `CoreException.Poisoned` |
+| `beacon(unixS: ULong) -> ByteArray` | The 8 B local `beacon` characteristic value | `CoreException.NotRestored`, `.Crypto`, `.Poisoned` |
 
-`ObjectKind` (`ENCAPSULATION_KEY`, `CIPHERTEXT`) and `ChunkOutcome`
-(`APPENDED`, `DUPLICATE`) mirror `cairn-proto`. Kotlin must `close()` an
-`IncomingObject`; calls after `close()` throw `IllegalStateException`. A
-poisoned lock is recovered, because a rejected chunk never mutates state.
+`Event` and `Action` are sealed classes mirroring the core. `LinkId`,
+`TimerId` and `ContactId` cross as `ULong`. `Clock`, `Persisted`,
+`ContactInfo`, `GattRole`, `Verification` and `ChatRejection` mirror the core
+types. `Event.BeaconRead` carries the bytes read; a value that is not 8 B long
+closes the link and backs off the address.
+
+Keys, `pairID` and session state stay in Rust. The `Persist` blob and chat text
+cross by design: Kotlin seals the blob with the platform keystore.
+
+A panic inside the core surfaces as UniFFI's `InternalException` and poisons
+the core: every later call throws `CoreException.Poisoned`. Kotlin must
+`close()` a `CairnCore`; calls after `close()` throw `IllegalStateException`.

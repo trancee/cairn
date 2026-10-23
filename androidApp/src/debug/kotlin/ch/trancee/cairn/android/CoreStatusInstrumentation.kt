@@ -24,6 +24,6 @@ class CoreStatusInstrumentation : Instrumentation() {
     }
 
     private companion object {
-        const val EXPECTED_STATUS = "field=cairn rejected=Truncated progress=600 closed=true"
+        const val EXPECTED_STATUS = "paired=1+1 chat=hello rejected=NotRestored closed=true"
     }
 }

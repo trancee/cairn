@@ -17,7 +17,7 @@ fn read_beacon(net: &mut Net, device: usize, link: LinkId) {
         device,
         Event::BeaconRead {
             link,
-            beacon: STRANGER_BEACON,
+            beacon: STRANGER_BEACON.to_vec(),
         },
     );
 }
@@ -361,7 +361,7 @@ fn caller_contract_violations_are_errors() {
         START,
         Event::BeaconRead {
             link: LinkId(1),
-            beacon: STRANGER_BEACON,
+            beacon: STRANGER_BEACON.to_vec(),
         },
     );
     fresh
@@ -369,7 +369,7 @@ fn caller_contract_violations_are_errors() {
         .unwrap();
     let read = Event::BeaconRead {
         link: LinkId(3),
-        beacon: STRANGER_BEACON,
+        beacon: STRANGER_BEACON.to_vec(),
     };
     fresh.handle(START, read.clone()).unwrap();
     let second_beacon_read = fresh.handle(START, read);
@@ -487,7 +487,7 @@ fn events_for_unknown_links_and_stale_timers_are_ignored() {
         },
         Event::BeaconRead {
             link: unknown,
-            beacon: STRANGER_BEACON,
+            beacon: STRANGER_BEACON.to_vec(),
         },
         Event::Received {
             link: unknown,
@@ -553,7 +553,7 @@ fn crossing_p0s_with_equal_nonces_close_both_links() {
                 START,
                 Event::BeaconRead {
                     link: own,
-                    beacon: STRANGER_BEACON,
+                    beacon: STRANGER_BEACON.to_vec(),
                 },
             )
             .unwrap(),
@@ -642,7 +642,7 @@ fn backend_failures_are_returned_to_the_caller() {
             START,
             Event::BeaconRead {
                 link: LinkId(1),
-                beacon: STRANGER_BEACON,
+                beacon: STRANGER_BEACON.to_vec(),
             },
         )
         .unwrap(),
@@ -693,7 +693,7 @@ fn a_central_does_not_send_p0_to_a_backed_off_address() {
     let mut core = restored(START);
     let read = |link| Event::BeaconRead {
         link,
-        beacon: STRANGER_BEACON,
+        beacon: STRANGER_BEACON.to_vec(),
     };
     let timer = core
         .handle(START, link_up(LinkId(1), GattRole::Central, 185))
@@ -711,6 +711,44 @@ fn a_central_does_not_send_p0_to_a_backed_off_address() {
 
     let retry = core.handle(START, read(LinkId(2))).unwrap();
 
+    assert!(sent(&retry).is_empty());
+    assert!(retry.contains(&Action::Disconnect { link: LinkId(2) }));
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn a_beacon_of_the_wrong_length_closes_the_link_and_backs_off_the_address() {
+    Seeded::seed(37);
+    let mut core = restored(START);
+    core.handle(START, link_up(LinkId(1), GattRole::Central, 185))
+        .unwrap();
+    core.handle(START, link_up(LinkId(2), GattRole::Central, 185))
+        .unwrap();
+
+    let short = core.handle(
+        START,
+        Event::BeaconRead {
+            link: LinkId(1),
+            beacon: STRANGER_BEACON[..7].to_vec(),
+        },
+    );
+    let retry = core
+        .handle(
+            START,
+            Event::BeaconRead {
+                link: LinkId(2),
+                beacon: STRANGER_BEACON.to_vec(),
+            },
+        )
+        .unwrap();
+
+    assert_eq!(
+        short,
+        Ok(vec![
+            Action::CancelTimer { timer: TimerId(0) },
+            Action::Disconnect { link: LinkId(1) }
+        ])
+    );
     assert!(sent(&retry).is_empty());
     assert!(retry.contains(&Action::Disconnect { link: LinkId(2) }));
 }

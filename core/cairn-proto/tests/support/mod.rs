@@ -151,7 +151,13 @@ impl Net {
             .core
             .beacon(self.clock.unix_s - self.devices[peripheral].lag_s)
             .unwrap();
-        self.inject(central, Event::BeaconRead { link, beacon });
+        self.inject(
+            central,
+            Event::BeaconRead {
+                link,
+                beacon: beacon.to_vec(),
+            },
+        );
         self.run();
     }
 

@@ -1,6 +1,6 @@
 [package]
 name = "cairn-ffi"
-description = "UniFFI boundary exposing public Cairn core operations"
+description = "UniFFI boundary exposing the Cairn core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,8 +12,8 @@ name = "cairn_ffi"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [dependencies]
+cairn-crypto = { path = "../cairn-crypto", version = "0.1.0", default-features = false, features = ["aws-lc"] }
 cairn-proto = { path = "../cairn-proto", version = "0.1.0" }
-cairn-wire = { path = "../cairn-wire", version = "0.1.0" }
 uniffi = { version = "=0.32.0", default-features = false }
 
 [lints]
