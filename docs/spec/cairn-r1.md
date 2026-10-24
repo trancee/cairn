@@ -1,6 +1,6 @@
 # `cairn-r1` protocol specification
 
-Status: **draft 0.8** (GATT UUIDs, [ADR 0023](../adr/0023-android-ble-adapter.md); fragments capped at the 512 B ATT value limit, §4.3; 2026-10-24). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
+Status: **draft 0.8** (GATT UUIDs, [ADR 0023](../adr/0023-android-ble-adapter.md); fragments capped at the 512 B ATT value limit, §4.3; randomized dial retries, §10.4; 2026-10-24). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
 
 This document consolidates, and is normative over:
 - [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md), as amended by [ADR 0021](../adr/0021-automatic-neighbour-admission.md);
@@ -393,7 +393,9 @@ door = Trunc8(HMAC(K_door_me→peer, lp("cairn-r1 door") ‖ u64(w)))
 ### 10.4 Connect policy (ADR 0008)
 
 - Connect to an unknown or beaconless peer only if there is something to send, a contact has not been seen for 10 min, or admission (§5.6) is within its limits.
-- At most one attempt per address per 2 min. After a non-matching `beacon` read, either admit the stranger on the same link (§5.6) or disconnect; after 3 non-matching reads without admission, back off that address for 1 h [OI-27].
+- Wait a random 0–3 s after first seeing an address before dialling it, so devices that see each other at once don't dial in step [OI-28].
+- At most one attempt per address per 2 min, except that a dial that fails before the link comes up MAY be retried after a random 1–5 s and, if that fails too, after a random 5–15 s. A third failure waits 2 min [OI-28].
+- After a non-matching `beacon` read, either admit the stranger on the same link (§5.6) or disconnect; after 3 non-matching reads without admission, back off that address for 1 h [OI-27].
 
 ## 11. Implementation requirements
 
@@ -424,7 +426,7 @@ door = Trunc8(HMAC(K_door_me→peer, lp("cairn-r1 door") ‖ u64(w)))
 
 ## 13. Consolidation issues (resolved 2026-10-05)
 
-OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: Resume*, OI-19 to OI-20 from *Formal model: SAS pairing*, OI-21 to OI-26 from the in-progress *Formal model: PQ ratchet mixing*, and OI-27 from the owner's mesh redirection (ADR 0021). The user accepted every proposal. OI-4 is accepted as *provisional*, pending *Formal model: PQ ratchet mixing*; OI-22 supersedes its classical fallback. The affected ADRs carry amendment notes.
+OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: Resume*, OI-19 to OI-20 from *Formal model: SAS pairing*, OI-21 to OI-26 from the in-progress *Formal model: PQ ratchet mixing*, OI-27 from the owner's mesh redirection (ADR 0021), and OI-28 from the S2 device demonstration. The user accepted every proposal. OI-4 is accepted as *provisional*, pending *Formal model: PQ ratchet mixing*; OI-22 supersedes its classical fallback. The affected ADRs carry amendment notes.
 
 | # | Issue | Resolution |
 |---|---|---|
@@ -454,11 +456,12 @@ OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: R
 | OI-24 | PQ healing after state compromise is not explicitly conditioned on a fresh exchange that a continuously active attacker did not replace | Claim conditional fresh honest-epoch healing, retaining stolen-key knowledge; do not claim recovery under continued active interception (§9, threat model) (user's choice, 2026-10-05) |
 | OI-25 | Chunk offsets alone do not tell the sender which bytes survived a disconnect or a lost acknowledgement | Authenticated cumulative `0D KEM_PROGRESS(epoch, kind, next_offset)` after durable storage; re-advertise progress and pending EPOCH_DONE after Resume; resend immutable unacknowledged chunks (§7.3, §9) (user's choice, 2026-10-05) |
 | OI-27 | Owner redirection to a peer-to-peer BLE mesh (2026-10-23): pairing must start automatically for every discovered peer. With no pairing screen, A can't tell which incoming link to send P1 on, OI-20's user-pick role rule has no user, and both devices can connect to each other at once | Automatic TOFU admission (§5.6): central is B and sends `P0 = hdr ‖ r(16)`; one pairing in flight with an `r` tie-break; admission limits 10/h admitted, 30/h attempts, 256 total, no eviction; only `mode = 0x03`; QR and SAS pairing retired, Verify remains; empty card name by default. +17 B once per admission. Verified models unchanged (ADR 0021) (user's choice, 2026-10-23) |
+| OI-28 | S2 device demonstration (2026-10-24): two phones that see each other at once dial each other at once, both dials fail (Android status 133, HCI `0x3e`), and the 2 min attempt limit makes them retry in step and collide again | A random 0–3 s delay before the first dial; a dial that fails before link-up is retried after a random 1–5 s, then 5–15 s, then 2 min (§10.4, ADR 0008). No wire change (user's choice, 2026-10-24) |
 | OI-26 | Reassembly semantics for gaps, overlaps and retransmitted chunks are unspecified | Contiguous append only; exact duplicates wholly within the stored prefix are accepted; gaps, conflicting/cross-frontier overlaps, wrong epochs and bounds violations fail closed without partial mutation (§9) (user's choice, 2026-10-05) |
 
 ## 14. Change log
 
-- 0.8 (2026-10-24): recorded the GATT service and characteristic UUIDs (§12, ADR 0023). No byte of any frame changes.
+- 0.8 (2026-10-24): recorded the GATT service and characteristic UUIDs (§12, ADR 0023); capped fragments at the 512 B ATT value limit (§4.3, ADR 0003); accepted OI-28 (randomized first dial and two fast retries, §10.4). No byte of any frame changes.
 - 0.7 (2026-10-23): accepted OI-27 (automatic neighbour admission, ADR 0021): new P0 frame and §5.6; QR and SAS pairing modes retired; card name empty by default; connect policy admits strangers. Multi-hop relaying remains unspecified (issue 47).
 
 - 0.6 (2026-10-05): accepted OI-25 (durable cumulative KEM_PROGRESS) and OI-26 (strict contiguous reassembly); specified retransmission, reconnect receipts and fail-closed validation. Ratchet gate remains closed.

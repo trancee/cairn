@@ -6,9 +6,7 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothProfile
 import android.os.Build
-import android.os.Looper
 import android.os.ParcelUuid
-import java.time.Duration
 import java.util.UUID
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -360,21 +358,6 @@ class CentralTest {
         h.discover(address)
 
         assertEquals(1, shadowOf(h.device(address)).bluetoothGatts.size)
-    }
-
-    @Test
-    fun centralRetriesAnAddressOnlyAfterTwoMinutes() {
-        val first = h.discover(address)!!
-        h.callback(first).onConnectionStateChange(first, 133, BluetoothProfile.STATE_DISCONNECTED)
-        h.idle()
-
-        h.discover(address)
-        val attemptsBefore = shadowOf(h.device(address)).bluetoothGatts.size
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(2))
-        h.discover(address)
-
-        assertEquals(1, attemptsBefore)
-        assertEquals(2, shadowOf(h.device(address)).bluetoothGatts.size)
     }
 
     @Test

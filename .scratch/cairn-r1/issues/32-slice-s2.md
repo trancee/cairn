@@ -65,3 +65,6 @@ both connections fail with status 133. The once-per-2-minutes attempt limit
 then fires on both phones in step, so the first link takes about two minutes.
 The phones linked within seconds when started 5 s apart. Follow-up:
 [issue 50](50-simultaneous-dial-backoff.md).
+
+Issue 50 resolved this with randomized dial timing (spec §10.4, OI-28). In six
+trials started together, the two phones linked within 5–9 s.
