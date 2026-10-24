@@ -13,6 +13,7 @@ import sys
 SCOPES = {
     "rust": [
         "core/**",
+        ".cargo/**",
         "rust-toolchain.toml",
         "scripts/check-rust.sh",
         "scripts/check-ct.sh",
@@ -37,6 +38,7 @@ SCOPES = {
         "**/*.rs",
         "**/Cargo.toml",
         "**/Cargo.lock",
+        ".cargo/**",
         "rust-toolchain.toml",
     ],
 }

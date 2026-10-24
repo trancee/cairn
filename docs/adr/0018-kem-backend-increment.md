@@ -65,7 +65,8 @@ Contract:
   keys have no 32-byte seed form.
 - Derandomized `Reference` functions exist only for known-answer tests.
   Production randomness comes from the OS CSPRNG (`getrandom`, AWS-LC
-  `rand`).
+  `rand`). AWS-LC is built without CPU jitter entropy
+  ([ADR 0024](0024-aws-lc-os-entropy.md)).
 
 Evidence, as pinned in `core/README.md`:
 
