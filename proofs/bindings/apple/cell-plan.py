@@ -7,8 +7,10 @@ ISOLATION = [
 ]
 BINDINGS = ["install-bindgen", "build-bindings", "jvm"]
 # The root Gradle build is traced into the same database as the fixture. Its
-# Kotlin/Native build runs untraced first: CodeQL extracts only JVM Kotlin.
-REPOSITORY = ["repository-bindings", "repository-native", "repository-codeql"]
+# Kotlin/Native build runs untraced first: CodeQL extracts only JVM Kotlin. The
+# JVM tests and coverage gate run untraced last, so the traced compilation is
+# never up to date.
+REPOSITORY = ["repository-bindings", "repository-native", "repository-codeql", "repository-jvm"]
 
 # Each scope is (needs CodeQL, runs boundary probes, ordered probe list) for
 # one bounded cell. The CodeQL lane runs "codeql" and "isolation" as parallel

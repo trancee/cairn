@@ -298,6 +298,14 @@ if [ "$#" -eq 3 ]; then
         /bin/bash "$tools/check-codeql-repository.sh" "$tools"
       "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
       ;;
+    repository-jvm)
+      "$python" -I "$scripts/uid-supervisor.py" --seconds 900 --diagnose-after 840 \
+        "$work/proof-output/repository-jvm.log" \
+        /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+        -D PRIVATE_IPC=true -f "$work/build.sb" \
+        /bin/bash "$tools/check-repository-build.sh" "$tools" jvm
+      "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
+      ;;
     codeql-analysis)
       analysis_result=0
       "$python" -I "$scripts/uid-supervisor.py" --seconds 600 \
