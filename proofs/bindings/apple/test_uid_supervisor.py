@@ -4,6 +4,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 import importlib.util
@@ -45,7 +46,7 @@ class DedicatedSupervisorTest(unittest.TestCase):
 
             result = subprocess.run(
                 [sys.executable, str(Path(__file__).with_name("uid-supervisor.py")),
-                 "--user-bootstrap", "--bootout-user-domain", str(output),
+                 "--user-bootstrap", str(output),
                  "/bin/launchctl", "manageruid"],
                 capture_output=True, timeout=25, text=True,
             )
@@ -53,6 +54,22 @@ class DedicatedSupervisorTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(output.read_text().strip(), "59000")
             self.assertIn("PASS: dedicated UID has no remaining processes", result.stdout)
+
+    def test_cleanup_removes_the_launchd_domain_that_respawns_distnoted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            # A bootstrap lookup creates user/59000, whose KeepAlive distnoted agent
+            # launchd restarts at most 10 s after cleanup kills it.
+            result = subprocess.run(
+                [sys.executable, str(SUPERVISOR), str(Path(directory) / "proof.log"),
+                 "/bin/launchctl", "print", "user/59000"],
+                capture_output=True, timeout=25, text=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            for _ in range(120):
+                self.assertEqual(supervisor.account_processes(59000), set())
+                time.sleep(0.1)
+            self.assertIn("PASS: dedicated user/59000 launchd domain removed", result.stdout)
 
     def test_diagnostic_time_must_be_positive_and_before_deadline(self):
         with tempfile.TemporaryDirectory() as directory:

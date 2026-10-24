@@ -43,16 +43,17 @@ def account_processes(uid):
             if int(owner) == uid}
 
 
-def cleanup_account(uid, bootout_user_domain=False):
+def cleanup_account(uid):
     deadline = time.monotonic() + 10
-    if bootout_user_domain:
-        if uid != 59000 or os.geteuid() != 0 or os.environ.get("GITHUB_ACTIONS") != "true":
-            raise RuntimeError("FAIL: domain cleanup requires the dedicated hosted UID")
-        subprocess.run(
-            ["/bin/launchctl", "bootout", "user/59000"],
-            check=True, timeout=5, stdout=subprocess.DEVNULL,
-        )
-        print("PASS: dedicated user/59000 launchd domain removed", flush=True)
+    if uid != 59000 or os.geteuid() != 0 or os.environ.get("GITHUB_ACTIONS") != "true":
+        raise RuntimeError("FAIL: domain cleanup requires the dedicated hosted UID")
+    # Any bootstrap lookup creates user/59000, whose KeepAlive distnoted agent launchd
+    # restarts after a kill. Bootout of an absent domain succeeds and creates nothing.
+    subprocess.run(
+        ["/bin/launchctl", "bootout", "user/59000"],
+        check=True, timeout=5, stdout=subprocess.DEVNULL,
+    )
+    print("PASS: dedicated user/59000 launchd domain removed", flush=True)
     force_after = time.monotonic() + 2
     while True:
         processes = account_processes(uid)
@@ -119,7 +120,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seconds", type=float, default=30)
     parser.add_argument("--diagnose-after", type=float)
-    parser.add_argument("--bootout-user-domain", action="store_true")
     parser.add_argument("--user-bootstrap", action="store_true")
     parser.add_argument("output")
     parser.add_argument("command", nargs=argparse.REMAINDER)
@@ -175,7 +175,7 @@ def main():
                     os.killpg(process.pid, signal.SIGKILL)
                     process.wait(timeout=5)
         finally:
-            cleanup_account(account.pw_uid, arguments.bootout_user_domain)
+            cleanup_account(account.pw_uid)
 
 
 if __name__ == "__main__":

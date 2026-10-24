@@ -1903,3 +1903,38 @@ supervisor launch found a launchd-parented `distnoted` under UID 59000 and
 refused to start. The seed now uses the same supervisor as every other probe
 command, so its owned processes are cleaned and checked before
 `fixture-targets` starts. No pre-cleanup or trust exception was added.
+
+## Amendment (2026-10-23): always boot out `user/59000`
+
+Root cause of the UID-59000 `distnoted` refusals (runs `38513991094`,
+`38515598161`, `39557473636` and 4 of the 30 isolation runs before this
+change). Any bootstrap lookup by the probe user, even
+`launchctl print user/59000` run by root, creates the background launchd
+domain `user/59000`. That domain holds the KeepAlive agent
+`com.apple.distnoted.xpc.agent`. The supervisor killed the process but left
+the domain, so launchd restarted `distnoted` about 4.5 s later (10 s
+throttle), and the next supervisor precheck refused to start. Java,
+`defaults` and `xcrun` trigger the lookup only sometimes, which is why the
+failure moved between steps.
+
+Evidence, on a hosted `macos-26` runner with a dedicated diagnostic workflow
+that was not merged:
+- Supervised `/bin/launchctl print user/59000` leaves `distnoted` in 3 of 3
+  runs; `/usr/bin/true` never does.
+- `launchctl bootout user/59000` removes the domain, and nothing respawns.
+  Bootout of an absent domain returns 0 and creates nothing.
+- Red: the new regression test
+  `test_cleanup_removes_the_launchd_domain_that_respawns_distnoted` sees a
+  `distnoted` process within 12 s with the old supervisor
+  ([run `40008583064`](https://github.com/trancee/cairn/actions/runs/40008583064)).
+- Green: with the fix, the full supervisor suite passes, and 24 passive
+  supervised runs leave no process
+  ([run `40008754586`](https://github.com/trancee/cairn/actions/runs/40008754586)).
+
+Decision: the owner widened the approved bootout from the boot invocation to
+every supervised cleanup. `cleanup_account` always runs the exact
+`launchctl bootout user/59000`, and the `--bootout-user-domain` flag is
+removed. All other constraints above are unchanged: hosted root and UID 59000
+only, a five-second deadline inside the ten-second cleanup window, a failed
+bootout is fatal, empty-UID verification follows, no system/runner/GUI
+domain is touched and printed domain structure is not parsed.
