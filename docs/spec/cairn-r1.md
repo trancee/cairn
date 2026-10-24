@@ -1,6 +1,6 @@
 # `cairn-r1` protocol specification
 
-Status: **draft 0.8** (GATT UUIDs, [ADR 0023](../adr/0023-android-ble-adapter.md), 2026-10-24). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
+Status: **draft 0.8** (GATT UUIDs, [ADR 0023](../adr/0023-android-ble-adapter.md); fragments capped at the 512 B ATT value limit, §4.3; 2026-10-24). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
 
 This document consolidates, and is normative over:
 - [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md), as amended by [ADR 0021](../adr/0021-automatic-neighbour-admission.md);
@@ -100,7 +100,7 @@ A receiver MUST close the link without sending anything when it sees:
 
 ### 4.3 Fragmentation
 
-- One ATT value carries one fragment: the header byte plus up to `ATT_MTU − 4` body bytes.
+- One ATT value carries one fragment: the header byte plus up to `min(ATT_MTU − 4, 511)` body bytes. The 511 keeps every value within ATT's 512-byte attribute value limit (Core Vol 3 Part F §3.2.9); stacks drop longer notifications even when `ATT_MTU` is 517.
 - The fragments of a frame are sent back to back. Every fragment repeats the header, with MORE set on all but the last.
 - Fragments from different frames in the same direction MUST NOT interleave.
 - Reassembly concatenates the bodies. The reassembled frame is the header with MORE cleared, followed by the bodies.

@@ -93,3 +93,6 @@ First version, so nothing to migrate. GATT UUIDs and the `beacon`/`rx`/`tx`/`psm
 
 2026-10-05, from *Formal model: Resume* ([`cairn-r1` spec §13](../spec/cairn-r1.md#13-consolidation-issues-resolved-2026-10-05)):
 - **Duplicate links.** A device can't tell that a link is a duplicate until it has matched a pseudonym. The losing link is therefore closed at S1, by the concurrent-Resume rule in spec §6, not before Resume (OI-17).
+
+2026-10-24, from the S2 device demonstration ([issue 32](../../.scratch/cairn-r1/issues/32-slice-s2.md)):
+- **Fragment size.** A fragment is at most `min(ATT_MTU − 3, 512)` B, so the body is at most `min(ATT_MTU − 4, 511)` B (spec §4.3). ATT caps an attribute value at 512 B (Core Vol 3 Part F §3.2.9), and Android stacks drop longer notifications even at ATT MTU 517.

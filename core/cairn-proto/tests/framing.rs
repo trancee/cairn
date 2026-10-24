@@ -33,6 +33,16 @@ fn a_frame_that_fits_is_one_fragment_without_more() {
 }
 
 #[test]
+fn fragments_never_exceed_the_512_byte_att_value_limit() {
+    let frame = data_frame(1024);
+
+    let fragments = fragment(&frame, 517).unwrap();
+
+    let lengths: Vec<usize> = fragments.iter().map(Vec::len).collect();
+    assert_eq!(lengths, [512, 512, 3]);
+}
+
+#[test]
 fn mtu_below_the_att_minimum_is_rejected() {
     let frame = data_frame(4);
 

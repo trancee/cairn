@@ -37,9 +37,9 @@ fuzz_target!(|input: &[u8]| {
     let mut reassembler = Reassembler::new(SESSION_FRAME_LIMIT);
     let (last, init) = fragments.split_last().unwrap();
     for piece in init {
-        assert!(piece.len() <= usize::from(mtu) - 3);
+        assert!(piece.len() <= (usize::from(mtu) - 3).min(512));
         assert_eq!(reassembler.accept(piece), Ok(None));
     }
-    assert!(last.len() <= usize::from(mtu) - 3);
+    assert!(last.len() <= (usize::from(mtu) - 3).min(512));
     assert_eq!(reassembler.accept(last), Ok(Some(frame.to_vec())));
 });
