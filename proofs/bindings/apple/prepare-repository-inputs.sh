@@ -17,8 +17,26 @@ rust=1.99.0
 if ! rustup run "$rust" rustc --version; then
   rustup toolchain install "$rust" --profile minimal
 fi
+rustup target add --toolchain "$rust" aarch64-apple-ios aarch64-apple-ios-sim
 rust_home="$(dirname "$(dirname "$(rustup which --toolchain "$rust" rustc)")")"
 test "$("$rust_home/bin/rustc" --version | cut -d' ' -f2)" = "$rust"
+for target in aarch64-apple-ios aarch64-apple-ios-sim; do
+  test -d "$rust_home/lib/rustlib/$target/lib"
+done
+
+# The root build's Kotlin/Native compiler. It declares the same dependency set
+# as the frozen fixture compiler, so the frozen native dependencies serve both.
+/bin/bash "$scripts/fetch-pinned.sh" \
+  https://github.com/JetBrains/kotlin/releases/download/v2.4.21/kotlin-native-prebuilt-macos-aarch64-2.4.21.tar.gz \
+  bf4edb526d91e17d0862102f69250525d788e79011f86c2c64362749adf260ae "$prepared/repository-kotlin-native.tar.gz"
+mkdir "$output/kotlin-native"
+tar -xzf "$prepared/repository-kotlin-native.tar.gz" --strip-components=1 -C "$output/kotlin-native"
+test "$(grep -x 'compilerVersion=.*' "$output/kotlin-native/konan/konan.properties")" = compilerVersion=2.4.21
+if ! diff <(grep -v '^compilerVersion=' "$tools/kotlin-native/konan/konan.properties") \
+  <(grep -v '^compilerVersion=' "$output/kotlin-native/konan/konan.properties"); then
+  echo 'FAIL: root Kotlin/Native dependency set differs from the frozen native dependencies' >&2
+  exit 1
+fi
 
 mkdir "$output/source"
 git -C "$repository" ls-files -z -- settings.gradle.kts build.gradle.kts gradle.properties \
@@ -66,13 +84,16 @@ mkdir "$resolve" "$prepared/repository-home"
   JAVA_HOME="$tools/daemon-jdk" GRADLE_USER_HOME="$prepared/repository-gradle-home" \
   CARGO_HOME="$CARGO_HOME" CARGO_TARGET_DIR="$prepared/repository-cargo-target" \
   ANDROID_HOME="$sdk" ANDROID_USER_HOME="$prepared/repository-home/android" \
+  KONAN_DATA_DIR="$prepared/repository-home/konan" \
   "$tools/gradle/bin/gradle" -p "$resolve" --no-daemon --console=plain \
   -Pcairn.uniffi.bindgen="$output/ubique/bindgen" \
+  -Pkotlin.native.home="$output/kotlin-native" \
   -Porg.gradle.java.installations.paths="$tools/compiler-jdk" \
   -Porg.gradle.java.installations.auto-download=false \
   --init-script "$repository/proofs/bindings/linux-android/resolve-repository-inputs.gradle" \
   cairnResolveRepositoryInputs
 test ! -e "$prepared/repository-cargo-target"
+test ! -e "$prepared/repository-home/konan/dependencies"
 mkdir "$output/gradle-dependencies"
 /usr/bin/rsync -a --exclude='*.lock' --exclude=gc.properties \
   "$prepared/repository-gradle-home/caches/modules-2" "$output/gradle-dependencies/"

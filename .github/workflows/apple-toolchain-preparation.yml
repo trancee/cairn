@@ -199,6 +199,20 @@ jobs:
           printf '%s\n' "$GITHUB_SHA" | sudo -n tee \
             "$RUNNER_TEMP/apple-preparation/simulator-payload/revision.txt"
           sudo -n chmod 0444 "$RUNNER_TEMP/apple-preparation/simulator-payload/revision.txt"
+      - name: Record same-run root simulator test payload provenance
+        if: ${{ matrix.cell == 'codeql' }}
+        run: |
+          printf '%s\n' "$GITHUB_SHA" | sudo -n tee \
+            "$RUNNER_TEMP/apple-preparation/repository-simulator-payload/revision.txt"
+          sudo -n chmod 0444 "$RUNNER_TEMP/apple-preparation/repository-simulator-payload/revision.txt"
+      - name: Deliver strictly built root simulator test executable
+        if: ${{ matrix.cell == 'codeql' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apple-repository-simulator-payload
+          path: ${{ runner.temp }}/apple-preparation/repository-simulator-payload
+          if-no-files-found: error
+          retention-days: 7
       - name: Retain strict-cell Kotlin extraction database
         if: ${{ matrix.cell == 'codeql' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -311,5 +325,58 @@ jobs:
           path: |
             ${{ runner.temp }}/functional-*.log
             ${{ runner.temp }}/simulator-build-version.log
+          if-no-files-found: error
+          retention-days: 7
+  sdk-simulator-tests:
+    name: Root SDK simulator tests (not strict isolation)
+    if: ${{ inputs.codeql }}
+    needs: prepare
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - name: Check out same-revision runtime harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download same-run root simulator test payload
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: apple-repository-simulator-payload
+          path: ${{ runner.temp }}/repository-simulator-payload
+      - name: Verify delivered Mach-O platform and architecture
+        run: |
+          binary="$RUNNER_TEMP/repository-simulator-payload/CairnSdkTest.kexe"
+          test "$(xcrun lipo -archs "$binary")" = arm64
+          xcrun vtool -show-build "$binary" | tee "$RUNNER_TEMP/sdk-simulator-build-version.log"
+          awk '
+            $1 == "platform" && $2 == "IOSSIMULATOR" { platform_matches++ }
+            $1 == "minos" && $2 == "15.0" { floor_matches++ }
+            END { exit !(platform_matches == 1 && floor_matches == 1) }
+          ' "$RUNNER_TEMP/sdk-simulator-build-version.log"
+      - name: Run the root SDK common tests on a fresh simulator
+        run: |
+          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 480 \
+            "$RUNNER_TEMP/sdk-simulator-tests.log" \
+            "$(xcrun --find python3)" -I proofs/bindings/apple/run-functional-simulator.py \
+            --executable CairnSdkTest.kexe \
+            "$RUNNER_TEMP/repository-simulator-payload" "$RUNNER_TEMP/cairn-sdk-simulator"
+          grep -E '^\[  PASSED  \] [1-9][0-9]* tests?\.' "$RUNNER_TEMP/sdk-simulator-tests.log"
+          if grep -F '[  FAILED  ]' "$RUNNER_TEMP/sdk-simulator-tests.log"; then exit 1; fi
+          grep -Fx 'PASS: delivered generated simulator consumer exited successfully' \
+            "$RUNNER_TEMP/sdk-simulator-tests.log"
+      - name: Shut down and delete only the recorded test device
+        if: always()
+        run: |
+          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 75 \
+            "$RUNNER_TEMP/sdk-simulator-cleanup.log" \
+            "$(xcrun --find python3)" -I proofs/bindings/apple/run-functional-simulator.py --cleanup \
+            "$RUNNER_TEMP/repository-simulator-payload" "$RUNNER_TEMP/cairn-sdk-simulator"
+      - name: Retain explicitly functional-only evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apple-sdk-simulator-tests
+          path: |
+            ${{ runner.temp }}/sdk-simulator-*.log
           if-no-files-found: error
           retention-days: 7

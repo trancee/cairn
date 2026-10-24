@@ -271,6 +271,25 @@ if [ "$#" -eq 3 ]; then
         /bin/bash "$tools/check-repository-build.sh" "$tools" bindings
       "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
       ;;
+    repository-native)
+      "$python" -I "$scripts/uid-supervisor.py" --seconds 900 --diagnose-after 840 \
+        "$work/proof-output/repository-native.log" \
+        /usr/bin/sandbox-exec -D "INPUTS=$work/inputs" -D "SCRATCH=$volume" \
+        -D PRIVATE_IPC=true -f "$work/build.sb" \
+        /bin/bash "$tools/check-repository-build.sh" "$tools" native
+      binary="$volume/repository-build/sdk/build/bin/iosSimulatorArm64/debugTest/test.kexe"
+      test -f "$binary"
+      test ! -L "$binary"
+      test "$(stat -f %z "$binary")" -le 134217728
+      mkdir -m 0755 "$output/repository-simulator-payload"
+      cp "$binary" "$output/repository-simulator-payload/CairnSdkTest.kexe"
+      cmp "$binary" "$output/repository-simulator-payload/CairnSdkTest.kexe"
+      chmod 0444 "$output/repository-simulator-payload/CairnSdkTest.kexe"
+      (cd "$output/repository-simulator-payload" && shasum -a 256 CairnSdkTest.kexe > payload.sha256)
+      chmod 0444 "$output/repository-simulator-payload/payload.sha256"
+      echo 'PASS: verified root simulator test executable exported before scratch teardown'
+      "$python" -I "$scripts/check-build-scratch.py" "$image" "$volume"
+      ;;
     repository-codeql)
       "$python" -I "$scripts/uid-supervisor.py" --seconds 900 --diagnose-after 840 \
         "$work/proof-output/repository-codeql.log" \

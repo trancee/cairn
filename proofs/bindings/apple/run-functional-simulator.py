@@ -11,8 +11,13 @@ import uuid
 from pathlib import Path
 
 
-def verify_payload(payload, revision):
-    expected = {"CairnSimulatorSmoke.kexe", "payload.sha256", "revision.txt"}
+EXECUTABLES = ("CairnSimulatorSmoke.kexe", "CairnSdkTest.kexe")
+
+
+def verify_payload(payload, revision, executable=EXECUTABLES[0]):
+    if executable not in EXECUTABLES:
+        raise SystemExit("FAIL: functional payload executable not allowed")
+    expected = {executable, "payload.sha256", "revision.txt"}
     if not payload.is_dir() or payload.is_symlink() or {
         item.name for item in payload.iterdir()
     } != expected:
@@ -27,10 +32,10 @@ def verify_payload(payload, revision):
     ).read_bytes() != (revision + "\n").encode():
         raise SystemExit("FAIL: functional payload source revision mismatch")
     manifest = (payload / "payload.sha256").read_bytes()
-    match = re.fullmatch(rb"([0-9a-f]{64})  CairnSimulatorSmoke\.kexe\n", manifest)
+    match = re.fullmatch(rb"([0-9a-f]{64})  " + re.escape(executable.encode()) + rb"\n", manifest)
     if not match:
         raise SystemExit("FAIL: functional payload checksum manifest mismatch")
-    binary = payload / "CairnSimulatorSmoke.kexe"
+    binary = payload / executable
     digest = hashlib.sha256()
     with binary.open("rb") as source:
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
@@ -43,6 +48,7 @@ def verify_payload(payload, revision):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cleanup", action="store_true")
+    parser.add_argument("--executable", choices=EXECUTABLES, default=EXECUTABLES[0])
     parser.add_argument("payload", type=Path)
     parser.add_argument("work", type=Path)
     arguments = parser.parse_args()
@@ -54,7 +60,9 @@ def main():
     environment.update(PATH="/usr/bin:/bin", LANG="en_US.UTF-8")
     binary = None
     if not arguments.cleanup:
-        binary = verify_payload(arguments.payload, os.environ.get("GITHUB_SHA", ""))
+        binary = verify_payload(
+            arguments.payload, os.environ.get("GITHUB_SHA", ""), arguments.executable,
+        )
     simctl = subprocess.run(
         ["/usr/bin/xcrun", "--find", "simctl"], check=True,
         capture_output=True, text=True, timeout=10, env=environment,
@@ -111,7 +119,7 @@ def main():
     print("PASS: exact normal-user functional ARM64 bootstatus completed", flush=True)
     subprocess.run([*command, "spawn", "--standalone", device_id, str(binary)],
                    check=True, timeout=60, env=environment)
-    verify_payload(arguments.payload, os.environ.get("GITHUB_SHA", ""))
+    verify_payload(arguments.payload, os.environ.get("GITHUB_SHA", ""), arguments.executable)
     print("PASS: delivered generated simulator consumer exited successfully", flush=True)
 
 
