@@ -11,6 +11,8 @@ pub const SESSION_FRAME_LIMIT: usize = 4096;
 pub(crate) const MIN_ATT_MTU: u16 = 23;
 /// ATT write/notify overhead plus the repeated header byte.
 const FRAGMENT_OVERHEAD: usize = 4;
+/// Longest attribute value ATT allows (Core Vol 3 Part F §3.2.9), whatever the MTU.
+const MAX_ATT_VALUE: usize = 512;
 
 /// The ATT MTU is below the Bluetooth minimum of 23.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -24,7 +26,7 @@ pub fn fragment(frame: &[u8], mtu: u16) -> Result<Vec<Vec<u8>>, MtuTooSmall> {
     let Some((&header, body)) = frame.split_first() else {
         return Ok(Vec::new());
     };
-    let capacity = usize::from(mtu) - FRAGMENT_OVERHEAD;
+    let capacity = (usize::from(mtu) - FRAGMENT_OVERHEAD).min(MAX_ATT_VALUE - 1);
     let count = body.len().div_ceil(capacity).max(1);
     Ok((0..count)
         .map(|index| {
