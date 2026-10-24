@@ -131,6 +131,14 @@ network, whole-VM memory, scratch, file or job limit is increased. Export
 coverage and SARIF only after successful execution. Repository-path mapping
 and persistent advanced-setup replacement remain unverified.
 
+Amendment (2026-10-24): the `:androidBle` and `:androidApp` sources
+grew the database until `OverlyLargeRange.ql` exhausted the 696 MiB heap
+that `--ram=2048` yields with two threads
+([run 40108135798](https://github.com/trancee/cairn/actions/runs/40108135798)).
+The owner approved 4 GiB requested evaluator RAM for the inventory query and
+suite analysis. Finalization keeps 2 GiB. The 7 GiB whole-VM memory, threads,
+command ceilings and every other limit are unchanged.
+
 Run `38267253216` fails during trusted query-pack preparation before freezing
 or target work; no coverage/query evidence is produced. Select the sole
 bundled Java query-pack version directory and verify its actual standard suite

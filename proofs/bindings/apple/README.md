@@ -285,8 +285,8 @@ database finalization; downloaded metadata and source archive agree.
 The mandatory analysis gate queries compiled Kotlin compilation units,
 requires every tracked `.kt` source plus generated binding evidence, and runs
 the unchanged bundled Java/Kotlin security suite offline. Analysis has its
-own command ceiling (300 seconds, raised to 600 when root sources joined), two threads and 2 GiB requested
-evaluator RAM; all caches/results remain in bounded scratch. Coverage and
+own command ceiling (300 seconds, raised to 600 when root sources joined), two threads and 4 GiB requested
+evaluator RAM (2 GiB until the Android modules joined; `OverlyLargeRange` then exhausted its 696 MiB heap); all caches/results remain in bounded scratch. Coverage and
 SARIF export require success. Compiled coverage and suite execution pass in
 run `38268914707`; mapped export passes in run `38274027100`, attempt 2.
 Processed GitHub results remain unverified. This is not yet a deployed

@@ -11,7 +11,7 @@ database="$HOME/codeql-java"
 inventory=$(/usr/bin/find "$tools/codeql/qlpacks/codeql/java-queries" \
   -name CairnSourceInventory.ql -type f)
 test -f "$inventory"
-options=(--threads=2 --ram=2048 --common-caches="$HOME/codeql-common" \
+options=(--threads=2 --ram=4096 --common-caches="$HOME/codeql-common" \
   --compilation-cache="$HOME/codeql-compilation" --no-default-compilation-cache)
 "$codeql" query run "${options[@]}" --database="$database" \
   --output="$HOME/kotlin-sources.bqrs" "$inventory"
