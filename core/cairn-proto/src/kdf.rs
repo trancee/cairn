@@ -40,9 +40,7 @@ pub(crate) fn tag<B: CryptoBackend, const N: usize>(
         input.extend_from_slice(part);
     }
     let digest = B::hmac_sha384(key, &input)?;
-    let mut truncated = [0; N];
-    truncated.copy_from_slice(&digest[..N]);
-    Ok(truncated)
+    Ok(*digest.first_chunk::<N>().expect("N <= 48"))
 }
 
 /// `H(x)` over the concatenation of `parts`.
