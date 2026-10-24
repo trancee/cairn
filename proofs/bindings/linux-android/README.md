@@ -606,13 +606,29 @@ Observed on 2026-10-24 with label `s2-kover` (Kover `0.9.11` added; ADR 0023):
 - A source copy with one uncovered branch failed `koverVerify`: "branches
   covered percentage is 96.969700, but expected minimum is 100".
 
+Observed on 2026-10-24 with label `s2-radio` (`:androidBle`, `:androidApp`,
+Robolectric `4.17`; ADR 0023), source archive SHA-256
+`dd3d3a614db9c951994824edb4236de8ffac401f9e1ed771e0b4d85ef0417c96` from
+`cbb06f4`:
+- Preparation passed.
+- The green run passed in 4 min 16 s: `:sdk` 25, `:androidBle` 141 and
+  `:androidApp` 54 tests, every `koverVerify` at 100% lines and branches,
+  and the APK native-entry checks (APK SHA-256
+  `8df0d32152e12096e01b04c94701d03c1777e758337dfd2a1f7618021cecf058`).
+  Robolectric read the `android-all` jars in place from the read-only inputs.
+- A source copy with one uncovered branch in `:androidBle` failed only
+  `:androidBle:koverVerifyDebug`: "branches covered percentage is 98.717900,
+  but expected minimum is 100". Its evidence is kept under label directory
+  `s2-radio-mutant`.
+
 Limitations:
 - Debug builds only; armeabi-v7a is not packaged.
 - Emulator `37.2.12.0` startup sometimes segfaults under nested KVM. Rerun
   the unchanged command; a crash before ADB connects is not app evidence.
 - With no arguments, the script needs the fixture APK from its own generator
   build in `/srv/cairn-generator-scratch`.
-- No release build, Compose UI interaction, physical device or iOS proof.
+- No release build, physical device or iOS proof. Compose UI interaction
+  runs only on the Robolectric host.
 - Gradle project metadata stays writable inside scratch.
 - Downloads during preparation are trusted at the TLS, checksum and Rust
   signature level. Maven artifacts have no signature verification.
