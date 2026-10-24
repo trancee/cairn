@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.ubique.uniffi)
+    alias(libs.plugins.kover)
 }
 
 cargo {
@@ -34,6 +35,24 @@ kotlin {
     sourceSets {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+        }
+    }
+}
+
+// Constitution T3: the handwritten SDK keeps full line and branch coverage. Kover measures the JVM
+// test run, which executes commonMain; the generated bindings are UniFFI's, not ours.
+kover {
+    reports {
+        filters {
+            excludes {
+                packages("ch.trancee.cairn.ffi")
+            }
+        }
+        verify {
+            rule {
+                minBound(100, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.LINE)
+                minBound(100, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.BRANCH)
+            }
         }
     }
 }
