@@ -7,6 +7,7 @@ on:
     # Must equal SCOPES in scripts/check_scopes.py (scripts/test_check_scopes.py).
     paths:
       - core/**
+      - .cargo/**
       - rust-toolchain.toml
       - scripts/check-rust.sh
       - scripts/check-ct.sh

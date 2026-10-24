@@ -109,7 +109,10 @@ cryptographic primitives; `sha2`, `hmac`, `hkdf`, `ml-kem`, `x25519-dalek`,
 `sha3`, `shake` and `aes-gcm` provide the independent RustCrypto reference
 adapter ([ADR 0018](../docs/adr/0018-kem-backend-increment.md),
 [ADR 0019](../docs/adr/0019-crypto-seam-completion.md)), and `getrandom`
-supplies its OS randomness. They are permissively licensed and lock their
+supplies its OS randomness. AWS-LC seeds its DRBG from the OS CSPRNG only:
+the repository-root `.cargo/config.toml` sets `AWS_LC_SYS_NO_JITTER_ENTROPY=1`,
+because the CPU jitter source aborts the process when its health tests fail
+([ADR 0024](../docs/adr/0024-aws-lc-os-entropy.md)). They are permissively licensed and lock their
 native/transitive dependencies in `Cargo.lock`. `zeroize` wipes returned
 HMAC/HKDF buffers on drop and enables supported RustCrypto state wiping.
 The standard library has no cryptographic primitives or guaranteed wiping

@@ -1,0 +1,3 @@
+[env]
+# ADR 0024: seed aws-lc from the OS CSPRNG; its CPU jitter source aborts the process on health-test failure.
+AWS_LC_SYS_NO_JITTER_ENTROPY = "1"

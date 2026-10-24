@@ -32,6 +32,11 @@ class ScopesForChangedPaths(unittest.TestCase):
 
         self.assertEqual(scopes, {"rust", "models", "codeql"})
 
+    def test_cargo_config_selects_every_cargo_build(self):
+        scopes = check_scopes.scopes_for([".cargo/config.toml"])
+
+        self.assertEqual(scopes, {"rust", "codeql"})
+
     def test_workflow_change_selects_its_lane_and_workflow_lint(self):
         scopes = check_scopes.scopes_for([".github/workflows/rust.yml"])
 

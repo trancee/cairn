@@ -50,6 +50,8 @@ Contract:
   An all-zero output returns `ZeroSharedSecret` (spec §2.1).
   `X25519SecretKey` zeroizes on drop and redacts `Debug`.
 - `fill_random` uses the OS CSPRNG (`aws_lc_rs::rand`, `getrandom`).
+  AWS-LC is built without CPU jitter entropy
+  ([ADR 0024](0024-aws-lc-os-entropy.md)).
   ADR 0004's seeded test generator is a protocol-layer injection and is not
   part of this increment.
 - The reference adapter adds `aes-gcm` 0.11.1 with the `aes`, `alloc` and

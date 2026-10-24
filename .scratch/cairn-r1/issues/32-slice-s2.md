@@ -68,3 +68,7 @@ The phones linked within seconds when started 5 s apart. Follow-up:
 
 Issue 50 resolved this with randomized dial timing (spec §10.4, OI-28). In six
 trials started together, the two phones linked within 5–9 s.
+
+In the fleet trace run, the P10 lite aborted at startup inside AWS-LC's jitter
+entropy source. Fixed by building AWS-LC without jitter entropy:
+[issue 51](51-aws-lc-jitter-abort.md).
