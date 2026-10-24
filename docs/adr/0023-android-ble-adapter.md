@@ -120,7 +120,11 @@ The platform-neutral `LinkDriver` in `:sdk` `commonMain` sits between
   `koverVerifyDebug`). The gate is 100% lines and branches.
 - Robolectric `4.17` runs every Android host test on API 26 and API 37. It
   loads pinned `android-all` jars that Gradle resolves like any other input,
-  never from the network (`gradle/robolectric.gradle.kts`). API 37 needs
+  never from the network (`gradle/robolectric.gradle.kts`). A generated
+  `robolectric-deps.properties` points Robolectric at the jars in the
+  Gradle cache. Copying them is not an option: the API 37 jar is about
+  239 MB, above the isolated lanes' 128 MiB per-file ceiling
+  ([ADR 0014](0014-hosted-apple-isolation-probes.md)). API 37 needs
   `--add-opens java.base/java.io` and `--add-exports
   java.base/jdk.internal.access` on JDK 17 and later.
 - Compose ui-test pulls Espresso `3.5.0`, whose idling calls an
