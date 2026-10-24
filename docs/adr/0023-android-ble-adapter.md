@@ -98,9 +98,14 @@ The platform-neutral `LinkDriver` in `:sdk` `commonMain` sits between
 - **Central.** `connectGatt` over LE without auto-connect, then MTU 517,
   service discovery and the `tx` CCCD write. Only then does it report
   `linkUp` and read `beacon`. A write to `rx` waits for that read, since
-  Android runs one GATT operation per connection. The radio makes at most one
-  connection attempt per address every 2 minutes (spec §10.4); the address
-  is only this back-off key.
+  Android runs one GATT operation per connection. Dials follow spec §10.4:
+  a random 0–3 s delay after an address is first seen, two retries after a
+  random 1–5 s and 5–15 s when a dial fails before `linkUp`, otherwise one
+  dial per address every 2 minutes. The address is only this back-off key.
+  The radio gates dials on scan results rather than timers, so a peer that
+  stops advertising is not dialled. Each failed dial logs its stage, status,
+  elapsed time and next delay under the tag `CairnRadio`, with only the last
+  two address bytes.
 - **Peripheral.** The GATT server reports `linkUp` when the central enables
   `tx` notifications, at the MTU the central negotiated (23 by default), and
   `MtuChanged` when the MTU changes later. Writes to `rx` before that are

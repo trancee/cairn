@@ -82,3 +82,6 @@ This is the first version. These parameters are policy inside the core and SDK; 
 
 2026-10-23, from [ADR 0021](0021-automatic-neighbour-admission.md) (OI-27):
 - The connect policy also connects to an unknown peer when automatic admission is within its limits. After a non-matching `beacon` read, the device either admits the stranger on the same link (P0, spec §5.6) or disconnects.
+
+2026-10-24, from the S2 device demonstration ([issue 50](../../.scratch/cairn-r1/issues/50-simultaneous-dial-backoff.md), OI-28):
+- **Dial timing.** The first dial to an address waits a random 0–3 s after the address is first seen. A dial that fails before the link comes up is retried after a random 1–5 s, then 5–15 s; a third failure, or a dial that linked, waits 2 min. Two phones that dialled each other at once otherwise retried in step every 2 min and collided again. The retries add at most two dials per address per 2 min, and only after a dial failed.

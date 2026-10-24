@@ -20,9 +20,11 @@ import android.content.Context
 import android.os.Build
 import android.os.Handler
 import android.os.SystemClock
+import android.util.Log
 import ch.trancee.cairn.ffi.GattRole
 import ch.trancee.cairn.sdk.Radio
 import ch.trancee.cairn.sdk.RadioListener
+import kotlin.random.Random
 
 /**
  * The Android [Radio] for slice S2 (ADR 0023 §3). It advertises and scans for the cairn service
@@ -32,7 +34,11 @@ import ch.trancee.cairn.sdk.RadioListener
  * so [listener] sees one ordered stream. Callers must hold the permissions in [BlePermissions].
  */
 @SuppressLint("MissingPermission")
-class AndroidRadio(private val context: Context, private val handler: Handler) : Radio {
+class AndroidRadio(
+    private val context: Context,
+    private val handler: Handler,
+    private val random: Random = Random.Default,
+) : Radio {
     /** Usually the [ch.trancee.cairn.sdk.LinkDriver]; set before [start]. */
     lateinit var listener: RadioListener
 
@@ -52,7 +58,7 @@ class AndroidRadio(private val context: Context, private val handler: Handler) :
     private val peripherals = HashMap<String, Peripheral>()
     private val links = HashMap<ULong, Link>()
     private val serverMtus = HashMap<String, Int>()
-    private val attempts = HashMap<String, Long>()
+    private val dials = HashMap<String, Dial>()
 
     /**
      * Opens the GATT server, advertises and scans. Returns false, and starts nothing, when
@@ -103,10 +109,10 @@ class AndroidRadio(private val context: Context, private val handler: Handler) :
         val address = device.address
         if (address in centrals || address in peripherals) return
         val now = SystemClock.elapsedRealtime()
-        val last = attempts[address]
-        if (last != null && now - last < ATTEMPT_INTERVAL_MS) return
-        attempts[address] = now
-        val central = Central(address)
+        val dial = dials.getOrPut(address) { Dial(now + random.nextLong(0, FIRST_DIAL_SPREAD_MS + 1)) }
+        if (now < dial.notBefore) return
+        dial.notBefore = now + ATTEMPT_INTERVAL_MS
+        val central = Central(address, dial, now)
         val gatt: BluetoothGatt = device.connectGatt(context, false, central, BluetoothDevice.TRANSPORT_LE) ?: return
         central.gatt = gatt
         centrals[address] = central
@@ -120,8 +126,35 @@ class AndroidRadio(private val context: Context, private val handler: Handler) :
 
     private val advertiseCallback = object : AdvertiseCallback() {}
 
+    /**
+     * When the central may next dial one address (spec §10.4). A dial that fails before link-up is
+     * retried twice after random delays, so two devices that dialled each other at once fall out of
+     * step; a third failure, or a dial that linked, waits [ATTEMPT_INTERVAL_MS].
+     */
+    private inner class Dial(var notBefore: Long) {
+        private var failures = 0
+
+        fun linked() {
+            failures = 0
+        }
+
+        /** Records a failed dial at [now] and returns the delay until the next one. */
+        fun failed(now: Long): Long {
+            failures++
+            val delay = when (failures) {
+                1 -> random.nextLong(1_000, 5_001)
+                2 -> random.nextLong(5_000, 15_001)
+                else -> ATTEMPT_INTERVAL_MS.also { failures = 0 }
+            }
+            notBefore = now + delay
+            return delay
+        }
+    }
+
     /** A link where we are the GATT client: connect, MTU, discovery, `tx` subscription, then `beacon`. */
-    private inner class Central(val address: String) : BluetoothGattCallback(), Link {
+    private inner class Central(val address: String, val dial: Dial, val dialledAt: Long) :
+        BluetoothGattCallback(),
+        Link {
         lateinit var gatt: BluetoothGatt
         private var stage = Stage.CONNECTING
         private var mtu = GattProfile.DEFAULT_MTU
@@ -130,12 +163,14 @@ class AndroidRadio(private val context: Context, private val handler: Handler) :
         private lateinit var beacon: BluetoothGattCharacteristic
         private var reading = false
         private var held: ByteArray? = null
+        private var status = BluetoothGatt.GATT_SUCCESS
 
         private fun post(block: () -> Unit) {
             handler.post { if (centrals[address] === this) block() }
         }
 
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) = post {
+            this.status = status
             if (status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_CONNECTED) {
                 if (!gatt.requestMtu(GattProfile.MAX_MTU)) close()
             } else {
@@ -176,6 +211,7 @@ class AndroidRadio(private val context: Context, private val handler: Handler) :
                 close()
             } else {
                 stage = Stage.UP
+                dial.linked()
                 link = listener.linkUp(GattRole.CENTRAL, mtu.toUShort(), address.encodeToByteArray())
                 links[link] = this
                 reading = true
@@ -243,6 +279,14 @@ class AndroidRadio(private val context: Context, private val handler: Handler) :
             if (stage == Stage.UP) {
                 links.remove(link)
                 listener.linkDown(link)
+            } else {
+                val now = SystemClock.elapsedRealtime()
+                val delay = dial.failed(now)
+                Log.i(
+                    TAG,
+                    "dial ${address.takeLast(5)} failed $stage status 0x%02x after %d ms; retry in %d ms"
+                        .format(status, now - dialledAt, delay),
+                )
             }
         }
     }
@@ -363,8 +407,13 @@ class AndroidRadio(private val context: Context, private val handler: Handler) :
     }
 
     private companion object {
-        /** Spec §10.4: at most one connection attempt per address per 2 min. */
+        const val TAG = "CairnRadio"
+
+        /** Spec §10.4: the interval between dials to one address, outside the two fast retries. */
         const val ATTEMPT_INTERVAL_MS = 120_000L
+
+        /** Spec §10.4: the first dial to an address waits a random 0 to 3 s after it is first seen. */
+        const val FIRST_DIAL_SPREAD_MS = 3_000L
 
         fun BluetoothGattServer.respond(device: BluetoothDevice, requestId: Int, accepted: Boolean) {
             val status = if (accepted) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_WRITE_NOT_PERMITTED

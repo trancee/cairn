@@ -60,13 +60,27 @@ class RecordingListener : RadioListener {
     override fun beacon(): ByteArray = beaconValue
 }
 
+/** Records each `nextLong(from, until)` range and answers with [pick], by default the lowest value. */
+class FakeRandom : kotlin.random.Random() {
+    val ranges = mutableListOf<LongRange>()
+    var pick: (Long, Long) -> Long = { from, _ -> from }
+
+    override fun nextBits(bitCount: Int): Int = error("the radio draws only ranges")
+
+    override fun nextLong(from: Long, until: Long): Long {
+        ranges += from until until
+        return pick(from, until)
+    }
+}
+
 fun ByteArray.hex(): String = joinToString("") { "%02x".format(it) }
 
 /** One radio under test on the main looper, with the Bluetooth permissions granted. */
 class RadioHarness {
     val context: Application = ApplicationProvider.getApplicationContext()
     val listener = RecordingListener()
-    val radio = AndroidRadio(context, Handler(Looper.getMainLooper())).also { it.listener = listener }
+    val random = FakeRandom()
+    val radio = AndroidRadio(context, Handler(Looper.getMainLooper()), random).also { it.listener = listener }
     val manager: BluetoothManager = context.getSystemService(BluetoothManager::class.java)
     val adapter: BluetoothAdapter = manager.adapter
 
