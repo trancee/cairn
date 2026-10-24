@@ -273,9 +273,7 @@ pub struct AwsLc;
 impl CryptoBackend for AwsLc {
     fn sha384(input: &[u8]) -> [u8; 48] {
         let digest = aws_lc_rs::digest::digest(&aws_lc_rs::digest::SHA384, input);
-        let mut output = [0; 48];
-        output.copy_from_slice(digest.as_ref());
-        output
+        digest.as_ref().try_into().expect("fixed length")
     }
 
     fn hmac_sha384(key: &[u8], input: &[u8]) -> Result<Zeroizing<[u8; 48]>, CryptoError> {
@@ -483,9 +481,7 @@ fn mlkem768_coefficients_reduced(public: &[u8; MLKEM768_ENCAPSULATION_KEY_LEN]) 
 /// Copies a public provider output whose length the algorithm fixes.
 #[cfg(feature = "aws-lc")]
 fn provider_bytes<const N: usize>(bytes: &[u8]) -> [u8; N] {
-    let mut output = [0; N];
-    output.copy_from_slice(bytes);
-    output
+    bytes.try_into().expect("fixed length")
 }
 
 #[cfg(feature = "aws-lc")]
