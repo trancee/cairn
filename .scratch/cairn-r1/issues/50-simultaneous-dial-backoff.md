@@ -1,7 +1,7 @@
 # Simultaneous dial delays the first link
 
 Type: task
-Status: needs-triage
+Status: resolved
 Blocked by: none
 
 ## Question
@@ -24,3 +24,51 @@ detect the inbound link.
 
 Done when two phones started together link within seconds in a repeatable
 device test, with a Robolectric test of the retry policy written first.
+
+## Fleet observation (2026-10-24)
+
+Sixteen arm64 phones started together, before the fix. Their 133 failures
+fall into two classes:
+- **Fast collisions.** Most failures came within 2 s, many with HCI reason
+  `0x3e` (connection failed to be established) while the server saw the same
+  peer connect: crossed or simultaneous dials.
+- **Timeouts.** About 30 s, when the peer never answered.
+
+Separately, slow phones (P10 lite: Bluetooth 4.2, no Data Length Extension,
+50 ms connection interval) linked and then closed exactly 5 s later on the
+pre-authentication limit of spec §4.4. That is a separate question, about
+the 5 s limit, not this issue.
+
+## Decision
+
+Option B (user's choice, 2026-10-24; spec §10.4, OI-28, ADR 0008
+amendment):
+- The first dial to an address waits a random 0–3 s after the address is
+  first seen.
+- A dial that fails before link-up is retried after a random 1–5 s, then a
+  random 5–15 s.
+- A third failure, or a dial that linked, waits 2 min.
+
+`AndroidRadio` gates dials on scan results, not timers, and logs each failed
+dial (stage, status, elapsed time, next delay, last two address bytes) under
+`CairnRadio`. Robolectric tests: `DialPolicyTest`.
+
+## Result
+
+**Pair test.** Nothing Phone (2) and P10 lite, both force-stopped and
+started together, six times. Every trial linked: the UI showed the contact
+5–9 s after launch, including UI polling delay. In trial 6 both dials
+collided (`CONNECTING` status `0x85` after 277 ms); the retry 1.1 s later
+linked.
+
+**Fleet, 15 phones.** The Pixel 6, Pixel 4a, Nokia X20 and Nothing Phone (1)
+stayed PIN-locked, and Settings covered Cairn on the P10 lite, so 11 phones
+ran Cairn.
+- Every one of the 11 formed contacts: 2–8 each, 64 in total. Counts stopped
+  growing between +150 s and +240 s.
+- Failed dials per phone in 4 min ranged from 0 to 27, mostly `CONNECTING`
+  `0x85`. The Moto edge 30 fusion and the Mi Note 3 also reported `0x3e`.
+
+The earlier fleet run is not directly comparable: its zero-contact counts
+for the Mi Note 3 and Poco F1 may be artefacts, because `uiautomator dump`
+returns nothing on those phones while Cairn's UI is animating.
