@@ -214,8 +214,10 @@ fix. Manual hosted probes `38514098575` pass all six supervisor cases and all
 boundary/resource assertions; their eight retained artifact checksums verify.
 PR run `38513991094` at diagnostic head `6ad4bb9` passes offline effective
 targets/dependency metadata and later refuses a `distnoted` process under UID
-59000, parent PID 1. Its origin/lifetime remains unestablished; it is neither
-trusted nor pre-cleaned. The earlier missing-snapshot failure does not recur.
+59000, parent PID 1. It is neither trusted nor pre-cleaned. Its origin was
+established on 2026-10-23: any bootstrap lookup by the probe user creates the
+`user/59000` launchd domain, whose KeepAlive distnoted agent launchd restarts
+after a kill. Supervisor cleanup now always boots out that domain (ADR 0014). The earlier missing-snapshot failure does not recur.
 Formal run `38513991093` separately fails unchanged mutation-certificate replay
 with Tamarin `<<loop>>`, not a reported security counterexample.
 Push run `38513985911` completes Kotlin extraction, coverage and security
@@ -616,7 +618,8 @@ Trusted device creation passed `38165989640`; boot probes `38167434234`/
 cleanup failed and scratch detach was busy. The diagnostic observed
 launchd-parented simulator services and a remaining distnoted process.
 Trusted lifecycle and runtime containment remain incomplete; no app ran.
-Exact disposable-domain removal and empty-UID verification now pass
+Exact disposable-domain removal, now run on every supervised cleanup, and
+empty-UID verification pass
 `38204550881`, `38215350684`, `38216685239` and `38220908711`.
 Owner-approved trusted inventory and boot ceilings are separately 300 seconds.
 The actual bootstrap-context regression passes `38220908711`, but boot still

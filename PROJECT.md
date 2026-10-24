@@ -2,6 +2,19 @@
 
 state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer + host-only ML-KEM-768/X-Wing/AES-256-GCM/X25519/RNG backends + S1 sans-IO core (pairing, Resume, CHAT) behind the UniFFI `CairnCore` + root Gradle build (JVM/Android); BLE transport/SDK/application=not implemented.
 
+## Apple isolation `distnoted` cleanup (2026-10-23)
+
+Fixes the hosted isolation-cell flake that made 4 of 30 runs refuse with a
+UID-59000 `distnoted` (first step of
+[issue 48](.scratch/cairn-r1/issues/48-apple-lane-ios-targets.md)). Any
+bootstrap lookup by the probe user creates the `user/59000` launchd domain,
+whose KeepAlive `com.apple.distnoted.xpc.agent` launchd restarts after the
+supervisor kills it. `uid-supervisor.py` cleanup now always boots out
+`user/59000`; the opt-in `--bootout-user-domain` flag is removed. The owner
+widened the [ADR 0014](docs/adr/0014-hosted-apple-isolation-probes.md)
+approval accordingly. No budget, deadline, service or trust boundary
+otherwise changes.
+
 ## S1 fuzzing and constant-time gates (2026-10-23)
 
 PR (d2) of [issue 31](.scratch/cairn-r1/issues/31-slice-s1.md) completes the
@@ -1455,7 +1468,7 @@ Rust and formal gates pass. The target script now streams partial Gradle
 diagnostics into the existing bounded collector with unchanged exit/budget
 semantics, verified by real-script timeout/error tests. Hosted manual probe
 `38514098575` passes; PR `38513991094` passes offline targets then rejects
-UID-59000 `distnoted`, with unestablished helper origin/lifetime. Formal
+UID-59000 `distnoted` (origin established 2026-10-23, see above). Formal
 `38513991093` separately fails unchanged Tamarin mutation replay (`<<loop>>`).
 Push `38513985911` completes Kotlin extraction/coverage/queries but fails
 ordinary scratch detach before mandatory input-integrity/delivery gates.
