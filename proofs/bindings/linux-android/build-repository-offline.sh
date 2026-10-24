@@ -45,7 +45,8 @@ runuser -u cairn-build -- install -d "$scratch/gradle-home/caches/modules-2/file
 
 source="$scratch/source"
 read_only=(settings.gradle.kts build.gradle.kts gradle.properties gradle rust-toolchain.toml core
-  sdk/build.gradle.kts sdk/src app/build.gradle.kts app/src androidApp/build.gradle.kts androidApp/src)
+  sdk/build.gradle.kts sdk/src app/build.gradle.kts app/src androidBle/build.gradle.kts androidBle/src
+  androidApp/build.gradle.kts androidApp/src)
 bindings=(
   -p "BindReadOnlyPaths=$canonical/cargo/registry:$scratch/cargo/registry"
   -p "BindReadOnlyPaths=$canonical/gradle/files-2.1:$scratch/gradle-home/caches/modules-2/files-2.1"
@@ -93,7 +94,7 @@ from pathlib import Path
 
 assert {path.name for path in Path("/sys/class/net").iterdir()} == {"lo"}
 NETWORK
-for input in settings.gradle.kts gradle/libs.versions.toml core/Cargo.lock sdk/src app/src androidApp/src \
+for input in settings.gradle.kts gradle/libs.versions.toml core/Cargo.lock sdk/src app/src androidBle/src androidApp/src \
   "$SCRATCH/cargo/registry" "$SCRATCH/gradle-home/caches/modules-2/files-2.1"; do
   if touch "$input/.cairn-write-probe" 2>/dev/null || { test -f "$input" && test -w "$input"; }; then
     echo "FAIL: input is writable: $input" >&2
@@ -109,7 +110,8 @@ echo 'PASS: networkless sandbox; source and downloaded inputs read-only'
   -Porg.gradle.java.installations.auto-download=false \
   -Pkotlin.compiler.execution.strategy=in-process \
   -PandroidAbis=x86_64,arm64-v8a \
-  :sdk:jvmTest :sdk:koverVerify :androidApp:assembleDebug
+  :sdk:jvmTest :sdk:koverVerify :androidBle:testDebugUnitTest :androidBle:koverVerifyDebug \
+  :androidApp:testDebugUnitTest :androidApp:koverVerifyDebug :androidApp:assembleDebug
 
 apk=androidApp/build/outputs/apk/debug/androidApp-debug.apk
 unzip -Z1 "$apk" > "$TMPDIR/apk-entries.txt"
@@ -119,7 +121,7 @@ for abi in arm64-v8a x86_64; do
   done
 done
 sha256sum "$apk"
-echo 'PASS: offline JVM binding tests; Android debug packaging'
+echo 'PASS: offline JVM and Robolectric tests at full coverage; Android debug packaging'
 BUILD
 install -d -o root -g root -m 0755 "$evidence"
 install -o root -g root -m 0644 \

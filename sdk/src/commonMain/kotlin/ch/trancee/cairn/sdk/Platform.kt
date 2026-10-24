@@ -5,6 +5,7 @@ import ch.trancee.cairn.ffi.CairnCore
 import ch.trancee.cairn.ffi.Clock
 import ch.trancee.cairn.ffi.ContactInfo
 import ch.trancee.cairn.ffi.Event
+import ch.trancee.cairn.ffi.GattRole
 
 /** The protocol core as the [LinkDriver] sees it: [CoreEngine] in apps, a fake in unit tests. */
 interface Engine {
@@ -37,6 +38,28 @@ interface Radio {
 
     /** Closes the link; the platform still reports [LinkDriver.linkDown]. */
     fun disconnect(link: ULong)
+}
+
+/** What a [Radio] reports, on the driver's thread; [LinkDriver] implements it (ADR 0023 §2). */
+interface RadioListener {
+    /** Reports a connected link and returns its new id. */
+    fun linkUp(role: GattRole, mtu: UShort, address: ByteArray): ULong
+
+    fun mtuChanged(link: ULong, mtu: UShort)
+
+    /** Central only: the value read from the peer's `beacon` characteristic. */
+    fun beaconRead(link: ULong, beacon: ByteArray)
+
+    /** One ATT value received from `rx` or `tx`. */
+    fun received(link: ULong, fragment: ByteArray)
+
+    /** The platform accepted the link's in-flight fragment and can take the next one. */
+    fun sent(link: ULong)
+
+    fun linkDown(link: ULong)
+
+    /** Peripheral only: the value to answer a `beacon` read with. */
+    fun beacon(): ByteArray
 }
 
 /** Platform timers; expiry calls [LinkDriver.timerFired]. */

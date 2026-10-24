@@ -28,6 +28,7 @@ on:
       - gradle/**
       - sdk/**
       - app/**
+      - androidBle/**
       - androidApp/**
       - core/**
   schedule:

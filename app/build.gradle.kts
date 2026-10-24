@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.kotlin.multiplatform.library)
-    alias(libs.plugins.kotlin.compose)
 }
 
 kotlin {
@@ -14,9 +13,6 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":sdk"))
-            implementation(libs.compose.foundation)
-            implementation(libs.compose.runtime)
-            implementation(libs.compose.ui)
         }
     }
 }

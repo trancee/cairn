@@ -82,9 +82,11 @@ change. Fuzzing and the constant-time taint check landed in PR (d2), above.
   `WireError`, and `IncomingObject` with a typed `TransferError`. Since
   2026-10-23 it exports `CairnCore` instead
   ([ADR 0022](docs/adr/0022-cairn-core-contract.md)).
-- The root Gradle build: `:sdk`, `:app` and `:androidApp`.
+- The root Gradle build: `:sdk`, `:app`, `:androidBle` and `:androidApp`.
 - The tuple: Ubique `1.3.2`, Kotlin `2.4.21`, Gradle `9.7.0` wrapper, AGP
-  `9.3.1`, Compose Multiplatform `1.12.2` and Rust `1.99.0`.
+  `9.3.1`, Compose Multiplatform `1.12.2` and Rust `1.99.0`. Since ADR 0023
+  the app uses Jetpack Compose through the Compose BOM, and Compose
+  Multiplatform is no longer a dependency.
 
 iOS targets are deferred to the Apple-lane increment. Android host tests are
 off because of an upstream wiring gap.
@@ -94,6 +96,7 @@ KMP target and host proof matrix:
 | Module | Target | Host | Task | Proof | Limitations |
 |---|---|---|---|---|---|
 | `:sdk` | JVM | Linux x86_64 guest and strict `codeql` cell (`repository-jvm`), both offline sandboxes | `:sdk:jvmTest :sdk:koverVerify` | runtime: 25 tests, the `CairnCore` loopbacks, the `LinkDriver` unit tests and two drivers chatting at ATT MTU 23 ([ADR 0023](docs/adr/0023-android-ble-adapter.md)); Kover `0.9.11` at 100% lines and branches, excluding generated `ch.trancee.cairn.ffi` | an uncovered-branch mutant fails `koverVerify` (96.97% branches); JVM only, so the Android source set is not measured |
+| `:androidBle`, `:androidApp` | Android host (Robolectric `4.17`, API 26 and 37) | strict `codeql` cell (`repository-jvm`) and Linux x86_64 guest, both offline sandboxes | `testDebugUnitTest koverVerifyDebug` of each | runtime: `AndroidRadio` against shadowed GATT client, server, scanner and advertiser; permission and Bluetooth gates, chat, debug panel and lifecycle in the Compose screen; Kover at 100% lines and branches ([ADR 0023](docs/adr/0023-android-ble-adapter.md) §4) | no real radio; `@Composable` code excluded from coverage; Linux guest run pending |
 | `:sdk` | Android | same | `:androidApp:assembleDebug` (`-PandroidAbis=x86_64,arm64-v8a`) | APK has `libcairn_ffi.so`, `libuniffi_runtime.so` and `libjnidispatch.so` per ABI | debug only; armeabi-v7a not packaged |
 | `:app`, `:androidApp` | Android API 26 x86_64 | fresh emulator, private network | `run-isolated-android.sh … .CoreStatusInstrumentation` | runtime: `coreStatus()` pairs and chats two `CairnCore`s through `:app` → `:sdk` → Rust | Compose UI not driven; no release build or physical device; not rerun since the `CairnCore` cutover |
 | all | iOS | — | — | none | deferred (ADR 0020) |

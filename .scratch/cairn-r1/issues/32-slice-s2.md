@@ -23,3 +23,10 @@ The GATT UUIDs are in spec §12 (draft 0.8). S2 ships as stacked PRs:
 1. the ADR and the platform-neutral `LinkDriver` with the Kover gate;
 2. the Android radio module, permissions and the chat screen;
 3. the device demonstration.
+
+2026-10-24: PR 1 merged (#45). PR 2 adds `:androidBle` (`AndroidRadio`,
+both GATT roles, permissions) and the Compose chat screen in `:androidApp`.
+Robolectric host tests run on API 26 and 37, and Kover is at 100% lines and
+branches in both modules. The owner chose to exclude `@Composable` code from
+coverage, because some Compose compiler branches cannot be reached
+(ADR 0023 §4). The Linux guest lane is not rerun yet: the guest VM is down.

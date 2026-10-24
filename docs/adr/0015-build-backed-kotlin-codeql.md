@@ -382,10 +382,11 @@ than leave the root Kotlin unscanned. The same database (source root still
    `check-repository-build.sh bindings` assembles `repository-build` in
    bounded scratch from frozen inputs and runs `:sdk:buildBindings` offline.
 3. `repository-codeql` (CodeQL sandbox, private IPC, 900 seconds):
-   `check-codeql-repository.sh` traces the five compile tasks
-   (`:sdk:compileKotlinJvm`, `:sdk:compileTestKotlinJvm`,
-   `:sdk:compileAndroidMain`, `:app:compileAndroidMain`,
-   `:androidApp:compileDebugKotlin`), then finalizes.
+   `check-codeql-repository.sh` traces the compile tasks of every tracked
+   Kotlin source set (`:sdk:compileKotlinJvm`, `:sdk:compileTestKotlinJvm`,
+   `:sdk:compileAndroidMain`, `:app:compileAndroidMain`, and
+   `compileDebugKotlin` and `compileDebugUnitTestKotlin` of `:androidBle` and
+   `:androidApp`), then finalizes.
 
 The frozen root inputs are prepared only in the `codeql` cell under
 `/opt/cairn-apple-tools/repository-inputs`, covered by the separate

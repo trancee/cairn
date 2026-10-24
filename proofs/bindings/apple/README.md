@@ -306,8 +306,9 @@ before finalization (ADR 0015 "Root Gradle build extraction"):
 | `repository-codeql` | `check-codeql-repository.sh TOOLS` | `codeql.sb`, 900 s, then finalize |
 | `repository-jvm` (untraced) | `check-repository-build.sh TOOLS jvm` | `build.sb`, 900 s |
 
-`repository-jvm` runs `:sdk:jvmTest` and `:sdk:koverVerify`, the 100% line
-and branch gate of [ADR 0023](../../../docs/adr/0023-android-ble-adapter.md).
+`repository-jvm` runs `:sdk:jvmTest`, `:sdk:koverVerify` and the Robolectric
+`testDebugUnitTest` and `koverVerifyDebug` of `:androidBle` and
+`:androidApp`, the 100% line and branch gate of [ADR 0023](../../../docs/adr/0023-android-ble-adapter.md).
 It runs after `repository-codeql`, which does not rerun up-to-date tasks: an
 earlier JVM compilation would leave the traced build nothing to extract.
 

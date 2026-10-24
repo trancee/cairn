@@ -502,7 +502,7 @@ iOS 15 device/simulator linkage and runtime, and final runner acceptance.
 ## Repository root build lane
 
 These scripts prove the repository's own root Gradle build (`:sdk`, `:app`,
-`:androidApp`; [ADR 0020](../../../docs/adr/0020-root-gradle-wire-ffi.md)),
+`:androidBle`, `:androidApp`; [ADR 0020](../../../docs/adr/0020-root-gradle-wire-ffi.md)),
 not this fixture. They reuse the guest account, toolchains and AVD seed
 described above, plus JDK 21 at `/usr/lib/jvm/java-21-openjdk-amd64`.
 
@@ -511,7 +511,7 @@ described above, plus JDK 21 at `/usr/lib/jvm/java-21-openjdk-amd64`.
 
    ```bash
    git ls-files -z -co --exclude-standard -- settings.gradle.kts build.gradle.kts \
-     gradle.properties gradle rust-toolchain.toml sdk app androidApp core \
+     gradle.properties gradle rust-toolchain.toml sdk app androidBle androidApp core \
      ':!core/fuzz' ':!core/ct' ':!core/target' > /tmp/cairn-src.list
    COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs --null -T /tmp/cairn-src.list \
      -czf /tmp/cairn-source.tar.gz
@@ -557,8 +557,11 @@ described above, plus JDK 21 at `/usr/lib/jvm/java-21-openjdk-amd64`.
    - limits of 12 GiB memory, 256 tasks, 400% CPU, 30 minutes and 2 GiB
      per file.
 
-   It runs `gradle --offline --rerun-tasks --continue :sdk:jvmTest
-   :sdk:koverVerify :androidApp:assembleDebug` with `-PandroidAbis=x86_64,arm64-v8a`, then
+   It runs `gradle --offline --rerun-tasks --continue` with
+   `-PandroidAbis=x86_64,arm64-v8a` on `:sdk:jvmTest`, `:sdk:koverVerify`, the
+   Robolectric `testDebugUnitTest` and `koverVerifyDebug` of `:androidBle` and
+   `:androidApp` ([ADR 0023](../../../docs/adr/0023-android-ble-adapter.md)
+   §4), and `:androidApp:assembleDebug`. It then
    requires `libcairn_ffi.so`, `libuniffi_runtime.so` and `libjnidispatch.so`
    for each ABI in the APK. It retains the APK and the test-result XML under
    `/var/lib/cairn-repository-proof/LABEL` and rechecks both input manifests.

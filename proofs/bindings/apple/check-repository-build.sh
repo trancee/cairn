@@ -12,10 +12,13 @@ case "$mode" in
   native)
     tasks=(:sdk:linkDebugFrameworkIosArm64 :sdk:linkDebugFrameworkIosSimulatorArm64
       :sdk:linkDebugTestIosSimulatorArm64) ;;
-  jvm) tasks=(:sdk:jvmTest :sdk:koverVerify) ;;
+  jvm)
+    tasks=(:sdk:jvmTest :sdk:koverVerify :androidBle:testDebugUnitTest :androidBle:koverVerifyDebug
+      :androidApp:testDebugUnitTest :androidApp:koverVerifyDebug) ;;
   compile)
     tasks=(:sdk:compileKotlinJvm :sdk:compileTestKotlinJvm :sdk:compileAndroidMain
-      :app:compileAndroidMain :androidApp:compileDebugKotlin) ;;
+      :app:compileAndroidMain :androidBle:compileDebugKotlin :androidBle:compileDebugUnitTestKotlin
+      :androidApp:compileDebugKotlin :androidApp:compileDebugUnitTestKotlin) ;;
   *) echo "FAIL: unsupported root build mode: $mode" >&2; exit 2 ;;
 esac
 if [ "$mode" = bindings ]; then
@@ -24,7 +27,7 @@ if [ "$mode" = bindings ]; then
   cp "$inputs/source/settings.gradle.kts" "$inputs/source/build.gradle.kts" \
     "$inputs/source/gradle.properties" "$project/"
   cp -R "$inputs/source/gradle" "$project/gradle"
-  for module in sdk app androidApp; do
+  for module in sdk app androidBle androidApp; do
     mkdir "$project/$module"
     cp "$inputs/source/$module/build.gradle.kts" "$project/$module/"
     ln -s "$inputs/source/$module/src" "$project/$module/src"
