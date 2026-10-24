@@ -44,7 +44,7 @@ CairnCore.handle(event: Event) -> List<Action>   // plus read-only queries (cont
 
 **Rust/Kotlin bindings.** Use Ubique's unified UniFFI Kotlin Multiplatform plugin (`ch.ubique.uniffi.plugin`) at `1.3.1`, with UniFFI `0.32.0`. This replaces Gobley. Keep the plugin-managed runtime and generated dependencies together at `1.3.1`; do not add Gobley's separate Cargo/Rust/UniFFI plugins or atomicfu compiler-plugin setup.
 
-The first bootstrap must prove the generated API through a real Kotlin call on the JVM, Android API 26+, and iOS device/simulator targets with an iOS 15 deployment floor before the binding choice is considered validated for production. The iOS 15 floor is not yet verified; track the build proof in [issue 44](../../.scratch/cairn-r1/issues/44-ubique-binding-smoke-test.md).
+The first bootstrap must prove the generated API through a real Kotlin call on the JVM, Android API 26+, and iOS device/simulator targets with an iOS 15 deployment floor before the binding choice is considered validated for production. The iOS 15 floor is verified at build level since 2026-10-24 (see below); physical-device proof is tracked in [issue 48](../../.scratch/cairn-r1/issues/48-apple-lane-ios-targets.md).
 
 **Layout (monorepo):**
 
@@ -107,6 +107,11 @@ No released SDK consumers exist. The binding-generator choice changes build inte
 - The root build adds `:androidApp` beside `:sdk` and `:app`. `cairn-ffi`
   exports an interim wire and chunk-reassembly surface until `CairnCore`
   exists. iOS targets are deferred to the Apple-lane increment.
+
+2026-10-24: the Apple lane links the root `:sdk` iOS device and simulator
+frameworks and verifies `minos 15.0` on each, so the iOS 15 floor is
+verified at build level. Physical-device runs remain open
+([ADR 0020](0020-root-gradle-wire-ffi.md#amendment-ios-targets-2026-10-24)).
 
 2026-10-23, from [ADR 0022](0022-cairn-core-contract.md):
 - The concrete `Event` and `Action` sets, identifiers, queries and the

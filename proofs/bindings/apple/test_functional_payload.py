@@ -13,14 +13,14 @@ spec.loader.exec_module(simulator)
 
 
 class FunctionalPayloadTest(unittest.TestCase):
-    def create_payload(self, directory):
+    def create_payload(self, directory, executable="CairnSimulatorSmoke.kexe"):
         payload = Path(directory)
-        binary = payload / "CairnSimulatorSmoke.kexe"
+        binary = payload / executable
         binary.write_bytes(b"checksum validation fixture")
         (payload / "revision.txt").write_text("a" * 40 + "\n")
         digest = hashlib.sha256(binary.read_bytes()).hexdigest()
         (payload / "payload.sha256").write_text(
-            f"{digest}  CairnSimulatorSmoke.kexe\n"
+            f"{digest}  {executable}\n"
         )
         return payload
 
@@ -31,6 +31,28 @@ class FunctionalPayloadTest(unittest.TestCase):
             binary = simulator.verify_payload(payload, "a" * 40)
 
             self.assertEqual(binary, payload / "CairnSimulatorSmoke.kexe")
+
+    def test_root_sdk_test_payload_is_selected_by_its_declared_executable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            payload = self.create_payload(directory, "CairnSdkTest.kexe")
+
+            binary = simulator.verify_payload(payload, "a" * 40, "CairnSdkTest.kexe")
+
+            self.assertEqual(binary, payload / "CairnSdkTest.kexe")
+
+    def test_payload_must_carry_the_declared_executable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            payload = self.create_payload(directory, "CairnSdkTest.kexe")
+
+            with self.assertRaisesRegex(SystemExit, "FAIL: functional payload file set mismatch"):
+                simulator.verify_payload(payload, "a" * 40)
+
+    def test_undeclared_executable_names_are_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            payload = self.create_payload(directory, "other.kexe")
+
+            with self.assertRaisesRegex(SystemExit, "FAIL: functional payload executable not allowed"):
+                simulator.verify_payload(payload, "a" * 40, "other.kexe")
 
     def test_invalid_payload_fails_before_execution(self):
         def oversize(payload):

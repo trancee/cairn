@@ -31,7 +31,7 @@ class CellPlanTest(unittest.TestCase):
     def test_codeql_cell_runs_only_setup_and_the_traced_binding_paths(self):
         self.assertEqual(plan.probes("codeql"), [
             "codeql-startup", "toolchains", *SETUP, *BINDING_PATH,
-            "repository-bindings", "repository-codeql", "codeql-analysis",
+            "repository-bindings", "repository-native", "repository-codeql", "codeql-analysis",
         ])
         self.assertTrue(set(ISOLATION_ONLY).isdisjoint(plan.probes("codeql")))
 
@@ -68,7 +68,8 @@ class CellPlanTest(unittest.TestCase):
         unsplit = [
             "codeql-startup", "toolchains", *SETUP, "native-tool", "native-compilation",
             "native-cinterop", "native-linkage", "allocator-inputs", "fixture-rust",
-            *BINDING_PATH, "repository-bindings", "repository-codeql", "codeql-analysis",
+            *BINDING_PATH, "repository-bindings", "repository-native", "repository-codeql",
+            "codeql-analysis",
         ]
         covered = set(plan.probes("codeql")) | set(plan.probes("isolation"))
 
@@ -95,6 +96,12 @@ class CellPlanTest(unittest.TestCase):
 
         self.assertEqual(supervisor.group(1).split(),
                          ["--seconds", "60", "--diagnose-after", "50", "\\"])
+
+    def test_root_native_build_runs_untraced_between_bindings_and_codeql_tracing(self):
+        probes = plan.probes("codeql")
+
+        self.assertLess(probes.index("repository-bindings"), probes.index("repository-native"))
+        self.assertLess(probes.index("repository-native"), probes.index("repository-codeql"))
 
     def test_each_scope_requires_its_matching_codeql_tool_state(self):
         self.assertEqual(plan.requires_codeql("full"), False)

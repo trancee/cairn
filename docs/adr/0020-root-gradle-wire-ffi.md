@@ -101,7 +101,8 @@ which is acceptable because no SDK consumers have been released.
   Re-enable `withHostTest {}` once Ubique's resource wiring works with
   AGP's KMP library plugin.
 - iOS targets are deferred to the Apple-lane increment, so no iOS code
-  merges without a build proof. That increment must deliver:
+  merges without a build proof (delivered 2026-10-24; see the amendment
+  "iOS targets"). That increment must deliver:
   - device and simulator-arm64 framework builds;
   - the iOS 15 floor check.
 - Strict Kotlin CodeQL over the root JVM/Android sources is part of this
@@ -189,3 +190,52 @@ Remove a floor once the tuple's AGP brings that version or newer itself.
 - **Exclude configurations from dependency submission.** Rejected for the same
   reason.
 - **Upgrade AGP.** Out of scope: that is a separate tuple decision.
+
+## Amendment: iOS targets (2026-10-24)
+
+[Issue 48](../../.scratch/cairn-r1/issues/48-apple-lane-ios-targets.md)
+delivers the Apple-lane increment deferred above.
+
+**Decision.** `:sdk` adds `iosArm64` and `iosSimulatorArm64`, each with a
+`CairnSdk` framework. The root `gradle.properties` sets
+`kotlin.mpp.enableCInteropCommonization=true`; Ubique refuses to configure
+iOS targets without it. The owner chose three options:
+
+- **Lane.** The strict `codeql` cell builds the iOS binaries. A new
+  `repository-native` arm runs untraced between `repository-bindings` and
+  `repository-codeql` (`build.sb`, 900 s). It links both frameworks and the
+  simulator test executable offline with the pinned Kotlin/Native `2.4.21`
+  compiler and Rust `1.99.0` with the iOS standard libraries. `vtool` then
+  requires platform `IOS`/`IOSSIMULATOR` and `minos 15.0` on all three
+  binaries.
+- **Tests.** The cell exports the `commonTest` simulator executable. A
+  separate, explicitly non-strict job runs it on a fresh iPhone 17
+  simulator (iOS 26.4), the same pattern as the fixture's functional
+  runtime. It requires `[  PASSED  ]` and no `[  FAILED  ]`.
+- **CodeQL.** CodeQL cannot extract Kotlin/Native, so iOS-only sources are
+  not analysed. The compiled-source inventory gate already fails on any
+  tracked `.kt` without JVM extraction, so no iOS-only handwritten source
+  can merge unscanned. Today all handwritten Kotlin is common, JVM or
+  Android code.
+
+Preparation reuses the frozen fixture native dependencies. It fails closed
+unless the `2.4.21` `konan.properties` equals the frozen `2.4.20` one apart
+from `compilerVersion`. `resolve-repository-inputs.gradle` skips commonized
+cinterop configurations, which are built locally; this matches the fixture.
+
+**Evidence.** Run [`40084024801`](https://github.com/trancee/cairn/actions/runs/40084024801) at `98af6a7`:
+- `repository-native` took 2 min 37 s; the `codeql` cell took 23 min of 45.
+- All three binaries report `minos 15.0`, so the iOS 15 floor is verified at
+  build level ([ADR 0004](0004-core-architecture.md)).
+- The simulator ran the four `CoreLoopbackTest` tests through the generated
+  bindings: `[  PASSED  ] 4 tests.`
+- The first attempt's cleanup timed out on `simctl list` after the tests
+  passed; the rerun passed. The owner approved raising that timeout to 60 s
+  and the cleanup budget from 75 s to 150 s for both simulator jobs.
+
+The Linux lane is unaffected: guest label `ios-targets` passed
+`:sdk:jvmTest :androidApp:assembleDebug` offline and the API 26 emulator
+`CoreStatusInstrumentation`.
+
+**Still open.** The oldest/newest-iPhone demonstration on physical devices,
+and an XCFramework or release build.

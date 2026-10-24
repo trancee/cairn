@@ -69,6 +69,13 @@ class CodeQLSourcesTest(unittest.TestCase):
         with self.assertRaisesRegex(sources.CoverageError, "missing-tracked-source"):
             self.verify(report)
 
+    def test_tracked_ios_only_source_without_jvm_extraction_fails(self):
+        # CodeQL extracts only JVM Kotlin compilations, never Kotlin/Native (ADR 0020).
+        ios = "sdk/src/iosMain/kotlin/ch/trancee/cairn/sdk/Platform.kt"
+
+        with self.assertRaisesRegex(sources.CoverageError, "missing-tracked-source"):
+            self.verify(self.report(), [*EXPECTED, ios])
+
     def test_archived_files_cannot_replace_compiled_rows(self):
         report = {"#select": {"tuples": []}, "archived": EXPECTED}
 

@@ -27,6 +27,10 @@ kotlin {
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
     }
+    // The iOS 15.0 deployment floor is Kotlin/Native's default; the Apple lane verifies it.
+    listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
+        target.binaries.framework { baseName = "CairnSdk" }
+    }
     sourceSets {
         commonTest.dependencies {
             implementation(libs.kotlin.test)

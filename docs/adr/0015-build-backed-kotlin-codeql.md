@@ -432,3 +432,14 @@ limits:
 The SARIF artifact list still enumerates only files under the fixture source
 root. Root findings are mapped by the tested normalizer, but no actual root
 result has been observed yet.
+
+## Kotlin/Native is not extracted (2026-10-24)
+
+The root `:sdk` now has iOS targets
+([ADR 0020](0020-root-gradle-wire-ffi.md#amendment-ios-targets-2026-10-24)).
+CodeQL extracts only JVM Kotlin, so the `repository-native` arm runs
+untraced before `repository-codeql`, and Kotlin/Native compilation adds no
+database content. The compiled-source inventory still fails on any tracked
+`.kt` without JVM extraction (`test_tracked_ios_only_source_without_jvm_extraction_fails`).
+An iOS-only handwritten source therefore needs a new decision before it can
+merge.

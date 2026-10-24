@@ -302,7 +302,18 @@ before finalization (ADR 0015 "Root Gradle build extraction"):
 | prepare (network, unprivileged) | `prepare-repository-inputs.sh PREPARED` | bounded 1200 s |
 | freeze (root) | `freeze-repository-inputs.sh PREPARED RUST` | writes `repository-inputs.sha256` |
 | `repository-bindings` | `check-repository-build.sh TOOLS bindings` | `build.sb`, 900 s |
+| `repository-native` (untraced) | `check-repository-build.sh TOOLS native` | `build.sb`, 900 s; exports `CairnSdkTest.kexe` |
 | `repository-codeql` | `check-codeql-repository.sh TOOLS` | `codeql.sb`, 900 s, then finalize |
+
+`repository-native` links the iOS device and simulator `CairnSdk`
+frameworks and the simulator test executable with the pinned Kotlin/Native
+`2.4.21` (`repository-inputs/kotlin-native`) and the frozen native
+dependencies. Preparation fails unless its `konan.properties` matches the
+frozen compiler's apart from `compilerVersion`. `vtool` requires
+`minos 15.0` on all three binaries. The non-strict job "Root SDK simulator
+tests" runs the delivered `apple-repository-simulator-payload` on a fresh
+simulator with `run-functional-simulator.py --executable CairnSdkTest.kexe`.
+It requires a nonzero `[  PASSED  ]` count and no `[  FAILED  ]`.
 
 Root inputs are frozen under `/opt/cairn-apple-tools/repository-inputs`.
 The checksum-pinned SDK archives carry no SDK-manager metadata, so the
@@ -338,8 +349,9 @@ standard undeclared `%SRCROOT%` using the known frozen database source root;
 other unknown bases remain errors. Failed reports are retained separately
 with a failed status. The built-in `3 out of 9` diagnostic is not substituted
 for the explicit compiled-source gate.
-CodeQL mode also omits native-only framework/executable tasks and simulator
-payload export after its JVM/analysis gates; ordinary mode retains them.
+CodeQL mode also omits the fixture's native-only framework/executable tasks
+and simulator payload export after its JVM/analysis gates; ordinary mode
+retains them. The root build's native arm runs only in CodeQL mode.
 No resource, filesystem, network, integrity or cleanup boundary is relaxed.
 
 The complete upload-free replacement passes in
