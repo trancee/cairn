@@ -109,7 +109,7 @@ echo 'PASS: networkless sandbox; source and downloaded inputs read-only'
   -Porg.gradle.java.installations.auto-download=false \
   -Pkotlin.compiler.execution.strategy=in-process \
   -PandroidAbis=x86_64,arm64-v8a \
-  :sdk:jvmTest :androidApp:assembleDebug
+  :sdk:jvmTest :sdk:koverVerify :androidApp:assembleDebug
 
 apk=androidApp/build/outputs/apk/debug/androidApp-debug.apk
 unzip -Z1 "$apk" > "$TMPDIR/apk-entries.txt"

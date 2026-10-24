@@ -1,6 +1,6 @@
 # `cairn-r1` protocol specification
 
-Status: **draft 0.7** (automatic neighbour admission, [ADR 0021](../adr/0021-automatic-neighbour-admission.md), 2026-10-23). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
+Status: **draft 0.8** (GATT UUIDs, [ADR 0023](../adr/0023-android-ble-adapter.md), 2026-10-24). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
 
 This document consolidates, and is normative over:
 - [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md), as amended by [ADR 0021](../adr/0021-automatic-neighbour-admission.md);
@@ -409,7 +409,17 @@ door = Trunc8(HMAC(K_door_me→peer, lp("cairn-r1 door") ‖ u64(w)))
 
 ## 12. Constants and test vectors
 
-- GATT service and characteristic UUIDs: **TBD** in *Slice S0: Bootstrap* (random v4, recorded here).
+- GATT UUIDs (random v4, generated for *Slice S2: Android↔Android over BLE*, [ADR 0023](../adr/0023-android-ble-adapter.md)):
+
+  | Item | UUID |
+  |---|---|
+  | `cairn` service | `d8177748-2cfa-4aa1-b3d0-c46de25a0e45` |
+  | `beacon` | `725e4d3d-d899-4e4e-990a-af2bac20deb4` |
+  | `rx` | `eabb6cc0-aa49-4dd4-ae89-af2383e291dd` |
+  | `tx` | `d91c38e6-5dbc-4eee-828b-707e41d63451` |
+  | `psm` | `1446537a-3d32-4b5c-89d9-8c05f045487a` |
+
+  `tx` carries the standard Client Characteristic Configuration descriptor (`0x2902`).
 - Test vectors (pairing, Resume, DATA, QUEUED, beacon, doorbell, SAS/QRC): **pending**. They are generated from the reference adapter and cross-checked with the `aws-lc-rs` adapter during the implementation slices. Pinning them belongs to the spec freeze.
 
 ## 13. Consolidation issues (resolved 2026-10-05)
@@ -448,6 +458,7 @@ OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: R
 
 ## 14. Change log
 
+- 0.8 (2026-10-24): recorded the GATT service and characteristic UUIDs (§12, ADR 0023). No byte of any frame changes.
 - 0.7 (2026-10-23): accepted OI-27 (automatic neighbour admission, ADR 0021): new P0 frame and §5.6; QR and SAS pairing modes retired; card name empty by default; connect policy admits strangers. Multi-hop relaying remains unspecified (issue 47).
 
 - 0.6 (2026-10-05): accepted OI-25 (durable cumulative KEM_PROGRESS) and OI-26 (strict contiguous reassembly); specified retransmission, reconnect receipts and fail-closed validation. Ratchet gate remains closed.

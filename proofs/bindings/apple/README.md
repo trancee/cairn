@@ -304,6 +304,12 @@ before finalization (ADR 0015 "Root Gradle build extraction"):
 | `repository-bindings` | `check-repository-build.sh TOOLS bindings` | `build.sb`, 900 s |
 | `repository-native` (untraced) | `check-repository-build.sh TOOLS native` | `build.sb`, 900 s; exports `CairnSdkTest.kexe` |
 | `repository-codeql` | `check-codeql-repository.sh TOOLS` | `codeql.sb`, 900 s, then finalize |
+| `repository-jvm` (untraced) | `check-repository-build.sh TOOLS jvm` | `build.sb`, 900 s |
+
+`repository-jvm` runs `:sdk:jvmTest` and `:sdk:koverVerify`, the 100% line
+and branch gate of [ADR 0023](../../../docs/adr/0023-android-ble-adapter.md).
+It runs after `repository-codeql`, which does not rerun up-to-date tasks: an
+earlier JVM compilation would leave the traced build nothing to extract.
 
 `repository-native` links the iOS device and simulator `CairnSdk`
 frameworks and the simulator test executable with the pinned Kotlin/Native

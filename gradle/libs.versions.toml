@@ -8,6 +8,7 @@ androidx-activity = "1.13.0"
 compose-multiplatform = "1.12.2"
 jvm-toolchain = "21"
 kotlin = "2.4.21"
+kover = "0.9.11"
 ubique-uniffi = "1.3.2"
 # Patched-version floors for vulnerable transitive build tooling (AGP, UTP, bundletool); see ADR 0020.
 floor-bouncycastle = "1.86"
@@ -71,4 +72,5 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 ubique-uniffi = { id = "ch.ubique.uniffi.plugin", version.ref = "ubique-uniffi" }

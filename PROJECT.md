@@ -93,7 +93,7 @@ KMP target and host proof matrix:
 
 | Module | Target | Host | Task | Proof | Limitations |
 |---|---|---|---|---|---|
-| `:sdk` | JVM | Linux x86_64 guest, offline sandbox | `:sdk:jvmTest` | runtime: 4 `CairnCore` loopback tests (pair and chat, Resume after restore, typed `CoreException`, post-close rejection) | no Kotlin coverage engine yet; not rerun since the `CairnCore` cutover |
+| `:sdk` | JVM | Linux x86_64 guest and strict `codeql` cell (`repository-jvm`), both offline sandboxes | `:sdk:jvmTest :sdk:koverVerify` | runtime: 25 tests, the `CairnCore` loopbacks, the `LinkDriver` unit tests and two drivers chatting at ATT MTU 23 ([ADR 0023](docs/adr/0023-android-ble-adapter.md)); Kover `0.9.11` at 100% lines and branches, excluding generated `ch.trancee.cairn.ffi` | an uncovered-branch mutant fails `koverVerify` (96.97% branches); JVM only, so the Android source set is not measured |
 | `:sdk` | Android | same | `:androidApp:assembleDebug` (`-PandroidAbis=x86_64,arm64-v8a`) | APK has `libcairn_ffi.so`, `libuniffi_runtime.so` and `libjnidispatch.so` per ABI | debug only; armeabi-v7a not packaged |
 | `:app`, `:androidApp` | Android API 26 x86_64 | fresh emulator, private network | `run-isolated-android.sh … .CoreStatusInstrumentation` | runtime: `coreStatus()` pairs and chats two `CairnCore`s through `:app` → `:sdk` → Rust | Compose UI not driven; no release build or physical device; not rerun since the `CairnCore` cutover |
 | all | iOS | — | — | none | deferred (ADR 0020) |

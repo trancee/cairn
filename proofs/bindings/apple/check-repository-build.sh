@@ -12,6 +12,7 @@ case "$mode" in
   native)
     tasks=(:sdk:linkDebugFrameworkIosArm64 :sdk:linkDebugFrameworkIosSimulatorArm64
       :sdk:linkDebugTestIosSimulatorArm64) ;;
+  jvm) tasks=(:sdk:jvmTest :sdk:koverVerify) ;;
   compile)
     tasks=(:sdk:compileKotlinJvm :sdk:compileTestKotlinJvm :sdk:compileAndroidMain
       :app:compileAndroidMain :androidApp:compileDebugKotlin) ;;

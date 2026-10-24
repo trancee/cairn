@@ -558,7 +558,7 @@ described above, plus JDK 21 at `/usr/lib/jvm/java-21-openjdk-amd64`.
      per file.
 
    It runs `gradle --offline --rerun-tasks --continue :sdk:jvmTest
-   :androidApp:assembleDebug` with `-PandroidAbis=x86_64,arm64-v8a`, then
+   :sdk:koverVerify :androidApp:assembleDebug` with `-PandroidAbis=x86_64,arm64-v8a`, then
    requires `libcairn_ffi.so`, `libuniffi_runtime.so` and `libjnidispatch.so`
    for each ABI in the APK. It retains the APK and the test-result XML under
    `/var/lib/cairn-repository-proof/LABEL` and rechecks both input manifests.
@@ -593,6 +593,15 @@ Observed on 2026-10-22 with label `gradle-uniffi-bootstrap`:
   `e97b9471ed2b66e1082f06b5b3a9c219b4bd16b6ff1c6b11da946fe64336f1df`).
   The emulator segfaulted during startup twice, before ADB connected or the
   APK was installed; the third, unchanged run passed.
+
+Observed on 2026-10-24 with label `s2-kover` (Kover `0.9.11` added; ADR 0023):
+- Preparation passed.
+- The TDD red run compiled and failed 21 of 25 `jvmTest` tests against the
+  stub `LinkDriver`.
+- The green run passed all 25 tests and `koverVerify` at 100% lines and
+  branches.
+- A source copy with one uncovered branch failed `koverVerify`: "branches
+  covered percentage is 96.969700, but expected minimum is 100".
 
 Limitations:
 - Debug builds only; armeabi-v7a is not packaged.

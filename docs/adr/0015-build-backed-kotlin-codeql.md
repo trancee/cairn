@@ -443,3 +443,13 @@ database content. The compiled-source inventory still fails on any tracked
 `.kt` without JVM extraction (`test_tracked_ios_only_source_without_jvm_extraction_fails`).
 An iOS-only handwritten source therefore needs a new decision before it can
 merge.
+
+## Root JVM tests and coverage (2026-10-24)
+
+[ADR 0023](0023-android-ble-adapter.md) adds a 100% line and branch Kover
+gate on `:sdk`. The `codeql` cell gains a `repository-jvm` arm
+(`build.sb`, 900 s, untraced) that runs `:sdk:jvmTest :sdk:koverVerify` from
+the same frozen inputs. It runs after `repository-codeql` and before
+`codeql-analysis`. The traced `compile` mode does not rerun up-to-date
+tasks, so compiling first would leave the trace with nothing to extract. The
+database, sandboxes and other limits are unchanged.
