@@ -15,3 +15,10 @@ green, and the binding is demonstrated on the oldest and newest core-matrix
 iPhones.
 
 ## Comments
+
+- 2026-10-24: the iOS targets build and test in CI (PR #43, run
+  [`40084024801`](https://github.com/trancee/cairn/actions/runs/40084024801)). The strict cell links the device and simulator
+  frameworks and the test executable at `minos 15.0`; a fresh simulator
+  passes the four common tests. CodeQL cannot extract Kotlin/Native; the
+  inventory gate blocks iOS-only sources (ADR 0015). Open: the
+  oldest/newest-iPhone demonstration on physical devices.

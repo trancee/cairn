@@ -313,7 +313,7 @@ jobs:
       - name: Shut down and delete only the recorded functional device
         if: always()
         run: |
-          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 75 \
+          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 150 \
             "$RUNNER_TEMP/functional-cleanup.log" \
             "$(xcrun --find python3)" -I proofs/bindings/apple/run-functional-simulator.py --cleanup \
             "$RUNNER_TEMP/simulator-payload" "$RUNNER_TEMP/cairn-functional"
@@ -367,7 +367,7 @@ jobs:
       - name: Shut down and delete only the recorded test device
         if: always()
         run: |
-          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 75 \
+          "$(xcrun --find python3)" proofs/bindings/linux-android/bounded-proof.py --seconds 150 \
             "$RUNNER_TEMP/sdk-simulator-cleanup.log" \
             "$(xcrun --find python3)" -I proofs/bindings/apple/run-functional-simulator.py --cleanup \
             "$RUNNER_TEMP/repository-simulator-payload" "$RUNNER_TEMP/cairn-sdk-simulator"

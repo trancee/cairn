@@ -71,10 +71,11 @@ def main():
     identity_file = arguments.work / "device-id"
     command = [simctl, "--set", str(device_set)]
 
-    def devices():
+    # Hosted CoreSimulator can take tens of seconds to answer after a run.
+    def devices(timeout=60):
         result = subprocess.run(
             [*command, "list", "devices", "--json"], check=True,
-            capture_output=True, text=True, timeout=15, env=environment,
+            capture_output=True, text=True, timeout=timeout, env=environment,
         )
         return [device for group in json.loads(result.stdout)["devices"].values()
                 for device in group]
@@ -94,7 +95,7 @@ def main():
                            timeout=30, env=environment)
         subprocess.run([*command, "delete", device_id], check=True,
                        timeout=15, env=environment)
-        if any(device["udid"].lower() == device_id for device in devices()):
+        if any(device["udid"].lower() == device_id for device in devices(30)):
             raise SystemExit("FAIL: functional device survived deletion")
         print("PASS: exact functional simulator shutdown/deletion verified")
         return

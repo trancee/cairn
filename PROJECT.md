@@ -1,6 +1,20 @@
 # PROJECT
 
-state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer + host-only ML-KEM-768/X-Wing/AES-256-GCM/X25519/RNG backends + S1 sans-IO core (pairing, Resume, CHAT) behind the UniFFI `CairnCore` + root Gradle build (JVM/Android); BLE transport/SDK/application=not implemented.
+state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer + host-only ML-KEM-768/X-Wing/AES-256-GCM/X25519/RNG backends + S1 sans-IO core (pairing, Resume, CHAT) behind the UniFFI `CairnCore` + root Gradle build (JVM/Android/iOS); BLE transport/SDK/application=not implemented.
+
+## iOS targets in the strict Apple lane (2026-10-24)
+
+[Issue 48](.scratch/cairn-r1/issues/48-apple-lane-ios-targets.md): `:sdk`
+gains `iosArm64` and `iosSimulatorArm64` with a `CairnSdk` framework. The
+strict `codeql` cell's new untraced `repository-native` arm links both
+frameworks and the simulator test executable offline, and checks
+`minos 15.0`. A separate non-strict job runs the common tests on a fresh
+simulator. CodeQL cannot extract Kotlin/Native; the inventory gate blocks
+iOS-only sources. See the
+[ADR 0020 amendment](docs/adr/0020-root-gradle-wire-ffi.md#amendment-ios-targets-2026-10-24).
+Evidence: run [`40084024801`](https://github.com/trancee/cairn/actions/runs/40084024801), 4/4 tests on the simulator, plus the
+Linux guest lane (label `ios-targets`). Physical-iPhone demonstration
+remains open.
 
 ## Apple isolation `distnoted` cleanup (2026-10-23)
 
