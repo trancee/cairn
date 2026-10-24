@@ -43,6 +43,10 @@ standard CCCD (`0x2902`).
 The platform-neutral `LinkDriver` in `:sdk` `commonMain` sits between
 `CairnCore` and a platform `Radio`. Every iOS and Android adapter reuses it.
 
+- **Seam.** The radio reports to a `RadioListener` (`linkUp`, `mtuChanged`,
+  `received`, `sent`, `linkDown` and `beacon`), which the driver implements.
+  The app may wrap it to observe radio events, for example to refresh the
+  debug panel.
 - **Confinement.** The driver is not thread-safe. The platform calls it from
   one thread and posts BLE callbacks there.
 - **Links.** `linkUp` allocates a `LinkId`, counting up from 1, never reused
@@ -75,9 +79,17 @@ The platform-neutral `LinkDriver` in `:sdk` `commonMain` sits between
 
 ### 3. Android radio
 
-- **Module.** A separate Android library module implements `Radio`. Its
-  tests are Robolectric host tests that never load the Rust library, which
-  avoids the ADR 0020 gap.
+- **Module.** The Android library module `:androidBle` implements `Radio` as
+  `AndroidRadio`. Its tests are Robolectric host tests that never load the
+  Rust library, which avoids the ADR 0020 gap.
+- **Threading.** Every call runs on one `Handler` thread, and every platform
+  callback is posted there. `send` and `disconnect` are posted too, because
+  the driver calls them while it dispatches, possibly before `linkUp`
+  returned the id.
+- **Start and stop.** `start` needs Bluetooth on and both the scanner and
+  the advertiser; otherwise it starts nothing and returns false. It is
+  idempotent. `stop` stops discovery, closes every connection and reports
+  `linkDown` for each link at once.
 - **Discovery.** S2 advertises only the fixed service UUID (legacy,
   connectable) and scans with a filter on it, while the app is in the
   foreground. Beacons in advertising data, duty cycles and background
@@ -85,11 +97,18 @@ The platform-neutral `LinkDriver` in `:sdk` `commonMain` sits between
   peer whose advertised beacon matched nothing (ADR 0003).
 - **Central.** `connectGatt` over LE without auto-connect, then MTU 517,
   service discovery and the `tx` CCCD write. Only then does it report
-  `linkUp` and read `beacon`.
-- **Peripheral.** The GATT server reports `linkUp` at ATT MTU 23 when a
-  central connects, and `MtuChanged` when the MTU changes. A `beacon` read is
-  answered from `CairnCore.beacon`. A `psm` read returns an ATT error, since
-  S2 does not open L2CAP CoC.
+  `linkUp` and read `beacon`. A write to `rx` waits for that read, since
+  Android runs one GATT operation per connection. The radio makes at most one
+  connection attempt per address every 2 minutes (spec §10.4); the address
+  is only this back-off key.
+- **Peripheral.** The GATT server reports `linkUp` when the central enables
+  `tx` notifications, at the MTU the central negotiated (23 by default), and
+  `MtuChanged` when the MTU changes later. Writes to `rx` before that are
+  refused. A `beacon` read is answered from `CairnCore.beacon`. A `psm` read
+  returns an ATT error, since S2 does not open L2CAP CoC.
+- **API 33.** On API 33+ the radio uses the value-taking write and notify
+  calls and the value-bearing read and notification callbacks; below, the
+  deprecated ones.
 - **Permissions.** On API 31+, `BLUETOOTH_SCAN` with `neverForLocation`,
   `BLUETOOTH_CONNECT` and `BLUETOOTH_ADVERTISE`. On API 26–30, `BLUETOOTH`,
   `BLUETOOTH_ADMIN` and `ACCESS_FINE_LOCATION`, capped at `maxSdkVersion 30`.
@@ -97,16 +116,46 @@ The platform-neutral `LinkDriver` in `:sdk` `commonMain` sits between
 ### 4. Coverage
 
 - Kover `0.9.11` with its default IntelliJ engine measures `:sdk`
-  (`jvmTest`) and the Android modules (Robolectric host tests). The gate is
-  100% lines and branches.
-- The only exclusion is the UniFFI-generated package `ch.trancee.cairn.ffi`.
+  (`jvmTest`) and the Android modules (Robolectric host tests,
+  `koverVerifyDebug`). The gate is 100% lines and branches.
+- Robolectric `4.17` runs every Android host test on API 26 and API 37. It
+  loads pinned `android-all` jars that Gradle resolves like any other input,
+  never from the network (`gradle/robolectric.gradle.kts`). A generated
+  `robolectric-deps.properties` points Robolectric at the jars in the
+  Gradle cache. Copying them is not an option: the API 37 jar is about
+  239 MB, above the isolated lanes' 128 MiB per-file ceiling
+  ([ADR 0014](0014-hosted-apple-isolation-probes.md)). API 37 needs
+  `--add-opens java.base/java.io` and `--add-exports
+  java.base/jdk.internal.access` on JDK 17 and later.
+- Compose ui-test pulls Espresso `3.5.0`, whose idling calls an
+  `InputManager` method that API 37 removed; the catalog pins Espresso
+  `3.7.0`.
+- Exclusions:
+  - the UniFFI-generated package `ch.trancee.cairn.ffi`;
+  - in `:androidApp`, the on-device `CoreStatusInstrumentation`, which loads
+    the Rust library a host test cannot;
+  - in `:androidApp`, code annotated `@Composable`. The Compose compiler adds
+    skip, restart and trace branches to every composable; no test can
+    honestly reach some of them, for example the `isTraceInProgress` branch.
+    The owner chose this exclusion on 2026-10-24. Composables therefore hold
+    no decisions: state, statuses and gates live in plain code measured at
+    100%, and Compose UI tests still assert every screen.
 - Kover reports `0.9.x` as stable releases; the guidance's beta label is
   accepted as is.
 
 ### 5. Reference app
 
-- A minimal Material 3 chat screen: contacts and one conversation.
-- The debug-panel fields from §2.
+- `:androidApp` holds the screen, in Jetpack Compose with Material 3 (the
+  Compose BOM pins the versions) and dynamic colour on API 31+. Whether S3
+  shares UI with iOS through Compose Multiplatform is decided there; `:app`
+  keeps only the `coreStatus()` loopback check.
+- One activity shows, in order: a Nearby devices permission gate, a
+  Bluetooth-off gate, the contact list and one conversation. Each message
+  shows sent, failed or why it was not sent.
+- A toggle shows the debug-panel fields from §2; faults show as a
+  dismissable banner.
+- The radio runs while the activity is started. It stops in `onStop`,
+  except across a configuration change such as rotation.
 
 ### 6. Timing smoke test
 

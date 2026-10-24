@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Cairn</string>
+    <string name="permission_title">Nearby devices</string>
+    <string name="permission_body">Cairn finds and talks to nearby phones over Bluetooth. It never uses your location.</string>
+    <string name="permission_allow">Allow</string>
+    <string name="permission_settings">App settings</string>
+    <string name="bluetooth_title">Bluetooth is off</string>
+    <string name="bluetooth_body">Turn on Bluetooth to reach nearby phones.</string>
+    <string name="bluetooth_enable">Turn on Bluetooth</string>
+    <string name="contacts_empty">No contacts yet. Open Cairn on a nearby phone and keep both screens on to pair.</string>
+    <string name="contact_label">Contact %1$d</string>
+    <string name="verification_unverified">Unverified</string>
+    <string name="verification_verified">Verified</string>
+    <string name="verification_compromised">Key changed — not trusted</string>
+    <string name="message_hint">Message</string>
+    <string name="send">Send</string>
+    <string name="back">Back</string>
+    <string name="state_sent">Sent</string>
+    <string name="state_failed">Not sent: internal error</string>
+    <string name="rejection_no_session">Not sent: no secure session yet</string>
+    <string name="rejection_too_long">Not sent: message too long</string>
+    <string name="rejection_exhausted">Not sent: message counter used up</string>
+    <string name="debug_show">Show links</string>
+    <string name="debug_hide">Hide links</string>
+    <string name="debug_empty">No links</string>
+    <string name="debug_link">Link %1$d · %2$s · MTU %3$d · up at %4$d ms\nout %5$d / %6$d B · in %7$d / %8$d B</string>
+    <string name="fault_crypto">The crypto backend failed; one step was dropped.</string>
+    <string name="fault_poisoned">The core restarted; every link was closed.</string>
+    <string name="dismiss">Dismiss</string>
+</resources>

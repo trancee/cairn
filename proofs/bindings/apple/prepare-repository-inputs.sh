@@ -40,7 +40,7 @@ fi
 
 mkdir "$output/source"
 git -C "$repository" ls-files -z -- settings.gradle.kts build.gradle.kts gradle.properties \
-  gradle sdk app androidApp core ':(exclude)core/fuzz' ':(exclude)core/ct' \
+  gradle sdk app androidBle androidApp core ':(exclude)core/fuzz' ':(exclude)core/ct' \
   | (cd "$repository" && tar --null -T - -cf -) | tar -xf - -C "$output/source"
 test -f "$output/source/core/Cargo.lock"
 test ! -e "$output/source/core/target"

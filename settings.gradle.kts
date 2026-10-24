@@ -26,4 +26,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "cairn"
-include(":sdk", ":app", ":androidApp")
+include(":sdk", ":app", ":androidBle", ":androidApp")

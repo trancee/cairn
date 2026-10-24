@@ -60,6 +60,9 @@ The user approved the following on 2026-10-22.
 - `:app` (Compose `App()` and `coreStatus()`);
 - `:androidApp` (an Android application shell).
 
+Since ADR 0023, `:app` holds only `coreStatus()`, `:androidBle` adds the
+Android radio, and `:androidApp` holds the chat screen.
+
 The version catalog lives in `gradle/libs.versions.toml`. Repositories are
 declared only in settings (`FAIL_ON_PROJECT_REPOS`), with `google()` limited
 to the AndroidX, Android and Google groups. Lanes may substitute a

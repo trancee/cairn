@@ -5,10 +5,19 @@ android-compileSdk = "37"
 android-minSdk = "26"
 android-ndk = "30.0.16248370"
 androidx-activity = "1.13.0"
-compose-multiplatform = "1.12.2"
+# The Compose BOM pins material3 1.4.0 with ui and ui-test 1.12.1 (ADR 0023 §5).
+androidx-compose-bom = "2026.09.00"
+androidx-test-core = "1.7.0"
+# Compose ui-test pulls Espresso 3.5.0, whose idling breaks on the API 37 framework (ADR 0023 §4).
+androidx-test-espresso = "3.7.0"
+junit = "4.13.2"
 jvm-toolchain = "21"
 kotlin = "2.4.21"
 kover = "0.9.11"
+robolectric = "4.17"
+# The android-all jars Robolectric 4.17 runs for API 26 and 37; host tests load them offline (ADR 0023 §4).
+robolectric-sdk26 = "8.0.0_r4-robolectric-r1-i7"
+robolectric-sdk37 = "17-robolectric-15733970-i7"
 ubique-uniffi = "1.3.2"
 # Patched-version floors for vulnerable transitive build tooling (AGP, UTP, bundletool); see ADR 0020.
 floor-bouncycastle = "1.86"
@@ -20,10 +29,16 @@ floor-netty = "4.1.139.Final"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
-compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }
-compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose-multiplatform" }
-compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-multiplatform" }
+androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "androidx-compose-bom" }
+androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
+androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
+androidx-test-core = { module = "androidx.test:core", version.ref = "androidx-test-core" }
+androidx-test-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "androidx-test-espresso" }
+junit = { module = "junit:junit", version.ref = "junit" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+robolectric-android-all-sdk26 = { module = "org.robolectric:android-all-instrumented", version.ref = "robolectric-sdk26" }
+robolectric-android-all-sdk37 = { module = "org.robolectric:android-all-instrumented", version.ref = "robolectric-sdk37" }
 floor-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "floor-bouncycastle" }
 floor-bcprov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "floor-bouncycastle" }
 floor-bcutil = { module = "org.bouncycastle:bcutil-jdk18on", version.ref = "floor-bouncycastle" }
@@ -69,6 +84,7 @@ build-tool-floors = [
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

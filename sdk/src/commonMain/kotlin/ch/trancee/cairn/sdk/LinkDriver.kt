@@ -53,7 +53,7 @@ class LinkDriver(
     private val timers: Timers,
     private val clock: ClockSource,
     private val listener: (Notice) -> Unit,
-) {
+) : RadioListener {
     private class Link(val role: GattRole, var mtu: UShort, val upAtMonoMs: ULong) {
         val queue = ArrayDeque<ByteArray>()
         var inFlightBytes = 0
@@ -77,8 +77,7 @@ class LinkDriver(
     /** Restores a fresh core; call once, first. */
     fun start() = dispatch(Event.Restore(null))
 
-    /** Reports a connected link and returns its new id. */
-    fun linkUp(role: GattRole, mtu: UShort, address: ByteArray): ULong {
+    override fun linkUp(role: GattRole, mtu: UShort, address: ByteArray): ULong {
         val now = clock.now()
         val link = nextLink++
         links[link] = Link(role, mtu, now.monoMs)
@@ -86,16 +85,14 @@ class LinkDriver(
         return link
     }
 
-    fun mtuChanged(link: ULong, mtu: UShort) {
+    override fun mtuChanged(link: ULong, mtu: UShort) {
         links[link]?.mtu = mtu
         dispatch(Event.MtuChanged(link, mtu))
     }
 
-    /** Central only: the value read from the peer's `beacon` characteristic. */
-    fun beaconRead(link: ULong, beacon: ByteArray) = dispatch(Event.BeaconRead(link, beacon))
+    override fun beaconRead(link: ULong, beacon: ByteArray) = dispatch(Event.BeaconRead(link, beacon))
 
-    /** One ATT value received from `rx` or `tx`. */
-    fun received(link: ULong, fragment: ByteArray) {
+    override fun received(link: ULong, fragment: ByteArray) {
         links[link]?.let { state ->
             state.fragmentsIn++
             state.bytesIn += fragment.size
@@ -103,8 +100,7 @@ class LinkDriver(
         dispatch(Event.Received(link, fragment))
     }
 
-    /** The platform accepted the link's in-flight fragment and can take the next one. */
-    fun sent(link: ULong) {
+    override fun sent(link: ULong) {
         val state = links[link] ?: return
         if (state.closing) return
         state.unconfirmedBytes -= state.inFlightBytes
@@ -112,7 +108,7 @@ class LinkDriver(
         transmit(link, state)
     }
 
-    fun linkDown(link: ULong) {
+    override fun linkDown(link: ULong) {
         links.remove(link)
         dispatch(Event.LinkDown(link))
     }
@@ -124,7 +120,7 @@ class LinkDriver(
     fun sendChat(contact: ULong, text: String) = dispatch(Event.SendChat(contact, text))
 
     /** The value for the local `beacon` characteristic. */
-    fun beacon(): ByteArray = query { it.beacon(clock.now().unixS) }
+    override fun beacon(): ByteArray = query { it.beacon(clock.now().unixS) }
 
     fun contacts(): List<ContactInfo> = query(Engine::contacts)
 

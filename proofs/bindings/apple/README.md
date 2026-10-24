@@ -285,8 +285,8 @@ database finalization; downloaded metadata and source archive agree.
 The mandatory analysis gate queries compiled Kotlin compilation units,
 requires every tracked `.kt` source plus generated binding evidence, and runs
 the unchanged bundled Java/Kotlin security suite offline. Analysis has its
-own command ceiling (300 seconds, raised to 600 when root sources joined), two threads and 2 GiB requested
-evaluator RAM; all caches/results remain in bounded scratch. Coverage and
+own command ceiling (300 seconds, raised to 600 when root sources joined), two threads and 4 GiB requested
+evaluator RAM (2 GiB until the Android modules joined; `OverlyLargeRange` then exhausted its 696 MiB heap); all caches/results remain in bounded scratch. Coverage and
 SARIF export require success. Compiled coverage and suite execution pass in
 run `38268914707`; mapped export passes in run `38274027100`, attempt 2.
 Processed GitHub results remain unverified. This is not yet a deployed
@@ -306,8 +306,9 @@ before finalization (ADR 0015 "Root Gradle build extraction"):
 | `repository-codeql` | `check-codeql-repository.sh TOOLS` | `codeql.sb`, 900 s, then finalize |
 | `repository-jvm` (untraced) | `check-repository-build.sh TOOLS jvm` | `build.sb`, 900 s |
 
-`repository-jvm` runs `:sdk:jvmTest` and `:sdk:koverVerify`, the 100% line
-and branch gate of [ADR 0023](../../../docs/adr/0023-android-ble-adapter.md).
+`repository-jvm` runs `:sdk:jvmTest`, `:sdk:koverVerify` and the Robolectric
+`testDebugUnitTest` and `koverVerifyDebug` of `:androidBle` and
+`:androidApp`, the 100% line and branch gate of [ADR 0023](../../../docs/adr/0023-android-ble-adapter.md).
 It runs after `repository-codeql`, which does not rerun up-to-date tasks: an
 earlier JVM compilation would leave the traced build nothing to extract.
 
