@@ -30,3 +30,10 @@ Robolectric host tests run on API 26 and 37, and Kover is at 100% lines and
 branches in both modules. The owner chose to exclude `@Composable` code from
 coverage, because some Compose compiler branches cannot be reached
 (ADR 0023 §4). The Linux guest lane is not rerun yet: the guest VM is down.
+
+2026-10-24: PR 2 merged (#46). Two CI fixes landed with it. Robolectric now
+reads the `android-all` jars in place, because copying them broke the strict
+lane's 128 MiB file ceiling. Strict Kotlin CodeQL analysis now gets 4 GiB of
+evaluator RAM (ADR 0015 amendment). The Linux guest lane is green with label
+`s2-radio`, and a mutant with one uncovered branch fails
+`:androidBle:koverVerifyDebug`. Next: PR 3, the device demonstration.
