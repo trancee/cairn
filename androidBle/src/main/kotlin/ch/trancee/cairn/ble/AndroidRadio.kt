@@ -112,7 +112,7 @@ class AndroidRadio(
         serverTx = service.getCharacteristic(GattProfile.TX)
         this.server = server
         this.advertiser = advertiser
-        advertise(advertiser)
+        budget()
         scanner.startScan(GattProfile.scanFilters(), GattProfile.scanSettings(), scanCallback)
         this.scanner = scanner
         return true
@@ -120,6 +120,23 @@ class AndroidRadio(
 
     /** The beacon in the latest advert; the dial rule compares it (ADR 0025). */
     private var advertised = ByteArray(0)
+
+    private var advertising = false
+
+    /** Advertises only while a slot is free (ADR 0025); runs after every change to the slots in use. */
+    private fun budget() {
+        val advertiser = advertiser ?: return
+        val free = slotsInUse() < maxSlots
+        if (free == advertising) return
+        if (free) {
+            advertise(advertiser)
+        } else {
+            advertiser.stopAdvertising(advertiseCallback)
+            handler.removeCallbacksAndMessages(rotation)
+            advertising = false
+            Log.i(TAG, "slots full; advertising stopped")
+        }
+    }
 
     /** Tags the pending advert restart, so [release] can cancel it. */
     private val rotation = Any()
@@ -129,6 +146,7 @@ class AndroidRadio(
         val beacon = listener.beacon()
         advertiser.startAdvertising(GattProfile.advertiseSettings(), GattProfile.advertiseData(beacon), advertiseCallback)
         advertised = beacon
+        advertising = true
         handler.removeCallbacksAndMessages(rotation)
         val wall = wallClock()
         val delay = BEACON_WINDOW_MS - wall % BEACON_WINDOW_MS + random.nextLong(0, ROTATION_JITTER_MS + 1)
@@ -155,13 +173,15 @@ class AndroidRadio(
 
     // Once the adapter leaves STATE_ON the stack drops scans and advertising itself, and stopping
     // them throws IllegalStateException, so release skips them.
+    // The advertiser goes first, so links closing here don't restart advertising.
     private fun release() {
+        advertiser = null
+        advertising = false
+        handler.removeCallbacksAndMessages(rotation)
         centrals.values.toList().forEach(Central::close)
         peripherals.values.toList().forEach(Peripheral::close)
         server?.close()
-        handler.removeCallbacksAndMessages(rotation)
         scanner = null
-        advertiser = null
         server = null
         serverMtus.clear()
         serverConnected.clear()
@@ -210,6 +230,7 @@ class AndroidRadio(
         val gatt: BluetoothGatt = device.connectGatt(context, false, central, BluetoothDevice.TRANSPORT_LE) ?: return
         central.gatt = gatt
         centrals[address] = central
+        budget()
         // A stack may wait 30 s for a peer that is gone, holding the slot (ADR 0025).
         handler.postDelayed({
             if (centrals[address] === central && !central.isUp) {
@@ -421,6 +442,7 @@ class AndroidRadio(
 
         override fun close() {
             centrals.remove(address)
+            budget()
             gatt.disconnect()
             gatt.close()
             if (stage == Stage.UP) {
@@ -453,6 +475,7 @@ class AndroidRadio(
         override fun close() {
             server.cancelConnection(device)
             peripherals.remove(device.address)
+            budget()
             down(link)
         }
     }
@@ -464,13 +487,21 @@ class AndroidRadio(
             handler.post { server?.let(block) }
         }
 
-        override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) = post {
+        override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) = post { server ->
+            val address = device.address
             if (newState == BluetoothProfile.STATE_CONNECTED) {
-                serverConnected += device.address
+                // A device that raced the advert stop; one sharing an address with our dial costs no slot.
+                if (address !in centrals && slotsInUse() >= maxSlots) {
+                    server.cancelConnection(device)
+                } else {
+                    serverConnected += address
+                    budget()
+                }
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                serverConnected -= device.address
-                serverMtus.remove(device.address)
-                peripherals.remove(device.address)?.let { down(it.link) }
+                serverConnected -= address
+                serverMtus.remove(address)
+                peripherals.remove(address)?.let { down(it.link) }
+                budget()
             }
         }
 
@@ -527,6 +558,7 @@ class AndroidRadio(
                 val peripheral = Peripheral(device, server, serverTx!!, link)
                 peripherals[address] = peripheral
                 links[link] = peripheral
+                budget()
             }
         }
 

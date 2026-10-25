@@ -100,4 +100,67 @@ class SlotBudgetTest {
 
         assertFalse(h.shadow(gatt).isClosed)
     }
+
+    private val advertising get() = shadowOf(h.adapter.bluetoothLeAdvertiser).advertisementRequestCount
+
+    private fun fill() {
+        h.connect(h.discover(address(1))!!)
+        (2..slots).forEach(::serverConnect)
+    }
+
+    private fun serverDisconnect(i: Int) {
+        h.serverCallback().onConnectionStateChange(h.device(address(i)), 0, BluetoothProfile.STATE_DISCONNECTED)
+        h.idle()
+    }
+
+    @Test
+    fun stopsAdvertisingWhileEverySlotIsInUse() {
+        fill()
+
+        assertEquals(0, advertising)
+    }
+
+    @Test
+    fun advertisesTheCurrentBeaconAgainOnceASlotFrees() {
+        fill()
+        val next = byteArrayOf(8, 7, 6, 5, 4, 3, 2, 1)
+        h.listener.beaconValue = next
+
+        serverDisconnect(2)
+
+        assertEquals(1, advertising)
+        kotlin.test.assertContentEquals(
+            next,
+            shadowOf(h.adapter.bluetoothLeAdvertiser).lastAdvertisingData.serviceData.values.single(),
+        )
+    }
+
+    @Test
+    fun doesNotRotateTheAdvertWhileFull() {
+        fill()
+
+        advance(330_000)
+
+        assertEquals(0, advertising)
+    }
+
+    @Test
+    fun disconnectsADeviceThatConnectsToAFullServer() {
+        fill()
+
+        serverConnect(20)
+        serverDisconnect(2)
+
+        assertTrue(shadowOf(h.server).isConnectionCancelled(h.device(address(20))))
+        assertEquals(1, advertising)
+    }
+
+    @Test
+    fun acceptsAServerConnectionFromAPeerItIsDialling() {
+        fill()
+
+        serverConnect(1)
+
+        assertFalse(shadowOf(h.server).isConnectionCancelled(h.device(address(1))))
+    }
 }
