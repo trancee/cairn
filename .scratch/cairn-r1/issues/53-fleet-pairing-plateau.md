@@ -287,8 +287,40 @@ the HCI events of the same dial:
 - **Android rebuilds the advertising set, with a new address, after each
   connection attempt.** The phones used 23 to 41 addresses in 300 s.
 - Only 3 phones and a handful of matched pairs back these causes.
-  MediaTek and Kirin phones, which have the most timeouts, cannot be
-  snooped without root.
+  Kirin phones, which have many timeouts, cannot be snooped without root.
+  The MediaTek realme can: `*#800#` → Communication & network → Bluetooth
+  → Bluetooth connections starts the OPLUS log kit, which writes standard
+  btsnoop files under `/sdcard/Android/data/com.oplus.logkit/files/Log/`.
+  A 90 s run there shows the same `0x3E` drops after
+  `LE Extended Create Connection`.
+
+## Extended advertising A/B (ADR 0028, 2026-10-25)
+
+Four 300 s runs in the order `main`, `ext`, `ext`, `main`, all phones forced
+to band `FULL` (`dumpsys battery set ac 1`, `set level 100`). 23 phones
+were attached. Three Xiaomi phones refuse adb installs (MIUI "Install via
+USB"), and five wireless-adb phones logged no scan results after the first
+run (the lock screen, most likely), so the 13 phones that linked in all
+four runs are compared. Of those, 3 advertise legacy (Xcover 4, Mi Note 3,
+P30 lite); none fell back from a failed set. For later runs, the Xiaomi
+phones install over adb once "USB debugging (Security settings)" is
+enabled, and every phone needs its lock screen off.
+
+| 13 phones | `main` 1 | `ext` 1 | `ext` 2 | `main` 2 |
+|---|---:|---:|---:|---:|
+| Pairs at 300 s | 36 | 38 | 45 | 40 |
+| Pairs at 120 s | 27 | 32 | 29 | 31 |
+| Failed dials < 1.5 s (`0x3E`) | 159 | 27 | 21 | 150 |
+| Failed dials 1.5–9 s | 19 | 28 | 14 | 32 |
+| Dial timeouts (10 s) | 52 | 108 | 91 | 11 |
+| All failed dials | 230 | 163 | 126 | 193 |
+
+- Fast failures fell 85 %: the `CONNECT_IND` loss of the HCI snoop is gone.
+- Timeouts rose: with an extended target, the controller keeps the create
+  connection pending until a request is answered, and a target that stopped
+  advertising (slots full) or changed address answers none. That is the
+  failure class fix B (dial freshness) addresses.
+- Pairs rose 9 % (41.5 against 38), inside the run-to-run spread.
 
 ## Open
 

@@ -8,13 +8,18 @@ import org.robolectric.Shadows.shadowOf
 import java.time.Duration
 import kotlin.test.assertEquals
 
-/** Of two radios that advertise a beacon, only the lower one dials (ADR 0025). */
+/**
+ * Of two radios that advertise a beacon, only the lower one dials (ADR 0025), unless one advertises
+ * extended and sees the other advertise legacy (ADR 0028).
+ */
 @RunWith(RobolectricTestRunner::class)
 class DialRuleTest {
     private val h = RadioHarness()
     private val address = "00:11:22:33:44:01"
 
     private fun dials() = shadowOf(h.device(address)).bluetoothGatts.size
+
+    private fun extended() = shadowOf(h.adapter).setIsLeExtendedAdvertisingSupported(true)
 
     private fun start(own: ByteArray) {
         h.listener.beaconValue = own
@@ -67,5 +72,34 @@ class DialRuleTest {
         h.sight(address)
 
         assertEquals(1, dials())
+    }
+
+    @Test
+    fun anExtendedAdvertiserDialsALegacyAdvertiserWithALowerBeacon() {
+        extended()
+        start(byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8))
+
+        h.sight(address, byteArrayOf(1, 2, 3, 4, 5, 6, 7, 7))
+
+        assertEquals(1, dials())
+    }
+
+    @Test
+    fun anExtendedAdvertiserLeavesAnExtendedAdvertiserWithALowerBeacon() {
+        extended()
+        start(byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8))
+
+        h.sight(address, byteArrayOf(1, 2, 3, 4, 5, 6, 7, 7), legacy = false)
+
+        assertEquals(0, dials())
+    }
+
+    @Test
+    fun aLegacyAdvertiserLeavesAnExtendedAdvertiserWithALowerBeacon() {
+        start(byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8))
+
+        h.sight(address, byteArrayOf(1, 2, 3, 4, 5, 6, 7, 7), legacy = false)
+
+        assertEquals(0, dials())
     }
 }

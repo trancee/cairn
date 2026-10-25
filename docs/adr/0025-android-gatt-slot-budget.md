@@ -122,3 +122,7 @@ On Android, the radio budgets its GATT connections (spec §10.4):
 
 2026-10-25, from [ADR 0027](0027-android-energy-bands.md) (OI-33): in energy
 band `LOW` the budget is 3 slots.
+
+2026-10-25, from [ADR 0028](0028-android-extended-advertising.md) (OI-34): a
+radio that advertises extended dials a peer it sees through a legacy advert
+whatever their beacons.

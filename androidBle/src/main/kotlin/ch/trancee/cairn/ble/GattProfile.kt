@@ -1,10 +1,12 @@
 package ch.trancee.cairn.ble
 
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattService
 import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
+import android.bluetooth.le.AdvertisingSetParameters
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanSettings
 import android.os.ParcelUuid
@@ -44,12 +46,30 @@ object GattProfile {
         addCharacteristic(characteristic(PSM, BluetoothGattCharacteristic.PROPERTY_READ, BluetoothGattCharacteristic.PERMISSION_READ))
     }
 
-    /** Legacy, connectable, untimed advertising. */
-    /** [mode] follows the energy band (spec §10.4). */
+    /** Legacy, connectable, untimed advertising; [mode] follows the energy band (spec §10.4). */
     fun advertiseSettings(mode: Int): AdvertiseSettings = AdvertiseSettings.Builder()
         .setAdvertiseMode(mode)
         .setConnectable(true)
         .setTimeout(0)
+        .build()
+
+    /**
+     * An extended, connectable, non-scannable set on 1M PHYs (spec §10.1, ADR 0028), at the interval
+     * of the legacy [mode].
+     */
+    fun advertisingSetParameters(mode: Int): AdvertisingSetParameters = AdvertisingSetParameters.Builder()
+        .setLegacyMode(false)
+        .setConnectable(true)
+        .setScannable(false)
+        .setPrimaryPhy(BluetoothDevice.PHY_LE_1M)
+        .setSecondaryPhy(BluetoothDevice.PHY_LE_1M)
+        .setInterval(
+            when (mode) {
+                AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY -> AdvertisingSetParameters.INTERVAL_LOW
+                AdvertiseSettings.ADVERTISE_MODE_BALANCED -> AdvertisingSetParameters.INTERVAL_MEDIUM
+                else -> AdvertisingSetParameters.INTERVAL_HIGH
+            },
+        )
         .build()
 
     /**
@@ -67,8 +87,14 @@ object GattProfile {
         ScanFilter.Builder().setServiceData(ParcelUuid(SERVICE), ByteArray(0)).build(),
     )
 
-    /** [mode] follows the energy band (spec §10.4). */
-    fun scanSettings(mode: Int): ScanSettings = ScanSettings.Builder().setScanMode(mode).build()
+    /**
+     * [mode] follows the energy band (spec §10.4); an [extended] scan receives extended adverts as
+     * well as legacy ones, on every supported PHY (ADR 0028).
+     */
+    fun scanSettings(mode: Int, extended: Boolean): ScanSettings = ScanSettings.Builder()
+        .setScanMode(mode)
+        .apply { if (extended) setLegacy(false).setPhy(ScanSettings.PHY_LE_ALL_SUPPORTED) }
+        .build()
 
     private fun characteristic(uuid: UUID, properties: Int, permissions: Int) =
         BluetoothGattCharacteristic(uuid, properties, permissions)
