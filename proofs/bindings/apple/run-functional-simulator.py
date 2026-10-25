@@ -7,11 +7,24 @@ import json
 import os
 import re
 import subprocess
+import time
 import uuid
 from pathlib import Path
 
 
 EXECUTABLES = ("CairnSimulatorSmoke.kexe", "CairnSdkTest.kexe")
+# Hosted runs took up to 154 s for create+boot+bootstatus and 6-49 s for spawn, with create
+# exceeding 30 s and spawn 60 s in about a quarter of runs. The step's 480 s bound still caps the total.
+BUDGETS = {"create": 120, "boot": 30, "bootstatus": 300, "spawn": 180}
+
+
+def launch_phase(command, phase, *arguments, **options):
+    started = time.monotonic()
+    try:
+        return subprocess.run([*command, phase, *arguments], check=True,
+                              timeout=BUDGETS[phase], **options)
+    finally:
+        print(f"TIMING: {phase} {time.monotonic() - started:.1f} s of {BUDGETS[phase]} s", flush=True)
 
 
 def verify_payload(payload, revision, executable=EXECUTABLES[0]):
@@ -105,21 +118,18 @@ def main():
     arguments.work.mkdir(mode=0o700)
     device_set.mkdir(mode=0o700)
     binary.chmod(0o500)
-    result = subprocess.run(
-        [*command, "create", "cairn-functional-smoke",
-         "com.apple.CoreSimulator.SimDeviceType.iPhone-17",
-         "com.apple.CoreSimulator.SimRuntime.iOS-26-4"],
-        check=True, capture_output=True, text=True, timeout=30, env=environment,
+    result = launch_phase(
+        command, "create", "cairn-functional-smoke",
+        "com.apple.CoreSimulator.SimDeviceType.iPhone-17",
+        "com.apple.CoreSimulator.SimRuntime.iOS-26-4",
+        capture_output=True, text=True, env=environment,
     )
     device_id = str(uuid.UUID(result.stdout.strip()))
     identity_file.write_text(device_id + "\n")
-    subprocess.run([*command, "boot", device_id, "--arch=arm64"],
-                   check=True, timeout=30, env=environment)
-    subprocess.run([*command, "bootstatus", device_id],
-                   check=True, timeout=300, env=environment)
+    launch_phase(command, "boot", device_id, "--arch=arm64", env=environment)
+    launch_phase(command, "bootstatus", device_id, env=environment)
     print("PASS: exact normal-user functional ARM64 bootstatus completed", flush=True)
-    subprocess.run([*command, "spawn", "--standalone", device_id, str(binary)],
-                   check=True, timeout=60, env=environment)
+    launch_phase(command, "spawn", "--standalone", device_id, str(binary), env=environment)
     verify_payload(arguments.payload, os.environ.get("GITHUB_SHA", ""), arguments.executable)
     print("PASS: delivered generated simulator consumer exited successfully", flush=True)
 

@@ -1,7 +1,13 @@
+import contextlib
 import hashlib
 import importlib.util
+import io
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -53,6 +59,33 @@ class FunctionalPayloadTest(unittest.TestCase):
 
             with self.assertRaisesRegex(SystemExit, "FAIL: functional payload executable not allowed"):
                 simulator.verify_payload(payload, "a" * 40, "other.kexe")
+
+    def test_launch_phases_use_evidence_based_budgets_and_report_elapsed_time(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "payload").mkdir()
+            payload = self.create_payload(Path(directory) / "payload")
+            calls = []
+
+            def operating_system(command, **options):
+                calls.append((command, options["timeout"]))
+                if command[0] == "/usr/bin/xcrun":
+                    return subprocess.CompletedProcess(command, 0, stdout="/simctl\n")
+                if "create" in command:
+                    return subprocess.CompletedProcess(command, 0, stdout="64445669-fe0b-4170-a787-c568494f418e\n")
+                return subprocess.CompletedProcess(command, 0)
+
+            output = io.StringIO()
+            environment = {"GITHUB_ACTIONS": "true", "GITHUB_SHA": "a" * 40, "HOME": directory, "TMPDIR": directory}
+            with mock.patch.object(simulator.subprocess, "run", side_effect=operating_system), \
+                    mock.patch.dict(os.environ, environment), \
+                    mock.patch.object(sys, "argv", ["run", str(payload), str(Path(directory) / "work")]), \
+                    contextlib.redirect_stdout(output):
+                simulator.main()
+
+        budgets = {command[3]: timeout for command, timeout in calls if command[0] == "/simctl"}
+        self.assertEqual(budgets, {"create": 120, "boot": 30, "bootstatus": 300, "spawn": 180})
+        for phase in budgets:
+            self.assertRegex(output.getvalue(), rf"(?m)^TIMING: {phase} [0-9]+\.[0-9] s of {budgets[phase]} s$")
 
     def test_invalid_payload_fails_before_execution(self):
         def oversize(payload):

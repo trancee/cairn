@@ -49,6 +49,22 @@ Its recorded revision matches the run and Mach-O inspection reports
 deterministic first-attempt reliability remain unproven; this is real generated
 simulator execution, not strict runtime containment or hardware evidence.
 
+**Phase budgets (2026-10-25).** The unchanged limits later failed about 9 of 23
+"Root SDK simulator tests" executions over two days:
+
+- `create` hit 30 s six times;
+- `spawn` hit 60 s twice; once the tests printed `[  PASSED  ]` one second after the timeout;
+- the cleanup inventory hit its former 15 s limit once.
+
+Successful runs needed up to 154 s for create, boot and bootstatus together,
+and 6–49 s for `spawn`. The tests themselves run in about 0.2 s. The owner
+approved budgets that fit this evidence: `create` 120 s, `boot` 30 s,
+`bootstatus` 300 s and `spawn` 180 s. The step's 480 s bound and the job's
+10-minute limit stay unchanged and still cap the total. Each launch phase prints
+`TIMING: <phase> <elapsed> s of <budget> s`, so later runs show which phase is
+slow. There is still no automatic retry, and the cause of the latency stays
+unproven.
+
 ## Scratch teardown
 
 The hosted resource fixture's exit trap uses `detach-scratch.py` for ordinary
@@ -77,9 +93,27 @@ returns nonzero, with an explicit diagnostic error.
 Unavailable, malformed or timed-out diagnostics remain explicitly observable
 and cannot turn failed ejection into success. If unmount already succeeded,
 the mount-path query may be unavailable; no whole-disk state is inferred.
-No retry, forced detach, unrelated process termination or limit/permission
-change is included. This fixes a success-path diagnostic dependency, not
-intermittent busy-eject reliability or strict runtime acceptance.
+There is no forced detach, unrelated process termination, or limit or
+permission change.
+
+**Bounded device retry (2026-10-25).** The benign preflight failed three times
+with `couldn't eject "disk7" - Resource busy`. Each time the volume was already
+unmounted, the image reported no mount point, and the only image holder was the
+system `diskimages-helper`. The owner approved one narrow retry for exactly that
+state. All of these conditions must hold:
+
+- the owned image is identified;
+- it reports no mount point;
+- the filesystem holder query returns no holder;
+- every image/device holder is `diskimages-helper`;
+- the media registry validated.
+
+Only then does `detach-scratch.py` retry `hdiutil detach` on the owned whole
+disk, at most three times, three seconds apart. It prints
+`PASS: unmounted scratch image ejected on device retry <n>`. Any other state,
+or three failed retries, stays `FAIL: scratch detach failed`. This mitigates
+the observed transient hold; it does not prove native ejection reliability or
+strict runtime acceptance.
 
 The existing benign-preflight test discovery includes the OS-boundary
 regressions. The focused command is:
