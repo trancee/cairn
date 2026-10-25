@@ -1,6 +1,6 @@
 # `cairn-r1` protocol specification
 
-Status: **draft 0.8** (GATT UUIDs, [ADR 0023](../adr/0023-android-ble-adapter.md); fragments capped at the 512 B ATT value limit, §4.3; randomized dial retries, §10.4; 2026-10-24). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
+Status: **draft 0.9** (BUSY refusal of a P0, §5.6; 2026-10-25). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
 
 This document consolidates, and is normative over:
 - [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md), as amended by [ADR 0021](../adr/0021-automatic-neighbour-admission.md);
@@ -90,7 +90,7 @@ Every frame and every fragment begins with one header byte:
 ```
 bit 7     MORE   1 = more fragments of this frame follow (GATT only; 0 on L2CAP CoC)
 bits 6–4  type   0 PAIR   1 S1   2 S2   3 DATA   4–7 reserved
-bits 3–0  sub    PAIR: step 0–4 [OI-27];  S1/S2: bit 0 = KCI; S1 bit 1 = MIX (*provisional*, §9) [OI-4]; other bits 0;  DATA: 0
+bits 3–0  sub    PAIR: step 0–4 [OI-27], 5 = BUSY [OI-29];  S1/S2: bit 0 = KCI; S1 bit 1 = MIX (*provisional*, §9) [OI-4]; other bits 0;  DATA: 0
 ```
 
 A receiver MUST close the link without sending anything when it sees:
@@ -142,8 +142,10 @@ Pairing is automatic: a device admits every stranger it discovers as a **neighbo
 | P2 | B→A | `ct(1120) ‖ nB(16)` | 1137 |
 | P3 | A→B | `nA(16) ‖ Seal(K_card_A, 0^12, hdr ‖ th, confirm_A(16) ‖ card_A)` | ≤ 135 |
 | P4 | B→A | `Seal(K_card_B, 0^12, hdr ‖ th, confirm_B(16) ‖ card_B)` | ≤ 119 |
+| BUSY | A→B | — | 1 |
 
 - P0 is B's admission request (§5.6); `r = rand(16)` is used only for the tie-break. P0 is not part of `th`.
+- BUSY is A's refusal of a P0 (§5.6) [OI-29]. It is not part of `th`.
 - `mode` MUST be `0x03` TOFU. B MUST abort on any other value [OI-19, OI-27]. The values `0x01` (QR) and `0x02` (SAS) are retired and abort.
 - The sizes are maxima for a card with a 48 B name and no KCI key (86 B plaintext, §5.4) [OI-1]. With the default empty name, P3 ≤ 87 B and P4 ≤ 71 B. A KCI card adds 1184 B.
 
@@ -204,17 +206,22 @@ K_door_A→B  = KDF(RK, "", "door A", "", 32);  K_door_B→A = KDF(RK, "", "door
 
 - **Stranger.** A peer whose advertised beacon matches no contact and whose `beacon` read (§4.1) also matches none.
 - **Roles.** On an admission link the GATT central is pairing role B and the peripheral is pairing role A.
-- **Request.** After a non-matching `beacon` read, B MAY send P0 on the same link if the limits below allow. A answers with P1 only if the limits allow; otherwise it closes the link without a response.
-- **One pairing in flight.** A device MUST have at most one pairing in flight, as A or B. While it has one, it MUST NOT send P0 and MUST close any further link that sends P0.
+- **Request.** After a non-matching `beacon` read, B MAY send P0 on the same link if the limits below allow. A answers with P1 only if the limits allow; otherwise it answers BUSY.
+- **One pairing in flight.** A device MUST have at most one pairing in flight, as A or B. While it has one, it MUST NOT send P0 and MUST answer BUSY to any further link that sends P0.
 - **Tie-break.** If a device receives P0 while its own P0 is unanswered, it compares the two `r` values as unsigned big-endian integers:
   - incoming `r` larger: close its own outgoing link and answer the incoming P0;
-  - incoming `r` smaller: close the incoming link;
-  - equal: close both.
+  - incoming `r` smaller: answer BUSY on the incoming link;
+  - equal: close its own outgoing link and answer BUSY on the incoming link.
 - **Limits** (per device, both roles):
   - at most 10 neighbours admitted per rolling hour;
   - at most 30 pairing attempts started or answered per rolling hour;
   - at most 256 neighbours in total; at the cap, admission stops and nothing is evicted;
-  - an address whose attempt failed or was refused is not tried again for 1 h.
+  - an address whose attempt failed is not tried again for 1 h.
+- **BUSY** [OI-29]. A refusal of a P0 is a BUSY frame, so that B learns of it at once rather than at the §4.4 deadline. Android cannot drop a link that the remote central opened, so A cannot signal a refusal by closing.
+  - A sends BUSY, then waits for B to close the link and closes it itself at the §4.4 deadline. Any further frame on that link closes it. The refused link is not a pairing in flight.
+  - B, on a BUSY in reply to its P0, closes the link. A refusal ran no X-Wing operation, so it is not a failed attempt: B neither backs off the address nor counts the attempt against the 30 per hour. B may dial the address again under §10.4.
+  - A BUSY with a body, or in any other state, is a malformed frame (§4.2).
+  - BUSY is unauthenticated, like P0. An attacker who forges one can at most delay a pairing, as by dropping frames.
 
 ## 6. Resume
 
@@ -407,7 +414,7 @@ door = Trunc8(HMAC(K_door_me→peer, lp("cairn-r1 door") ‖ u64(w)))
   CI enforces this per ADR 0007.
 - **Hygiene.** Secrets MUST be held in zeroize-on-drop types and MUST NOT cross the FFI, apart from the sealed persistence blob (ADR 0004).
 - **Storage.** Persisted state MUST be excluded from backups. Restoring old state is out of scope, but a device that detects a non-monotonic `n` MUST require re-pairing (ADR 0006).
-- **Errors.** Any protocol error closes the link without a response, so there is no error oracle. CLOSE is sent only for orderly shutdown.
+- **Errors.** Any protocol error closes the link without a response, so there is no error oracle. A BUSY refusal (§5.6) is not an error response: it follows only a well-formed P0 and depends only on admission state, not on secrets. CLOSE is sent only for orderly shutdown.
 
 ## 12. Constants and test vectors
 
@@ -457,10 +464,12 @@ OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: R
 | OI-25 | Chunk offsets alone do not tell the sender which bytes survived a disconnect or a lost acknowledgement | Authenticated cumulative `0D KEM_PROGRESS(epoch, kind, next_offset)` after durable storage; re-advertise progress and pending EPOCH_DONE after Resume; resend immutable unacknowledged chunks (§7.3, §9) (user's choice, 2026-10-05) |
 | OI-27 | Owner redirection to a peer-to-peer BLE mesh (2026-10-23): pairing must start automatically for every discovered peer. With no pairing screen, A can't tell which incoming link to send P1 on, OI-20's user-pick role rule has no user, and both devices can connect to each other at once | Automatic TOFU admission (§5.6): central is B and sends `P0 = hdr ‖ r(16)`; one pairing in flight with an `r` tie-break; admission limits 10/h admitted, 30/h attempts, 256 total, no eviction; only `mode = 0x03`; QR and SAS pairing retired, Verify remains; empty card name by default. +17 B once per admission. Verified models unchanged (ADR 0021) (user's choice, 2026-10-23) |
 | OI-28 | S2 device demonstration (2026-10-24): two phones that see each other at once dial each other at once, both dials fail (Android status 133, HCI `0x3e`), and the 2 min attempt limit makes them retry in step and collide again | A random 0–3 s delay before the first dial; a dial that fails before link-up is retried after a random 1–5 s, then 5–15 s, then 2 min (§10.4, ADR 0008). No wire change (user's choice, 2026-10-24) |
+| OI-29 | S2 fleet test (2026-10-25, issue 52): a peripheral that refuses a P0 closes the link, but Android doesn't drop a link that the remote central opened. The central waits about 5 s for its deadline with its own pairing in flight, refusing every other peer, and then backs off the address for 1 h | A refuses with a 1 B `BUSY` frame (PAIR step 5) and waits for B to close. B closes at once, without back-off, and the attempt isn't counted (§4.2, §5.1, §5.6, ADR 0021). Models unchanged: BUSY is an unauthenticated availability signal outside `th` (user's choice, 2026-10-25) |
 | OI-26 | Reassembly semantics for gaps, overlaps and retransmitted chunks are unspecified | Contiguous append only; exact duplicates wholly within the stored prefix are accepted; gaps, conflicting/cross-frontier overlaps, wrong epochs and bounds violations fail closed without partial mutation (§9) (user's choice, 2026-10-05) |
 
 ## 14. Change log
 
+- 0.9 (2026-10-25): accepted OI-29: a 1 B BUSY frame (PAIR step 5) refuses a P0 in place of a silent close; a BUSY neither backs off the address nor counts as an attempt (§4.2, §5.1, §5.6).
 - 0.8 (2026-10-24): recorded the GATT service and characteristic UUIDs (§12, ADR 0023); capped fragments at the 512 B ATT value limit (§4.3, ADR 0003); accepted OI-28 (randomized first dial and two fast retries, §10.4). No byte of any frame changes.
 - 0.7 (2026-10-23): accepted OI-27 (automatic neighbour admission, ADR 0021): new P0 frame and §5.6; QR and SAS pairing modes retired; card name empty by default; connect policy admits strangers. Multi-hop relaying remains unspecified (issue 47).
 

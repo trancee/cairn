@@ -23,6 +23,8 @@ use zeroize::Zeroizing;
 /// A pre-authentication link must finish pairing or Resume within 5 s (spec §4.4).
 const PRE_AUTH_LINK_MS: u64 = 5_000;
 const P0_LEN: usize = 17;
+/// A's refusal of a P0 (spec §5.6): a PAIR header with step 5 and no body.
+const BUSY: [u8; 1] = [0x05];
 
 /// The time of an event: monotonic for timers and limits, wall clock for beacon days.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -191,15 +193,18 @@ pub struct ContactInfo {
 enum LinkState {
     /// Central before its beacon read, or peripheral before the first frame.
     Fresh,
-    /// B sent P0 and waits for P1.
+    /// B sent P0 and waits for P1; `attempt_ms` is when the attempt was counted.
     SentP0 {
         r: [u8; 16],
+        attempt_ms: u64,
     },
     AwaitingP2(Box<AwaitingP2>),
     AwaitingP3(Box<AwaitingP3>),
     AwaitingP4(Box<AwaitingP4>),
     /// A after pairing, waiting for B's S1 on the same link.
     Admitted,
+    /// A answered BUSY and waits for B to close the link.
+    Refused,
     /// I sent S1 and waits for S2.
     SentS1(Box<Resuming>),
     Session(Box<SessionLink>),
@@ -481,7 +486,15 @@ impl<B: CryptoBackend> Core<B> {
         let mut p0 = Vec::with_capacity(P0_LEN);
         p0.push(0x00);
         p0.extend_from_slice(&r);
-        self.advance(id, LinkState::SentP0 { r }, &p0, actions);
+        self.advance(
+            id,
+            LinkState::SentP0 {
+                r,
+                attempt_ms: clock.mono_ms,
+            },
+            &p0,
+            actions,
+        );
         Ok(())
     }
 
@@ -553,6 +566,11 @@ impl<B: CryptoBackend> Core<B> {
             (GattRole::Peripheral, 0, LinkState::Fresh) => {
                 return self.receive_p0(clock, id, frame, actions);
             }
+            (GattRole::Central, 5, LinkState::SentP0 { attempt_ms, .. }) if frame.len() == 1 => {
+                self.admission.refund_attempt(attempt_ms);
+                self.close(id, actions);
+                return Ok(());
+            }
             (GattRole::Central, 1, LinkState::SentP0 { .. }) => {
                 AwaitingP3::receive_p1::<B>(self.own_card(clock)?, frame)
                     .map(|(state, p2)| Step::Advance(LinkState::AwaitingP3(Box::new(state)), p2))
@@ -594,7 +612,7 @@ impl<B: CryptoBackend> Core<B> {
             .iter()
             .filter(|(other, link)| **other != id && link.state.pairing())
             .map(|(other, link)| match link.state {
-                LinkState::SentP0 { r } => (*other, Some(r)),
+                LinkState::SentP0 { r, .. } => (*other, Some(r)),
                 _ => (*other, None),
             })
             .collect();
@@ -603,17 +621,17 @@ impl<B: CryptoBackend> Core<B> {
             [(own, Some(r))] => match tie_break(r, &incoming) {
                 TieBreak::AnswerIncoming => self.close(*own, actions),
                 TieBreak::CloseIncoming => {
-                    self.close(id, actions);
+                    self.advance(id, LinkState::Refused, &BUSY, actions);
                     return Ok(());
                 }
                 TieBreak::CloseBoth => {
                     self.close(*own, actions);
-                    self.close(id, actions);
+                    self.advance(id, LinkState::Refused, &BUSY, actions);
                     return Ok(());
                 }
             },
             _ => {
-                self.close(id, actions);
+                self.advance(id, LinkState::Refused, &BUSY, actions);
                 return Ok(());
             }
         }
@@ -622,7 +640,7 @@ impl<B: CryptoBackend> Core<B> {
             .admission
             .allows(clock.mono_ms, self.contact_count(), &address)
         {
-            self.close(id, actions);
+            self.advance(id, LinkState::Refused, &BUSY, actions);
             return Ok(());
         }
         self.admission.record_attempt(clock.mono_ms);

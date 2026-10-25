@@ -31,18 +31,18 @@ fn reserved_frame_types_are_rejected() {
 }
 
 #[test]
-fn pairing_sub_is_the_step_zero_to_four() {
+fn pairing_sub_is_the_step_zero_to_four_or_busy() {
     let subs = 0..=15u8;
 
     let accepted: Vec<u8> = subs
         .filter(|&sub| Header::new(FrameType::Pair, sub).is_ok())
         .collect();
 
-    assert_eq!(accepted, [0, 1, 2, 3, 4]);
+    assert_eq!(accepted, [0, 1, 2, 3, 4, 5]);
     assert_eq!(
-        Header::parse(0x05),
+        Header::parse(0x06),
         Err(HeaderError::InvalidSub),
-        "step 5 does not exist"
+        "step 6 does not exist"
     );
 }
 
