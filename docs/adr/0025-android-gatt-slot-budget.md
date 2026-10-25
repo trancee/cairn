@@ -126,3 +126,7 @@ band `LOW` the budget is 3 slots.
 2026-10-25, from [ADR 0028](0028-android-extended-advertising.md) (OI-34): a
 radio that advertises extended dials a peer it sees through a legacy advert
 whatever their beacons.
+
+2026-10-25, from [ADR 0029](0029-android-dial-freshness.md) (OI-35): a
+dial also fails once its target has gone unseen for 2 s, 5 s or 7 s in
+band `FULL`, `SAVE` or `LOW`.
