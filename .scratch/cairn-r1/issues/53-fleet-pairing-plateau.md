@@ -260,6 +260,40 @@ report it: `1f1dad34`, `R5CT83AC`, `ZY22GCD9`, `e9097611`):
   and the other phones report no controller energy.
 - Every phone was in the same band at once. A real crowd mixes bands.
 
+## HCI snoop of failed dials (2026-10-25)
+
+HCI snoop logs were captured on 3 Qualcomm phones (S10e `R38`, Nothing
+`1f1dad34`, moto `ZY22`) during two 300 s fleet runs of `main`. The
+MediaTek realme writes only a 16-byte file, and the POCO's run after its
+reboot logged no cairn lines. Each dial failure in logcat was matched to
+the HCI events of the same dial:
+
+| App failure | Share of fleet failures | HCI sequence |
+|---|---:|---|
+| Fast 133 (< 1.5 s) | 102 of 238 | `LE Extended Create Connection` → connection complete `0x00` → disconnect `0x3E` after 6 connection events (0.21–0.32 s at 45 ms) |
+| 10 s timeout | 106 of 238 | Create connection pending for 10 s with no connectable advert from the target → cancel → connection complete `0x02` |
+| 5 s (S10e only) | 30 of 238 | As the timeout; Samsung's stack cancels after 5 s |
+
+- **Fast 133s reach the air.** In the one fast 133 where both ends were
+  snooped, the moto connected to the Nothing's current advertising address
+  while it advertised, and the Nothing logged no connection: the
+  `CONNECT_IND` was lost on the advertising channels. This fits plan B,
+  where `LOW_POWER` advertising halved the failed dials.
+- **Timeouts dial phones that stopped advertising.** Every advertising gap
+  over 1 s on the 3 phones was cairn's own slots-full stop (ADR 0025). The
+  moto advertised for 16 % of its run, the S10e 59 % and the Nothing 68 %.
+  Of the 2 timeouts where both ends were snooped, the target stopped
+  advertising for a full slot set in one and rotated its address in the other.
+- **Android rebuilds the advertising set, with a new address, after each
+  connection attempt.** The phones used 23 to 41 addresses in 300 s.
+- Only 3 phones and a handful of matched pairs back these causes.
+  Kirin phones, which have many timeouts, cannot be snooped without root.
+  The MediaTek realme can: `*#800#` → Communication & network → Bluetooth
+  → Bluetooth connections starts the OPLUS log kit, which writes standard
+  btsnoop files under `/sdcard/Android/data/com.oplus.logkit/files/Log/`.
+  A 90 s run there shows the same `0x3E` drops after
+  `LE Extended Create Connection`.
+
 ## Extended advertising A/B (ADR 0028, 2026-10-25)
 
 Four 300 s runs in the order `main`, `ext`, `ext`, `main`, all phones forced
@@ -268,7 +302,9 @@ were attached. Three Xiaomi phones refuse adb installs (MIUI "Install via
 USB"), and five wireless-adb phones logged no scan results after the first
 run (the lock screen, most likely), so the 13 phones that linked in all
 four runs are compared. Of those, 3 advertise legacy (Xcover 4, Mi Note 3,
-P30 lite); none fell back from a failed set.
+P30 lite); none fell back from a failed set. For later runs, the Xiaomi
+phones install over adb once "USB debugging (Security settings)" is
+enabled, and every phone needs its lock screen off.
 
 | 13 phones | `main` 1 | `ext` 1 | `ext` 2 | `main` 2 |
 |---|---:|---:|---:|---:|
@@ -289,10 +325,10 @@ P30 lite); none fell back from a failed set.
 ## Open
 
 1. **Plateau.** Slot exhaustion resolved by ADR 0025 (36 to 49 pairs). Still
-   open: the 97 fast 133s without a full table, and whether pairing
-   completes in a longer run. A congestion controller did not help
-   (ADR 0026); an HCI snoop of R38 or e9097611 should show whether their
-   connect requests reach the air.
+   open: whether pairing completes in a longer run. A congestion
+   controller did not help (ADR 0026). The HCI snoop shows that fast 133s
+   are connection requests lost on the advertising channels, and timeouts
+   dial phones that stopped advertising.
 2. **Unanswered frames.** Was the notification lost over the air, or did the
    central stall? Needs an HCI snoop on one affected pair. The `out` trace
    is logged when the fragment is queued, so `onNotificationSent` timing
