@@ -62,6 +62,14 @@ object AppHarness {
 
     fun scanning(): Boolean = shadowOf(adapter.bluetoothLeScanner).scanCallbacks.isNotEmpty()
 
+    /** Broadcasts an adapter state change, as the system does when Bluetooth turns off or on. */
+    fun adapterState(state: Int) {
+        app.sendBroadcast(
+            android.content.Intent(BluetoothAdapter.ACTION_STATE_CHANGED).putExtra(BluetoothAdapter.EXTRA_STATE, state),
+        )
+        idle()
+    }
+
     fun idle() = ShadowLooper.idleMainLooper()
 
     fun contact(id: ULong, name: String = "", verification: Verification = Verification.UNVERIFIED) =

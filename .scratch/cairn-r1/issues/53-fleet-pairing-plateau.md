@@ -63,6 +63,35 @@ Fleet runs must run `setprop log.tag.CairnRadio D` on every phone first.
 The property doesn't survive a reboot. Only the GX6 overrides `log.tag`;
 the other phones don't set it.
 
+## Fleet4
+
+Same build as fleet3 (`feat/s2-busy-frame`), same 12 USB phones with
+cleared app data, 180 s, `log.tag.CairnRadio=D` on every phone. Pairs below
+are phone pairs whose matched central link reached a session frame (frame
+type 3). This is stricter than the 22 quoted for fleet3 above.
+
+| | fleet3 | fleet4 |
+|---|---|---|
+| Phone pairs with a session | 16 | 29 |
+| … within 60 s / 120 s | 13 / 16 | 24 / 27 |
+| Last new pair | 77 s | 143 s |
+| Central P0s with no peripheral match | 3 | 0 |
+| Failed dials (`CONNECTING`) | 233 (214) | 209 (198) |
+| First S2/DATA median / p90 / max | 1.11 / 2.76 / 3.64 s | 1.02 / 1.92 / 3.01 s |
+
+- With the GX6 visible, no central P0 is unmatched. That supports the
+  hidden GX6 trace as the cause of fleet3's three.
+- The GX6 paired with 5 phones. The P10 lite paired with 2, after 4 links
+  and 30 failed dials.
+- **7XHEIBPB dropped out.** 7 s after launch its controller reported
+  `Hardware Error Event 0x00` and the system restarted the Bluetooth
+  process; Bluetooth was back on within 2 s. `AndroidRadio` didn't follow
+  adapter state, so its server, advertising and scanning stayed dead and it
+  logged nothing more. 29 pairs is therefore out of 55 possible, not 66.
+  The fault happened once, 4 s after the app's first two dials; fleet1–3
+  didn't show it, so its cause is unknown. The radio now follows adapter
+  state; see ADR 0023 §3.
+
 ## Open
 
 1. **Plateau.** Separate the causes:
@@ -75,7 +104,6 @@ the other phones don't set it.
    central stall? Needs an HCI snoop on one affected pair. The `out` trace
    is logged when the fragment is queued, so `onNotificationSent` timing
    would also help.
-3. **Unmatched P0s.** Probably the hidden GX6 trace. Confirm in the next
-   fleet run, with the tag property set.
+3. **Unmatched P0s.** Resolved: fleet4 has none with the GX6 visible.
 4. **P10 lite.** Find out why it never links as central: 11 hung connects
    and 24 status 0x85 failures.
