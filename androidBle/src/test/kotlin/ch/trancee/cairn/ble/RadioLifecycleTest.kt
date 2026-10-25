@@ -6,6 +6,7 @@ import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
 import android.os.ParcelUuid
 import android.provider.Settings
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -28,7 +29,9 @@ class RadioLifecycleTest {
 
         val advertiser = shadowOf(h.adapter.bluetoothLeAdvertiser)
         assertEquals(1, advertiser.advertisementRequestCount)
-        assertEquals(listOf(ParcelUuid(GattProfile.SERVICE)), advertiser.lastAdvertisingData.serviceUuids)
+        assertEquals(emptyList(), advertiser.lastAdvertisingData.serviceUuids)
+        assertEquals(setOf(ParcelUuid(GattProfile.SERVICE)), advertiser.lastAdvertisingData.serviceData.keys)
+        assertContentEquals(h.listener.beaconValue, advertiser.lastAdvertisingData.serviceData.getValue(ParcelUuid(GattProfile.SERVICE)))
         assertFalse(advertiser.lastAdvertisingData.includeDeviceName)
         assertEquals(1, shadowOf(h.adapter.bluetoothLeScanner).activeScans.size)
     }

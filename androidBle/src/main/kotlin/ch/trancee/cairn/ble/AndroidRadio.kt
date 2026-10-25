@@ -94,7 +94,7 @@ class AndroidRadio(
         server.addService(service)
         serverTx = service.getCharacteristic(GattProfile.TX)
         this.server = server
-        advertiser.startAdvertising(GattProfile.advertiseSettings(), GattProfile.advertiseData(), advertiseCallback)
+        advertiser.startAdvertising(GattProfile.advertiseSettings(), GattProfile.advertiseData(listener.beacon()), advertiseCallback)
         this.advertiser = advertiser
         scanner.startScan(GattProfile.scanFilters(), GattProfile.scanSettings(), scanCallback)
         this.scanner = scanner

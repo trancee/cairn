@@ -1,9 +1,9 @@
 # `cairn-r1` protocol specification
 
-Status: **draft 0.10** (graduated pairing back-off, §5.6; 2026-10-25). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
+Status: **draft 0.11** (Android GATT slot budget, §10.4; 2026-10-25). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
 
 This document consolidates, and is normative over:
-- [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md), as amended by [ADR 0021](../adr/0021-automatic-neighbour-admission.md);
+- [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md), as amended by [ADR 0021](../adr/0021-automatic-neighbour-admission.md) and [ADR 0025](../adr/0025-android-gatt-slot-budget.md);
 - the [wire-format draft](../research/2026-10-05-wire-format-draft.md);
 - the [threat model](threat-model.md).
 
@@ -406,6 +406,11 @@ door = Trunc8(HMAC(K_door_me→peer, lp("cairn-r1 door") ‖ u64(w)))
 - Connect to an unknown or beaconless peer only if there is something to send, a contact has not been seen for 10 min, or admission (§5.6) is within its limits.
 - Wait a random 0–3 s after first seeing an address before dialling it, so devices that see each other at once don't dial in step [OI-28].
 - At most one attempt per address per 2 min, except that a dial that fails before the link comes up MAY be retried after a random 1–5 s and, if that fails too, after a random 5–15 s. A third failure waits 2 min [OI-28].
+- **Android slot budget** (ADR 0025) [OI-31]:
+  - The radio counts dials in flight, central links and devices connected to its GATT server. It uses at most 5 of them on API ≤ 34 and 6 on API 35+, with at most 1 dial in flight on API ≤ 28 and 2 otherwise. A dial that has not come up within 10 s fails.
+  - Of two Android devices that both advertise a beacon (§10.1), only the one whose own advertised beacon is lower, as an unsigned big-endian number, dials. Equal beacons dial. A peer advertising only the service UUID is dialled as before.
+  - The radio advertises only while it has a free slot, and disconnects a device that connects to a full GATT server.
+  - A full radio that sees an advertising address with no link, no dial in flight and no dial back-off closes its longest link idle for ≥ 30 s, at most once every 60 s.
 - After a non-matching `beacon` read, either admit the stranger on the same link (§5.6) or disconnect; after 3 non-matching reads that the §5.6 limits refused, back off that address for 1 h. Reads refused because the address is already backed off don't count [OI-27, OI-30].
 
 ## 11. Implementation requirements
@@ -470,10 +475,12 @@ OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: R
 | OI-28 | S2 device demonstration (2026-10-24): two phones that see each other at once dial each other at once, both dials fail (Android status 133, HCI `0x3e`), and the 2 min attempt limit makes them retry in step and collide again | A random 0–3 s delay before the first dial; a dial that fails before link-up is retried after a random 1–5 s, then 5–15 s, then 2 min (§10.4, ADR 0008). No wire change (user's choice, 2026-10-24) |
 | OI-29 | S2 fleet test (2026-10-25, issue 52): a peripheral that refuses a P0 closes the link, but Android doesn't drop a link that the remote central opened. The central waits about 5 s for its deadline with its own pairing in flight, refusing every other peer, and then backs off the address for 1 h | A refuses with a 1 B `BUSY` frame (PAIR step 5) and waits for B to close. B closes at once, without back-off, and the attempt isn't counted (§4.2, §5.1, §5.6, ADR 0021). Models unchanged: BUSY is an unauthenticated availability signal outside `th` (user's choice, 2026-10-25) |
 | OI-30 | Fleet pairing plateau (2026-10-25, issue 53): every failed pairing backed the address off for 1 h, and a refused dial re-armed that hour. In a 12-phone run, 20 attempts failed, none on a protocol check (11 deadlines without a reply, 9 link drops), and 14 of 69 central links were then refused, so one radio hiccup blocked a pair of phones for the rest of the encounter | Transport failures back off 2 min, doubling up to 1 h; protocol failures keep 1 h; a completed pairing resets the count; a refused dial doesn't re-arm a back-off, and three dials refused by the limits back off 1 h as §10.4 says (§5.6, §10.4, ADR 0021). The 30 attempts per hour still bound X-Wing work. No wire change; models unchanged, no model covers admission (user's choice, 2026-10-25) |
+| OI-31 | Fleet pairing plateau, cause (2026-10-25, issue 53): Android allocates one of 7–8 GATT link records per device when a connect starts. In a 15-phone run, 274 of 443 fast status-133 dial failures coincided with a full table, and the S2 radio dialled every peer, advertised while full and never freed a link | Android slot budget: 5 slots (6 on API 35+), 1–2 dials in flight, a 10 s dial timeout, the lower advertised beacon dials, advertising only with a free slot, eviction of a ≥ 30 s idle link when a new peer waits (§10.4, ADR 0025). The beacon advert is the one §10.1 already specifies. No wire change; no model covers discovery (user's choice, 2026-10-25) |
 | OI-26 | Reassembly semantics for gaps, overlaps and retransmitted chunks are unspecified | Contiguous append only; exact duplicates wholly within the stored prefix are accepted; gaps, conflicting/cross-frontier overlaps, wrong epochs and bounds violations fail closed without partial mutation (§9) (user's choice, 2026-10-05) |
 
 ## 14. Change log
 
+- 0.11 (2026-10-25): accepted OI-31: Android budgets its GATT connections, and the lower advertised beacon dials (§10.4, ADR 0025). No byte of any frame changes.
 - 0.10 (2026-10-25): accepted OI-30: a transport failure backs off the address for 2 min, doubling up to 1 h; protocol failures keep 1 h; refusals don't extend a back-off (§5.6, §10.4). No byte of any frame changes.
 - 0.9 (2026-10-25): accepted OI-29: a 1 B BUSY frame (PAIR step 5) refuses a P0 in place of a silent close; a BUSY neither backs off the address nor counts as an attempt (§4.2, §5.1, §5.6).
 - 0.8 (2026-10-24): recorded the GATT service and characteristic UUIDs (§12, ADR 0023); capped fragments at the 512 B ATT value limit (§4.3, ADR 0003); accepted OI-28 (randomized first dial and two fast retries, §10.4). No byte of any frame changes.
