@@ -89,7 +89,7 @@ def owned_media_state(registry: object, names: list[str]) -> tuple[list[dict], l
     ]
 
 
-def print_holder_fields(output: str) -> None:
+def print_holder_fields(output: str) -> set[str]:
     lines = output.splitlines()
     if any(
         not re.fullmatch(r"p[0-9]+", line)
@@ -98,6 +98,22 @@ def print_holder_fields(output: str) -> None:
     ):
         raise DiagnosticError("invalid-holder-fields")
     print("".join(line + "\n" for line in lines if line.startswith(("p", "c"))), end="")
+    return {line[1:] for line in lines if line.startswith("c")}
+
+
+# hdiutil can unmount the volume and then fail to eject the disk with "Resource busy" while
+# only the system image server still holds it. Only that state is retried, by device.
+def eject_unmounted_image(whole_disk: str) -> bool:
+    for attempt in range(1, 4):
+        time.sleep(3)
+        try:
+            ejected = subprocess.run(["/usr/bin/hdiutil", "detach", "-verbose", whole_disk], timeout=30)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if ejected.returncode == 0:
+            print(f"PASS: unmounted scratch image ejected on device retry {attempt}")
+            return True
+    return False
 
 
 def detach_scratch(volume: str, image: str) -> int:
@@ -115,7 +131,7 @@ def detach_scratch(volume: str, image: str) -> int:
     else:
         if detached.returncode == 0:
             return 0
-        print("FAIL: scratch detach failed", file=sys.stderr)
+        print("DIAGNOSTIC: scratch detach returned nonzero")
     metadata_deadline = time.monotonic() + 5
     try:
         result = subprocess.run(
@@ -138,7 +154,7 @@ def detach_scratch(volume: str, image: str) -> int:
         OSError, subprocess.SubprocessError, ValueError, plistlib.InvalidFileException, ExpatError,
     ) as error:
         print(f"DIAGNOSTIC: scratch detach state unavailable: {type(error).__name__}", file=sys.stderr)
-    devices = []
+    devices, mounts, holders, media_known = [], None, {}, False
     try:
         inventory = subprocess.run(
             ["/usr/bin/hdiutil", "info", "-plist"],
@@ -160,13 +176,13 @@ def detach_scratch(volume: str, image: str) -> int:
     ):
         print(f"DIAGNOSTIC: {label} holder identities")
         try:
-            holders = subprocess.run(
+            result = subprocess.run(
                 ["/usr/sbin/lsof", "-nP", "-Fpc", *selection],
                 capture_output=True, text=True, check=False,
                 timeout=remaining_seconds(holder_deadline),
             )
-            print_holder_fields(holders.stdout)
-            if holders.returncode:
+            holders[label] = print_holder_fields(result.stdout)
+            if result.returncode:
                 raise DiagnosticError("holder-query-nonzero")
         except (OSError, subprocess.SubprocessError, UnicodeError, ValueError) as error:
             reason = str(error) if isinstance(error, DiagnosticError) else type(error).__name__
@@ -182,11 +198,18 @@ def detach_scratch(volume: str, image: str) -> int:
             )
             print("DIAGNOSTIC: owned scratch media state " + json.dumps(media))
             print("DIAGNOSTIC: owned scratch media absent " + json.dumps(absent))
+            media_known = True
         except (
             OSError, subprocess.SubprocessError, ValueError, plistlib.InvalidFileException, ExpatError,
         ) as error:
             reason = str(error) if isinstance(error, DiagnosticError) else type(error).__name__
             print(f"DIAGNOSTIC: owned scratch media unavailable: {reason}", file=sys.stderr)
+    if media_known and mounts == [] and holders.get("scratch filesystem") == set() \
+            and holders.get("owned scratch image/device", {"unknown"}) <= {"diskimages-helper"}:
+        whole_disk = re.fullmatch(r"(/dev/disk[0-9]+)(?:s[0-9]+)*", devices[0]).group(1)
+        if eject_unmounted_image(whole_disk):
+            return 0
+    print("FAIL: scratch detach failed", file=sys.stderr)
     return 1
 
 

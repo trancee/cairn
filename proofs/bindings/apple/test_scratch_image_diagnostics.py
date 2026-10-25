@@ -327,12 +327,14 @@ class ScratchImageDiagnosticsTest(unittest.TestCase):
                     raise subprocess.CalledProcessError(1, command)
 
                 output, errors = io.StringIO(), io.StringIO()
-                with mock.patch.object(scratch_detach.subprocess, "run", side_effect=operating_system):
+                with mock.patch.object(scratch_detach.subprocess, "run", side_effect=operating_system), \
+                        mock.patch.object(scratch_detach.time, "sleep") as sleep:
                     with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
                         result = scratch_detach.detach_scratch(VOLUME, IMAGE)
 
                 self.assertEqual(result, 1)
                 self.assertIn("owned scratch media unavailable: " + reason, errors.getvalue())
+                sleep.assert_not_called()
                 self.assertNotIn("bad class", output.getvalue() + errors.getvalue())
 
     def test_holder_field_errors_do_not_log_unselected_file_fields(self):

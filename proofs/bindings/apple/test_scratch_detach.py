@@ -193,6 +193,82 @@ class ScratchDetachTest(unittest.TestCase):
         self.assertIn("open-file holder collection failed: CalledProcessError", errors.getvalue())
         self.assertNotIn("untrusted diagnostic output", errors.getvalue())
 
+    def unmounted_image_system(self, device_results, image_holders="p3985\ncdiskimages-helper\n",
+                               inventory=INVENTORY):
+        detaches, results = [], iter(device_results)
+
+        def operating_system(command, **options):
+            if command[:2] == ["/usr/bin/hdiutil", "detach"]:
+                detaches.append(command[-1])
+                return subprocess.CompletedProcess(
+                    command, 1 if command[-1] == VOLUME else next(results),
+                )
+            if command[:2] == ["/usr/bin/hdiutil", "info"]:
+                return subprocess.CompletedProcess(command, 0, stdout=inventory)
+            if command[0] == "/usr/sbin/diskutil":
+                raise subprocess.CalledProcessError(1, command)
+            if command[0] == "/usr/sbin/ioreg":
+                return subprocess.CompletedProcess(command, 0, stdout=plistlib.dumps([]))
+            if "+f" in command:
+                return subprocess.CompletedProcess(command, 1, stdout="")
+            return subprocess.CompletedProcess(command, 1, stdout=image_holders)
+
+        return detaches, operating_system
+
+    def detach_with(self, operating_system):
+        output, errors = io.StringIO(), io.StringIO()
+        with mock.patch.object(scratch_detach.subprocess, "run", side_effect=operating_system), \
+                mock.patch.object(scratch_detach.time, "sleep") as sleep:
+            with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
+                result = scratch_detach.detach_scratch(VOLUME, IMAGE)
+        return result, output.getvalue(), errors.getvalue(), sleep
+
+    def test_unmounted_image_held_only_by_diskimages_helper_is_ejected_by_device_retry(self):
+        detaches, operating_system = self.unmounted_image_system([1, 0])
+
+        result, output, errors, sleep = self.detach_with(operating_system)
+
+        self.assertEqual(result, 0, errors)
+        self.assertEqual(detaches, [VOLUME, "/dev/disk7", "/dev/disk7"])
+        self.assertEqual(sleep.call_count, 2)
+        self.assertIn("PASS: unmounted scratch image ejected on device retry 2", output)
+        self.assertNotIn("FAIL", errors)
+
+    def test_device_retry_is_bounded_and_the_detach_stays_failed(self):
+        detaches, operating_system = self.unmounted_image_system([1, 1, 1, 0])
+
+        result, output, errors, sleep = self.detach_with(operating_system)
+
+        self.assertEqual(result, 1)
+        self.assertEqual(detaches, [VOLUME, "/dev/disk7", "/dev/disk7", "/dev/disk7"])
+        self.assertEqual(sleep.call_count, 3)
+        self.assertIn("FAIL: scratch detach failed", errors)
+
+    def test_image_with_a_foreign_holder_is_not_retried(self):
+        detaches, operating_system = self.unmounted_image_system(
+            [0], image_holders="p3985\ncdiskimages-helper\np123\ncfixture\n",
+        )
+
+        result, output, errors, sleep = self.detach_with(operating_system)
+
+        self.assertEqual(result, 1)
+        self.assertEqual(detaches, [VOLUME])
+        sleep.assert_not_called()
+
+    def test_image_that_is_still_mounted_is_not_retried(self):
+        mounted = plistlib.dumps({"images": [
+            {"image-path": IMAGE, "system-entities": [
+                {"dev-entry": "/dev/disk7"}, {"dev-entry": "/dev/disk7s2", "mount-point": VOLUME},
+            ]},
+        ]})
+        detaches, operating_system = self.unmounted_image_system([0], inventory=mounted)
+
+        result, output, errors, sleep = self.detach_with(operating_system)
+
+        self.assertEqual(result, 1)
+        self.assertEqual(detaches, [VOLUME])
+        sleep.assert_not_called()
+
     def test_cli_rejects_invalid_arity_and_path_without_traceback(self):
         for arguments in ([], ["/", IMAGE], [VOLUME, "extra"], [VOLUME, IMAGE, "extra"]):
             with self.subTest(arguments=arguments):
