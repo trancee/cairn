@@ -100,6 +100,12 @@ class RadioHarness {
 
     fun scanCallback() = shadowOf(adapter.bluetoothLeScanner).scanCallbacks.single()
 
+    /** Reports [address] as a scan match, advertising [beacon] as service data when given. */
+    fun sight(address: String, beacon: ByteArray? = null) {
+        scanCallback().onScanResult(0, ScanResult(device(address), beacon?.let(::advert), -40, 0))
+        idle()
+    }
+
     /** Reports [address] as a scan match and returns the GATT client the radio opened. */
     fun discover(address: String, service: BluetoothGattService? = peerService()): BluetoothGatt? {
         val device = device(address)
@@ -148,6 +154,18 @@ class RadioHarness {
         server.getService(GattProfile.SERVICE).getCharacteristic(uuid)
 
     companion object {
+        /** A legacy advert as spec §10.1 lays it out: flags, then service data, service UUID ‖ [beacon]. */
+        fun advert(beacon: ByteArray): android.bluetooth.le.ScanRecord {
+            val uuid = java.nio.ByteBuffer.allocate(16).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                .putLong(GattProfile.SERVICE.leastSignificantBits).putLong(GattProfile.SERVICE.mostSignificantBits).array()
+            val bytes = byteArrayOf(2, 1, 6, (1 + 16 + beacon.size).toByte(), 0x21) + uuid + beacon
+            return ReflectionHelpers.callStaticMethod(
+                android.bluetooth.le.ScanRecord::class.java,
+                "parseFromBytes",
+                ReflectionHelpers.ClassParameter.from(ByteArray::class.java, bytes),
+            )
+        }
+
         /** 2027-01-15T08:01:40Z: 100 s after a window boundary, 200 s before the next one. */
         const val WALL_START = 1_800_000_100_000L
 

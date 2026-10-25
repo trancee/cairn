@@ -23,6 +23,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Handler
+import android.os.ParcelUuid
 import android.os.SystemClock
 import android.util.Log
 import ch.trancee.cairn.ffi.GattRole
@@ -103,8 +104,8 @@ class AndroidRadio(
         return true
     }
 
-    /** The beacon in the current advert; the dial rule compares it (ADR 0025). */
-    private var advertised: ByteArray? = null
+    /** The beacon in the latest advert; the dial rule compares it (ADR 0025). */
+    private var advertised = ByteArray(0)
 
     /** Tags the pending advert restart, so [release] can cancel it. */
     private val rotation = Any()
@@ -145,7 +146,6 @@ class AndroidRadio(
         peripherals.values.toList().forEach(Peripheral::close)
         server?.close()
         handler.removeCallbacksAndMessages(rotation)
-        advertised = null
         scanner = null
         advertiser = null
         server = null
@@ -181,9 +181,11 @@ class AndroidRadio(
         handler.post { links[link]?.close() }
     }
 
-    private fun connect(device: BluetoothDevice) {
+    /** Dials [device] unless both advertise a beacon and ours is the higher one (ADR 0025). */
+    private fun connect(device: BluetoothDevice, beacon: ByteArray?) {
         val address = device.address
         if (address in centrals || address in peripherals) return
+        if (beacon != null && compareUnsigned(advertised, beacon) > 0) return
         val now = SystemClock.elapsedRealtime()
         val dial = dials.getOrPut(address) { Dial(now + random.nextLong(0, FIRST_DIAL_SPREAD_MS + 1)) }
         if (now < dial.notBefore) return
@@ -196,7 +198,8 @@ class AndroidRadio(
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
-            handler.post { if (server != null) connect(result.device) }
+            val beacon = result.scanRecord?.getServiceData(ParcelUuid(GattProfile.SERVICE))
+            handler.post { if (server != null) connect(result.device, beacon) }
         }
     }
 
@@ -538,6 +541,15 @@ class AndroidRadio(
 
         /** Spec §10.1: the advert restarts up to 30 s after each window boundary. */
         const val ROTATION_JITTER_MS = 30_000L
+
+        /** Big-endian unsigned order, as spec §10.1 beacons compare. */
+        fun compareUnsigned(a: ByteArray, b: ByteArray): Int {
+            for (i in 0 until minOf(a.size, b.size)) {
+                val c = (a[i].toInt() and 0xff) - (b[i].toInt() and 0xff)
+                if (c != 0) return c
+            }
+            return a.size - b.size
+        }
 
         fun BluetoothGattServer.respond(device: BluetoothDevice, requestId: Int, accepted: Boolean) {
             val status = if (accepted) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_WRITE_NOT_PERMITTED
