@@ -80,7 +80,11 @@ class RadioHarness {
     val context: Application = ApplicationProvider.getApplicationContext()
     val listener = RecordingListener()
     val random = FakeRandom()
-    val radio = AndroidRadio(context, Handler(Looper.getMainLooper()), random).also { it.listener = listener }
+
+    /** Wall-clock ms; it starts 100 s into a beacon window and advances with the looper. */
+    private val wallOffset = WALL_START - android.os.SystemClock.elapsedRealtime()
+    val radio = AndroidRadio(context, Handler(Looper.getMainLooper()), random) { wallOffset + android.os.SystemClock.elapsedRealtime() }
+        .also { it.listener = listener }
     val manager: BluetoothManager = context.getSystemService(BluetoothManager::class.java)
     val adapter: BluetoothAdapter = manager.adapter
 
@@ -95,6 +99,12 @@ class RadioHarness {
     fun device(address: String): BluetoothDevice = adapter.getRemoteDevice(address)
 
     fun scanCallback() = shadowOf(adapter.bluetoothLeScanner).scanCallbacks.single()
+
+    /** Reports [address] as a scan match, advertising [beacon] as service data when given. */
+    fun sight(address: String, beacon: ByteArray? = null) {
+        scanCallback().onScanResult(0, ScanResult(device(address), beacon?.let(::advert), -40, 0))
+        idle()
+    }
 
     /** Reports [address] as a scan match and returns the GATT client the radio opened. */
     fun discover(address: String, service: BluetoothGattService? = peerService()): BluetoothGatt? {
@@ -144,6 +154,21 @@ class RadioHarness {
         server.getService(GattProfile.SERVICE).getCharacteristic(uuid)
 
     companion object {
+        /** A legacy advert as spec §10.1 lays it out: flags, then service data, service UUID ‖ [beacon]. */
+        fun advert(beacon: ByteArray): android.bluetooth.le.ScanRecord {
+            val uuid = java.nio.ByteBuffer.allocate(16).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                .putLong(GattProfile.SERVICE.leastSignificantBits).putLong(GattProfile.SERVICE.mostSignificantBits).array()
+            val bytes = byteArrayOf(2, 1, 6, (1 + 16 + beacon.size).toByte(), 0x21) + uuid + beacon
+            return ReflectionHelpers.callStaticMethod(
+                android.bluetooth.le.ScanRecord::class.java,
+                "parseFromBytes",
+                ReflectionHelpers.ClassParameter.from(ByteArray::class.java, bytes),
+            )
+        }
+
+        /** 2027-01-15T08:01:40Z: 100 s after a window boundary, 200 s before the next one. */
+        const val WALL_START = 1_800_000_100_000L
+
         /** A peer's GATT service as discovery returns it, with a readable `beacon` value. */
         fun peerService(
             beacon: ByteArray? = byteArrayOf(9, 9, 9, 9, 9, 9, 9, 9),

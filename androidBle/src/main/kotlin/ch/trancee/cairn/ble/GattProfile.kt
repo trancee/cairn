@@ -51,13 +51,20 @@ object GattProfile {
         .setTimeout(0)
         .build()
 
-    /** Only the service UUID: 3 B flags plus 18 B fit the 31 B legacy payload. */
-    fun advertiseData(): AdvertiseData = AdvertiseData.Builder()
-        .addServiceUuid(ParcelUuid(SERVICE))
+    /**
+     * Service data, service UUID ‖ [beacon] (spec §10.1, ADR 0025): 3 B flags plus 2 + 16 + 8 B fit
+     * the 31 B legacy payload.
+     */
+    fun advertiseData(beacon: ByteArray): AdvertiseData = AdvertiseData.Builder()
+        .addServiceData(ParcelUuid(SERVICE), beacon)
         .setIncludeDeviceName(false)
         .build()
 
-    fun scanFilters(): List<ScanFilter> = listOf(ScanFilter.Builder().setServiceUuid(ParcelUuid(SERVICE)).build())
+    /** Either advert form: the bare service UUID of older builds, or service data with a beacon. */
+    fun scanFilters(): List<ScanFilter> = listOf(
+        ScanFilter.Builder().setServiceUuid(ParcelUuid(SERVICE)).build(),
+        ScanFilter.Builder().setServiceData(ParcelUuid(SERVICE), ByteArray(0)).build(),
+    )
 
     fun scanSettings(): ScanSettings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
 

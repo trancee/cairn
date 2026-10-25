@@ -220,3 +220,19 @@ debug panel.
   from T3.
 - **Unsealed persistence before S5.** Contacts survive restarts, but the
   blob would be stored against ADR 0006 and spec §11.
+
+## Amendments
+
+2026-10-25, from [ADR 0025](0025-android-gatt-slot-budget.md) (OI-31,
+[issue 53](../../.scratch/cairn-r1/issues/53-fleet-pairing-plateau.md)):
+- **Discovery.** The radio advertises service data (service UUID ‖ beacon,
+  spec §10.1) instead of the bare service UUID. It restarts the advertising
+  set at every beacon window boundary plus 0–30 s of jitter, and scans for
+  either form. Duty cycles and background operation stay in S6.
+- **Central.** The radio budgets its GATT slots: at most 5 (6 on API 35+)
+  dials, central links and server connections; 1–2 dials in flight; a 10 s
+  dial timeout. It dials a peer with an advertised beacon only if its own
+  beacon is lower.
+- **Peripheral.** It advertises only while it has a free slot, disconnects a
+  device that connects to a full server, and, when full, evicts its
+  longest-idle link for a waiting peer.

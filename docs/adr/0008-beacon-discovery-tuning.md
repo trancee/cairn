@@ -88,3 +88,10 @@ This is the first version. These parameters are policy inside the core and SDK; 
 
 2026-10-25, from the fleet pairing plateau ([issue 53](../../.scratch/cairn-r1/issues/53-fleet-pairing-plateau.md), OI-30):
 - **Non-matching reads.** The 1 h back-off after 3 non-matching reads counts only reads that the admission limits refused (spec §10.4). A read refused because the address is already backed off doesn't count, so it can't turn a short [ADR 0021](0021-automatic-neighbour-admission.md) back-off into an hour.
+
+2026-10-25, from [ADR 0025](0025-android-gatt-slot-budget.md) (OI-31):
+- **Android slot budget.** An Android radio holds at most 5 GATT connections
+  (6 on API 35+), with 1–2 dials in flight and a 10 s dial timeout. Of two
+  Android devices that advertise a beacon, only the one with the lower
+  beacon dials. A full radio stops advertising, and evicts its longest-idle
+  link (idle ≥ 30 s, at most once per 60 s) when a new peer waits.

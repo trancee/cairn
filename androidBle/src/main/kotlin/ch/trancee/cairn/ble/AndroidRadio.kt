@@ -23,6 +23,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Handler
+import android.os.ParcelUuid
 import android.os.SystemClock
 import android.util.Log
 import ch.trancee.cairn.ffi.GattRole
@@ -42,6 +43,8 @@ class AndroidRadio(
     private val context: Context,
     private val handler: Handler,
     private val random: Random = Random.Default,
+    /** Unix time in ms; the beacon window follows it (spec §10.1). */
+    private val wallClock: () -> Long = System::currentTimeMillis,
 ) : Radio {
     /** Usually the [ch.trancee.cairn.sdk.LinkDriver]; set before [start]. */
     lateinit var listener: RadioListener
@@ -67,6 +70,24 @@ class AndroidRadio(
     private val serverMtus = HashMap<String, Int>()
     private val dials = HashMap<String, Dial>()
     private val upAt = HashMap<ULong, Long>()
+
+    /** When each link last carried a fragment, or came up. */
+    private val activeAt = HashMap<ULong, Long>()
+    private var evictedAt = -EVICTION_INTERVAL_MS
+
+    /** Devices connected to the GATT server, subscribed or not; each holds a slot (ADR 0025). */
+    private val serverConnected = HashSet<String>()
+
+    /** ADR 0025: the AOSP link-record minimum, 7 before API 35 and 8 from it, less 2. */
+    private val maxSlots = if (Build.VERSION.SDK_INT >= 35) 6 else 5
+
+    /** ADR 0025: stacks up to API 28 run one LE connect at a time. */
+    private val maxDialsInFlight = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) 1 else 2
+
+    // Android allocates one link record per remote address, whichever role opened it.
+    private fun slotsInUse(): Int = (centrals.keys + peripherals.keys + serverConnected).size
+
+    private fun dialsInFlight(): Int = centrals.values.count { !it.isUp }
 
     /**
      * Opens the GATT server, advertises and scans, and from then on follows Bluetooth turning off
@@ -94,11 +115,53 @@ class AndroidRadio(
         server.addService(service)
         serverTx = service.getCharacteristic(GattProfile.TX)
         this.server = server
-        advertiser.startAdvertising(GattProfile.advertiseSettings(), GattProfile.advertiseData(), advertiseCallback)
         this.advertiser = advertiser
+        budget()
         scanner.startScan(GattProfile.scanFilters(), GattProfile.scanSettings(), scanCallback)
         this.scanner = scanner
         return true
+    }
+
+    /** The beacon in the latest advert; the dial rule compares it (ADR 0025). */
+    private var advertised = ByteArray(0)
+
+    private var advertising = false
+
+    /** Advertises only while a slot is free (ADR 0025); runs after every change to the slots in use. */
+    private fun budget() {
+        val advertiser = advertiser ?: return
+        val free = slotsInUse() < maxSlots
+        if (free == advertising) return
+        if (free) {
+            advertise(advertiser)
+        } else {
+            advertiser.stopAdvertising(advertiseCallback)
+            handler.removeCallbacksAndMessages(rotation)
+            advertising = false
+            Log.i(TAG, "slots full; advertising stopped")
+        }
+    }
+
+    /** Tags the pending advert restart, so [release] can cancel it. */
+    private val rotation = Any()
+
+    // Restarts at the next window boundary plus jitter, so the advert carries the current beacon (spec §10.1).
+    private fun advertise(advertiser: BluetoothLeAdvertiser) {
+        val beacon = listener.beacon()
+        advertiser.startAdvertising(GattProfile.advertiseSettings(), GattProfile.advertiseData(beacon), advertiseCallback)
+        advertised = beacon
+        advertising = true
+        handler.removeCallbacksAndMessages(rotation)
+        val wall = wallClock()
+        val delay = BEACON_WINDOW_MS - wall % BEACON_WINDOW_MS + random.nextLong(0, ROTATION_JITTER_MS + 1)
+        handler.postAtTime(
+            {
+                advertiser.stopAdvertising(advertiseCallback)
+                advertise(advertiser)
+            },
+            rotation,
+            SystemClock.uptimeMillis() + delay,
+        )
     }
 
     /** Stops discovery, closes every connection and reports [RadioListener.linkDown] for each link. */
@@ -114,14 +177,18 @@ class AndroidRadio(
 
     // Once the adapter leaves STATE_ON the stack drops scans and advertising itself, and stopping
     // them throws IllegalStateException, so release skips them.
+    // The advertiser goes first, so links closing here don't restart advertising.
     private fun release() {
+        advertiser = null
+        advertising = false
+        handler.removeCallbacksAndMessages(rotation)
         centrals.values.toList().forEach(Central::close)
         peripherals.values.toList().forEach(Peripheral::close)
         server?.close()
         scanner = null
-        advertiser = null
         server = null
         serverMtus.clear()
+        serverConnected.clear()
     }
 
     private var following = false
@@ -153,10 +220,15 @@ class AndroidRadio(
         handler.post { links[link]?.close() }
     }
 
-    private fun connect(device: BluetoothDevice) {
+    /** Dials [device] unless both advertise a beacon and ours is the higher one (ADR 0025). */
+    private fun connect(device: BluetoothDevice, beacon: ByteArray?) {
         val address = device.address
         if (address in centrals || address in peripherals) return
         val now = SystemClock.elapsedRealtime()
+        val waiting = address !in serverConnected && now >= (dials[address]?.notBefore ?: now)
+        if (waiting && slotsInUse() >= maxSlots) evict(now, address)
+        if (beacon != null && compareUnsigned(advertised, beacon) > 0) return
+        if (dialsInFlight() >= maxDialsInFlight || slotsInUse() >= maxSlots) return
         val dial = dials.getOrPut(address) { Dial(now + random.nextLong(0, FIRST_DIAL_SPREAD_MS + 1)) }
         if (now < dial.notBefore) return
         dial.notBefore = now + ATTEMPT_INTERVAL_MS
@@ -164,11 +236,20 @@ class AndroidRadio(
         val gatt: BluetoothGatt = device.connectGatt(context, false, central, BluetoothDevice.TRANSPORT_LE) ?: return
         central.gatt = gatt
         centrals[address] = central
+        budget()
+        // A stack may wait 30 s for a peer that is gone, holding the slot (ADR 0025).
+        handler.postDelayed({
+            if (centrals[address] === central && !central.isUp) {
+                Log.i(TAG, "dial ${address.takeLast(5)} timed out")
+                central.close()
+            }
+        }, DIAL_TIMEOUT_MS)
     }
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
-            handler.post { if (server != null) connect(result.device) }
+            val beacon = result.scanRecord?.getServiceData(ParcelUuid(GattProfile.SERVICE))
+            handler.post { if (server != null) connect(result.device, beacon) }
         }
     }
 
@@ -179,6 +260,7 @@ class AndroidRadio(
     private fun up(role: GattRole, mtu: Int, address: String): ULong {
         val link = listener.linkUp(role, mtu.toUShort(), address.encodeToByteArray())
         upAt[link] = SystemClock.elapsedRealtime()
+        activeAt[link] = upAt.getValue(link)
         Log.d(TAG, "link $link up $role mtu $mtu")
         return link
     }
@@ -186,6 +268,7 @@ class AndroidRadio(
     private fun since(link: ULong) = SystemClock.elapsedRealtime() - upAt.getValue(link)
 
     private fun trace(link: ULong, direction: String, fragment: ByteArray) {
+        activeAt[link] = SystemClock.elapsedRealtime()
         val header = fragment.copyOf(minOf(1, fragment.size)).joinToString("") { "%02x".format(it) }
         Log.d(TAG, "link $link $direction 0x$header ${fragment.size} B at ${since(link)} ms")
     }
@@ -198,8 +281,19 @@ class AndroidRadio(
     private fun down(link: ULong) {
         Log.d(TAG, "link $link down at ${since(link)} ms")
         upAt.remove(link)
+        activeAt.remove(link)
         links.remove(link)
         listener.linkDown(link)
+    }
+
+    /** Closes the longest link idle for [LINK_IDLE_MS], at most once per [EVICTION_INTERVAL_MS] (ADR 0025). */
+    private fun evict(now: Long, waiting: String) {
+        if (now - evictedAt < EVICTION_INTERVAL_MS) return
+        val (link, at) = activeAt.minByOrNull { it.value } ?: return
+        if (now - at < LINK_IDLE_MS) return
+        evictedAt = now
+        Log.i(TAG, "slots full; evicting link $link idle ${now - at} ms for ${waiting.takeLast(5)}")
+        links.getValue(link).close()
     }
 
     /**
@@ -233,6 +327,7 @@ class AndroidRadio(
         Link {
         lateinit var gatt: BluetoothGatt
         private var stage = Stage.CONNECTING
+        val isUp get() = stage == Stage.UP
         private var mtu = GattProfile.DEFAULT_MTU
         private var link = 0uL
         private lateinit var rx: BluetoothGattCharacteristic
@@ -366,6 +461,7 @@ class AndroidRadio(
 
         override fun close() {
             centrals.remove(address)
+            budget()
             gatt.disconnect()
             gatt.close()
             if (stage == Stage.UP) {
@@ -398,6 +494,7 @@ class AndroidRadio(
         override fun close() {
             server.cancelConnection(device)
             peripherals.remove(device.address)
+            budget()
             down(link)
         }
     }
@@ -409,10 +506,21 @@ class AndroidRadio(
             handler.post { server?.let(block) }
         }
 
-        override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) = post {
-            if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                serverMtus.remove(device.address)
-                peripherals.remove(device.address)?.let { down(it.link) }
+        override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) = post { server ->
+            val address = device.address
+            if (newState == BluetoothProfile.STATE_CONNECTED) {
+                // A device that raced the advert stop; one sharing an address with our dial costs no slot.
+                if (address !in centrals && slotsInUse() >= maxSlots) {
+                    server.cancelConnection(device)
+                } else {
+                    serverConnected += address
+                    budget()
+                }
+            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                serverConnected -= address
+                serverMtus.remove(address)
+                peripherals.remove(address)?.let { down(it.link) }
+                budget()
             }
         }
 
@@ -469,6 +577,7 @@ class AndroidRadio(
                 val peripheral = Peripheral(device, server, serverTx!!, link)
                 peripherals[address] = peripheral
                 links[link] = peripheral
+                budget()
             }
         }
 
@@ -504,6 +613,30 @@ class AndroidRadio(
 
         /** Spec §10.4: the first dial to an address waits a random 0 to 3 s after it is first seen. */
         const val FIRST_DIAL_SPREAD_MS = 3_000L
+
+        /** ADR 0025: a link that carried no fragment for this long may be evicted. */
+        const val LINK_IDLE_MS = 30_000L
+
+        /** ADR 0025: at most one eviction per interval. */
+        const val EVICTION_INTERVAL_MS = 60_000L
+
+        /** ADR 0025: a dial not up by then fails and frees its slot. */
+        const val DIAL_TIMEOUT_MS = 10_000L
+
+        /** Spec §10.1: one beacon per 300 s window of Unix time. */
+        const val BEACON_WINDOW_MS = 300_000L
+
+        /** Spec §10.1: the advert restarts up to 30 s after each window boundary. */
+        const val ROTATION_JITTER_MS = 30_000L
+
+        /** Big-endian unsigned order, as spec §10.1 beacons compare. */
+        fun compareUnsigned(a: ByteArray, b: ByteArray): Int {
+            for (i in 0 until minOf(a.size, b.size)) {
+                val c = (a[i].toInt() and 0xff) - (b[i].toInt() and 0xff)
+                if (c != 0) return c
+            }
+            return a.size - b.size
+        }
 
         fun BluetoothGattServer.respond(device: BluetoothDevice, requestId: Int, accepted: Boolean) {
             val status = if (accepted) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_WRITE_NOT_PERMITTED

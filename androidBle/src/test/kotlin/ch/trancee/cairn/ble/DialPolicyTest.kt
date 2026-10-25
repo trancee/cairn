@@ -15,7 +15,11 @@ import org.robolectric.shadows.ShadowLog
 /** Spec §10.4: when the central dials an address, and how it retries a dial that fails before link-up. */
 @RunWith(RobolectricTestRunner::class)
 class DialPolicyTest {
-    private val h = RadioHarness().also { it.radio.start() }
+    // Drops the advert rotation's draw, so the ranges below are the dial schedule only.
+    private val h = RadioHarness().also {
+        it.radio.start()
+        it.random.ranges.clear()
+    }
     private val address = "00:11:22:33:44:01"
 
     private fun sight() {

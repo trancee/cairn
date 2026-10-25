@@ -65,10 +65,13 @@ class CentralTest {
     private fun assertClosed(gatt: BluetoothGatt) = assertTrue(h.shadow(gatt).isClosed)
 
     @Test
-    fun scansOnlyForTheCairnService() {
+    fun scansOnlyForTheCairnServiceUuidOrServiceData() {
         val scan = shadowOf(h.adapter.bluetoothLeScanner).activeScans.single()
 
-        assertEquals(ParcelUuid(GattProfile.SERVICE), scan.scanFilters().single().serviceUuid)
+        val filters = scan.scanFilters()
+        assertEquals(listOf(ParcelUuid(GattProfile.SERVICE), null), filters.map { it.serviceUuid })
+        assertEquals(listOf(null, ParcelUuid(GattProfile.SERVICE)), filters.map { it.serviceDataUuid })
+        assertContentEquals(ByteArray(0), filters[1].serviceData)
     }
 
     @Test
