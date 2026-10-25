@@ -5,6 +5,8 @@ use alloc::vec::Vec;
 use core::cmp::Ordering;
 
 const HOUR_MS: u64 = 3_600_000;
+/// The back-off after a first transport failure; each further one doubles it.
+const BASE_BACK_OFF_MS: u64 = 120_000;
 pub(crate) const MAX_ADMITTED_PER_HOUR: usize = 10;
 pub(crate) const MAX_ATTEMPTS_PER_HOUR: usize = 30;
 pub(crate) const MAX_NEIGHBOURS: usize = 256;
@@ -32,7 +34,16 @@ pub(crate) fn tie_break(own: &[u8; 16], incoming: &[u8; 16]) -> TieBreak {
 pub(crate) struct Admission {
     attempts: VecDeque<u64>,
     admitted: VecDeque<u64>,
-    back_off: Vec<(Vec<u8>, u64)>,
+    failures: Vec<Failures>,
+}
+
+/// The failed attempts with one address, kept until 1 h after its back-off ends.
+#[derive(Debug)]
+struct Failures {
+    address: Vec<u8>,
+    transport: u32,
+    refusals: u8,
+    until_ms: u64,
 }
 
 impl Admission {
@@ -45,14 +56,22 @@ impl Admission {
         while self.admitted.front().is_some_and(expired) {
             self.admitted.pop_front();
         }
-        self.back_off.retain(|&(_, until)| until > now_ms);
+        self.forget(now_ms);
         self.attempts.len() < MAX_ATTEMPTS_PER_HOUR
             && self.admitted.len() < MAX_ADMITTED_PER_HOUR
             && neighbours < MAX_NEIGHBOURS
-            && !self
-                .back_off
-                .iter()
-                .any(|(backed_off, _)| backed_off == address)
+            && !self.backed_off(now_ms, address)
+    }
+
+    fn backed_off(&self, now_ms: u64, address: &[u8]) -> bool {
+        self.failures
+            .iter()
+            .any(|failures| failures.address == address && failures.until_ms > now_ms)
+    }
+
+    fn forget(&mut self, now_ms: u64) {
+        self.failures
+            .retain(|failures| now_ms.saturating_sub(failures.until_ms) < HOUR_MS);
     }
 
     pub(crate) fn record_attempt(&mut self, now_ms: u64) {
@@ -70,11 +89,57 @@ impl Admission {
         self.admitted.push_back(now_ms);
     }
 
-    /// Refuses `address` for one hour after a failed or refused attempt.
-    pub(crate) fn back_off(&mut self, now_ms: u64, address: &[u8]) {
-        self.back_off
-            .retain(|(backed_off, _)| backed_off != address);
-        self.back_off.push((address.into(), now_ms + HOUR_MS));
+    /// A link drop or deadline: 2 min after the first, doubling up to 1 h.
+    pub(crate) fn transport_failure(&mut self, now_ms: u64, address: &[u8]) {
+        let failures = self.failures_of(now_ms, address);
+        failures.transport += 1;
+        let back_off = BASE_BACK_OFF_MS << (failures.transport - 1).min(5);
+        failures.until_ms = failures.until_ms.max(now_ms + back_off.min(HOUR_MS));
+    }
+
+    /// A malformed or invalid frame or value refuses `address` for 1 h.
+    pub(crate) fn protocol_failure(&mut self, now_ms: u64, address: &[u8]) {
+        self.failures_of(now_ms, address).until_ms = now_ms + HOUR_MS;
+    }
+
+    /// A non-matching read that the limits refused; the third refuses
+    /// `address` for 1 h (spec §10.4). Refusals while backed off don't count.
+    pub(crate) fn refused(&mut self, now_ms: u64, address: &[u8]) {
+        if self.backed_off(now_ms, address) {
+            return;
+        }
+        let failures = self.failures_of(now_ms, address);
+        failures.refusals += 1;
+        if failures.refusals == 3 {
+            failures.refusals = 0;
+            failures.until_ms = now_ms + HOUR_MS;
+        }
+    }
+
+    /// A completed pairing forgets the failures with `address`.
+    pub(crate) fn paired(&mut self, address: &[u8]) {
+        self.failures.retain(|failures| failures.address != address);
+    }
+
+    fn failures_of(&mut self, now_ms: u64, address: &[u8]) -> &mut Failures {
+        self.forget(now_ms);
+        let index = match self
+            .failures
+            .iter()
+            .position(|failures| failures.address == address)
+        {
+            Some(index) => index,
+            None => {
+                self.failures.push(Failures {
+                    address: address.into(),
+                    transport: 0,
+                    refusals: 0,
+                    until_ms: now_ms,
+                });
+                self.failures.len() - 1
+            }
+        };
+        &mut self.failures[index]
     }
 }
 
@@ -168,9 +233,9 @@ mod tests {
     }
 
     #[test]
-    fn a_backed_off_address_waits_one_hour_and_others_do_not() {
+    fn a_protocol_failure_backs_off_one_hour_and_others_do_not() {
         let mut admission = Admission::default();
-        admission.back_off(1_000, ADDRESS);
+        admission.protocol_failure(1_000, ADDRESS);
 
         let decisions = [
             admission.allows(1_000 + HOUR_MS - 1, 0, ADDRESS),
@@ -179,5 +244,94 @@ mod tests {
         ];
 
         assert_eq!(decisions, [false, true, true]);
+    }
+
+    #[test]
+    fn transport_failures_back_off_two_minutes_doubling_up_to_one_hour() {
+        let mut admission = Admission::default();
+        let mut now = 0;
+        let mut waits = Vec::new();
+
+        for _ in 0..7 {
+            admission.transport_failure(now, ADDRESS);
+            let start = now;
+            while !admission.allows(now, 0, ADDRESS) {
+                now += 1_000;
+            }
+            waits.push((now - start) / 60_000);
+        }
+
+        assert_eq!(waits, [2, 4, 8, 16, 32, 60, 60]);
+    }
+
+    #[test]
+    fn transport_failures_are_forgotten_one_hour_after_the_back_off_ends() {
+        let mut admission = Admission::default();
+        let later = BASE_BACK_OFF_MS + HOUR_MS;
+        admission.transport_failure(0, ADDRESS);
+        admission.transport_failure(0, b"addr-2");
+        admission.transport_failure(BASE_BACK_OFF_MS, b"addr-2");
+
+        admission.transport_failure(later, ADDRESS);
+        admission.transport_failure(later, b"addr-2");
+
+        let decisions = [
+            admission.allows(later + BASE_BACK_OFF_MS, 0, ADDRESS),
+            admission.allows(later + BASE_BACK_OFF_MS, 0, b"addr-2"),
+        ];
+
+        assert_eq!(decisions, [true, false]);
+    }
+
+    #[test]
+    fn a_successful_pairing_resets_the_transport_failures() {
+        let mut admission = Admission::default();
+        admission.transport_failure(0, ADDRESS);
+        admission.transport_failure(0, ADDRESS);
+
+        admission.paired(ADDRESS);
+        admission.transport_failure(0, ADDRESS);
+
+        assert!(admission.allows(BASE_BACK_OFF_MS, 0, ADDRESS));
+    }
+
+    #[test]
+    fn a_transport_failure_does_not_shorten_a_protocol_back_off() {
+        let mut admission = Admission::default();
+        admission.protocol_failure(0, ADDRESS);
+
+        admission.transport_failure(0, ADDRESS);
+
+        assert!(!admission.allows(HOUR_MS - 1, 0, ADDRESS));
+    }
+
+    #[test]
+    fn three_refusals_back_off_one_hour() {
+        let mut admission = Admission::default();
+        admission.refused(0, ADDRESS);
+        admission.refused(0, ADDRESS);
+        let after_two = admission.allows(0, 0, ADDRESS);
+
+        admission.refused(1_000, ADDRESS);
+
+        let decisions = [
+            admission.allows(1_000 + HOUR_MS - 1, 0, ADDRESS),
+            admission.allows(1_000 + HOUR_MS, 0, ADDRESS),
+        ];
+        assert!(after_two);
+        assert_eq!(decisions, [false, true]);
+    }
+
+    #[test]
+    fn refusals_while_backed_off_do_not_count() {
+        let mut admission = Admission::default();
+        admission.transport_failure(0, ADDRESS);
+
+        for _ in 0..3 {
+            admission.refused(0, ADDRESS);
+        }
+        admission.refused(BASE_BACK_OFF_MS, ADDRESS);
+
+        assert!(admission.allows(BASE_BACK_OFF_MS, 0, ADDRESS));
     }
 }

@@ -85,3 +85,6 @@ This is the first version. These parameters are policy inside the core and SDK; 
 
 2026-10-24, from the S2 device demonstration ([issue 50](../../.scratch/cairn-r1/issues/50-simultaneous-dial-backoff.md), OI-28):
 - **Dial timing.** The first dial to an address waits a random 0–3 s after the address is first seen. A dial that fails before the link comes up is retried after a random 1–5 s, then 5–15 s; a third failure, or a dial that linked, waits 2 min. Two phones that dialled each other at once otherwise retried in step every 2 min and collided again. The retries add at most two dials per address per 2 min, and only after a dial failed.
+
+2026-10-25, from the fleet pairing plateau ([issue 53](../../.scratch/cairn-r1/issues/53-fleet-pairing-plateau.md), OI-30):
+- **Non-matching reads.** The 1 h back-off after 3 non-matching reads counts only reads that the admission limits refused (spec §10.4). A read refused because the address is already backed off doesn't count, so it can't turn a short [ADR 0021](0021-automatic-neighbour-admission.md) back-off into an hour.

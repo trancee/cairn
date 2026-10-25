@@ -878,3 +878,123 @@ fn busy_with_a_body_fails_the_pairing_and_backs_off_the_address() {
     assert!(malformed.contains(&Action::Disconnect { link: LinkId(1) }));
     assert!(sent(&retry).is_empty());
 }
+
+/// Dials `link` as central at `mono_ms` and reads a stranger's beacon; returns
+/// whether P0 was sent and the latest pre-auth deadline.
+fn dial(core: &mut Core<Seeded>, link: LinkId, mono_ms: u64) -> (bool, Option<TimerId>) {
+    let clock = Clock { mono_ms, ..START };
+    let mut actions = core
+        .handle(clock, link_up(link, GattRole::Central, 185))
+        .unwrap();
+    actions.extend(
+        core.handle(
+            clock,
+            Event::BeaconRead {
+                link,
+                beacon: STRANGER_BEACON.to_vec(),
+            },
+        )
+        .unwrap(),
+    );
+    let deadline = actions.iter().rev().find_map(|action| match action {
+        Action::SetTimer { timer, .. } => Some(*timer),
+        _ => None,
+    });
+    (!sent(&actions).is_empty(), deadline)
+}
+
+const MINUTE: u64 = 60_000;
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn transport_failures_back_off_the_address_two_minutes_then_four() {
+    Seeded::seed(43);
+    let mut core = restored(START);
+    let t0 = START.mono_ms;
+    let at = |mono_ms| Clock { mono_ms, ..START };
+
+    let (first, _) = dial(&mut core, LinkId(1), t0);
+    core.handle(at(t0), Event::LinkDown { link: LinkId(1) })
+        .unwrap();
+    let (early, _) = dial(&mut core, LinkId(2), t0 + 2 * MINUTE - 1);
+    let (second, deadline) = dial(&mut core, LinkId(3), t0 + 2 * MINUTE);
+    let t1 = t0 + 2 * MINUTE + 5_000;
+    core.handle(
+        at(t1),
+        Event::TimerFired {
+            timer: deadline.unwrap(),
+        },
+    )
+    .unwrap();
+    let (before_four, _) = dial(&mut core, LinkId(4), t1 + 4 * MINUTE - 1);
+    let (after_four, _) = dial(&mut core, LinkId(5), t1 + 4 * MINUTE);
+
+    assert_eq!(
+        [first, early, second, before_four, after_four],
+        [true, false, true, false, true],
+        "refused dials do not extend the back-off"
+    );
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn a_protocol_failure_backs_off_the_address_for_one_hour() {
+    Seeded::seed(44);
+    let mut core = restored(START);
+    let t0 = START.mono_ms;
+    dial(&mut core, LinkId(1), t0);
+    core.handle(
+        START,
+        Event::Received {
+            link: LinkId(1),
+            fragment: vec![0x05, 0],
+        },
+    )
+    .unwrap();
+
+    let (after_two_minutes, _) = dial(&mut core, LinkId(2), t0 + 2 * MINUTE);
+    let (before_an_hour, _) = dial(&mut core, LinkId(3), t0 + 60 * MINUTE - 1);
+    let (after_an_hour, _) = dial(&mut core, LinkId(4), t0 + 60 * MINUTE);
+
+    assert_eq!(
+        [after_two_minutes, before_an_hour, after_an_hour],
+        [false, false, true]
+    );
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn three_dials_refused_by_the_limits_back_off_the_address_for_one_hour() {
+    Seeded::seed(45);
+    let mut core = restored(START);
+    let t0 = START.mono_ms;
+    for n in 0..30 {
+        let link = LinkId(100 + n);
+        core.handle(
+            START,
+            Event::LinkUp {
+                link,
+                gatt_role: GattRole::Central,
+                mtu: 185,
+                address: vec![n as u8],
+            },
+        )
+        .unwrap();
+        core.handle(
+            START,
+            Event::BeaconRead {
+                link,
+                beacon: STRANGER_BEACON.to_vec(),
+            },
+        )
+        .unwrap();
+        core.handle(START, Event::LinkDown { link }).unwrap();
+    }
+
+    let refused = [0, 2, 4].map(|minute| dial(&mut core, LinkId(minute), t0 + minute * MINUTE).0);
+    let (budget_free, _) = dial(&mut core, LinkId(60), t0 + 60 * MINUTE);
+    let (backed_off_ended, _) = dial(&mut core, LinkId(64), t0 + 64 * MINUTE);
+
+    assert_eq!(refused, [false; 3]);
+    assert_eq!([budget_free, backed_off_ended], [false, true]);
+}

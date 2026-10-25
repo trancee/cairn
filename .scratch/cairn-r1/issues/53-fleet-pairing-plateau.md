@@ -92,14 +92,75 @@ type 3). This is stricter than the 22 quoted for fleet3 above.
   didn't show it, so its cause is unknown. The radio now follows adapter
   state; see ADR 0023 §3.
 
+## Back-off refusals (2026-10-25)
+
+Classifying every central link by what it sent corrects the fleet3 finding
+that admission is not a main limiter. A link that closed within 2 s of
+link-up, sent nothing, and had no pairing of its own in flight was refused
+by admission:
+
+| Run | P0 sent | closed, own pairing in flight | refused | Resume |
+|---|---|---|---|---|
+| fleet3 | 36 | 16 | 10 | 2 |
+| fleet4 | 43 | 10 | 14 | 2 |
+
+The budgets were far from used up (at most 43 attempts across 12 phones),
+so the refusals were the per-address back-off. In fleet4, 20 pairing
+attempts failed and none failed a protocol check: 11 reached the 5 s
+deadline without a reply, 7 lost the link after 0.1–4.4 s, and 2 timed out
+after step 3. Each backed off its address for 1 h, and each refused dial
+re-armed the hour.
+
+Fixed by spec OI-30 (user's choice, option A): transport failures back off
+2 min, doubling up to 1 h; protocol failures keep 1 h; a refused dial
+doesn't re-arm a back-off. A new fleet run should confirm that the plateau
+lifts.
+
+## Fleet5 and A/B with OI-30 (2026-10-25)
+
+All 22 reachable phones were tried. Six took part in none of the runs:
+- Pixel 6, Nothing Phone 2, Nokia X20, Redmi Note 11 (`884d596`) and
+  OnePlus 6 are on a secure lock screen; the activity never resumes.
+- Galaxy Xcover 4 (`armeabi-v7a`, API 28) crashes at start:
+  `libcairn_ffi.so` is packaged only for `arm64-v8a`, although ADR 0004
+  lists `armeabi-v7a`.
+
+Two more Redmi phones can't be prepared: MIUI refuses `pm grant` and input
+injection until "USB debugging (security settings)" is enabled. Note that
+`pm clear` also revokes runtime permissions, so each run grants them again.
+
+Interleaved A/B on the same 14 phones, 300 s each, `main` (`b6f3779`, 1 h
+back-off) against PR #58 (OI-30). 12–13 phones logged links; the Huawei
+P30 lite never linked, the OnePlus Nord 2T only once.
+
+| | main | PR #58 |
+|---|---|---|
+| Phone pairs with a session | 26 | 24 |
+| … by 60 / 120 / 180 s | 20 / 22 / 25 | 15 / 20 / 23 |
+| Possible pairs never reached by a matched P0 | 34 of 66 | 36 of 66 |
+| Pairs with a failed attempt / paired later | 2 / 0 | 5 / 3 |
+| Central links refused (no pairing in flight) | 19 | 13 |
+| Failed dials (hung ≥ 29 s) | 468 (80) | 466 (93) |
+
+- The pair count is within run-to-run variance (fleet3 and fleet4, one
+  build, gave 16 and 29). OI-30 is not what limits it.
+- The plateau is reaching the peer at all: about half of all phone pairs
+  never exchange a P0, against about 470 failed dials per run, mostly
+  `CONNECTING` status `0x85`. The back-off only affects the 2–7 pairs per
+  run whose attempt failed after P0; with OI-30, 3 of 5 paired later.
+- The address back-off is weaker than assumed even on `main`: in fleet4,
+  6 of 10 pairs with a failed attempt paired later, some within 5 s. The
+  other phone can dial in the opposite role, and Android rotates the
+  advertising address.
+- On the Huawei P10 lite (Android 8) `com.android.bluetooth` crashed once
+  with SIGSEGV in `bta_gattc_char_dscpt_disc_cmplt` during service
+  discovery: a platform stack fault, not the app.
+
 ## Open
 
-1. **Plateau.** Separate the causes:
-   - failed dials;
-   - the 2 min attempt interval per address;
-   - the 1 h back-off after a timed-out pairing.
-
-   Logging back-off decisions from the core would show which applies.
+1. **Plateau.** It is the failed dials (`0x85`, 30 s hung connects), not
+   admission. Next: per phone pair, which dials fail (the dial line carries
+   an address prefix), and whether fewer concurrent dials per phone help.
 2. **Unanswered frames.** Was the notification lost over the air, or did the
    central stall? Needs an HCI snoop on one affected pair. The `out` trace
    is logged when the fragment is queued, so `onNotificationSent` timing
@@ -107,3 +168,5 @@ type 3). This is stricter than the 22 quoted for fleet3 above.
 3. **Unmatched P0s.** Resolved: fleet4 has none with the GX6 visible.
 4. **P10 lite.** Find out why it never links as central: 11 hung connects
    and 24 status 0x85 failures.
+5. **`armeabi-v7a`.** Package the 32-bit library as ADR 0004 says, or
+   amend the ADR.

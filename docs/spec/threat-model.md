@@ -81,7 +81,7 @@ QR and SAS pairing are retired (ADR 0021). Every neighbour is admitted by TOFU a
 - Before authentication, an attacker can make the device do at most one MAC per S1. No asymmetric operation happens before the MAC check.
 - Rate limits apply per pseudonym, per remote address and globally.
 - A connection that has not authenticated within 5 s is dropped. ADR 0003's pre-auth frame limits apply.
-- Pairing is automatic but bounded (spec §5.6): one pairing in flight, at most 30 attempts and 10 admissions per rolling hour, at most 256 neighbours, and a 1 h back-off per failed address. An attacker can use up the hourly budget and delay legitimate admissions.
+- Pairing is automatic but bounded (spec §5.6): one pairing in flight, at most 30 attempts and 10 admissions per rolling hour, at most 256 neighbours, and a back-off per failed address (2 min after a transport failure, doubling up to 1 h; 1 h after a protocol failure). Dropping frames makes a peer retry sooner, but every retry still counts against the 30 attempts. An attacker can use up the hourly budget and delay legitimate admissions.
 - Any neighbour can send messages to the user; admission limits bound how many neighbours exist, not what they send.
 
 ## 6. Non-goals (explicitly not claimed)
