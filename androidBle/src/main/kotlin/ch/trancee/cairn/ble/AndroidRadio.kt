@@ -71,6 +71,20 @@ class AndroidRadio(
     private val dials = HashMap<String, Dial>()
     private val upAt = HashMap<ULong, Long>()
 
+    /** Devices connected to the GATT server, subscribed or not; each holds a slot (ADR 0025). */
+    private val serverConnected = HashSet<String>()
+
+    /** ADR 0025: the AOSP link-record minimum, 7 before API 35 and 8 from it, less 2. */
+    private val maxSlots = if (Build.VERSION.SDK_INT >= 35) 6 else 5
+
+    /** ADR 0025: stacks up to API 28 run one LE connect at a time. */
+    private val maxDialsInFlight = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) 1 else 2
+
+    // Android allocates one link record per remote address, whichever role opened it.
+    private fun slotsInUse(): Int = (centrals.keys + peripherals.keys + serverConnected).size
+
+    private fun dialsInFlight(): Int = centrals.values.count { !it.isUp }
+
     /**
      * Opens the GATT server, advertises and scans, and from then on follows Bluetooth turning off
      * and on (see [availability]) until [stop]. Returns false, and starts nothing yet, when
@@ -150,6 +164,7 @@ class AndroidRadio(
         advertiser = null
         server = null
         serverMtus.clear()
+        serverConnected.clear()
     }
 
     private var following = false
@@ -186,6 +201,7 @@ class AndroidRadio(
         val address = device.address
         if (address in centrals || address in peripherals) return
         if (beacon != null && compareUnsigned(advertised, beacon) > 0) return
+        if (dialsInFlight() >= maxDialsInFlight || slotsInUse() >= maxSlots) return
         val now = SystemClock.elapsedRealtime()
         val dial = dials.getOrPut(address) { Dial(now + random.nextLong(0, FIRST_DIAL_SPREAD_MS + 1)) }
         if (now < dial.notBefore) return
@@ -264,6 +280,7 @@ class AndroidRadio(
         Link {
         lateinit var gatt: BluetoothGatt
         private var stage = Stage.CONNECTING
+        val isUp get() = stage == Stage.UP
         private var mtu = GattProfile.DEFAULT_MTU
         private var link = 0uL
         private lateinit var rx: BluetoothGattCharacteristic
@@ -441,7 +458,10 @@ class AndroidRadio(
         }
 
         override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) = post {
-            if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+            if (newState == BluetoothProfile.STATE_CONNECTED) {
+                serverConnected += device.address
+            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                serverConnected -= device.address
                 serverMtus.remove(device.address)
                 peripherals.remove(device.address)?.let { down(it.link) }
             }
