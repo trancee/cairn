@@ -61,8 +61,18 @@ The Android radio picks an energy band from the battery (spec §10.4):
 ## Consequences
 
 - A phone on a charger, or above 50 %, behaves as today.
-- In `SAVE` and `LOW`, discovery slows as measured in ADR 0026, and in
-  `LOW` the phone keeps at most 3 links.
+- In `LOW` the phone keeps at most 3 links.
+- A fleet run (15 phones × 300 s, every phone in the same band) measured:
+
+  | Band | Pairs at 300 s | Bluetooth Rx | Bluetooth drain |
+  |---|---:|---:|---:|
+  | `FULL` | 47 | 305 s | 1.96 mAh |
+  | `SAVE` | 47 | 103 s | 0.88 mAh |
+  | `LOW` | 27 | 64 s | 0.55 mAh |
+
+  `SAVE` costs no pairs and saves 55 % of Bluetooth energy; `LOW` saves
+  72 % and pairs 40 % fewer phones. Energy is the median of the 4 phones
+  whose controllers report it. Issue 53 has the details.
 - The fleet phones are on chargers, so they stay `FULL`. A fleet run can
   force a band with `adb shell dumpsys battery unplug` and
   `dumpsys battery set level`, and reset it with `dumpsys battery reset`.

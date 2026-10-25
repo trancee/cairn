@@ -228,6 +228,38 @@ in a back-to-back A/B against `main`, 15 phones × 300 s:
 - `main` paired 45, 47 and 49 times in three runs of the same code: the
   spread between runs is a few pairs.
 
+## Energy bands (plan D, 2026-10-25)
+
+ADR 0027 (PR #63) was run on 15 phones × 300 s per band. Each band was forced
+on every phone with `dumpsys battery unplug` and `dumpsys battery set level`
+(90, 40 and 10 %):
+
+| Band | Pairs at 240 s | Pairs at 300 s | Failed dials | Timeouts | Links up |
+|---|---:|---:|---:|---:|---:|
+| `FULL` | 42 | 47 | 229 | 64 | 215 |
+| `SAVE` | 41 | 47 | 195 | 61 | 167 |
+| `LOW` | 23 | 27 | 59 | 34 | 91 |
+
+Bluetooth controller use (`dumpsys batterystats`, median of the 4 phones that
+report it: `1f1dad34`, `R5CT83AC`, `ZY22GCD9`, `e9097611`):
+
+| Band | Rx time | Tx time | Bluetooth drain |
+|---|---:|---:|---:|
+| `FULL` | 305 s | 71 s | 1.96 mAh |
+| `SAVE` | 103 s | 54 s | 0.88 mAh |
+| `LOW` | 64 s | 40 s | 0.55 mAh |
+
+- `FULL` matches `main` (45, 47 and 49 pairs).
+- `SAVE` paired as fast as `FULL` and used 55 % less Bluetooth energy.
+- `LOW` paired 40 % fewer phones and used 72 % less. It trades reach for
+  battery, as ADR 0027 intends.
+- The L2N phone (Huawei) showed its low-battery warning at 10 %, and its
+  logcat main buffer kept only the last 6 s of the `LOW` run. Its 0 pairs
+  there are a logging gap; the `LOW` row counts 14 phones.
+- `42c2cf` reported 83 mAh in `FULL`, which is a `batterystats` artefact,
+  and the other phones report no controller energy.
+- Every phone was in the same band at once. A real crowd mixes bands.
+
 ## Open
 
 1. **Plateau.** Slot exhaustion resolved by ADR 0025 (36 to 49 pairs). Still
