@@ -73,8 +73,13 @@ The Android radio advertises extended where the controller supports it
   lower. Both dials may race, as OI-28 allows.
 - The advert payload and every frame stay the same. Only the PDU type on
   air changes.
-- The effect on failed dials and pairs is measured by an A/B fleet run
-  against `main`.
+- Measured in a fleet A/B against `main` (13 phones, two 300 s runs each,
+  [issue 53](../../.scratch/cairn-r1/issues/53-fleet-pairing-plateau.md)):
+  failed dials under 1.5 s fell from 159 and 150 to 27 and 21, all failed
+  dials by 31 %, and pairs rose from 36 and 40 to 38 and 45, within the
+  run-to-run spread. Dial timeouts rose from 52 and 11 to 108 and 91: a
+  pending connection to an extended target that stopped advertising or
+  changed address is now cancelled at 10 s instead of failing fast.
 
 ## Considered options
 

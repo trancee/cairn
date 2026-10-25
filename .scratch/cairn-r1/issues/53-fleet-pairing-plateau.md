@@ -260,6 +260,32 @@ report it: `1f1dad34`, `R5CT83AC`, `ZY22GCD9`, `e9097611`):
   and the other phones report no controller energy.
 - Every phone was in the same band at once. A real crowd mixes bands.
 
+## Extended advertising A/B (ADR 0028, 2026-10-25)
+
+Four 300 s runs in the order `main`, `ext`, `ext`, `main`, all phones forced
+to band `FULL` (`dumpsys battery set ac 1`, `set level 100`). 23 phones
+were attached. Three Xiaomi phones refuse adb installs (MIUI "Install via
+USB"), and five wireless-adb phones logged no scan results after the first
+run (the lock screen, most likely), so the 13 phones that linked in all
+four runs are compared. Of those, 3 advertise legacy (Xcover 4, Mi Note 3,
+P30 lite); none fell back from a failed set.
+
+| 13 phones | `main` 1 | `ext` 1 | `ext` 2 | `main` 2 |
+|---|---:|---:|---:|---:|
+| Pairs at 300 s | 36 | 38 | 45 | 40 |
+| Pairs at 120 s | 27 | 32 | 29 | 31 |
+| Failed dials < 1.5 s (`0x3E`) | 159 | 27 | 21 | 150 |
+| Failed dials 1.5–9 s | 19 | 28 | 14 | 32 |
+| Dial timeouts (10 s) | 52 | 108 | 91 | 11 |
+| All failed dials | 230 | 163 | 126 | 193 |
+
+- Fast failures fell 85 %: the `CONNECT_IND` loss of the HCI snoop is gone.
+- Timeouts rose: with an extended target, the controller keeps the create
+  connection pending until a request is answered, and a target that stopped
+  advertising (slots full) or changed address answers none. That is the
+  failure class fix B (dial freshness) addresses.
+- Pairs rose 9 % (41.5 against 38), inside the run-to-run spread.
+
 ## Open
 
 1. **Plateau.** Slot exhaustion resolved by ADR 0025 (36 to 49 pairs). Still
