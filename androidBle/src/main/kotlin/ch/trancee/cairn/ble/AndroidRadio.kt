@@ -59,6 +59,7 @@ class AndroidRadio(
     private val links = HashMap<ULong, Link>()
     private val serverMtus = HashMap<String, Int>()
     private val dials = HashMap<String, Dial>()
+    private val upAt = HashMap<ULong, Long>()
 
     /**
      * Opens the GATT server, advertises and scans. Returns false, and starts nothing, when
@@ -98,7 +99,12 @@ class AndroidRadio(
 
     // Posted, because the driver calls these while it dispatches, possibly before linkUp returned the id.
     override fun send(link: ULong, fragment: ByteArray) {
-        handler.post { links[link]?.send(fragment) }
+        handler.post {
+            links[link]?.let {
+                trace(link, "out", fragment)
+                it.send(fragment)
+            }
+        }
     }
 
     override fun disconnect(link: ULong) {
@@ -125,6 +131,34 @@ class AndroidRadio(
     }
 
     private val advertiseCallback = object : AdvertiseCallback() {}
+
+    // The trace times pairing and Resume on devices (spec §4.4): link up, each fragment's header
+    // byte (frame type and step, §4.2) and size, and link down, in ms since link up.
+    private fun up(role: GattRole, mtu: Int, address: String): ULong {
+        val link = listener.linkUp(role, mtu.toUShort(), address.encodeToByteArray())
+        upAt[link] = SystemClock.elapsedRealtime()
+        Log.d(TAG, "link $link up $role mtu $mtu")
+        return link
+    }
+
+    private fun since(link: ULong) = SystemClock.elapsedRealtime() - upAt.getValue(link)
+
+    private fun trace(link: ULong, direction: String, fragment: ByteArray) {
+        val header = fragment.copyOf(minOf(1, fragment.size)).joinToString("") { "%02x".format(it) }
+        Log.d(TAG, "link $link $direction 0x$header ${fragment.size} B at ${since(link)} ms")
+    }
+
+    private fun received(link: ULong, fragment: ByteArray) {
+        trace(link, "in", fragment)
+        listener.received(link, fragment)
+    }
+
+    private fun down(link: ULong) {
+        Log.d(TAG, "link $link down at ${since(link)} ms")
+        upAt.remove(link)
+        links.remove(link)
+        listener.linkDown(link)
+    }
 
     /**
      * When the central may next dial one address (spec §10.4). A dial that fails before link-up is
@@ -212,7 +246,7 @@ class AndroidRadio(
             } else {
                 stage = Stage.UP
                 dial.linked()
-                link = listener.linkUp(GattRole.CENTRAL, mtu.toUShort(), address.encodeToByteArray())
+                link = up(GattRole.CENTRAL, mtu, address)
                 links[link] = this
                 reading = true
                 if (!gatt.readCharacteristic(beacon)) close()
@@ -257,7 +291,7 @@ class AndroidRadio(
         ) = post { notified(value) }
 
         private fun notified(value: ByteArray) {
-            if (stage == Stage.UP) listener.received(link, value)
+            if (stage == Stage.UP) received(link, value)
         }
 
         override fun onCharacteristicWrite(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) =
@@ -277,8 +311,7 @@ class AndroidRadio(
             gatt.disconnect()
             gatt.close()
             if (stage == Stage.UP) {
-                links.remove(link)
-                listener.linkDown(link)
+                down(link)
             } else {
                 val now = SystemClock.elapsedRealtime()
                 val delay = dial.failed(now)
@@ -307,8 +340,7 @@ class AndroidRadio(
         override fun close() {
             server.cancelConnection(device)
             peripherals.remove(device.address)
-            links.remove(link)
-            listener.linkDown(link)
+            down(link)
         }
     }
 
@@ -322,10 +354,7 @@ class AndroidRadio(
         override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) = post {
             if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 serverMtus.remove(device.address)
-                peripherals.remove(device.address)?.let {
-                    links.remove(it.link)
-                    listener.linkDown(it.link)
-                }
+                peripherals.remove(device.address)?.let { down(it.link) }
             }
         }
 
@@ -360,7 +389,7 @@ class AndroidRadio(
             val peripheral = peripherals[device.address]
             val accepted = peripheral != null && characteristic.uuid == GattProfile.RX && !preparedWrite
             if (responseNeeded) server.respond(device, requestId, accepted)
-            if (accepted) listener.received(peripheral.link, value)
+            if (accepted) received(peripheral.link, value)
         }
 
         override fun onDescriptorWriteRequest(
@@ -378,7 +407,7 @@ class AndroidRadio(
             val enable = value.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
             if (accepted && enable && address !in peripherals) {
                 val mtu = serverMtus[address] ?: GattProfile.DEFAULT_MTU
-                val link = listener.linkUp(GattRole.PERIPHERAL, mtu.toUShort(), address.encodeToByteArray())
+                val link = up(GattRole.PERIPHERAL, mtu, address)
                 val peripheral = Peripheral(device, server, serverTx!!, link)
                 peripherals[address] = peripheral
                 links[link] = peripheral

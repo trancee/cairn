@@ -114,6 +114,11 @@ The platform-neutral `LinkDriver` in `:sdk` `commonMain` sits between
 - **API 33.** On API 33+ the radio uses the value-taking write and notify
   calls and the value-bearing read and notification callbacks; below, the
   deprecated ones.
+- **Link trace.** At debug level under `CairnRadio`, the radio logs each
+  link's `up` (role and MTU), every fragment `in` and `out` (header byte,
+  size and milliseconds since `up`), and `down`. It logs no addresses and no
+  payload bytes. An `out` is logged when the fragment is queued, not when it
+  goes over the air.
 - **Permissions.** On API 31+, `BLUETOOTH_SCAN` with `neverForLocation`,
   `BLUETOOTH_CONNECT` and `BLUETOOTH_ADVERTISE`. On API 26–30, `BLUETOOTH`,
   `BLUETOOTH_ADMIN` and `ACCESS_FINE_LOCATION`, capped at `maxSdkVersion 30`.
