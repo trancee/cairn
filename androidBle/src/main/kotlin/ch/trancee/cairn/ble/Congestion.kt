@@ -1,14 +1,17 @@
 package ch.trancee.cairn.ble
 
 /**
- * The congestion level of spec §10.4 (ADR 0026), from advert density and dial failure rate.
- * Times are monotonic milliseconds, given in non-decreasing order.
+ * The crowd and channel levels of spec §10.4 (ADR 0026): the crowd from advert density, the
+ * channel from the dial failure rate. Times are monotonic milliseconds, in non-decreasing order.
  */
 internal class Congestion {
     enum class Level { CLEAR, BUSY, CROWDED }
 
-    var level = Level.CLEAR
-        private set
+    private val crowdLevel = Hysteresis()
+    private val channelLevel = Hysteresis()
+
+    val crowd get() = crowdLevel.level
+    val channel get() = channelLevel.level
 
     /** Distinct addresses seen in the last [DENSITY_WINDOW_MS] at the last evaluation. */
     var density = 0
@@ -22,10 +25,8 @@ internal class Congestion {
 
     private val sightings = LinkedHashMap<String, Long>()
     private val outcomes = ArrayDeque<Pair<Long, Boolean>>()
-    private var lowerSince: Long? = null
 
     fun sighted(address: String, at: Long) {
-        sightings.remove(address)
         sightings[address] = at
     }
 
@@ -33,34 +34,50 @@ internal class Congestion {
         outcomes.addLast(at to failed)
     }
 
-    fun evaluate(now: Long): Level {
+    fun evaluate(now: Long) {
         sightings.values.removeAll { it < now - DENSITY_WINDOW_MS }
         while (outcomes.firstOrNull()?.let { it.first < now - FAILURE_WINDOW_MS } == true) outcomes.removeFirst()
         density = sightings.size
         ended = outcomes.size
         failed = outcomes.count { it.second }
-        val target = target()
-        val since = lowerSince
-        when {
-            target >= level -> {
-                level = target
-                lowerSince = null
-            }
-            since == null -> lowerSince = now
-            now - since >= FALL_AFTER_MS -> {
-                level = Level.entries[level.ordinal - 1]
-                lowerSince = now
-            }
-        }
-        return level
+        crowdLevel.step(
+            when {
+                density >= CROWDED_DENSITY -> Level.CROWDED
+                density >= BUSY_DENSITY -> Level.BUSY
+                else -> Level.CLEAR
+            },
+            now,
+        )
+        val counted = ended >= MIN_OUTCOMES
+        channelLevel.step(
+            when {
+                counted && failed * 2 >= ended -> Level.CROWDED
+                counted && failed * 4 >= ended -> Level.BUSY
+                else -> Level.CLEAR
+            },
+            now,
+        )
     }
 
-    private fun target(): Level {
-        val counted = ended >= MIN_OUTCOMES
-        return when {
-            density >= CROWDED_DENSITY || counted && failed * 2 >= ended -> Level.CROWDED
-            density >= BUSY_DENSITY || counted && failed * 4 >= ended -> Level.BUSY
-            else -> Level.CLEAR
+    /** Rises at once; falls one level after a lower target held for [FALL_AFTER_MS]. */
+    private class Hysteresis {
+        var level = Level.CLEAR
+            private set
+        private var lowerSince: Long? = null
+
+        fun step(target: Level, now: Long) {
+            val since = lowerSince
+            when {
+                target >= level -> {
+                    level = target
+                    lowerSince = null
+                }
+                since == null -> lowerSince = now
+                now - since >= FALL_AFTER_MS -> {
+                    level = Level.entries[level.ordinal - 1]
+                    lowerSince = now
+                }
+            }
         }
     }
 

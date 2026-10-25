@@ -133,7 +133,7 @@ class AndroidRadio(
         this.server = server
         this.advertiser = advertiser
         budget()
-        scan(scanner, congestion.level.scanMode)
+        scan(scanner, congestion.channel.scanMode)
         this.scanner = scanner
         evaluate(advertiser)
         return true
@@ -149,10 +149,17 @@ class AndroidRadio(
     private fun evaluate(advertiser: BluetoothLeAdvertiser) {
         handler.postAtTime(
             {
-                val before = congestion.level
-                val level = congestion.evaluate(SystemClock.elapsedRealtime())
-                if (level != before) {
-                    Log.i(TAG, "congestion $level density ${congestion.density} failures ${congestion.failed}/${congestion.ended}")
+                val crowd = congestion.crowd
+                val channel = congestion.channel
+                congestion.evaluate(SystemClock.elapsedRealtime())
+                if (crowd != congestion.crowd || channel != congestion.channel) {
+                    Log.i(
+                        TAG,
+                        "congestion crowd ${congestion.crowd} channel ${congestion.channel} " +
+                            "density ${congestion.density} failures ${congestion.failed}/${congestion.ended}",
+                    )
+                }
+                if (channel != congestion.channel) {
                     rescan()
                     if (advertising) {
                         advertiser.stopAdvertising(advertiseCallback)
@@ -167,13 +174,13 @@ class AndroidRadio(
     }
 
     /**
-     * Restarts the scan when its mode should change: the level's, or `LOW_POWER` while every slot
+     * Restarts the scan when its mode should change: the channel level's, or `LOW_POWER` while every slot
      * is in use. Android allows 5 scan starts per 30 s, so a restart waits [SCAN_RESTART_INTERVAL_MS].
      */
     private fun rescan() {
         val scanner = scanner ?: return
         handler.removeCallbacksAndMessages(rescanning)
-        val mode = if (slotsInUse() >= maxSlots) ScanSettings.SCAN_MODE_LOW_POWER else congestion.level.scanMode
+        val mode = if (slotsInUse() >= maxSlots) ScanSettings.SCAN_MODE_LOW_POWER else congestion.channel.scanMode
         if (mode == scanMode) return
         val wait = scanStartedAt + SCAN_RESTART_INTERVAL_MS - SystemClock.elapsedRealtime()
         if (wait > 0) {
@@ -211,7 +218,7 @@ class AndroidRadio(
     // Restarts at the next window boundary plus jitter, so the advert carries the current beacon (spec §10.1).
     private fun advertise(advertiser: BluetoothLeAdvertiser) {
         val beacon = listener.beacon()
-        advertiser.startAdvertising(GattProfile.advertiseSettings(congestion.level.advertiseMode), GattProfile.advertiseData(beacon), advertiseCallback)
+        advertiser.startAdvertising(GattProfile.advertiseSettings(congestion.channel.advertiseMode), GattProfile.advertiseData(beacon), advertiseCallback)
         advertised = beacon
         advertising = true
         handler.removeCallbacksAndMessages(rotation)
@@ -297,8 +304,8 @@ class AndroidRadio(
         val dial = dials.getOrPut(address) { Dial(now + random.nextLong(0, FIRST_DIAL_SPREAD_MS + 1)) }
         if (now < dial.notBefore || now < nextDialAt) return
         dial.notBefore = now + ATTEMPT_INTERVAL_MS
-        val level = congestion.level
-        nextDialAt = now + level.dialGapMs * (1 shl minOf(dialFailures, MAX_GAP_DOUBLINGS))
+        nextDialAt = now + congestion.crowd.dialGapMs * (1 shl minOf(dialFailures, MAX_GAP_DOUBLINGS))
+        val timeout = congestion.channel.dialTimeoutMs
         val central = Central(address, dial, now)
         val gatt: BluetoothGatt = device.connectGatt(context, false, central, BluetoothDevice.TRANSPORT_LE) ?: return
         central.gatt = gatt
@@ -310,7 +317,7 @@ class AndroidRadio(
                 Log.i(TAG, "dial ${address.takeLast(5)} timed out")
                 central.close()
             }
-        }, level.dialTimeoutMs)
+        }, timeout)
     }
 
     private val scanCallback = object : ScanCallback() {
@@ -705,27 +712,22 @@ class AndroidRadio(
         /** ADR 0026: the dial gap doubles per failed dial in a row, up to 4 times. */
         const val MAX_GAP_DOUBLINGS = 2
 
-        /** ADR 0026: per level, a dial not up by then fails and frees its slot (ADR 0025). */
+        /** ADR 0026: per channel level, a dial not up by then fails and frees its slot (ADR 0025). */
         val Level.dialTimeoutMs get() = if (this == Level.CLEAR) 10_000L else 5_000L
 
-        /** ADR 0026: the base gap between dial starts. */
+        /** ADR 0026: per crowd level, the base gap between dial starts. */
         val Level.dialGapMs get() = when (this) {
             Level.CLEAR -> 0L
             Level.BUSY -> 1_000L
             Level.CROWDED -> 2_000L
         }
 
-        val Level.scanMode get() = when (this) {
-            Level.CLEAR -> ScanSettings.SCAN_MODE_LOW_LATENCY
-            Level.BUSY -> ScanSettings.SCAN_MODE_BALANCED
-            Level.CROWDED -> ScanSettings.SCAN_MODE_LOW_POWER
-        }
+        /** ADR 0026: per channel level; `LOW_POWER` only while full, which costs discovery. */
+        val Level.scanMode get() =
+            if (this == Level.CLEAR) ScanSettings.SCAN_MODE_LOW_LATENCY else ScanSettings.SCAN_MODE_BALANCED
 
-        val Level.advertiseMode get() = when (this) {
-            Level.CLEAR -> AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY
-            Level.BUSY -> AdvertiseSettings.ADVERTISE_MODE_BALANCED
-            Level.CROWDED -> AdvertiseSettings.ADVERTISE_MODE_LOW_POWER
-        }
+        val Level.advertiseMode get() =
+            if (this == Level.CLEAR) AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY else AdvertiseSettings.ADVERTISE_MODE_BALANCED
 
         /** Spec §10.1: one beacon per 300 s window of Unix time. */
         const val BEACON_WINDOW_MS = 300_000L

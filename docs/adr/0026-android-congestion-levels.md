@@ -34,8 +34,9 @@ already lowers the scan duty cycle while a connect is in progress.
 
 ## Decision
 
-The Android radio runs a congestion controller with three levels (spec
-§10.4):
+The Android radio tracks two congestion levels (spec §10.4): the *crowd*
+level, from how many peers are near, and the *channel* level, from how many
+dials fail.
 
 - **Signals.** Every 5 s, the radio computes:
   - *density*: distinct addresses whose cairn advert it saw in the last
@@ -43,46 +44,51 @@ The Android radio runs a congestion controller with three levels (spec
   - *failure rate*: of the dials that ended in the last 60 s, the share that
     failed, including timeouts. Fewer than 4 ended dials count as 0.
 - **Levels.**
-  - `CROWDED` if density ≥ 8 or failure rate ≥ 50 %;
-  - `BUSY` if density ≥ 4 or failure rate ≥ 25 %;
-  - `CLEAR` otherwise.
-- **Hysteresis.** The level rises at once. It falls by one level only after
+
+  | Level | Crowd: density | Channel: failure rate |
+  |---|---|---|
+  | `CROWDED` | ≥ 8 | ≥ 50 % |
+  | `BUSY` | ≥ 4 | ≥ 25 % |
+  | `CLEAR` | otherwise | otherwise |
+
+- **Hysteresis.** Each level rises at once. It falls by one level only after
   the lower level has held at every evaluation for 60 s.
 - **Actions.**
-
-  | | `CLEAR` | `BUSY` | `CROWDED` |
-  |---|---|---|---|
-  | Advertising mode | `LOW_LATENCY` | `BALANCED` | `LOW_POWER` |
-  | Scan mode | `LOW_LATENCY` | `BALANCED` | `LOW_POWER` |
-  | Base gap between dial starts | 0 | 1 s | 2 s |
-  | Dial timeout | 10 s | 5 s | 5 s |
-
-  - The dial gap doubles after each failed dial, up to 4 times the base,
-    and resets when a dial comes up.
+  - The crowd level sets the base gap between dial starts: 0 at `CLEAR`,
+    1 s at `BUSY`, 2 s at `CROWDED`. The gap doubles after each failed dial,
+    up to 4 times the base, and resets when a dial comes up.
+  - At channel level `CLEAR` the radio advertises and scans at `LOW_LATENCY`
+    and dials time out after 10 s. At `BUSY` and `CROWDED` it advertises and
+    scans at `BALANCED` and dials time out after 5 s.
   - While every slot is in use, the radio scans at `LOW_POWER` whatever the
-    level: only eviction needs scan results then.
+    level: only eviction needs scan results then. No level uses `LOW_POWER`
+    otherwise.
 - **Scan restarts.** The radio restarts the scan at most once every 10 s,
   and applies a later mode change when that time has passed. This stays
   within Android's 5 starts per 30 s.
-- **Logging.** Each level change logs the level, density and failure rate.
+- **Logging.** Each level change logs both levels, the density and the
+  failure rate.
 
 ## Consequences
 
-- In a crowd, each phone sends fewer adverts and connect requests. Fewer of
-  them should collide, at the cost of slower discovery. The fleet A/B, and a
-  900 s run of this change, measure it.
+- In a crowd, each phone spaces its connect requests. Fewer of them should
+  collide, while discovery keeps its pace until dials actually fail. The
+  fleet A/B, and a 900 s run of this change, measure it.
 - A quiet phone keeps today's behaviour: `CLEAR` changes nothing.
-- A phone in a crowd that tops 8 peers stays `CROWDED`, and scans and
-  advertises at `LOW_POWER`, which also saves energy. Energy bands remain a
-  separate step (issue 53, plan D).
-- A failed dial now frees its slot after 5 s in a crowd, not 10 s. A peer
-  that answers slowly on a congested channel may fail once more and be
-  retried.
+- Discovery slows only on a failing channel, and only to `BALANCED`. Energy
+  bands remain a separate step (issue 53, plan D).
+- A failed dial now frees its slot after 5 s on a failing channel, not 10 s.
+  A peer that answers slowly there may fail once more and be retried.
 
 ## Considered options
 
 - **Continuous AIMD on dial rate and duty cycle.** Smoother, but harder to
   test, and every small step restarts the scan against the 5-per-30-s quota.
+- **One level from both signals, with `LOW_POWER` advertising and scanning
+  at `CROWDED`.** In the first A/B (15 phones × 300 s, 2026-10-25), density
+  13 sent every scanning phone to `CROWDED` at the first evaluation. Failed
+  dials fell from 233 to 126, but pairs fell from 45 to 38, and from 33 to 17
+  in the first 60 s: discovery slowed more than fewer collisions gained.
 - **Density only.** It ignores the channel: a few peers in heavy RF noise
   stay `CLEAR`.
 - **Failure rate only.** It reacts only after dials fail.

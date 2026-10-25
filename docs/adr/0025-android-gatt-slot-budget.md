@@ -121,5 +121,5 @@ On Android, the radio budgets its GATT connections (spec §10.4):
 ## Amendments
 
 2026-10-25, from [ADR 0026](0026-android-congestion-levels.md) (OI-32): the
-dial timeout is 10 s only at congestion level `CLEAR`, and 5 s at `BUSY` and
+dial timeout is 10 s only at channel level `CLEAR`, and 5 s at `BUSY` and
 `CROWDED`. A full radio scans at `LOW_POWER`.

@@ -41,6 +41,15 @@ class CongestionLevelTest {
         h.idle()
     }
 
+    /** Four failed dials, two to each of two addresses, so the channel is `CROWDED` and the crowd `CLEAR`. */
+    private fun failFour() {
+        fail(dial("00:11:22:33:77:01")!!)
+        fail(dial("00:11:22:33:77:02")!!)
+        advance(1_000)
+        fail(dial("00:11:22:33:77:01")!!)
+        fail(dial("00:11:22:33:77:02")!!)
+    }
+
     private fun logged(text: String) = ShadowLog.getLogsForTag("CairnRadio").any { text in it.msg }
 
     @Test
@@ -53,28 +62,29 @@ class CongestionLevelTest {
     }
 
     @Test
-    fun busyScansAndAdvertisesBalanced() {
-        crowd(4)
-        advance(10_000)
-
-        assertEquals(ScanSettings.SCAN_MODE_BALANCED, scanMode())
-        assertEquals(AdvertiseSettings.ADVERTISE_MODE_BALANCED, advertiseModes().last())
-        assertTrue(logged("congestion BUSY density 4 failures 0/0"))
-    }
-
-    @Test
-    fun crowdedScansAndAdvertisesAtLowPower() {
+    fun aCrowdKeepsScanningAndAdvertisingAtLowLatency() {
         crowd(8)
         advance(10_000)
 
-        assertEquals(ScanSettings.SCAN_MODE_LOW_POWER, scanMode())
-        assertEquals(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER, advertiseModes().last())
+        assertEquals(ScanSettings.SCAN_MODE_LOW_LATENCY, scanMode())
+        assertEquals(listOf(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY), advertiseModes())
+        assertTrue(logged("congestion crowd CROWDED channel CLEAR density 8 failures 0/0"))
+    }
+
+    @Test
+    fun aFailingChannelScansAndAdvertisesBalanced() {
+        failFour()
+        advance(9_000)
+
+        assertEquals(ScanSettings.SCAN_MODE_BALANCED, scanMode())
+        assertEquals(AdvertiseSettings.ADVERTISE_MODE_BALANCED, advertiseModes().last())
+        assertTrue(logged("congestion crowd CLEAR channel CROWDED density 2 failures 4/4"))
     }
 
     @Test
     fun restartsTheScanAtMostOnceEveryTenSeconds() {
-        crowd(4)
-        advance(5_000)
+        failFour()
+        advance(4_000)
         val early = scanMode()
 
         advance(5_000)
@@ -101,11 +111,11 @@ class CongestionLevelTest {
 
     @Test
     fun aLevelChangeWhileFullAppliesWhenAdvertisingResumes() {
+        failFour()
         val peers = (1..6).map { h.device("00:11:22:33:66:%02X".format(it)) }
         peers.forEach { h.serverCallback().onConnectionStateChange(it, 0, BluetoothProfile.STATE_CONNECTED) }
         h.idle()
-        crowd(4)
-        advance(5_000)
+        advance(4_000)
         val whileFull = advertiseModes().toList()
         peers.forEach { h.serverCallback().onConnectionStateChange(it, 0, BluetoothProfile.STATE_DISCONNECTED) }
         h.idle()
@@ -153,11 +163,25 @@ class CongestionLevelTest {
     }
 
     @Test
-    fun busyDialsTimeOutAfterFiveSeconds() {
-        crowd(4)
-        advance(5_000)
+    fun dialsOnAFailingChannelTimeOutAfterFiveSeconds() {
+        failFour()
+        advance(4_000)
         dial("00:11:22:33:44:01")!!
         advance(4_999)
+        val early = logged("dial 44:01 timed out")
+
+        advance(1)
+
+        assertEquals(false, early)
+        assertTrue(logged("dial 44:01 timed out"))
+    }
+
+    @Test
+    fun dialsInACrowdOnAClearChannelTimeOutAfterTenSeconds() {
+        crowd(8)
+        advance(5_000)
+        dial("00:11:22:33:44:01")!!
+        advance(9_999)
         val early = logged("dial 44:01 timed out")
 
         advance(1)

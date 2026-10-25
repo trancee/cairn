@@ -238,6 +238,6 @@ debug panel.
   longest-idle link for a waiting peer.
 
 2026-10-25, from [ADR 0026](0026-android-congestion-levels.md) (OI-32): the
-advertising and scan modes, the spacing of dials and the dial timeout follow
-the congestion level (`CLEAR`, `BUSY`, `CROWDED`) in place of a fixed
+spacing of dials follows the crowd level, and the advertising and scan
+modes and the dial timeout follow the channel level, in place of a fixed
 `LOW_LATENCY`.
