@@ -1,7 +1,7 @@
 # Pre-auth links time out under fleet load
 
 Type: task
-Status: needs-triage
+Status: resolved
 Blocked by: none
 
 ## Question
@@ -62,12 +62,45 @@ Possibly related: spec §5.6 keeps a refused or failed address back for 1 h,
 which may explain why contact counts plateau after about 150 s. Not measured
 yet.
 
+## Re-measurement (fleet3)
+
+Same 12 phones, 180 s, with priority and 2M PHY (PR #52) and BUSY (PR #54).
+Unlike fleet1 and fleet2, every phone started with cleared app data, so
+links are all first pairings. Link counts and DATA counts therefore aren't
+comparable; per-link timings are. No crashes.
+
+| | Fleet2 | Fleet3 |
+|---|---|---|
+| Links | 162 | 128 |
+| Pairing complete (P4), median / max | 1.39 / 4.47 s | 0.84 / 3.41 s |
+| First S2 or DATA, median / p90 / max | 1.63 / 3.81 / 4.88 s | 1.11 / 2.76 / 3.64 s |
+| P1/P2 fragment gap, median / p90 / max | 143 / 450 / 1979 ms | 91 / 379 / 1535 ms |
+| Failed dials (mostly `CONNECTING` 0x85) | 232 | 233 |
+
+- **PHY.** 116 of 135 PHY updates reached 2M both ways; 9 were 1M/2M and
+  the rest failed with the link (0x06, 0x08, 0x13). P10 lite and
+  `GX6CTR500184` logged no PHY update and had only 3 links between them.
+- **BUSY.** Four P0s were refused. In three, the central received BUSY 15–57
+  ms after it was queued and closed about 200 ms after link-up, instead of
+  about 4.9 s. In the fourth, the central received nothing and both ends
+  closed at 5 s.
+- **Remaining 5 s closes** are frames that were queued and never answered,
+  not slow fragments: a BUSY and P1s whose central never sent P2 (one
+  central did receive the whole P1). Without an HCI snoop, a lost
+  notification can't be told from a stalled peer. Three of these peripheral
+  links matched no central P0 at all.
+- **Pairings.** 22 of the 66 phone pairs paired, 17 of them in the first
+  60 s and none after 140 s. Failed dials, 2 min per address, and the 1 h
+  back-off after the timed-out pairings limit the rest. Not separated yet.
+
 ## Decision
 
 - **Finding 3:** the central requests high connection priority and the 2M
   PHY for the first 10 s of each link
   ([ADR 0023](../../../docs/adr/0023-android-ble-adapter.md) §3).
-- **Finding 2:** option A. The refusing side sends an explicit BUSY frame
-  before closing, and the central closes when it receives one (a spec
-  change).
-- **5 s limit:** unchanged until a fleet run with both fixes is measured.
+- **Finding 2:** option A, spec OI-29 (draft 0.9). A refuses every P0 with
+  a 1 B BUSY frame (PAIR step 5) and waits for B to close. B closes on
+  BUSY with no back-off, and the attempt isn't counted (user's choice). A
+  refusal at the admission limits is a BUSY too.
+- **5 s limit:** unchanged. In fleet3 the slowest link reached S2 or DATA
+  in 3.64 s; links that hit the limit had stopped receiving frames.

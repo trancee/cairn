@@ -664,7 +664,7 @@ implementation-test obligations even after a symbolic proof succeeds.
 
 ## Pairing (`sas.spthy`)
 
-Since draft 0.7 ([ADR 0021](../../adr/0021-automatic-neighbour-admission.md)), pairing is always TOFU and Verify is the only upgrade. The model keeps its QR and SAS branches: removing modes only removes protocol branches, so the TOFU and Verify lemmas still apply. P0 and the admission tie-break are unauthenticated availability mechanisms outside `th` and are not modelled.
+Since draft 0.7 ([ADR 0021](../../adr/0021-automatic-neighbour-admission.md)), pairing is always TOFU and Verify is the only upgrade. The model keeps its QR and SAS branches: removing modes only removes protocol branches, so the TOFU and Verify lemmas still apply. P0, the admission tie-break and the BUSY refusal (OI-29) are unauthenticated availability mechanisms outside `th` and are not modelled.
 
 Run from this directory:
 

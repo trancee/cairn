@@ -59,6 +59,13 @@ impl Admission {
         self.attempts.push_back(now_ms);
     }
 
+    /// Uncounts the attempt recorded at `attempt_ms`; a BUSY refusal ran no crypto.
+    pub(crate) fn refund_attempt(&mut self, attempt_ms: u64) {
+        if let Some(index) = self.attempts.iter().rposition(|&time| time == attempt_ms) {
+            self.attempts.remove(index);
+        }
+    }
+
     pub(crate) fn record_admitted(&mut self, now_ms: u64) {
         self.admitted.push_back(now_ms);
     }
@@ -99,6 +106,23 @@ mod tests {
                 TieBreak::CloseBoth
             ]
         );
+    }
+
+    #[test]
+    fn refunding_removes_only_the_attempt_still_counted() {
+        let mut admission = Admission::default();
+        admission.record_attempt(0);
+        admission.allows(HOUR_MS, 0, ADDRESS);
+        for _ in 0..30 {
+            admission.record_attempt(HOUR_MS);
+        }
+
+        admission.refund_attempt(0);
+        let after_expired = admission.allows(HOUR_MS, 0, ADDRESS);
+        admission.refund_attempt(HOUR_MS);
+        let after_counted = admission.allows(HOUR_MS, 0, ADDRESS);
+
+        assert_eq!([after_expired, after_counted], [false, true]);
     }
 
     #[test]

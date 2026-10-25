@@ -56,10 +56,14 @@ class Session(private val context: Context, handler: Handler, newEngine: () -> E
 
     init {
         radio.listener = radioListener
+        radio.availability = { model.radio = if (it) RadioState.RUNNING else RadioState.BLUETOOTH_OFF }
         driver.start()
     }
 
-    /** Starts the radio, or records what the user must grant or enable first. */
+    /**
+     * Starts the radio, or records what the user must grant or enable first. Once started, the
+     * radio state follows Bluetooth turning off and on until [pause].
+     */
     fun resume() {
         model.radio = when {
             BlePermissions.missing(context).isNotEmpty() -> RadioState.NEEDS_PERMISSION

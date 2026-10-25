@@ -123,7 +123,9 @@ timers and rate limits; `unix_s` drives beacon windows and days (spec §10.1).
   in constant time.
 - The central decides from that match. On a hit it starts Resume as I; on
   a miss it sends P0 as B if the admission limits allow, and otherwise
-  disconnects and backs off the address (spec §10.4).
+  disconnects and backs off the address (spec §10.4). A peripheral that
+  refuses a P0 answers BUSY; a central that receives BUSY disconnects
+  without back-off (spec §5.6, OI-29).
 - A hit for a contact that already has a link in Resume or in session
   closes the new link (§10).
 - A day before a key's stored day, for example after the wall clock moved
