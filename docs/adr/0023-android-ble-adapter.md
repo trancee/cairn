@@ -236,3 +236,7 @@ debug panel.
 - **Peripheral.** It advertises only while it has a free slot, disconnects a
   device that connects to a full server, and, when full, evicts its
   longest-idle link for a waiting peer.
+
+2026-10-25, from [ADR 0027](0027-android-energy-bands.md) (OI-33): the
+advertising and scan modes follow the energy band (`FULL`, `SAVE`, `LOW`) in
+place of a fixed `LOW_LATENCY`.
