@@ -240,3 +240,7 @@ debug panel.
 2026-10-25, from [ADR 0027](0027-android-energy-bands.md) (OI-33): the
 advertising and scan modes follow the energy band (`FULL`, `SAVE`, `LOW`) in
 place of a fixed `LOW_LATENCY`.
+
+2026-10-25, from [ADR 0028](0028-android-extended-advertising.md) (OI-34): the
+advert is an extended connectable set where the controller supports it, and
+legacy otherwise; the scan receives both kinds.

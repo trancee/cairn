@@ -14,6 +14,8 @@ import android.bluetooth.BluetoothProfile
 import android.bluetooth.BluetoothStatusCodes
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseSettings
+import android.bluetooth.le.AdvertisingSet
+import android.bluetooth.le.AdvertisingSetCallback
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
@@ -153,6 +155,10 @@ class AndroidRadio(
         serverTx = service.getCharacteristic(GattProfile.TX)
         this.server = server
         this.advertiser = advertiser
+        extended = adapter.isLeExtendedAdvertisingSupported
+        setCallback = SetCallback()
+        scansExtended = extended
+        Log.i(TAG, if (extended) "advertising extended" else "advertising legacy")
         budget()
         scan(scanner)
         this.scanner = scanner
@@ -167,7 +173,7 @@ class AndroidRadio(
 
     private fun scan(scanner: BluetoothLeScanner) {
         scanMode = band.scanMode
-        scanner.startScan(GattProfile.scanFilters(), GattProfile.scanSettings(scanMode), scanCallback)
+        scanner.startScan(GattProfile.scanFilters(), GattProfile.scanSettings(scanMode, scansExtended), scanCallback)
         scanStartedAt = SystemClock.elapsedRealtime()
     }
 
@@ -199,14 +205,18 @@ class AndroidRadio(
         val advertiser = advertiser ?: return
         val free = slotsInUse() < maxSlots
         if (free && !(advertising && advertisedMode == band.advertiseMode)) {
-            if (advertising) advertiser.stopAdvertising(advertiseCallback)
+            if (advertising) stopAdvertising(advertiser)
             advertise(advertiser)
         } else if (!free && advertising) {
-            advertiser.stopAdvertising(advertiseCallback)
+            stopAdvertising(advertiser)
             handler.removeCallbacksAndMessages(rotation)
             advertising = false
             Log.i(TAG, "slots full; advertising stopped")
         }
+    }
+
+    private fun stopAdvertising(advertiser: BluetoothLeAdvertiser) {
+        if (extended) advertiser.stopAdvertisingSet(setCallback) else advertiser.stopAdvertising(advertiseCallback)
     }
 
     /** Tags the pending advert restart, so [release] can cancel it. */
@@ -216,7 +226,13 @@ class AndroidRadio(
     private fun advertise(advertiser: BluetoothLeAdvertiser) {
         val beacon = listener.beacon()
         advertisedMode = band.advertiseMode
-        advertiser.startAdvertising(GattProfile.advertiseSettings(advertisedMode), GattProfile.advertiseData(beacon), advertiseCallback)
+        if (extended) {
+            advertiser.startAdvertisingSet(
+                GattProfile.advertisingSetParameters(advertisedMode), GattProfile.advertiseData(beacon), null, null, null, setCallback,
+            )
+        } else {
+            advertiser.startAdvertising(GattProfile.advertiseSettings(advertisedMode), GattProfile.advertiseData(beacon), advertiseCallback)
+        }
         advertised = beacon
         advertising = true
         handler.removeCallbacksAndMessages(rotation)
@@ -224,7 +240,7 @@ class AndroidRadio(
         val delay = BEACON_WINDOW_MS - wall % BEACON_WINDOW_MS + random.nextLong(0, ROTATION_JITTER_MS + 1)
         handler.postAtTime(
             {
-                advertiser.stopAdvertising(advertiseCallback)
+                stopAdvertising(advertiser)
                 advertise(advertiser)
             },
             rotation,
@@ -240,7 +256,7 @@ class AndroidRadio(
             following = false
         }
         scanner?.stopScan(scanCallback)
-        advertiser?.stopAdvertising(advertiseCallback)
+        advertiser?.let(::stopAdvertising)
         release()
     }
 
@@ -290,14 +306,17 @@ class AndroidRadio(
         handler.post { links[link]?.close() }
     }
 
-    /** Dials [device] unless both advertise a beacon and ours is the higher one (ADR 0025). */
-    private fun connect(device: BluetoothDevice, beacon: ByteArray?) {
+    /**
+     * Dials [device] unless both advertise a beacon and ours is the higher one (ADR 0025); an
+     * extended advertiser dials a [legacy] advertiser regardless, as that one may not see it (ADR 0028).
+     */
+    private fun connect(device: BluetoothDevice, beacon: ByteArray?, legacy: Boolean) {
         val address = device.address
         if (address in centrals || address in peripherals) return
         val now = SystemClock.elapsedRealtime()
         val waiting = address !in serverConnected && now >= (dials[address]?.notBefore ?: now)
         if (waiting && slotsInUse() >= maxSlots) evict(now, address)
-        if (beacon != null && compareUnsigned(advertised, beacon) > 0) return
+        if (beacon != null && !(extended && legacy) && compareUnsigned(advertised, beacon) > 0) return
         if (dialsInFlight() >= maxDialsInFlight || slotsInUse() >= maxSlots) return
         val dial = dials.getOrPut(address) { Dial(now + random.nextLong(0, FIRST_DIAL_SPREAD_MS + 1)) }
         if (now < dial.notBefore) return
@@ -319,11 +338,36 @@ class AndroidRadio(
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val beacon = result.scanRecord?.getServiceData(ParcelUuid(GattProfile.SERVICE))
-            handler.post { if (server != null) connect(result.device, beacon) }
+            val legacy = result.isLegacy
+            handler.post { if (server != null) connect(result.device, beacon, legacy) }
         }
     }
 
     private val advertiseCallback = object : AdvertiseCallback() {}
+
+    /** Whether the radio advertises an extended set (ADR 0028); set when opened. */
+    private var extended = false
+
+    /** Whether the radio scans for extended adverts too; set when opened, kept on fallback. */
+    private var scansExtended = false
+
+    // A new one each time the radio opens: a set the adapter dropped while off still holds the old one.
+    private var setCallback = SetCallback()
+
+    // A set that fails to start leaves the radio on legacy advertising until it is next opened.
+    private inner class SetCallback : AdvertisingSetCallback() {
+        override fun onAdvertisingSetStarted(advertisingSet: AdvertisingSet?, txPower: Int, status: Int) {
+            if (status == ADVERTISE_SUCCESS) return
+            handler.post {
+                val advertiser = advertiser
+                if (setCallback === this && extended && advertiser != null) {
+                    extended = false
+                    Log.i(TAG, "advertising set failed ($status); advertising legacy")
+                    if (advertising) advertise(advertiser)
+                }
+            }
+        }
+    }
 
     // The trace times pairing and Resume on devices (spec §4.4): link up, each fragment's header
     // byte (frame type and step, §4.2) and size, and link down, in ms since link up.

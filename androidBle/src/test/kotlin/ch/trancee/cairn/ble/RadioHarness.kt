@@ -92,6 +92,8 @@ class RadioHarness {
         shadowOf(context).grantPermissions(*BlePermissions.required().toTypedArray())
         shadowOf(context).grantPermissions(Manifest.permission.BLUETOOTH_CONNECT)
         shadowOf(adapter).setEnabled(true)
+        // Robolectric's adapter supports extended advertising; tests of it opt back in (ADR 0028).
+        shadowOf(adapter).setIsLeExtendedAdvertisingSupported(false)
     }
 
     fun idle() = shadowOf(Looper.getMainLooper()).idle()
@@ -100,9 +102,21 @@ class RadioHarness {
 
     fun scanCallback() = shadowOf(adapter.bluetoothLeScanner).scanCallbacks.single()
 
-    /** Reports [address] as a scan match, advertising [beacon] as service data when given. */
-    fun sight(address: String, beacon: ByteArray? = null) {
-        scanCallback().onScanResult(0, ScanResult(device(address), beacon?.let(::advert), -40, 0))
+    /**
+     * Reports [address] as a scan match, advertising [beacon] as service data when given, in a legacy
+     * advert or, unless [legacy], an extended connectable one.
+     */
+    fun sight(address: String, beacon: ByteArray? = null, legacy: Boolean = true) {
+        val record = beacon?.let(::advert)
+        val result = if (legacy) {
+            ScanResult(device(address), record, -40, 0)
+        } else {
+            ScanResult(
+                device(address), CONNECTABLE, BluetoothDevice.PHY_LE_1M, BluetoothDevice.PHY_LE_1M,
+                0, ScanResult.TX_POWER_NOT_PRESENT, -40, ScanResult.PERIODIC_INTERVAL_NOT_PRESENT, record, 0,
+            )
+        }
+        scanCallback().onScanResult(0, result)
         idle()
     }
 
@@ -154,6 +168,9 @@ class RadioHarness {
         server.getService(GattProfile.SERVICE).getCharacteristic(uuid)
 
     companion object {
+        /** The event type of an extended connectable advert: the connectable bit, without the legacy bit. */
+        private const val CONNECTABLE = 0x01
+
         /** A legacy advert as spec §10.1 lays it out: flags, then service data, service UUID ‖ [beacon]. */
         fun advert(beacon: ByteArray): android.bluetooth.le.ScanRecord {
             val uuid = java.nio.ByteBuffer.allocate(16).order(java.nio.ByteOrder.LITTLE_ENDIAN)

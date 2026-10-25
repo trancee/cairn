@@ -1,9 +1,9 @@
 # `cairn-r1` protocol specification
 
-Status: **draft 0.12** (Android energy bands, §10.4; 2026-10-25). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
+Status: **draft 0.13** (Android extended advertising, §10.1, §10.4; 2026-10-25). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
 
 This document consolidates, and is normative over:
-- [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md), as amended by [ADR 0021](../adr/0021-automatic-neighbour-admission.md), [ADR 0025](../adr/0025-android-gatt-slot-budget.md) and [ADR 0027](../adr/0027-android-energy-bands.md);
+- [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md), as amended by [ADR 0021](../adr/0021-automatic-neighbour-admission.md), [ADR 0025](../adr/0025-android-gatt-slot-budget.md), [ADR 0027](../adr/0027-android-energy-bands.md) and [ADR 0028](../adr/0028-android-extended-advertising.md);
 - the [wire-format draft](../research/2026-10-05-wire-format-draft.md);
 - the [threat model](threat-model.md).
 
@@ -383,7 +383,7 @@ BK_d+1 = KDF(BK_d, "", "beacon day", "", 32)                       d = floor(uni
 
 - **Receivers** keep, for every contact, the beacons of windows `{w−1, w, w+1}` in a constant-time lookup structure.
 - **Advertisers** stop and restart the advertising set at every window boundary plus 0–30 s of random jitter.
-- **Android** advertises legacy PDUs: flags + service data (128-bit service UUID ‖ beacon), 29 of 31 B.
+- **Android** advertises flags + service data (128-bit service UUID ‖ beacon), 29 of 31 B: in an extended connectable, non-scannable advert on 1M PHYs where the controller supports it, else in legacy PDUs [OI-34].
 - **iOS** advertises in the foreground the fixed UUID plus a beacon UUID `Trunc16(HMAC(BK_d, lp("cairn-r1 beacon uuid") ‖ u64(w)))` [OI-9]. In the background it advertises the fixed UUID only.
 
 ### 10.2 Device beacon key
@@ -415,6 +415,9 @@ door = Trunc8(HMAC(K_door_me→peer, lp("cairn-r1 door") ‖ u64(w)))
   - The band is `FULL` while plugged in; otherwise `LOW` below 20 % battery, `SAVE` at 50 % or less or while Battery Saver is on, else `FULL`. A band set by level ends only 5 points above its threshold: `LOW` at 25 %, `SAVE` above 55 %.
   - `FULL`, `SAVE` and `LOW` advertise and scan at `LOW_LATENCY`, `BALANCED` and `LOW_POWER`. `LOW` caps the slot budget at 3; links above the cap stay up until eviction closes them.
   - The radio restarts the scan at most once every 10 s.
+- **Android extended advertising** (ADR 0028) [OI-34]:
+  - A radio whose controller supports extended advertising advertises extended (§10.1) at the band's interval, and scans for both advert kinds. If the set fails to start, it advertises legacy until next opened.
+  - A radio that advertises extended dials a peer seen through a legacy advert whatever their beacons. Otherwise the beacon rule above applies.
 - After a non-matching `beacon` read, either admit the stranger on the same link (§5.6) or disconnect; after 3 non-matching reads that the §5.6 limits refused, back off that address for 1 h. Reads refused because the address is already backed off don't count [OI-27, OI-30].
 
 ## 11. Implementation requirements
@@ -480,11 +483,13 @@ OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: R
 | OI-29 | S2 fleet test (2026-10-25, issue 52): a peripheral that refuses a P0 closes the link, but Android doesn't drop a link that the remote central opened. The central waits about 5 s for its deadline with its own pairing in flight, refusing every other peer, and then backs off the address for 1 h | A refuses with a 1 B `BUSY` frame (PAIR step 5) and waits for B to close. B closes at once, without back-off, and the attempt isn't counted (§4.2, §5.1, §5.6, ADR 0021). Models unchanged: BUSY is an unauthenticated availability signal outside `th` (user's choice, 2026-10-25) |
 | OI-30 | Fleet pairing plateau (2026-10-25, issue 53): every failed pairing backed the address off for 1 h, and a refused dial re-armed that hour. In a 12-phone run, 20 attempts failed, none on a protocol check (11 deadlines without a reply, 9 link drops), and 14 of 69 central links were then refused, so one radio hiccup blocked a pair of phones for the rest of the encounter | Transport failures back off 2 min, doubling up to 1 h; protocol failures keep 1 h; a completed pairing resets the count; a refused dial doesn't re-arm a back-off, and three dials refused by the limits back off 1 h as §10.4 says (§5.6, §10.4, ADR 0021). The 30 attempts per hour still bound X-Wing work. No wire change; models unchanged, no model covers admission (user's choice, 2026-10-25) |
 | OI-31 | Fleet pairing plateau, cause (2026-10-25, issue 53): Android allocates one of 7–8 GATT link records per device when a connect starts. In a 15-phone run, 274 of 443 fast status-133 dial failures coincided with a full table, and the S2 radio dialled every peer, advertised while full and never freed a link | Android slot budget: 5 slots (6 on API 35+), 1–2 dials in flight, a 10 s dial timeout, the lower advertised beacon dials, advertising only with a free slot, eviction of a ≥ 30 s idle link when a new peer waits (§10.4, ADR 0025). The beacon advert is the one §10.1 already specifies. No wire change; no model covers discovery (user's choice, 2026-10-25) |
+| OI-34 | Fleet pairing plateau, failed dials (2026-10-25, issue 53): an HCI snoop showed every fast status-133 dial failure is a `CONNECT_IND` lost on the primary advertising channels, so the link fails after 6 events with `0x3E` | Android advertises extended connectable PDUs where supported, so the request moves to a secondary channel and is answered by `AUX_CONNECT_RSP`; legacy otherwise; an extended advertiser dials peers it sees advertising legacy (§10.1, §10.4, ADR 0028). Advert payload unchanged; no frame changes (user's choice, 2026-10-25) |
 | OI-33 | Energy (2026-10-25, issue 53): the Android radio advertises and scans at `LOW_LATENCY` whatever the battery, and slower modes cost about 16 % of pairs in a crowd (ADR 0026) | Android energy bands `FULL`/`SAVE`/`LOW` from battery level, plug state and Battery Saver, with hysteresis; `BALANCED` and `LOW_POWER` modes and a 3-slot cap below `FULL` (§10.4, ADR 0027). No wire change (user's choice, 2026-10-25) |
 | OI-26 | Reassembly semantics for gaps, overlaps and retransmitted chunks are unspecified | Contiguous append only; exact duplicates wholly within the stored prefix are accepted; gaps, conflicting/cross-frontier overlaps, wrong epochs and bounds violations fail closed without partial mutation (§9) (user's choice, 2026-10-05) |
 
 ## 14. Change log
 
+- 0.13 (2026-10-25): accepted OI-34: Android advertises extended connectable PDUs where the controller supports them, and an extended advertiser dials legacy advertisers (§10.1, §10.4, ADR 0028). No byte of any frame changes.
 - 0.12 (2026-10-25): accepted OI-33: Android lowers its advertising and scan modes, and its slot budget, by battery band (§10.4, ADR 0027). No byte of any frame changes.
 - 0.11 (2026-10-25): accepted OI-31: Android budgets its GATT connections, and the lower advertised beacon dials (§10.4, ADR 0025). No byte of any frame changes.
 - 0.10 (2026-10-25): accepted OI-30: a transport failure backs off the address for 2 min, doubling up to 1 h; protocol failures keep 1 h; refusals don't extend a back-off (§5.6, §10.4). No byte of any frame changes.
