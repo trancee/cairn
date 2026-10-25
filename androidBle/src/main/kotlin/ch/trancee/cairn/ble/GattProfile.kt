@@ -45,8 +45,9 @@ object GattProfile {
     }
 
     /** Legacy, connectable, untimed advertising. */
-    fun advertiseSettings(): AdvertiseSettings = AdvertiseSettings.Builder()
-        .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+    /** [mode] follows the congestion level (spec §10.4). */
+    fun advertiseSettings(mode: Int): AdvertiseSettings = AdvertiseSettings.Builder()
+        .setAdvertiseMode(mode)
         .setConnectable(true)
         .setTimeout(0)
         .build()
@@ -66,7 +67,8 @@ object GattProfile {
         ScanFilter.Builder().setServiceData(ParcelUuid(SERVICE), ByteArray(0)).build(),
     )
 
-    fun scanSettings(): ScanSettings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
+    /** [mode] follows the congestion level (spec §10.4). */
+    fun scanSettings(mode: Int): ScanSettings = ScanSettings.Builder().setScanMode(mode).build()
 
     private fun characteristic(uuid: UUID, properties: Int, permissions: Int) =
         BluetoothGattCharacteristic(uuid, properties, permissions)
