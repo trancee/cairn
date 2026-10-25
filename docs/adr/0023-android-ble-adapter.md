@@ -119,6 +119,15 @@ The platform-neutral `LinkDriver` in `:sdk` `commonMain` sits between
   size and milliseconds since `up`), and `down`. It logs no addresses and no
   payload bytes. An `out` is logged when the fragment is queued, not when it
   goes over the air.
+- **Connection priority and PHY.** On connecting, the central requests
+  `CONNECTION_PRIORITY_HIGH` and prefers the LE 2M PHY both ways, so
+  pre-auth fragments arrive in time under load (issue 52). Ten seconds later
+  it requests `CONNECTION_PRIORITY_BALANCED` again, if the link is still
+  open: the length of two spec §4.4 deadlines, for pairing and then Resume.
+  The revert is timed, not tied to session start, since the core reports no
+  such event. The controller may decline either request, so a refusal
+  doesn't close the link. The PHY result is logged as `dial … phy`. The
+  peripheral requests neither; the central owns the connection parameters.
 - **Permissions.** On API 31+, `BLUETOOTH_SCAN` with `neverForLocation`,
   `BLUETOOTH_CONNECT` and `BLUETOOTH_ADVERTISE`. On API 26–30, `BLUETOOTH`,
   `BLUETOOTH_ADMIN` and `ACCESS_FINE_LOCATION`, capped at `maxSdkVersion 30`.

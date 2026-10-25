@@ -19,7 +19,7 @@ class LinkTraceTest {
 
     private fun advance(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
 
-    private fun trace() = ShadowLog.getLogsForTag("CairnRadio").map { it.msg }
+    private fun trace() = ShadowLog.getLogsForTag("CairnRadio").map { it.msg }.filter { it.startsWith("link ") }
 
     @Test
     fun centralLinkTracesEveryFragmentWithItsHeaderSizeAndTimeSinceLinkUp() {

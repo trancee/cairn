@@ -64,4 +64,10 @@ yet.
 
 ## Decision
 
-Pending.
+- **Finding 3:** the central requests high connection priority and the 2M
+  PHY for the first 10 s of each link
+  ([ADR 0023](../../../docs/adr/0023-android-ble-adapter.md) §3).
+- **Finding 2:** option A. The refusing side sends an explicit BUSY frame
+  before closing, and the central closes when it receives one (a spec
+  change).
+- **5 s limit:** unchanged until a fleet run with both fixes is measured.

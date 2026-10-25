@@ -206,10 +206,26 @@ class AndroidRadio(
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) = post {
             this.status = status
             if (status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_CONNECTED) {
+                // Both are preferences the controller may decline, so a refusal doesn't close the link.
+                gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+                gatt.setPreferredPhy(
+                    BluetoothDevice.PHY_LE_2M_MASK,
+                    BluetoothDevice.PHY_LE_2M_MASK,
+                    BluetoothDevice.PHY_OPTION_NO_PREFERRED,
+                )
+                handler.postDelayed({
+                    if (centrals[address] === this) {
+                        gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED)
+                    }
+                }, PRE_AUTH_WINDOW_MS)
                 if (!gatt.requestMtu(GattProfile.MAX_MTU)) close()
             } else {
                 close()
             }
+        }
+
+        override fun onPhyUpdate(gatt: BluetoothGatt, txPhy: Int, rxPhy: Int, status: Int) = post {
+            Log.d(TAG, "dial ${address.takeLast(5)} phy tx $txPhy rx $rxPhy status 0x%02x".format(status))
         }
 
         override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) = post {
@@ -440,6 +456,9 @@ class AndroidRadio(
 
         /** Spec §10.4: the interval between dials to one address, outside the two fast retries. */
         const val ATTEMPT_INTERVAL_MS = 120_000L
+
+        /** Spec §4.4 twice: pairing, then Resume under a fresh deadline (ADR 0022); high priority covers both. */
+        const val PRE_AUTH_WINDOW_MS = 10_000L
 
         /** Spec §10.4: the first dial to an address waits a random 0 to 3 s after it is first seen. */
         const val FIRST_DIAL_SPREAD_MS = 3_000L
