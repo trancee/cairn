@@ -1,6 +1,7 @@
 package ch.trancee.cairn.ble
 
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
@@ -16,7 +17,10 @@ import android.bluetooth.le.BluetoothLeAdvertiser
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Handler
 import android.os.SystemClock
@@ -42,6 +46,9 @@ class AndroidRadio(
     /** Usually the [ch.trancee.cairn.sdk.LinkDriver]; set before [start]. */
     lateinit var listener: RadioListener
 
+    /** Called on [handler]'s thread when Bluetooth turns off (false) or back on (true) while started. */
+    var availability: (Boolean) -> Unit = {}
+
     private interface Link {
         fun send(fragment: ByteArray)
 
@@ -59,12 +66,23 @@ class AndroidRadio(
     private val links = HashMap<ULong, Link>()
     private val serverMtus = HashMap<String, Int>()
     private val dials = HashMap<String, Dial>()
+    private val upAt = HashMap<ULong, Long>()
 
     /**
-     * Opens the GATT server, advertises and scans. Returns false, and starts nothing, when
+     * Opens the GATT server, advertises and scans, and from then on follows Bluetooth turning off
+     * and on (see [availability]) until [stop]. Returns false, and starts nothing yet, when
      * Bluetooth is missing or off; returns true when already started.
      */
     fun start(): Boolean {
+        if (!following) {
+            // Delivered on the handler; a system broadcast, so it needs no export flag.
+            context.registerReceiver(adapterReceiver, IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED), null, handler)
+            following = true
+        }
+        return open()
+    }
+
+    private fun open(): Boolean {
         if (server != null) return true
         val manager = context.getSystemService(BluetoothManager::class.java) ?: return false
         val adapter = manager.adapter ?: return false
@@ -85,8 +103,18 @@ class AndroidRadio(
 
     /** Stops discovery, closes every connection and reports [RadioListener.linkDown] for each link. */
     fun stop() {
+        if (following) {
+            context.unregisterReceiver(adapterReceiver)
+            following = false
+        }
         scanner?.stopScan(scanCallback)
         advertiser?.stopAdvertising(advertiseCallback)
+        release()
+    }
+
+    // Once the adapter leaves STATE_ON the stack drops scans and advertising itself, and stopping
+    // them throws IllegalStateException, so release skips them.
+    private fun release() {
         centrals.values.toList().forEach(Central::close)
         peripherals.values.toList().forEach(Peripheral::close)
         server?.close()
@@ -96,9 +124,29 @@ class AndroidRadio(
         serverMtus.clear()
     }
 
+    private var following = false
+
+    // A stack restart after a controller fault also turns Bluetooth off and on (issue 53).
+    private val adapterReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)) {
+                BluetoothAdapter.STATE_TURNING_OFF, BluetoothAdapter.STATE_OFF -> if (server != null) {
+                    release()
+                    availability(false)
+                }
+                BluetoothAdapter.STATE_ON -> if (server == null && open()) availability(true)
+            }
+        }
+    }
+
     // Posted, because the driver calls these while it dispatches, possibly before linkUp returned the id.
     override fun send(link: ULong, fragment: ByteArray) {
-        handler.post { links[link]?.send(fragment) }
+        handler.post {
+            links[link]?.let {
+                trace(link, "out", fragment)
+                it.send(fragment)
+            }
+        }
     }
 
     override fun disconnect(link: ULong) {
@@ -125,6 +173,34 @@ class AndroidRadio(
     }
 
     private val advertiseCallback = object : AdvertiseCallback() {}
+
+    // The trace times pairing and Resume on devices (spec §4.4): link up, each fragment's header
+    // byte (frame type and step, §4.2) and size, and link down, in ms since link up.
+    private fun up(role: GattRole, mtu: Int, address: String): ULong {
+        val link = listener.linkUp(role, mtu.toUShort(), address.encodeToByteArray())
+        upAt[link] = SystemClock.elapsedRealtime()
+        Log.d(TAG, "link $link up $role mtu $mtu")
+        return link
+    }
+
+    private fun since(link: ULong) = SystemClock.elapsedRealtime() - upAt.getValue(link)
+
+    private fun trace(link: ULong, direction: String, fragment: ByteArray) {
+        val header = fragment.copyOf(minOf(1, fragment.size)).joinToString("") { "%02x".format(it) }
+        Log.d(TAG, "link $link $direction 0x$header ${fragment.size} B at ${since(link)} ms")
+    }
+
+    private fun received(link: ULong, fragment: ByteArray) {
+        trace(link, "in", fragment)
+        listener.received(link, fragment)
+    }
+
+    private fun down(link: ULong) {
+        Log.d(TAG, "link $link down at ${since(link)} ms")
+        upAt.remove(link)
+        links.remove(link)
+        listener.linkDown(link)
+    }
 
     /**
      * When the central may next dial one address (spec §10.4). A dial that fails before link-up is
@@ -172,10 +248,26 @@ class AndroidRadio(
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) = post {
             this.status = status
             if (status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_CONNECTED) {
+                // Both are preferences the controller may decline, so a refusal doesn't close the link.
+                gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+                gatt.setPreferredPhy(
+                    BluetoothDevice.PHY_LE_2M_MASK,
+                    BluetoothDevice.PHY_LE_2M_MASK,
+                    BluetoothDevice.PHY_OPTION_NO_PREFERRED,
+                )
+                handler.postDelayed({
+                    if (centrals[address] === this) {
+                        gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED)
+                    }
+                }, PRE_AUTH_WINDOW_MS)
                 if (!gatt.requestMtu(GattProfile.MAX_MTU)) close()
             } else {
                 close()
             }
+        }
+
+        override fun onPhyUpdate(gatt: BluetoothGatt, txPhy: Int, rxPhy: Int, status: Int) = post {
+            Log.d(TAG, "dial ${address.takeLast(5)} phy tx $txPhy rx $rxPhy status 0x%02x".format(status))
         }
 
         override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) = post {
@@ -212,7 +304,7 @@ class AndroidRadio(
             } else {
                 stage = Stage.UP
                 dial.linked()
-                link = listener.linkUp(GattRole.CENTRAL, mtu.toUShort(), address.encodeToByteArray())
+                link = up(GattRole.CENTRAL, mtu, address)
                 links[link] = this
                 reading = true
                 if (!gatt.readCharacteristic(beacon)) close()
@@ -257,7 +349,7 @@ class AndroidRadio(
         ) = post { notified(value) }
 
         private fun notified(value: ByteArray) {
-            if (stage == Stage.UP) listener.received(link, value)
+            if (stage == Stage.UP) received(link, value)
         }
 
         override fun onCharacteristicWrite(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) =
@@ -277,8 +369,7 @@ class AndroidRadio(
             gatt.disconnect()
             gatt.close()
             if (stage == Stage.UP) {
-                links.remove(link)
-                listener.linkDown(link)
+                down(link)
             } else {
                 val now = SystemClock.elapsedRealtime()
                 val delay = dial.failed(now)
@@ -307,8 +398,7 @@ class AndroidRadio(
         override fun close() {
             server.cancelConnection(device)
             peripherals.remove(device.address)
-            links.remove(link)
-            listener.linkDown(link)
+            down(link)
         }
     }
 
@@ -322,10 +412,7 @@ class AndroidRadio(
         override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) = post {
             if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 serverMtus.remove(device.address)
-                peripherals.remove(device.address)?.let {
-                    links.remove(it.link)
-                    listener.linkDown(it.link)
-                }
+                peripherals.remove(device.address)?.let { down(it.link) }
             }
         }
 
@@ -360,7 +447,7 @@ class AndroidRadio(
             val peripheral = peripherals[device.address]
             val accepted = peripheral != null && characteristic.uuid == GattProfile.RX && !preparedWrite
             if (responseNeeded) server.respond(device, requestId, accepted)
-            if (accepted) listener.received(peripheral.link, value)
+            if (accepted) received(peripheral.link, value)
         }
 
         override fun onDescriptorWriteRequest(
@@ -378,7 +465,7 @@ class AndroidRadio(
             val enable = value.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
             if (accepted && enable && address !in peripherals) {
                 val mtu = serverMtus[address] ?: GattProfile.DEFAULT_MTU
-                val link = listener.linkUp(GattRole.PERIPHERAL, mtu.toUShort(), address.encodeToByteArray())
+                val link = up(GattRole.PERIPHERAL, mtu, address)
                 val peripheral = Peripheral(device, server, serverTx!!, link)
                 peripherals[address] = peripheral
                 links[link] = peripheral
@@ -411,6 +498,9 @@ class AndroidRadio(
 
         /** Spec §10.4: the interval between dials to one address, outside the two fast retries. */
         const val ATTEMPT_INTERVAL_MS = 120_000L
+
+        /** Spec §4.4 twice: pairing, then Resume under a fresh deadline (ADR 0022); high priority covers both. */
+        const val PRE_AUTH_WINDOW_MS = 10_000L
 
         /** Spec §10.4: the first dial to an address waits a random 0 to 3 s after it is first seen. */
         const val FIRST_DIAL_SPREAD_MS = 3_000L

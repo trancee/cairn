@@ -90,6 +90,19 @@ The platform-neutral `LinkDriver` in `:sdk` `commonMain` sits between
   the advertiser; otherwise it starts nothing and returns false. It is
   idempotent. `stop` stops discovery, closes every connection and reports
   `linkDown` for each link at once.
+- **Adapter state.** From `start` until `stop`, the radio follows
+  `BluetoothAdapter.ACTION_STATE_CHANGED`, received on its `Handler`. On
+  `STATE_TURNING_OFF` or `STATE_OFF` it closes every connection and the GATT
+  server, reports `linkDown` for each link, and reports `availability(false)`.
+  It doesn't stop scanning or advertising itself: the stack drops both, and
+  the calls throw `IllegalStateException` once the adapter has left
+  `STATE_ON`. On `STATE_ON` it opens everything again and reports
+  `availability(true)`; if that fails, it reports nothing. This also covers
+  a `start` while Bluetooth was off. The trigger was a controller fault in
+  fleet4 (issue 53): the system restarted Bluetooth within 2 s, and the old
+  radio stayed silent for the rest of the run. `availability` is a callback
+  on `AndroidRadio`, not on `RadioListener`, because adapter state is a
+  platform concern the core never sees.
 - **Discovery.** S2 advertises only the fixed service UUID (legacy,
   connectable) and scans with a filter on it, while the app is in the
   foreground. Beacons in advertising data, duty cycles and background
@@ -114,6 +127,20 @@ The platform-neutral `LinkDriver` in `:sdk` `commonMain` sits between
 - **API 33.** On API 33+ the radio uses the value-taking write and notify
   calls and the value-bearing read and notification callbacks; below, the
   deprecated ones.
+- **Link trace.** At debug level under `CairnRadio`, the radio logs each
+  link's `up` (role and MTU), every fragment `in` and `out` (header byte,
+  size and milliseconds since `up`), and `down`. It logs no addresses and no
+  payload bytes. An `out` is logged when the fragment is queued, not when it
+  goes over the air.
+- **Connection priority and PHY.** On connecting, the central requests
+  `CONNECTION_PRIORITY_HIGH` and prefers the LE 2M PHY both ways, so
+  pre-auth fragments arrive in time under load (issue 52). Ten seconds later
+  it requests `CONNECTION_PRIORITY_BALANCED` again, if the link is still
+  open: the length of two spec §4.4 deadlines, for pairing and then Resume.
+  The revert is timed, not tied to session start, since the core reports no
+  such event. The controller may decline either request, so a refusal
+  doesn't close the link. The PHY result is logged as `dial … phy`. The
+  peripheral requests neither; the central owns the connection parameters.
 - **Permissions.** On API 31+, `BLUETOOTH_SCAN` with `neverForLocation`,
   `BLUETOOTH_CONNECT` and `BLUETOOTH_ADVERTISE`. On API 26–30, `BLUETOOTH`,
   `BLUETOOTH_ADMIN` and `ACCESS_FINE_LOCATION`, capped at `maxSdkVersion 30`.
@@ -160,7 +187,8 @@ The platform-neutral `LinkDriver` in `:sdk` `commonMain` sits between
 - A toggle shows the debug-panel fields from §2; faults show as a
   dismissable banner.
 - The radio runs while the activity is started. It stops in `onStop`,
-  except across a configuration change such as rotation.
+  except across a configuration change such as rotation. While it runs, the
+  Bluetooth-off gate follows the radio's `availability`.
 
 ### 6. Timing smoke test
 

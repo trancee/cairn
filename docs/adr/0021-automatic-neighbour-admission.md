@@ -149,3 +149,21 @@ dropping frames.
   can stay in the middle until the users run Verify.
 - **Availability.** An attacker can use up the hourly attempt budget and
   delay legitimate admissions (best effort, threat model §5).
+
+## Amendments
+
+2026-10-25, from the S2 fleet test ([issue 52](../../.scratch/cairn-r1/issues/52-preauth-fleet-timing.md), spec OI-29):
+- Every refusal of a P0 in rules 4 and 5 (limits, a pairing in flight, a
+  smaller or equal incoming `r`) is a 1 B **BUSY** frame (PAIR step 5)
+  instead of closing the link. On Android, a peripheral can't drop a link
+  that the remote central opened, so B used to wait for its 5 s deadline,
+  with its own pairing in flight, and then backed off A for 1 h. With equal
+  `r`, the device still closes its own outgoing link.
+- A sends BUSY, then waits for B to close the link, closing it itself at the
+  pre-auth deadline. B closes the link on BUSY.
+- In rule 6, a BUSY is not a failed attempt: B doesn't back off the address
+  and the attempt doesn't count against the 30 per hour, since no X-Wing
+  operation ran. B dials again under the connect policy (2 min per address).
+  The 1 h back-off stays for failed attempts.
+- Formal models: unchanged. BUSY is an unauthenticated availability signal
+  outside `th`, like P0; forging one only delays a pairing.

@@ -44,6 +44,19 @@ class SessionTest {
     }
 
     @Test
+    fun theRadioStateFollowsBluetoothTurningOffAndOn() {
+        AppHarness.grantPermissions()
+        AppHarness.bluetooth(on = true)
+        app.session.resume()
+
+        AppHarness.adapterState(android.bluetooth.BluetoothAdapter.STATE_OFF)
+        assertEquals(RadioState.BLUETOOTH_OFF, app.session.model.radio)
+
+        AppHarness.adapterState(android.bluetooth.BluetoothAdapter.STATE_ON)
+        assertEquals(RadioState.RUNNING, app.session.model.radio)
+    }
+
+    @Test
     fun resumeStartsTheRadioAndPauseStopsIt() {
         AppHarness.grantPermissions()
         AppHarness.bluetooth(on = true)

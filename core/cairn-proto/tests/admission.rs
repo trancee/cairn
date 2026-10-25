@@ -163,19 +163,27 @@ fn crossing_p0s_are_resolved_by_the_tie_break_to_one_pairing() {
 
 #[test]
 #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
-fn a_second_p0_while_pairing_is_in_flight_is_closed() {
+fn a_second_p0_while_pairing_is_in_flight_is_answered_busy_and_may_retry() {
     let mut net = Net::new(3, 7);
     let (first, _) = net.connect(1, 0);
-    let (second, _) = net.connect(2, 0);
+    let (second, refused) = net.connect(2, 0);
 
     read_beacon(&mut net, 1, first);
     read_beacon(&mut net, 2, second);
     net.run();
+    let (retry, _) = net.connect(2, 0);
+    read_beacon(&mut net, 2, retry);
+    net.run();
 
-    assert_eq!(net.devices[0].core.contacts().len(), 1);
+    assert_eq!(first_fragment_headers(&net, 0, refused), [0x05]);
+    assert!(!net.is_up(2, second), "B closes on BUSY");
+    assert_eq!(net.devices[0].core.contacts().len(), 2);
     assert_eq!(net.devices[1].core.contacts().len(), 1);
-    assert!(net.devices[2].core.contacts().is_empty());
-    assert!(!net.is_up(2, second));
+    assert_eq!(
+        net.devices[2].core.contacts().len(),
+        1,
+        "BUSY backs off neither side"
+    );
 }
 
 #[test]
@@ -280,8 +288,11 @@ fn an_unfinished_pairing_times_out_and_backs_off_the_address() {
     assert_eq!(deadline.1, START.mono_ms + 5_000);
     assert!(!p1.is_empty());
     assert_eq!(expired, [Action::Disconnect { link: LinkId(1) }]);
-    assert!(sent(&retry).is_empty(), "no P1 to a backed-off address");
-    assert!(retry.contains(&Action::Disconnect { link: LinkId(2) }));
+    assert_eq!(
+        sent(&retry),
+        [vec![0x05]],
+        "BUSY, not P1, to a backed-off address"
+    );
 }
 
 #[test]
@@ -300,20 +311,20 @@ fn a_peripheral_answers_at_most_thirty_attempts_per_hour() {
             },
         );
         net.run();
-        answered.push(!first_fragment_headers(&net, 0, peripheral).is_empty());
+        answered.push(first_fragment_headers(&net, 0, peripheral));
         net.inject(stranger, Event::LinkDown { link: central });
         net.inject(0, Event::LinkDown { link: peripheral });
         net.run();
     }
 
-    assert_eq!(answered.iter().filter(|&&sent| sent).count(), 30);
-    assert!(!answered[30]);
+    assert!(answered[..30].iter().all(|headers| headers[0] == 0x01));
+    assert_eq!(answered[30], [0x05]);
 }
 
 #[test]
 #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
 fn malformed_or_unexpected_frames_close_the_link_without_a_reply() {
-    let frames: [&[u8]; 4] = [&[0x00, 1, 2], &[0x02; 20], &[0x30; 20], &[0x40]];
+    let frames: [&[u8]; 5] = [&[0x00, 1, 2], &[0x02; 20], &[0x30; 20], &[0x40], &[0x05]];
     let mut outcomes = Vec::new();
 
     for (seed, frame) in frames.into_iter().enumerate() {
@@ -334,7 +345,7 @@ fn malformed_or_unexpected_frames_close_the_link_without_a_reply() {
         ));
     }
 
-    assert_eq!(outcomes, [(true, false); 4]);
+    assert_eq!(outcomes, [(true, false); 5]);
 }
 
 #[test]
@@ -541,7 +552,7 @@ fn a_raised_mtu_sends_p1_in_fewer_fragments() {
 
 #[test]
 #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
-fn crossing_p0s_with_equal_nonces_close_both_links() {
+fn crossing_p0s_with_equal_nonces_close_the_own_link_and_answer_busy() {
     Seeded::seed(32);
     let mut core = restored(START);
     let (own, incoming) = (LinkId(1), LinkId(2));
@@ -571,10 +582,12 @@ fn crossing_p0s_with_equal_nonces_close_both_links() {
         )
         .unwrap();
 
-    assert!(sent(&actions).is_empty());
-    for link in [own, incoming] {
-        assert!(actions.contains(&Action::Disconnect { link }));
-    }
+    assert_eq!(sent(&actions), [vec![0x05]]);
+    assert!(actions.contains(&Action::Disconnect { link: own }));
+    assert!(
+        !actions.contains(&Action::Disconnect { link: incoming }),
+        "A waits for B to close"
+    );
 }
 
 #[test]
@@ -751,4 +764,117 @@ fn a_beacon_of_the_wrong_length_closes_the_link_and_backs_off_the_address() {
     );
     assert!(sent(&retry).is_empty());
     assert!(retry.contains(&Action::Disconnect { link: LinkId(2) }));
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn busy_neither_backs_off_nor_counts_against_the_attempt_limit() {
+    Seeded::seed(40);
+    let mut core = restored(START);
+    let mut p0s = Vec::new();
+
+    for link in (1..=31).map(LinkId) {
+        core.handle(START, link_up(link, GattRole::Central, 185))
+            .unwrap();
+        let read = core
+            .handle(
+                START,
+                Event::BeaconRead {
+                    link,
+                    beacon: STRANGER_BEACON.to_vec(),
+                },
+            )
+            .unwrap();
+        p0s.push(sent(&read).len());
+        let busy = core
+            .handle(
+                START,
+                Event::Received {
+                    link,
+                    fragment: vec![0x05],
+                },
+            )
+            .unwrap();
+        assert!(sent(&busy).is_empty());
+        assert!(busy.contains(&Action::Disconnect { link }));
+    }
+
+    assert_eq!(p0s, [1; 31]);
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn a_refused_link_accepts_nothing_more_and_closes_at_its_deadline_without_back_off() {
+    Seeded::seed(41);
+    let mut core = restored(START);
+    let up = |link, address: &[u8]| Event::LinkUp {
+        link,
+        gatt_role: GattRole::Peripheral,
+        mtu: 185,
+        address: address.to_vec(),
+    };
+    let p0 = |link| Event::Received {
+        link,
+        fragment: [&[0x00][..], &[7; 16]].concat(),
+    };
+    core.handle(START, up(LinkId(1), b"x")).unwrap();
+    core.handle(START, p0(LinkId(1))).unwrap();
+    core.handle(START, up(LinkId(2), b"y")).unwrap();
+    let deadline = core
+        .handle(START, up(LinkId(3), b"z"))
+        .unwrap()
+        .into_iter()
+        .find_map(|action| match action {
+            Action::SetTimer { timer, .. } => Some(timer),
+            _ => None,
+        })
+        .unwrap();
+
+    let busy = core.handle(START, p0(LinkId(2))).unwrap();
+    let again = core.handle(START, p0(LinkId(2))).unwrap();
+    core.handle(START, p0(LinkId(3))).unwrap();
+    let expired = core
+        .handle(START, Event::TimerFired { timer: deadline })
+        .unwrap();
+    core.handle(START, Event::LinkDown { link: LinkId(1) })
+        .unwrap();
+    core.handle(START, up(LinkId(4), b"z")).unwrap();
+    let retry = core.handle(START, p0(LinkId(4))).unwrap();
+
+    assert_eq!(sent(&busy), [vec![0x05]]);
+    assert!(!busy.contains(&Action::Disconnect { link: LinkId(2) }));
+    assert!(sent(&again).is_empty());
+    assert!(again.contains(&Action::Disconnect { link: LinkId(2) }));
+    assert_eq!(expired, [Action::Disconnect { link: LinkId(3) }]);
+    assert!(!sent(&retry).is_empty(), "z is not backed off");
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn busy_with_a_body_fails_the_pairing_and_backs_off_the_address() {
+    Seeded::seed(42);
+    let mut core = restored(START);
+    let read = |link| Event::BeaconRead {
+        link,
+        beacon: STRANGER_BEACON.to_vec(),
+    };
+    core.handle(START, link_up(LinkId(1), GattRole::Central, 185))
+        .unwrap();
+    core.handle(START, read(LinkId(1))).unwrap();
+
+    let malformed = core
+        .handle(
+            START,
+            Event::Received {
+                link: LinkId(1),
+                fragment: vec![0x05, 0],
+            },
+        )
+        .unwrap();
+    core.handle(START, link_up(LinkId(2), GattRole::Central, 185))
+        .unwrap();
+    let retry = core.handle(START, read(LinkId(2))).unwrap();
+
+    assert!(malformed.contains(&Action::Disconnect { link: LinkId(1) }));
+    assert!(sent(&retry).is_empty());
 }

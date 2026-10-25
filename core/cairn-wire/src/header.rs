@@ -5,7 +5,7 @@ const MORE: u8 = 0x80;
 /// The frame type in bits 6–4 of the header.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FrameType {
-    /// Pairing steps P0–P4.
+    /// Pairing steps P0–P4, and 5 for BUSY.
     Pair,
     /// Resume S1, sent by the initiator.
     ResumeInit,
@@ -27,7 +27,7 @@ impl FrameType {
 
     fn allows(self, sub: u8) -> bool {
         match self {
-            Self::Pair => sub <= 4,
+            Self::Pair => sub <= 5,
             Self::ResumeInit => sub & !0b11 == 0,
             Self::ResumeReply => sub & !0b1 == 0,
             Self::Data => sub == 0,
