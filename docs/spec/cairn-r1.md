@@ -413,7 +413,7 @@ door = Trunc8(HMAC(K_door_me→peer, lp("cairn-r1 door") ‖ u64(w)))
   - A full radio that sees an advertising address with no link or connection, no dial in flight and no dial back-off closes its longest link idle for ≥ 30 s, at most once every 60 s.
 - **Android energy bands** (ADR 0027) [OI-33]:
   - The band is `FULL` while plugged in; otherwise `LOW` below 20 % battery, `SAVE` at 50 % or less or while Battery Saver is on, else `FULL`. A band set by level ends only 5 points above its threshold: `LOW` at 25 %, `SAVE` above 55 %.
-  - `FULL`, `SAVE` and `LOW` advertise and scan at `LOW_LATENCY`, `BALANCED` and `LOW_POWER`. `LOW` caps the slot budget at 3; links above the cap stay up.
+  - `FULL`, `SAVE` and `LOW` advertise and scan at `LOW_LATENCY`, `BALANCED` and `LOW_POWER`. `LOW` caps the slot budget at 3; links above the cap stay up until eviction closes them.
   - The radio restarts the scan at most once every 10 s.
 - After a non-matching `beacon` read, either admit the stranger on the same link (§5.6) or disconnect; after 3 non-matching reads that the §5.6 limits refused, back off that address for 1 h. Reads refused because the address is already backed off don't count [OI-27, OI-30].
 

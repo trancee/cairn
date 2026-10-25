@@ -13,17 +13,21 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.BluetoothStatusCodes
 import android.bluetooth.le.AdvertiseCallback
+import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.BatteryManager
 import android.os.Build
 import android.os.Handler
 import android.os.ParcelUuid
+import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import ch.trancee.cairn.ffi.GattRole
@@ -79,7 +83,16 @@ class AndroidRadio(
     private val serverConnected = HashSet<String>()
 
     /** ADR 0025: the AOSP link-record minimum, 7 before API 35 and 8 from it, less 2. */
-    private val maxSlots = if (Build.VERSION.SDK_INT >= 35) 6 else 5
+    private val platformSlots = if (Build.VERSION.SDK_INT >= 35) 6 else 5
+
+    /** ADR 0027: energy band `LOW` keeps at most [LOW_SLOTS]. */
+    private val maxSlots get() = if (band == EnergyBand.LOW) minOf(platformSlots, LOW_SLOTS) else platformSlots
+
+    private var band = EnergyBand.FULL
+
+    /** The battery as last broadcast; unknown counts as full. */
+    private var batteryPercent = 100
+    private var plugged = false
 
     /** ADR 0025: stacks up to API 28 run one LE connect at a time. */
     private val maxDialsInFlight = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) 1 else 2
@@ -96,11 +109,35 @@ class AndroidRadio(
      */
     fun start(): Boolean {
         if (!following) {
-            // Delivered on the handler; a system broadcast, so it needs no export flag.
+            // Delivered on the handler; system broadcasts, so they need no export flag.
             context.registerReceiver(adapterReceiver, IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED), null, handler)
+            val energy = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+            energy.addAction(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
+            // The battery broadcast is sticky: the latest one comes back at once.
+            context.registerReceiver(energyReceiver, energy, null, handler)?.let(::energyChanged)
             following = true
         }
         return open()
+    }
+
+    private val energyReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) = energyChanged(intent)
+    }
+
+    /** Moves to the energy band of spec §10.4 (ADR 0027) after a battery or Battery Saver change. */
+    private fun energyChanged(intent: Intent) {
+        if (intent.action == Intent.ACTION_BATTERY_CHANGED) {
+            val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
+            batteryPercent = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, scale) * 100 / scale
+            plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0
+        }
+        val saver = context.getSystemService(PowerManager::class.java).isPowerSaveMode
+        val next = EnergyBand.next(band, batteryPercent, plugged, saver)
+        if (next == band) return
+        band = next
+        Log.i(TAG, "energy $band battery $batteryPercent% plugged $plugged saver $saver")
+        budget()
+        rescan()
     }
 
     private fun open(): Boolean {
@@ -117,24 +154,54 @@ class AndroidRadio(
         this.server = server
         this.advertiser = advertiser
         budget()
-        scanner.startScan(GattProfile.scanFilters(), GattProfile.scanSettings(), scanCallback)
+        scan(scanner)
         this.scanner = scanner
         return true
+    }
+
+    private var scanMode = 0
+    private var scanStartedAt = 0L
+
+    /** Tags the deferred scan restart, so [release] can cancel it. */
+    private val rescanning = Any()
+
+    private fun scan(scanner: BluetoothLeScanner) {
+        scanMode = band.scanMode
+        scanner.startScan(GattProfile.scanFilters(), GattProfile.scanSettings(scanMode), scanCallback)
+        scanStartedAt = SystemClock.elapsedRealtime()
+    }
+
+    /** Restarts the scan in the band's mode. Android allows 5 starts per 30 s, so it waits [SCAN_RESTART_INTERVAL_MS]. */
+    private fun rescan() {
+        val scanner = scanner ?: return
+        handler.removeCallbacksAndMessages(rescanning)
+        if (band.scanMode == scanMode) return
+        val wait = scanStartedAt + SCAN_RESTART_INTERVAL_MS - SystemClock.elapsedRealtime()
+        if (wait > 0) {
+            handler.postAtTime(::rescan, rescanning, SystemClock.uptimeMillis() + wait)
+        } else {
+            scanner.stopScan(scanCallback)
+            scan(scanner)
+        }
     }
 
     /** The beacon in the latest advert; the dial rule compares it (ADR 0025). */
     private var advertised = ByteArray(0)
 
     private var advertising = false
+    private var advertisedMode = 0
 
-    /** Advertises only while a slot is free (ADR 0025); runs after every change to the slots in use. */
+    /**
+     * Advertises only while a slot is free (ADR 0025), in the energy band's mode (ADR 0027); runs
+     * after every change to the slots in use or the band.
+     */
     private fun budget() {
         val advertiser = advertiser ?: return
         val free = slotsInUse() < maxSlots
-        if (free == advertising) return
-        if (free) {
+        if (free && !(advertising && advertisedMode == band.advertiseMode)) {
+            if (advertising) advertiser.stopAdvertising(advertiseCallback)
             advertise(advertiser)
-        } else {
+        } else if (!free && advertising) {
             advertiser.stopAdvertising(advertiseCallback)
             handler.removeCallbacksAndMessages(rotation)
             advertising = false
@@ -148,7 +215,8 @@ class AndroidRadio(
     // Restarts at the next window boundary plus jitter, so the advert carries the current beacon (spec §10.1).
     private fun advertise(advertiser: BluetoothLeAdvertiser) {
         val beacon = listener.beacon()
-        advertiser.startAdvertising(GattProfile.advertiseSettings(), GattProfile.advertiseData(beacon), advertiseCallback)
+        advertisedMode = band.advertiseMode
+        advertiser.startAdvertising(GattProfile.advertiseSettings(advertisedMode), GattProfile.advertiseData(beacon), advertiseCallback)
         advertised = beacon
         advertising = true
         handler.removeCallbacksAndMessages(rotation)
@@ -168,6 +236,7 @@ class AndroidRadio(
     fun stop() {
         if (following) {
             context.unregisterReceiver(adapterReceiver)
+            context.unregisterReceiver(energyReceiver)
             following = false
         }
         scanner?.stopScan(scanCallback)
@@ -182,6 +251,7 @@ class AndroidRadio(
         advertiser = null
         advertising = false
         handler.removeCallbacksAndMessages(rotation)
+        handler.removeCallbacksAndMessages(rescanning)
         centrals.values.toList().forEach(Central::close)
         peripherals.values.toList().forEach(Peripheral::close)
         server?.close()
@@ -622,6 +692,24 @@ class AndroidRadio(
 
         /** ADR 0025: a dial not up by then fails and frees its slot. */
         const val DIAL_TIMEOUT_MS = 10_000L
+
+        /** ADR 0027: the slot budget in energy band `LOW`. */
+        const val LOW_SLOTS = 3
+
+        /** ADR 0027: Android allows 5 scan starts per 30 s. */
+        const val SCAN_RESTART_INTERVAL_MS = 10_000L
+
+        val EnergyBand.scanMode get() = when (this) {
+            EnergyBand.FULL -> ScanSettings.SCAN_MODE_LOW_LATENCY
+            EnergyBand.SAVE -> ScanSettings.SCAN_MODE_BALANCED
+            EnergyBand.LOW -> ScanSettings.SCAN_MODE_LOW_POWER
+        }
+
+        val EnergyBand.advertiseMode get() = when (this) {
+            EnergyBand.FULL -> AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY
+            EnergyBand.SAVE -> AdvertiseSettings.ADVERTISE_MODE_BALANCED
+            EnergyBand.LOW -> AdvertiseSettings.ADVERTISE_MODE_LOW_POWER
+        }
 
         /** Spec §10.1: one beacon per 300 s window of Unix time. */
         const val BEACON_WINDOW_MS = 300_000L

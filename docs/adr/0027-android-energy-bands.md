@@ -49,7 +49,8 @@ The Android radio picks an energy band from the battery (spec §10.4):
   | Slots | 5 or 6 (ADR 0025) | 5 or 6 | 3 |
 
   - Links above a lowered slot cap stay up. The radio stops advertising and
-    dialling until it is below the cap.
+    dialling until it is below the cap, and eviction (ADR 0025) closes idle
+    links one at a time as peers wait.
   - The radio restarts the scan at most once every 10 s, and applies a
     later band change when that time has passed. This stays within
     Android's 5 starts per 30 s, which Battery Saver toggling could
