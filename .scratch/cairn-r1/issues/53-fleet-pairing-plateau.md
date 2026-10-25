@@ -159,17 +159,41 @@ P30 lite never linked, the OnePlus Nord 2T only once.
   with SIGSEGV in `bta_gattc_char_dscpt_disc_cmplt` during service
   discovery: a platform stack fault, not the app.
 
+## GATT slot exhaustion (ev1, 2026-10-25)
+
+A 300 s run on 15 phones (`main` with OI-30, both ABIs) captured the system
+log and `dumpsys bluetooth_manager`.
+
+- Android allocates a GATT link record (TCB) for every connection, in or
+  out, when the connect starts. The table holds `GATT_MAX_PHY_CHANNEL`
+  entries: 7 in AOSP up to Android 14, at least 8 from Android 15
+  (`gatt_get_max_phy_channel()`). `dumpsys` shows 8 on the Realme (API 35),
+  10 on the OnePlus `1f1dad34` and 16 on the Galaxy Z Flip4. A full table
+  makes `connectGatt` fail with `133` within milliseconds, and the stack
+  drops incoming links "due to out of resources".
+- 274 of 443 fast `133` dial failures fall within 100 ms of a
+  `Max TCB for gatt_if … reached` line. That is every fast `133` on the five
+  phones whose stack logs the tag (API 26–34). 30 incoming links were
+  dropped for lack of resources on the phones with 8–10 slots.
+- The slots are not held by sessions. `e9097611` hit the limit 78 times
+  with about 1 link up and 2 failing dials in flight. The rest are pending
+  dials and incoming connections from the other 13 phones that are not yet
+  links.
+- 14 phones each wanting 13 links need far more than 7–8 slots. At most
+  about 7 × 14 / 2 = 49 of 91 pairs can be connected at once, which is
+  consistent with about half of all pairs never connecting.
+- It does not follow API level: the phones that hit the limit run API 26,
+  28, 29, 31 and 34.
+- Phones report no usable battery wear. Health is "good" everywhere, and
+  `charge_full` equals the design value where it can be read at all.
+
 ## Open
 
-1. **Plateau.** It is the failed dials, not admission. In the A/B runs,
-   about 80 % of `CONNECTING` failures are `0x85`, and most of those come
-   back in under 2 s, many in 6–21 ms. They never reach the air, so the
-   local stack refuses them. Four phones (`e9097611`, `42c2cf`,
-   `1f1dad34`, `ZY22GCD9`) account for most of them. After four failures an
-   address waits 120 s. Hung connects (≥ 25 s) are a minority, mostly
-   on the two Huawei phones. Open: why the local stack refuses. Candidates
-   are concurrent pending connects, client registrations, or an address
-   that has already rotated.
+1. **Plateau.** It is GATT slot exhaustion, not admission or radio
+   congestion. Every phone dials every peer with no cap, and keeps
+   advertising as connectable when full. Needs a slot budget: a link cap
+   per phone, one dialling side per pair, connectable advertising only
+   with free slots, and rotation of idle links (ADR to follow).
 2. **Unanswered frames.** Was the notification lost over the air, or did the
    central stall? Needs an HCI snoop on one affected pair. The `out` trace
    is logged when the fragment is queued, so `onNotificationSent` timing
