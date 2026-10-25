@@ -115,5 +115,5 @@ On Android, the radio budgets its GATT connections (spec §10.4):
 
 - iOS budgets (S6). CoreBluetooth documents no connection limit, and its
   connects never time out.
-- A congestion controller on top of the budget (duty cycles, dial rate), and
-  battery bands (issue 53).
+- Battery bands (issue 53). A congestion controller on top of the budget was
+  tried and rejected ([ADR 0026](0026-android-congestion-levels.md)).
