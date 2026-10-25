@@ -187,13 +187,31 @@ log and `dumpsys bluetooth_manager`.
 - Phones report no usable battery wear. Health is "good" everywhere, and
   `charge_full` equals the design value where it can be read at all.
 
+## Slot budget A/B (2026-10-25)
+
+[ADR 0025](../../../docs/adr/0025-android-gatt-slot-budget.md), merged in
+PR #60. 15 phones, 300 s each, `main` (`df80e25`) then the PR (`86081df`):
+
+| Metric | `main` | slot budget |
+|---|---:|---:|
+| Pairs | 36 | 49 |
+| Pairs by 60 / 120 / 180 / 240 s | 22 / 27 / 31 / 33 | 28 / 31 / 38 / 42 |
+| Dial failures | 718 | 288 |
+| Fast status-133 failures (< 2 s) | 422 | 97 |
+| … within 100 ms of "Max TCB reached" | 259 | 0 |
+| Incoming links dropped "out of resources" | 32 | 0 |
+| Evictions / dial timeouts / advertising stops | – | 54 / 125 / 286 |
+
+- Slot exhaustion is gone. The remaining fast 133s have another cause.
+- New pairs still form at 300 s in both runs, so a longer run must show
+  whether the plateau is gone.
+- The P10 lite paired with 1 phone.
+
 ## Open
 
-1. **Plateau.** It is GATT slot exhaustion, not admission or radio
-   congestion. Every phone dials every peer with no cap, and keeps
-   advertising as connectable when full. Needs a slot budget: a link cap
-   per phone, one dialling side per pair, connectable advertising only
-   with free slots, and rotation of idle links (ADR to follow).
+1. **Plateau.** Slot exhaustion resolved by ADR 0025 (36 to 49 pairs). Still
+   open: the 97 fast 133s without a full table, and whether pairing
+   completes in a longer run.
 2. **Unanswered frames.** Was the notification lost over the air, or did the
    central stall? Needs an HCI snoop on one affected pair. The `out` trace
    is logged when the fragment is queued, so `onNotificationSent` timing
