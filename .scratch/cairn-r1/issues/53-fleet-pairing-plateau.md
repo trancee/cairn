@@ -121,9 +121,12 @@ lifts.
 All 22 reachable phones were tried. Six took part in none of the runs:
 - Pixel 6, Nothing Phone 2, Nokia X20, Redmi Note 11 (`884d596`) and
   OnePlus 6 are on a secure lock screen; the activity never resumes.
-- Galaxy Xcover 4 (`armeabi-v7a`, API 28) crashes at start:
-  `libcairn_ffi.so` is packaged only for `arm64-v8a`, although ADR 0004
-  lists `armeabi-v7a`.
+- Galaxy Xcover 4 (`armeabi-v7a`, API 28) crashes at start with
+  `UnsatisfiedLinkError`. The fleet APK is a debug build, and the uniffi
+  plugin packages only the host ABI (`arm64-v8a`) in debug builds. Release
+  builds include `armeabi-v7a` as ADR 0004 says. Building with
+  `./gradlew :androidApp:assembleDebug -PandroidAbis=arm64-v8a,armeabi-v7a`
+  packages both, and the app starts and resumes on the Xcover 4.
 
 Two more Redmi phones can't be prepared: MIUI refuses `pm grant` and input
 injection until "USB debugging (security settings)" is enabled. Note that
@@ -156,11 +159,41 @@ P30 lite never linked, the OnePlus Nord 2T only once.
   with SIGSEGV in `bta_gattc_char_dscpt_disc_cmplt` during service
   discovery: a platform stack fault, not the app.
 
+## GATT slot exhaustion (ev1, 2026-10-25)
+
+A 300 s run on 15 phones (`main` with OI-30, both ABIs) captured the system
+log and `dumpsys bluetooth_manager`.
+
+- Android allocates a GATT link record (TCB) for every connection, in or
+  out, when the connect starts. The table holds `GATT_MAX_PHY_CHANNEL`
+  entries: 7 in AOSP up to Android 14, at least 8 from Android 15
+  (`gatt_get_max_phy_channel()`). `dumpsys` shows 8 on the Realme (API 35),
+  10 on the OnePlus `1f1dad34` and 16 on the Galaxy Z Flip4. A full table
+  makes `connectGatt` fail with `133` within milliseconds, and the stack
+  drops incoming links "due to out of resources".
+- 274 of 443 fast `133` dial failures fall within 100 ms of a
+  `Max TCB for gatt_if … reached` line. That is every fast `133` on the five
+  phones whose stack logs the tag (API 26–34). 30 incoming links were
+  dropped for lack of resources on the phones with 8–10 slots.
+- The slots are not held by sessions. `e9097611` hit the limit 78 times
+  with about 1 link up and 2 failing dials in flight. The rest are pending
+  dials and incoming connections from the other 13 phones that are not yet
+  links.
+- 14 phones each wanting 13 links need far more than 7–8 slots. At most
+  about 7 × 14 / 2 = 49 of 91 pairs can be connected at once, which is
+  consistent with about half of all pairs never connecting.
+- It does not follow API level: the phones that hit the limit run API 26,
+  28, 29, 31 and 34.
+- Phones report no usable battery wear. Health is "good" everywhere, and
+  `charge_full` equals the design value where it can be read at all.
+
 ## Open
 
-1. **Plateau.** It is the failed dials (`0x85`, 30 s hung connects), not
-   admission. Next: per phone pair, which dials fail (the dial line carries
-   an address prefix), and whether fewer concurrent dials per phone help.
+1. **Plateau.** It is GATT slot exhaustion, not admission or radio
+   congestion. Every phone dials every peer with no cap, and keeps
+   advertising as connectable when full. Needs a slot budget: a link cap
+   per phone, one dialling side per pair, connectable advertising only
+   with free slots, and rotation of idle links (ADR to follow).
 2. **Unanswered frames.** Was the notification lost over the air, or did the
    central stall? Needs an HCI snoop on one affected pair. The `out` trace
    is logged when the fragment is queued, so `onNotificationSent` timing
@@ -168,5 +201,5 @@ P30 lite never linked, the OnePlus Nord 2T only once.
 3. **Unmatched P0s.** Resolved: fleet4 has none with the GX6 visible.
 4. **P10 lite.** Find out why it never links as central: 11 hung connects
    and 24 status 0x85 failures.
-5. **`armeabi-v7a`.** Package the 32-bit library as ADR 0004 says, or
-   amend the ADR.
+5. **`armeabi-v7a`.** Resolved: build fleet APKs with
+   `-PandroidAbis=arm64-v8a,armeabi-v7a`. ADR 0004 holds for release builds.
