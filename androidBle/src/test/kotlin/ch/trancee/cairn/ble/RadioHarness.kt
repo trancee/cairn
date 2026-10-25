@@ -80,7 +80,11 @@ class RadioHarness {
     val context: Application = ApplicationProvider.getApplicationContext()
     val listener = RecordingListener()
     val random = FakeRandom()
-    val radio = AndroidRadio(context, Handler(Looper.getMainLooper()), random).also { it.listener = listener }
+
+    /** Wall-clock ms; it starts 100 s into a beacon window and advances with the looper. */
+    private val wallOffset = WALL_START - android.os.SystemClock.elapsedRealtime()
+    val radio = AndroidRadio(context, Handler(Looper.getMainLooper()), random) { wallOffset + android.os.SystemClock.elapsedRealtime() }
+        .also { it.listener = listener }
     val manager: BluetoothManager = context.getSystemService(BluetoothManager::class.java)
     val adapter: BluetoothAdapter = manager.adapter
 
@@ -144,6 +148,9 @@ class RadioHarness {
         server.getService(GattProfile.SERVICE).getCharacteristic(uuid)
 
     companion object {
+        /** 2027-01-15T08:01:40Z: 100 s after a window boundary, 200 s before the next one. */
+        const val WALL_START = 1_800_000_100_000L
+
         /** A peer's GATT service as discovery returns it, with a readable `beacon` value. */
         fun peerService(
             beacon: ByteArray? = byteArrayOf(9, 9, 9, 9, 9, 9, 9, 9),

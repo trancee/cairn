@@ -42,6 +42,8 @@ class AndroidRadio(
     private val context: Context,
     private val handler: Handler,
     private val random: Random = Random.Default,
+    /** Unix time in ms; the beacon window follows it (spec §10.1). */
+    private val wallClock: () -> Long = System::currentTimeMillis,
 ) : Radio {
     /** Usually the [ch.trancee.cairn.sdk.LinkDriver]; set before [start]. */
     lateinit var listener: RadioListener
@@ -94,11 +96,35 @@ class AndroidRadio(
         server.addService(service)
         serverTx = service.getCharacteristic(GattProfile.TX)
         this.server = server
-        advertiser.startAdvertising(GattProfile.advertiseSettings(), GattProfile.advertiseData(listener.beacon()), advertiseCallback)
         this.advertiser = advertiser
+        advertise(advertiser)
         scanner.startScan(GattProfile.scanFilters(), GattProfile.scanSettings(), scanCallback)
         this.scanner = scanner
         return true
+    }
+
+    /** The beacon in the current advert; the dial rule compares it (ADR 0025). */
+    private var advertised: ByteArray? = null
+
+    /** Tags the pending advert restart, so [release] can cancel it. */
+    private val rotation = Any()
+
+    // Restarts at the next window boundary plus jitter, so the advert carries the current beacon (spec §10.1).
+    private fun advertise(advertiser: BluetoothLeAdvertiser) {
+        val beacon = listener.beacon()
+        advertiser.startAdvertising(GattProfile.advertiseSettings(), GattProfile.advertiseData(beacon), advertiseCallback)
+        advertised = beacon
+        handler.removeCallbacksAndMessages(rotation)
+        val wall = wallClock()
+        val delay = BEACON_WINDOW_MS - wall % BEACON_WINDOW_MS + random.nextLong(0, ROTATION_JITTER_MS + 1)
+        handler.postAtTime(
+            {
+                advertiser.stopAdvertising(advertiseCallback)
+                advertise(advertiser)
+            },
+            rotation,
+            SystemClock.uptimeMillis() + delay,
+        )
     }
 
     /** Stops discovery, closes every connection and reports [RadioListener.linkDown] for each link. */
@@ -118,6 +144,8 @@ class AndroidRadio(
         centrals.values.toList().forEach(Central::close)
         peripherals.values.toList().forEach(Peripheral::close)
         server?.close()
+        handler.removeCallbacksAndMessages(rotation)
+        advertised = null
         scanner = null
         advertiser = null
         server = null
@@ -504,6 +532,12 @@ class AndroidRadio(
 
         /** Spec §10.4: the first dial to an address waits a random 0 to 3 s after it is first seen. */
         const val FIRST_DIAL_SPREAD_MS = 3_000L
+
+        /** Spec §10.1: one beacon per 300 s window of Unix time. */
+        const val BEACON_WINDOW_MS = 300_000L
+
+        /** Spec §10.1: the advert restarts up to 30 s after each window boundary. */
+        const val ROTATION_JITTER_MS = 30_000L
 
         fun BluetoothGattServer.respond(device: BluetoothDevice, requestId: Int, accepted: Boolean) {
             val status = if (accepted) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_WRITE_NOT_PERMITTED
