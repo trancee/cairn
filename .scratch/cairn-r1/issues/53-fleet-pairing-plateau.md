@@ -121,9 +121,12 @@ lifts.
 All 22 reachable phones were tried. Six took part in none of the runs:
 - Pixel 6, Nothing Phone 2, Nokia X20, Redmi Note 11 (`884d596`) and
   OnePlus 6 are on a secure lock screen; the activity never resumes.
-- Galaxy Xcover 4 (`armeabi-v7a`, API 28) crashes at start:
-  `libcairn_ffi.so` is packaged only for `arm64-v8a`, although ADR 0004
-  lists `armeabi-v7a`.
+- Galaxy Xcover 4 (`armeabi-v7a`, API 28) crashes at start with
+  `UnsatisfiedLinkError`. The fleet APK is a debug build, and the uniffi
+  plugin packages only the host ABI (`arm64-v8a`) in debug builds. Release
+  builds include `armeabi-v7a` as ADR 0004 says. Building with
+  `./gradlew :androidApp:assembleDebug -PandroidAbis=arm64-v8a,armeabi-v7a`
+  packages both, and the app starts and resumes on the Xcover 4.
 
 Two more Redmi phones can't be prepared: MIUI refuses `pm grant` and input
 injection until "USB debugging (security settings)" is enabled. Note that
@@ -158,9 +161,15 @@ P30 lite never linked, the OnePlus Nord 2T only once.
 
 ## Open
 
-1. **Plateau.** It is the failed dials (`0x85`, 30 s hung connects), not
-   admission. Next: per phone pair, which dials fail (the dial line carries
-   an address prefix), and whether fewer concurrent dials per phone help.
+1. **Plateau.** It is the failed dials, not admission. In the A/B runs,
+   about 80 % of `CONNECTING` failures are `0x85`, and most of those come
+   back in under 2 s, many in 6–21 ms. They never reach the air, so the
+   local stack refuses them. Four phones (`e9097611`, `42c2cf`,
+   `1f1dad34`, `ZY22GCD9`) account for most of them. After four failures an
+   address waits 120 s. Hung connects (≥ 25 s) are a minority, mostly
+   on the two Huawei phones. Open: why the local stack refuses. Candidates
+   are concurrent pending connects, client registrations, or an address
+   that has already rotated.
 2. **Unanswered frames.** Was the notification lost over the air, or did the
    central stall? Needs an HCI snoop on one affected pair. The `out` trace
    is logged when the fragment is queued, so `onNotificationSent` timing
@@ -168,5 +177,5 @@ P30 lite never linked, the OnePlus Nord 2T only once.
 3. **Unmatched P0s.** Resolved: fleet4 has none with the GX6 visible.
 4. **P10 lite.** Find out why it never links as central: 11 hung connects
    and 24 status 0x85 failures.
-5. **`armeabi-v7a`.** Package the 32-bit library as ADR 0004 says, or
-   amend the ADR.
+5. **`armeabi-v7a`.** Resolved: build fleet APKs with
+   `-PandroidAbis=arm64-v8a,armeabi-v7a`. ADR 0004 holds for release builds.
