@@ -2,11 +2,15 @@ package ch.trancee.cairn.ble
 
 import android.bluetooth.BluetoothProfile
 import android.os.Build
+import android.os.Looper
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import java.time.Duration
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -70,5 +74,30 @@ class SlotBudgetTest {
         h.idle()
 
         assertNotNull(h.discover(address(9)))
+    }
+
+    private fun advance(ms: Long) = shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
+
+    @Test
+    fun aDialThatIsNotUpWithinTenSecondsFails() {
+        val gatt = h.discover(address(1))!!
+        advance(9_999)
+        assertFalse(h.shadow(gatt).isClosed)
+
+        advance(1)
+
+        assertTrue(h.shadow(gatt).isClosed)
+        assertEquals(1_000L..5_000L, h.random.ranges.last())
+        assertNotNull(h.discover(address(2)))
+    }
+
+    @Test
+    fun aDialThatCameUpOutlivesTheTimeout() {
+        val gatt = h.discover(address(1))!!
+        h.connect(gatt)
+
+        advance(10_000)
+
+        assertFalse(h.shadow(gatt).isClosed)
     }
 }

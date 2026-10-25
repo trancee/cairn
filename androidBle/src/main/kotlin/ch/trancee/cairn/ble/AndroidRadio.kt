@@ -210,6 +210,13 @@ class AndroidRadio(
         val gatt: BluetoothGatt = device.connectGatt(context, false, central, BluetoothDevice.TRANSPORT_LE) ?: return
         central.gatt = gatt
         centrals[address] = central
+        // A stack may wait 30 s for a peer that is gone, holding the slot (ADR 0025).
+        handler.postDelayed({
+            if (centrals[address] === central && !central.isUp) {
+                Log.i(TAG, "dial ${address.takeLast(5)} timed out")
+                central.close()
+            }
+        }, DIAL_TIMEOUT_MS)
     }
 
     private val scanCallback = object : ScanCallback() {
@@ -555,6 +562,9 @@ class AndroidRadio(
 
         /** Spec §10.4: the first dial to an address waits a random 0 to 3 s after it is first seen. */
         const val FIRST_DIAL_SPREAD_MS = 3_000L
+
+        /** ADR 0025: a dial not up by then fails and frees its slot. */
+        const val DIAL_TIMEOUT_MS = 10_000L
 
         /** Spec §10.1: one beacon per 300 s window of Unix time. */
         const val BEACON_WINDOW_MS = 300_000L
