@@ -334,7 +334,7 @@ impl<B: CryptoBackend> Core<B> {
             Event::LinkDown { link } => self.link_down(clock, link, &mut actions),
             Event::TimerFired { timer } => {
                 if let Some(link) = self.timers.remove(&timer) {
-                    self.abort(clock, link, &mut actions);
+                    self.expire(clock, link, &mut actions);
                 }
             }
             Event::SendChat { contact, text } => self.send_chat(contact, &text, &mut actions)?,
@@ -400,7 +400,8 @@ impl<B: CryptoBackend> Core<B> {
 
     /// A contact's beacon starts Resume as I; any other read is a stranger,
     /// who is sent P0 if the admission limits allow (spec §5.6, §10.4). A
-    /// value that is not 8 bytes long closes the link and backs off the address.
+    /// value that is not 8 bytes long closes the link and backs off the address
+    /// for 1 h.
     fn beacon_read(
         &mut self,
         clock: Clock,
@@ -416,7 +417,7 @@ impl<B: CryptoBackend> Core<B> {
         }
         let address = link.address.clone();
         let Ok(beacon) = <&[u8; 8]>::try_from(beacon) else {
-            self.admission.back_off(clock.mono_ms, &address);
+            self.admission.protocol_failure(clock.mono_ms, &address);
             self.close(id, actions);
             return Ok(());
         };
@@ -476,7 +477,7 @@ impl<B: CryptoBackend> Core<B> {
             .admission
             .allows(clock.mono_ms, self.contact_count(), address)
         {
-            self.admission.back_off(clock.mono_ms, address);
+            self.admission.refused(clock.mono_ms, address);
             self.close(id, actions);
             return Ok(());
         }
@@ -666,6 +667,8 @@ impl<B: CryptoBackend> Core<B> {
             return Ok(());
         }
         self.admission.record_admitted(clock.mono_ms);
+        let address = self.links[&id].address.clone();
+        self.admission.paired(&address);
         let device = self.device.as_mut().expect("restored");
         let contact = ContactId(device.next_contact);
         device.next_contact += 1;
@@ -951,8 +954,20 @@ impl<B: CryptoBackend> Core<B> {
         }
         let link = self.remove_link(id, actions);
         if link.state.pairing() {
-            self.admission.back_off(clock.mono_ms, &link.address);
+            self.admission
+                .transport_failure(clock.mono_ms, &link.address);
         }
+    }
+
+    /// Closes a link whose pre-auth deadline passed; a pairing in flight is a
+    /// transport failure (spec §5.6).
+    fn expire(&mut self, clock: Clock, id: LinkId, actions: &mut Vec<Action>) {
+        let link = self.remove_link(id, actions);
+        if link.state.pairing() {
+            self.admission
+                .transport_failure(clock.mono_ms, &link.address);
+        }
+        actions.push(Action::Disconnect { link: id });
     }
 
     /// Closes a link after a protocol failure; a failed pairing backs off the address.
@@ -964,7 +979,8 @@ impl<B: CryptoBackend> Core<B> {
     fn fail(&mut self, clock: Clock, id: LinkId, pairing: bool, actions: &mut Vec<Action>) {
         let link = self.remove_link(id, actions);
         if pairing {
-            self.admission.back_off(clock.mono_ms, &link.address);
+            self.admission
+                .protocol_failure(clock.mono_ms, &link.address);
         }
         actions.push(Action::Disconnect { link: id });
     }

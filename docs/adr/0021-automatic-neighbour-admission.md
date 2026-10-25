@@ -167,3 +167,25 @@ dropping frames.
   The 1 h back-off stays for failed attempts.
 - Formal models: unchanged. BUSY is an unauthenticated availability signal
   outside `th`, like P0; forging one only delays a pairing.
+
+2026-10-25, from the fleet pairing plateau ([issue 53](../../.scratch/cairn-r1/issues/53-fleet-pairing-plateau.md), spec OI-30):
+- In a 12-phone, 180 s run, 20 pairing attempts failed. None failed a
+  protocol check: 11 reached the 5 s deadline without a reply and 9 lost
+  the link. Each backed off its address for 1 h, and each later refused
+  dial re-armed that hour; 14 of 69 central links were refused that way.
+  One radio hiccup blocked a pair of phones for the rest of the encounter.
+- Rule 6's back-off now depends on the failure:
+  - a **transport failure** (the link dropped, or the pre-auth deadline
+    passed, with the pairing in flight) backs off the address for 2 min
+    after the first, doubling with each further one up to 1 h;
+  - a **protocol failure** (a malformed, unexpected or invalid frame or
+    value, or a card more than a day old) keeps the 1 h back-off;
+  - an address's failures are forgotten 1 h after its back-off ends, or
+    when a pairing with it completes.
+- A dial that the limits refuse is not a failed attempt and no longer
+  backs off the address. Three such refusals back it off for 1 h, as
+  ADR 0008's connect policy says; refusals while backed off don't count.
+- The 30 attempts per hour still bound X-Wing work. An attacker who drops
+  frames makes a peer retry the address sooner, but every retry counts
+  against that budget, as before.
+- Formal models: unchanged; no model covers admission. No wire change.

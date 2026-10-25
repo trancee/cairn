@@ -92,14 +92,35 @@ type 3). This is stricter than the 22 quoted for fleet3 above.
   didn't show it, so its cause is unknown. The radio now follows adapter
   state; see ADR 0023 §3.
 
+## Back-off refusals (2026-10-25)
+
+Classifying every central link by what it sent corrects the fleet3 finding
+that admission is not a main limiter. A link that closed within 2 s of
+link-up, sent nothing, and had no pairing of its own in flight was refused
+by admission:
+
+| Run | P0 sent | closed, own pairing in flight | refused | Resume |
+|---|---|---|---|---|
+| fleet3 | 36 | 16 | 10 | 2 |
+| fleet4 | 43 | 10 | 14 | 2 |
+
+The budgets were far from used up (at most 43 attempts across 12 phones),
+so the refusals were the per-address back-off. In fleet4, 20 pairing
+attempts failed and none failed a protocol check: 11 reached the 5 s
+deadline without a reply, 7 lost the link after 0.1–4.4 s, and 2 timed out
+after step 3. Each backed off its address for 1 h, and each refused dial
+re-armed the hour.
+
+Fixed by spec OI-30 (user's choice, option A): transport failures back off
+2 min, doubling up to 1 h; protocol failures keep 1 h; a refused dial
+doesn't re-arm a back-off. A new fleet run should confirm that the plateau
+lifts.
+
 ## Open
 
-1. **Plateau.** Separate the causes:
-   - failed dials;
-   - the 2 min attempt interval per address;
-   - the 1 h back-off after a timed-out pairing.
-
-   Logging back-off decisions from the core would show which applies.
+1. **Plateau.** Re-run the fleet with the OI-30 back-off and compare the
+   pairings over time with fleet4. Remaining causes are failed dials and
+   the 2 min attempt interval per address.
 2. **Unanswered frames.** Was the notification lost over the air, or did the
    central stall? Needs an HCI snoop on one affected pair. The `out` trace
    is logged when the fragment is queued, so `onNotificationSent` timing
