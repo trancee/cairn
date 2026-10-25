@@ -146,7 +146,7 @@ class RadioLifecycleTest {
 
     @Test
     fun advertisingIsConnectableAndUntimed() {
-        val settings: AdvertiseSettings = GattProfile.advertiseSettings(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER)
+        val settings: AdvertiseSettings = GattProfile.advertiseSettings()
         assertTrue(settings.isConnectable)
         assertEquals(0, settings.timeout)
     }
