@@ -90,6 +90,19 @@ The platform-neutral `LinkDriver` in `:sdk` `commonMain` sits between
   the advertiser; otherwise it starts nothing and returns false. It is
   idempotent. `stop` stops discovery, closes every connection and reports
   `linkDown` for each link at once.
+- **Adapter state.** From `start` until `stop`, the radio follows
+  `BluetoothAdapter.ACTION_STATE_CHANGED`, received on its `Handler`. On
+  `STATE_TURNING_OFF` or `STATE_OFF` it closes every connection and the GATT
+  server, reports `linkDown` for each link, and reports `availability(false)`.
+  It doesn't stop scanning or advertising itself: the stack drops both, and
+  the calls throw `IllegalStateException` once the adapter has left
+  `STATE_ON`. On `STATE_ON` it opens everything again and reports
+  `availability(true)`; if that fails, it reports nothing. This also covers
+  a `start` while Bluetooth was off. The trigger was a controller fault in
+  fleet4 (issue 53): the system restarted Bluetooth within 2 s, and the old
+  radio stayed silent for the rest of the run. `availability` is a callback
+  on `AndroidRadio`, not on `RadioListener`, because adapter state is a
+  platform concern the core never sees.
 - **Discovery.** S2 advertises only the fixed service UUID (legacy,
   connectable) and scans with a filter on it, while the app is in the
   foreground. Beacons in advertising data, duty cycles and background
@@ -174,7 +187,8 @@ The platform-neutral `LinkDriver` in `:sdk` `commonMain` sits between
 - A toggle shows the debug-panel fields from §2; faults show as a
   dismissable banner.
 - The radio runs while the activity is started. It stops in `onStop`,
-  except across a configuration change such as rotation.
+  except across a configuration change such as rotation. While it runs, the
+  Bluetooth-off gate follows the radio's `availability`.
 
 ### 6. Timing smoke test
 

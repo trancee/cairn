@@ -1,6 +1,7 @@
 package ch.trancee.cairn.ble
 
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
@@ -16,7 +17,10 @@ import android.bluetooth.le.BluetoothLeAdvertiser
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Handler
 import android.os.SystemClock
@@ -42,6 +46,9 @@ class AndroidRadio(
     /** Usually the [ch.trancee.cairn.sdk.LinkDriver]; set before [start]. */
     lateinit var listener: RadioListener
 
+    /** Called on [handler]'s thread when Bluetooth turns off (false) or back on (true) while started. */
+    var availability: (Boolean) -> Unit = {}
+
     private interface Link {
         fun send(fragment: ByteArray)
 
@@ -62,10 +69,20 @@ class AndroidRadio(
     private val upAt = HashMap<ULong, Long>()
 
     /**
-     * Opens the GATT server, advertises and scans. Returns false, and starts nothing, when
+     * Opens the GATT server, advertises and scans, and from then on follows Bluetooth turning off
+     * and on (see [availability]) until [stop]. Returns false, and starts nothing yet, when
      * Bluetooth is missing or off; returns true when already started.
      */
     fun start(): Boolean {
+        if (!following) {
+            // Delivered on the handler; a system broadcast, so it needs no export flag.
+            context.registerReceiver(adapterReceiver, IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED), null, handler)
+            following = true
+        }
+        return open()
+    }
+
+    private fun open(): Boolean {
         if (server != null) return true
         val manager = context.getSystemService(BluetoothManager::class.java) ?: return false
         val adapter = manager.adapter ?: return false
@@ -86,8 +103,18 @@ class AndroidRadio(
 
     /** Stops discovery, closes every connection and reports [RadioListener.linkDown] for each link. */
     fun stop() {
+        if (following) {
+            context.unregisterReceiver(adapterReceiver)
+            following = false
+        }
         scanner?.stopScan(scanCallback)
         advertiser?.stopAdvertising(advertiseCallback)
+        release()
+    }
+
+    // Once the adapter leaves STATE_ON the stack drops scans and advertising itself, and stopping
+    // them throws IllegalStateException, so release skips them.
+    private fun release() {
         centrals.values.toList().forEach(Central::close)
         peripherals.values.toList().forEach(Peripheral::close)
         server?.close()
@@ -95,6 +122,21 @@ class AndroidRadio(
         advertiser = null
         server = null
         serverMtus.clear()
+    }
+
+    private var following = false
+
+    // A stack restart after a controller fault also turns Bluetooth off and on (issue 53).
+    private val adapterReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)) {
+                BluetoothAdapter.STATE_TURNING_OFF, BluetoothAdapter.STATE_OFF -> if (server != null) {
+                    release()
+                    availability(false)
+                }
+                BluetoothAdapter.STATE_ON -> if (server == null && open()) availability(true)
+            }
+        }
     }
 
     // Posted, because the driver calls these while it dispatches, possibly before linkUp returned the id.
