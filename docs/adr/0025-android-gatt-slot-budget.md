@@ -115,5 +115,10 @@ On Android, the radio budgets its GATT connections (spec §10.4):
 
 - iOS budgets (S6). CoreBluetooth documents no connection limit, and its
   connects never time out.
-- Battery bands (issue 53). A congestion controller on top of the budget was
-  tried and rejected ([ADR 0026](0026-android-congestion-levels.md)).
+- A congestion controller on top of the budget was tried and rejected
+  ([ADR 0026](0026-android-congestion-levels.md)).
+
+## Amendments
+
+2026-10-25, from [ADR 0027](0027-android-energy-bands.md) (OI-33): in energy
+band `LOW` the budget is 3 slots.
