@@ -19,13 +19,15 @@ robolectric = "4.17"
 robolectric-sdk26 = "8.0.0_r4-robolectric-r1-i7"
 robolectric-sdk37 = "17-robolectric-15733970-i7"
 ubique-uniffi = "1.3.2"
-# Patched-version floors for vulnerable transitive build tooling (AGP, UTP, bundletool); see ADR 0020.
+# Patched-version floors for vulnerable transitive build tooling (AGP, UTP, bundletool, Kover, KGP); see ADR 0020.
 floor-bouncycastle = "1.86"
 floor-commons-lang3 = "3.21.0"
+floor-freemarker = "2.3.35"
 floor-httpcomponents = "4.5.14"
 floor-jdom2 = "2.0.6.1"
 floor-jose4j = "0.9.7"
 floor-netty = "4.1.139.Final"
+floor-opentelemetry = "1.62.0"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
@@ -42,6 +44,7 @@ robolectric-android-all-sdk37 = { module = "org.robolectric:android-all-instrume
 floor-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "floor-bouncycastle" }
 floor-bcprov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "floor-bouncycastle" }
 floor-bcutil = { module = "org.bouncycastle:bcutil-jdk18on", version.ref = "floor-bouncycastle" }
+floor-freemarker = { module = "org.freemarker:freemarker", version.ref = "floor-freemarker" }
 floor-commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "floor-commons-lang3" }
 floor-httpclient = { module = "org.apache.httpcomponents:httpclient", version.ref = "floor-httpcomponents" }
 floor-httpmime = { module = "org.apache.httpcomponents:httpmime", version.ref = "floor-httpcomponents" }
@@ -58,6 +61,8 @@ floor-netty-handler-proxy = { module = "io.netty:netty-handler-proxy", version.r
 floor-netty-resolver = { module = "io.netty:netty-resolver", version.ref = "floor-netty" }
 floor-netty-transport = { module = "io.netty:netty-transport", version.ref = "floor-netty" }
 floor-netty-transport-native-unix-common = { module = "io.netty:netty-transport-native-unix-common", version.ref = "floor-netty" }
+floor-opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "floor-opentelemetry" }
+floor-opentelemetry-context = { module = "io.opentelemetry:opentelemetry-context", version.ref = "floor-opentelemetry" }
 
 [bundles]
 build-tool-floors = [
@@ -65,6 +70,7 @@ build-tool-floors = [
     "floor-bcprov",
     "floor-bcutil",
     "floor-commons-lang3",
+    "floor-freemarker",
     "floor-httpclient",
     "floor-httpmime",
     "floor-jdom2",
@@ -80,6 +86,8 @@ build-tool-floors = [
     "floor-netty-resolver",
     "floor-netty-transport",
     "floor-netty-transport-native-unix-common",
+    "floor-opentelemetry-api",
+    "floor-opentelemetry-context",
 ]
 
 [plugins]

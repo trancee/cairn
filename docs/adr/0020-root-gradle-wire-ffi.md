@@ -187,6 +187,20 @@ and the Linux lane.
 
 Remove a floor once the tuple's AGP brings that version or newer itself.
 
+**Extension (2026-10-25).** Two more alerts came from the same submission:
+
+- freemarker `2.3.32` (GHSA-27j2-h3m2-8237). It reaches the root buildscript
+  `classpath` through Kover `0.9.11`'s `coverage-report`, which renders the
+  HTML reports.
+- `opentelemetry-api` `1.41.0` (GHSA-rcgg-9c38-7xpx). It comes through KGP
+  `2.4.21`'s `swift-export-embeddable` in `:sdk:swiftExportClasspathResolvable`.
+  KGP registers that configuration, but the repository never runs Swift export.
+
+Both plugins are at their latest stable release, so the bundle adds the floors
+freemarker `2.3.35` and opentelemetry `1.62.0`. The opentelemetry floor covers
+both `opentelemetry-api` and `opentelemetry-context`. The same removal rule
+applies, keyed to the Kover or Kotlin release.
+
 **Alternatives.**
 - **Dismiss the alerts as build-only.** Rejected: that weakens the gate, and
   build tooling runs with repository access.

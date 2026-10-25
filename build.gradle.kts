@@ -1,4 +1,4 @@
-// Raises vulnerable transitive build tooling (AGP, UTP, bundletool) to patched floors.
+// Raises vulnerable transitive build tooling (AGP, UTP, bundletool, Kover, KGP) to patched floors.
 // Constraints only lift versions already in a graph and add no dependency. Every resolvable
 // configuration gets them, including AGP's legacy lint and UTP ones, which are also
 // consumable. Consumable-only variants, which publishing would use, stay untouched.
