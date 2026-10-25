@@ -207,11 +207,34 @@ PR #60. 15 phones, 300 s each, `main` (`df80e25`) then the PR (`86081df`):
   whether the plateau is gone.
 - The P10 lite paired with 1 phone.
 
+## Congestion levels rejected (plan B, 2026-10-25)
+
+Two congestion controllers on top of the slot budget (PR #62) were each run
+in a back-to-back A/B against `main`, 15 phones × 300 s:
+
+| Variant | Pairs at 60 s | Pairs at 300 s | Failed dials | Timeouts |
+|---|---:|---:|---:|---:|
+| `main` | 33 | 45 | 233 | 79 |
+| One level, `LOW_POWER` when `CROWDED` | 17 | 38 | 126 | 81 |
+| `main` | 32 | 47 | 238 | 88 |
+| Crowd and channel levels | 26 | 41 | 240 | 116 |
+
+- `LOW_POWER` advertising and scanning halved the failed dials, but slowed
+  discovery more.
+- Slowing to `BALANCED` only when dials failed did not reduce failures. The
+  5 s timeout added timeouts, and the dial gap slowed dialling.
+- The remaining failures do not track the phone's own advert, scan or dial
+  rate. ADR 0026 records the rejection.
+- `main` paired 45, 47 and 49 times in three runs of the same code: the
+  spread between runs is a few pairs.
+
 ## Open
 
 1. **Plateau.** Slot exhaustion resolved by ADR 0025 (36 to 49 pairs). Still
    open: the 97 fast 133s without a full table, and whether pairing
-   completes in a longer run.
+   completes in a longer run. A congestion controller did not help
+   (ADR 0026); an HCI snoop of R38 or e9097611 should show whether their
+   connect requests reach the air.
 2. **Unanswered frames.** Was the notification lost over the air, or did the
    central stall? Needs an HCI snoop on one affected pair. The `out` trace
    is logged when the fragment is queued, so `onNotificationSent` timing
