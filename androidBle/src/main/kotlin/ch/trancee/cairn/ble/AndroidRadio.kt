@@ -71,6 +71,10 @@ class AndroidRadio(
     private val dials = HashMap<String, Dial>()
     private val upAt = HashMap<ULong, Long>()
 
+    /** When each link last carried a fragment, or came up. */
+    private val activeAt = HashMap<ULong, Long>()
+    private var evictedAt = -EVICTION_INTERVAL_MS
+
     /** Devices connected to the GATT server, subscribed or not; each holds a slot (ADR 0025). */
     private val serverConnected = HashSet<String>()
 
@@ -220,9 +224,11 @@ class AndroidRadio(
     private fun connect(device: BluetoothDevice, beacon: ByteArray?) {
         val address = device.address
         if (address in centrals || address in peripherals) return
+        val now = SystemClock.elapsedRealtime()
+        val waiting = address !in serverConnected && now >= (dials[address]?.notBefore ?: now)
+        if (waiting && slotsInUse() >= maxSlots) evict(now, address)
         if (beacon != null && compareUnsigned(advertised, beacon) > 0) return
         if (dialsInFlight() >= maxDialsInFlight || slotsInUse() >= maxSlots) return
-        val now = SystemClock.elapsedRealtime()
         val dial = dials.getOrPut(address) { Dial(now + random.nextLong(0, FIRST_DIAL_SPREAD_MS + 1)) }
         if (now < dial.notBefore) return
         dial.notBefore = now + ATTEMPT_INTERVAL_MS
@@ -254,6 +260,7 @@ class AndroidRadio(
     private fun up(role: GattRole, mtu: Int, address: String): ULong {
         val link = listener.linkUp(role, mtu.toUShort(), address.encodeToByteArray())
         upAt[link] = SystemClock.elapsedRealtime()
+        activeAt[link] = upAt.getValue(link)
         Log.d(TAG, "link $link up $role mtu $mtu")
         return link
     }
@@ -261,6 +268,7 @@ class AndroidRadio(
     private fun since(link: ULong) = SystemClock.elapsedRealtime() - upAt.getValue(link)
 
     private fun trace(link: ULong, direction: String, fragment: ByteArray) {
+        activeAt[link] = SystemClock.elapsedRealtime()
         val header = fragment.copyOf(minOf(1, fragment.size)).joinToString("") { "%02x".format(it) }
         Log.d(TAG, "link $link $direction 0x$header ${fragment.size} B at ${since(link)} ms")
     }
@@ -273,8 +281,19 @@ class AndroidRadio(
     private fun down(link: ULong) {
         Log.d(TAG, "link $link down at ${since(link)} ms")
         upAt.remove(link)
+        activeAt.remove(link)
         links.remove(link)
         listener.linkDown(link)
+    }
+
+    /** Closes the longest link idle for [LINK_IDLE_MS], at most once per [EVICTION_INTERVAL_MS] (ADR 0025). */
+    private fun evict(now: Long, waiting: String) {
+        if (now - evictedAt < EVICTION_INTERVAL_MS) return
+        val (link, at) = activeAt.minByOrNull { it.value } ?: return
+        if (now - at < LINK_IDLE_MS) return
+        evictedAt = now
+        Log.i(TAG, "slots full; evicting link $link idle ${now - at} ms for ${waiting.takeLast(5)}")
+        links.getValue(link).close()
     }
 
     /**
@@ -594,6 +613,12 @@ class AndroidRadio(
 
         /** Spec §10.4: the first dial to an address waits a random 0 to 3 s after it is first seen. */
         const val FIRST_DIAL_SPREAD_MS = 3_000L
+
+        /** ADR 0025: a link that carried no fragment for this long may be evicted. */
+        const val LINK_IDLE_MS = 30_000L
+
+        /** ADR 0025: at most one eviction per interval. */
+        const val EVICTION_INTERVAL_MS = 60_000L
 
         /** ADR 0025: a dial not up by then fails and frees its slot. */
         const val DIAL_TIMEOUT_MS = 10_000L

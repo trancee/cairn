@@ -72,8 +72,8 @@ On Android, the radio budgets its GATT connections (spec §10.4):
 - **Advertising.** The radio advertises only while it has a free slot, and
   stops while every slot is in use. A device that still connects to a full
   GATT server is disconnected at once.
-- **Eviction.** A full radio that sees an advertising address with no link
-  or dial, and no dial back-off, closes its longest-idle link. A link is
+- **Eviction.** A full radio that sees an advertising address with no link,
+  connection or dial, and no dial back-off, closes its longest-idle link. A link is
   idle when it has carried no fragment for 30 s. The radio evicts at most
   once every 60 s. The freed slot lets it advertise or dial again, and the
   core Resumes the evicted contact later. A false positive, such as a

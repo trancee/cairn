@@ -410,7 +410,7 @@ door = Trunc8(HMAC(K_door_me→peer, lp("cairn-r1 door") ‖ u64(w)))
   - The radio counts dials in flight, central links and devices connected to its GATT server. It uses at most 5 of them on API ≤ 34 and 6 on API 35+, with at most 1 dial in flight on API ≤ 28 and 2 otherwise. A dial that has not come up within 10 s fails.
   - Of two Android devices that both advertise a beacon (§10.1), only the one whose own advertised beacon is lower, as an unsigned big-endian number, dials. Equal beacons dial. A peer advertising only the service UUID is dialled as before.
   - The radio advertises only while it has a free slot, and disconnects a device that connects to a full GATT server.
-  - A full radio that sees an advertising address with no link, no dial in flight and no dial back-off closes its longest link idle for ≥ 30 s, at most once every 60 s.
+  - A full radio that sees an advertising address with no link or connection, no dial in flight and no dial back-off closes its longest link idle for ≥ 30 s, at most once every 60 s.
 - After a non-matching `beacon` read, either admit the stranger on the same link (§5.6) or disconnect; after 3 non-matching reads that the §5.6 limits refused, back off that address for 1 h. Reads refused because the address is already backed off don't count [OI-27, OI-30].
 
 ## 11. Implementation requirements
