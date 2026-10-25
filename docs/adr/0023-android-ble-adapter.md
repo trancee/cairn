@@ -236,3 +236,8 @@ debug panel.
 - **Peripheral.** It advertises only while it has a free slot, disconnects a
   device that connects to a full server, and, when full, evicts its
   longest-idle link for a waiting peer.
+
+2026-10-25, from [ADR 0026](0026-android-congestion-levels.md) (OI-32): the
+advertising and scan modes, the spacing of dials and the dial timeout follow
+the congestion level (`CLEAR`, `BUSY`, `CROWDED`) in place of a fixed
+`LOW_LATENCY`.
