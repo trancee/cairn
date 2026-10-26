@@ -89,6 +89,28 @@ eviction closed it 30–60 s after it came up, before it could be kept.
 
 The owner chose to drop the gate (2026-10-26).
 
+## Fleet result
+
+A second A/B ran four 600 s arms (A, B, B, A), with `main` and PR #68 as A
+and this decision as B. Only 12–13 phones formed links in each arm, fewer
+than the 19 of the first A/B, so the absolute values aren't comparable
+with the table above.
+
+| | A₁ | B₁ | B₂ | A₂ |
+|---|---:|---:|---:|---:|
+| Links | 564 | 212 | 166 | 623 |
+| Link time in links up > 120 s | 5% | 91% | 91% | 7% |
+| Links up > 300 s | 1 | 29 | 26 | 1 |
+| Evictions | 176 | 33 | 26 | 184 |
+| Pairs by 600 s | 26 | 20 | 8 | 33 |
+| Largest live component (mean) | 5.4 | 4.9 | 3.7 | 5.6 |
+| Live degree (mean) | 1.06 | 1.04 | 0.80 | 1.00 |
+
+Stable links hold: nine tenths of B's link time is in links up over two
+minutes. The live graph isn't better connected, though, and fewer pairs
+form. In both arms most closed links close remotely within 3 s, often
+before any frame; that predates this decision.
+
 ## Considered options
 
 - **Seniority.** Keep the longest-up links. No new measurement, but a
