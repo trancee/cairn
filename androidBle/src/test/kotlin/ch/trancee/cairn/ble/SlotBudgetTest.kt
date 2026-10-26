@@ -166,6 +166,18 @@ class SlotBudgetTest {
     }
 
     @Test
+    fun logsADeviceThatItDisconnects() {
+        fill()
+
+        serverConnect(20)
+
+        assertEquals(
+            "slots full; disconnecting ${address(20).takeLast(5)}",
+            org.robolectric.shadows.ShadowLog.getLogsForTag("CairnRadio").last().msg,
+        )
+    }
+
+    @Test
     fun acceptsAServerConnectionFromAPeerItIsDialling() {
         fill()
 

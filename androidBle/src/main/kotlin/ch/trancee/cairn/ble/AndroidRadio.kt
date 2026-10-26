@@ -199,44 +199,28 @@ class AndroidRadio(
 
     private var advertising = false
 
-    /** The advertising state when last budgeted, logged on each change. */
-    private var budgeted = "resumed"
+    /** Advertising stopped because every slot was in use; logged when it resumes. */
+    private var stoppedFull = false
     private var advertisedMode = 0
 
-    /** Tags the pending [budget] at the time a link becomes evictable. */
-    private val rebudget = Any()
-
-    /** The energy band's mode (ADR 0027), or `LOW_POWER` while every slot is in use (ADR 0032). */
-    private fun advertiseMode() =
-        if (slotsInUse() >= maxSlots) AdvertiseSettings.ADVERTISE_MODE_LOW_POWER else band.advertiseMode
-
     /**
-     * Advertises in [advertiseMode] while a slot is free or a link could be evicted for a device
-     * that connects; otherwise stops until one could (ADR 0025, ADR 0032). Runs after every change
-     * to the slots in use or the band.
+     * Advertises only while a slot is free (ADR 0025), in the energy band's mode (ADR 0027); runs
+     * after every change to the slots in use or the band.
      */
     private fun budget() {
         val advertiser = advertiser ?: return
-        handler.removeCallbacksAndMessages(rebudget)
-        val now = SystemClock.elapsedRealtime()
-        val due = if (slotsInUse() >= maxSlots) candidate(now)?.second ?: Long.MAX_VALUE else now
-        val state = when {
-            due > now -> "stopped"
-            slotsInUse() >= maxSlots -> "slowed"
-            else -> "resumed"
-        }
-        if (state != budgeted) Log.i(TAG, if (state == "resumed") "slot free; advertising resumed" else "slots full; advertising $state")
-        budgeted = state
-        if (due > now) {
-            if (advertising) {
-                stopAdvertising(advertiser)
-                handler.removeCallbacksAndMessages(rotation)
-                advertising = false
-            }
-            if (due != Long.MAX_VALUE) handler.postAtTime(::budget, rebudget, SystemClock.uptimeMillis() + (due - now))
-        } else if (!(advertising && advertisedMode == advertiseMode())) {
+        val free = slotsInUse() < maxSlots
+        if (free && !(advertising && advertisedMode == band.advertiseMode)) {
             if (advertising) stopAdvertising(advertiser)
+            if (stoppedFull) Log.i(TAG, "slot free; advertising resumed")
+            stoppedFull = false
             advertise(advertiser)
+        } else if (!free && advertising) {
+            stopAdvertising(advertiser)
+            handler.removeCallbacksAndMessages(rotation)
+            advertising = false
+            stoppedFull = true
+            Log.i(TAG, "slots full; advertising stopped")
         }
     }
 
@@ -250,7 +234,7 @@ class AndroidRadio(
     // Restarts at the next window boundary plus jitter, so the advert carries the current beacon (spec §10.1).
     private fun advertise(advertiser: BluetoothLeAdvertiser) {
         val beacon = listener.beacon()
-        advertisedMode = advertiseMode()
+        advertisedMode = band.advertiseMode
         if (extended) {
             advertiser.startAdvertisingSet(
                 GattProfile.advertisingSetParameters(advertisedMode), GattProfile.advertiseData(beacon), null, null, null, setCallback,
@@ -291,9 +275,8 @@ class AndroidRadio(
     private fun release() {
         advertiser = null
         advertising = false
-        budgeted = "resumed"
+        stoppedFull = false
         handler.removeCallbacksAndMessages(rotation)
-        handler.removeCallbacksAndMessages(rebudget)
         handler.removeCallbacksAndMessages(rescanning)
         centrals.values.toList().forEach(Central::close)
         peripherals.values.toList().forEach(Peripheral::close)
@@ -342,7 +325,7 @@ class AndroidRadio(
         if (address in centrals || address in peripherals) return
         val now = SystemClock.elapsedRealtime()
         val waiting = address !in serverConnected && now >= (dials[address]?.notBefore ?: now)
-        if (waiting && slotsInUse() >= maxSlots) evict(now, address, "scan")
+        if (waiting && slotsInUse() >= maxSlots) evict(now, address)
         if (beacon != null && !(extended && legacy) && compareUnsigned(advertised, beacon) > 0) return
         if (dialsInFlight() >= maxDialsInFlight || slotsInUse() >= maxSlots) return
         val dial = dials.getOrPut(address) { Dial(now + random.nextLong(0, FIRST_DIAL_SPREAD_MS + 1)) }
@@ -434,24 +417,17 @@ class AndroidRadio(
 
     /**
      * Closes the longest link idle for [LINK_IDLE_MS] that is not stable, at most once per
-     * [EVICTION_INTERVAL_MS] (ADR 0025, ADR 0030, ADR 0031), logging its [trigger]; returns whether it closed one.
+     * [EVICTION_INTERVAL_MS] (ADR 0025, ADR 0030, ADR 0031).
      */
-    private fun evict(now: Long, waiting: String, trigger: String): Boolean {
-        val (link, due) = candidate(now) ?: return false
-        if (now < due) return false
-        val at = activeAt.getValue(link)
+    private fun evict(now: Long, waiting: String) {
+        if (now - evictedAt < EVICTION_INTERVAL_MS) return
+        val stable = stable(now)
+        val (link, at) = activeAt.filterKeys { it !in stable }.minByOrNull { it.value } ?: return
+        if (now - at < LINK_IDLE_MS) return
         evictedAt = now
         val rssi = rssi(link, now) ?: "unknown"
-        Log.i(TAG, "slots full; evicting link $link idle ${now - at} ms rssi $rssi for ${waiting.takeLast(5)} ($trigger)")
+        Log.i(TAG, "slots full; evicting link $link idle ${now - at} ms rssi $rssi for ${waiting.takeLast(5)} (scan)")
         links.getValue(link).close()
-        return true
-    }
-
-    /** The non-stable link idle longest, and when [evict] may close it. */
-    private fun candidate(now: Long): Pair<ULong, Long>? {
-        val stable = stable(now)
-        val (link, at) = activeAt.filterKeys { it !in stable }.minByOrNull { it.value } ?: return null
-        return link to maxOf(at + LINK_IDLE_MS, evictedAt + EVICTION_INTERVAL_MS)
     }
 
     /** ADR 0031: the strongest links, then the oldest unmeasured, up to ¾ of the budget. */
@@ -691,9 +667,8 @@ class AndroidRadio(
         override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) = post { server ->
             val address = device.address
             if (newState == BluetoothProfile.STATE_CONNECTED) {
-                // ADR 0032: a full server evicts for the device, else disconnects it; one sharing an
-                // address with our dial costs no slot.
-                if (address !in centrals && slotsInUse() >= maxSlots && !evict(SystemClock.elapsedRealtime(), address, "connect")) {
+                // A device that raced the advert stop; one sharing an address with our dial costs no slot.
+                if (address !in centrals && slotsInUse() >= maxSlots) {
                     Log.i(TAG, "slots full; disconnecting ${address.takeLast(5)}")
                     server.cancelConnection(device)
                 } else {
