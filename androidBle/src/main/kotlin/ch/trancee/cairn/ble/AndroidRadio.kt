@@ -195,6 +195,9 @@ class AndroidRadio(
     private var advertised = ByteArray(0)
 
     private var advertising = false
+
+    /** Advertising stopped because every slot was in use; logged when it resumes. */
+    private var stoppedFull = false
     private var advertisedMode = 0
 
     /**
@@ -206,11 +209,14 @@ class AndroidRadio(
         val free = slotsInUse() < maxSlots
         if (free && !(advertising && advertisedMode == band.advertiseMode)) {
             if (advertising) stopAdvertising(advertiser)
+            if (stoppedFull) Log.i(TAG, "slot free; advertising resumed")
+            stoppedFull = false
             advertise(advertiser)
         } else if (!free && advertising) {
             stopAdvertising(advertiser)
             handler.removeCallbacksAndMessages(rotation)
             advertising = false
+            stoppedFull = true
             Log.i(TAG, "slots full; advertising stopped")
         }
     }
@@ -266,6 +272,7 @@ class AndroidRadio(
     private fun release() {
         advertiser = null
         advertising = false
+        stoppedFull = false
         handler.removeCallbacksAndMessages(rotation)
         handler.removeCallbacksAndMessages(rescanning)
         centrals.values.toList().forEach(Central::close)

@@ -373,9 +373,10 @@ left out), 23 linked in all four runs:
   none of the six other runs of either A/B, once after an HCI timeout on
   `LE_SET_EXTENDED_ADVERTISING_ENABLE`. `7XHEIBPB` restarts in `main` runs
   too.
-- Analysis note: the radio logs "advertising stopped" at every stop but
-  logs only the first start, so slot occupancy must be derived from link
-  up/down lines, not from advertising lines.
+- Analysis note: up to `e9b8b45` the radio logs "slots full; advertising
+  stopped" at every stop but only the first start, so slot occupancy there
+  must be derived from link up/down lines. Later builds log "slot free;
+  advertising resumed" at each restart after a full stop.
 
 ## Open
 
