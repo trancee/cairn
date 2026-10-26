@@ -2,6 +2,8 @@ package ch.trancee.cairn.ble
 
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothProfile
+import android.content.Intent
+import android.os.BatteryManager
 import android.os.Build
 import android.os.Looper
 import org.junit.Test
@@ -13,7 +15,7 @@ import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** A full radio keeps its strongest links up 60 s and evicts only the rest (spec §10.4, ADR 0031). */
+/** A full radio keeps its strongest links and evicts only the rest (spec §10.4, ADR 0031). */
 @RunWith(RobolectricTestRunner::class)
 class StableSlotsTest {
     private val h = RadioHarness().also { it.radio.start() }
@@ -52,15 +54,15 @@ class StableSlotsTest {
     }
 
     @Test
-    fun aLinkUpUnderSixtySecondsIsNotStable() {
+    fun aStrongLinkIsStableAsSoonAsItIsMeasured() {
         central(1, -41)
         advance(10_000)
         (2..slots).forEach { central(it, -40 - it) }
-        advance(59_999)
+        advance(30_000)
 
         h.sight(waiting)
 
-        assertEquals(listOf("down 2"), downs())
+        assertEquals(listOf("down ${quota + 1}"), downs())
     }
 
     @Test
@@ -100,6 +102,38 @@ class StableSlotsTest {
         h.sight(waiting)
 
         assertEquals(listOf("down ${quota + 1}"), downs())
+    }
+
+    @Test
+    fun theQuotaFollowsTheEnergyBand() {
+        (1..3).forEach { central(it, -40 - it) }
+        advance(10_000)
+        (4..slots).forEach { central(it, -40 - it) }
+        @Suppress("DEPRECATION")
+        h.context.sendStickyBroadcast(
+            Intent(Intent.ACTION_BATTERY_CHANGED)
+                .putExtra(BatteryManager.EXTRA_LEVEL, 10)
+                .putExtra(BatteryManager.EXTRA_SCALE, 100),
+        )
+        advance(30_000)
+
+        h.sight(waiting)
+
+        assertEquals(listOf("down 3"), downs())
+    }
+
+    @Test
+    fun evictsNothingWhenEveryLinkIsStable() {
+        (1..quota).forEach { central(it, -50) }
+        (quota + 1..slots).forEach {
+            h.serverCallback().onConnectionStateChange(h.device(address(it)), 0, BluetoothProfile.STATE_CONNECTED)
+        }
+        h.idle()
+        advance(60_000)
+
+        h.sight(waiting)
+
+        assertEquals(emptyList(), downs())
     }
 
     @Test

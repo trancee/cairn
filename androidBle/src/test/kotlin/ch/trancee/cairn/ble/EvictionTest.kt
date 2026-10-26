@@ -13,26 +13,30 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** A full radio frees its longest-idle link for a waiting peer (spec §10.4, ADR 0025). */
+/** A full radio frees its longest-idle rotating link for a waiting peer (spec §10.4, ADR 0025, ADR 0031). */
 @RunWith(RobolectricTestRunner::class)
 class EvictionTest {
     private val h = RadioHarness().also { it.radio.start() }
     private val slots = if (Build.VERSION.SDK_INT >= 35) 6 else 5
+    private val quota = slots * 3 / 4
+    private val rotating = quota + 1
     private val waiting = address(30)
 
     private fun address(i: Int) = "00:11:22:33:44:%02X".format(i)
 
     private fun advance(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
 
-    private fun link(i: Int): BluetoothGatt = h.discover(address(i))!!.also(h::connect)
+    /** Links 1..[quota] are the strongest and stay; the rest rotate. */
+    private fun link(i: Int): BluetoothGatt =
+        h.discover(address(i))!!.also { h.shadow(it).setRssi(if (i <= quota) -40 else -90) }.also(h::connect)
 
     private fun downs() = h.listener.events.filter { it.startsWith("down") }
 
-    /** Fills every slot with central links 1..slots, link 1 up 10 s before the rest. */
+    /** Fills every slot with central links 1..slots, the first rotating one up 10 s before the rest. */
     private fun fill(): List<BluetoothGatt> {
-        val first = link(1)
+        val first = (1..rotating).map(::link)
         advance(10_000)
-        return listOf(first) + (2..slots).map(::link)
+        return first + (rotating + 1..slots).map(::link)
     }
 
     @Test
@@ -42,8 +46,8 @@ class EvictionTest {
 
         h.sight(waiting)
 
-        assertEquals(listOf("down 1"), downs())
-        assertTrue(h.shadow(gatts[0]).isClosed)
+        assertEquals(listOf("down $rotating"), downs())
+        assertTrue(h.shadow(gatts[rotating - 1]).isClosed)
     }
 
     @Test
@@ -60,12 +64,12 @@ class EvictionTest {
     fun aFragmentKeepsALinkActive() {
         fill()
         advance(30_000)
-        h.radio.send(1u, byteArrayOf(1))
+        h.radio.send(rotating.toULong(), byteArrayOf(1))
         h.idle()
 
         h.sight(waiting)
 
-        assertEquals(listOf("down 2"), downs())
+        assertEquals(listOf("down ${rotating + 1}"), downs())
     }
 
     @Test
@@ -126,9 +130,9 @@ class EvictionTest {
     }
 
     @Test
-    fun evictsTheOnlyLinkAmongServerConnections() {
-        link(1)
-        (2..slots).forEach {
+    fun evictsTheOnlyRotatingLinkAmongServerConnections() {
+        (1..rotating).forEach(::link)
+        (rotating + 1..slots).forEach {
             h.serverCallback().onConnectionStateChange(h.device(address(it)), 0, BluetoothProfile.STATE_CONNECTED)
         }
         h.idle()
@@ -136,6 +140,6 @@ class EvictionTest {
 
         h.sight(waiting)
 
-        assertEquals(listOf("down 1"), downs())
+        assertEquals(listOf("down $rotating"), downs())
     }
 }

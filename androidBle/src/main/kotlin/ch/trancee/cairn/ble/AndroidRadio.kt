@@ -430,8 +430,8 @@ class AndroidRadio(
         links.getValue(link).close()
     }
 
-    /** ADR 0031: of the links up [STABLE_AFTER_MS], the strongest, then the oldest unmeasured, up to ¾ of the budget. */
-    private fun stable(now: Long): Set<ULong> = upAt.filterValues { now - it >= STABLE_AFTER_MS }.keys
+    /** ADR 0031: the strongest links, then the oldest unmeasured, up to ¾ of the budget. */
+    private fun stable(now: Long): Set<ULong> = upAt.keys
         .sortedWith(compareBy<ULong, Int?>(nullsLast(reverseOrder())) { rssi(it, now) }.thenBy { upAt.getValue(it) })
         .take(maxSlots * 3 / 4)
         .toSet()
@@ -777,9 +777,6 @@ class AndroidRadio(
 
         /** ADR 0030: at most one eviction per interval. */
         const val EVICTION_INTERVAL_MS = 15_000L
-
-        /** ADR 0031: a link up this long may be stable. */
-        const val STABLE_AFTER_MS = 60_000L
 
         /** ADR 0031: how often a central link reads its RSSI. */
         const val RSSI_INTERVAL_MS = 10_000L

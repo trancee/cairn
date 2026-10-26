@@ -38,16 +38,16 @@ A radio keeps its strongest links as **stable** and rotates the rest
 - **Quota.** At most ⌊¾ × budget⌋ links are stable: 3 of 5 slots, 4 of 6,
   2 of 3 in `LOW`. At least one slot always rotates, so discovery and
   admission go on.
-- **Eligibility.** A link is a candidate once it has been up 60 s, so a
-  link that is still pairing or flaps is never kept.
+- **Eligibility.** Every link is a candidate from the moment it comes up.
+  A first proposal kept only links up 60 s; it was rejected (below).
 - **Signal.** A link's RSSI is its latest reading no older than 30 s:
   - On a central link, the radio reads the RSSI (`readRemoteRssi`) every
     10 s. It is an HCI read outside the ATT queue: AOSP does not take the
     GATT busy lock for it, so it needs no slot between reads and writes.
   - Android has no RSSI call for a GATT server's links, so on a peripheral
     link it is the RSSI of the latest scan result from that address.
-- **Rank.** Candidates with an RSSI come first, strongest first, then
-  candidates without one, longest up first. The first quota of them are
+- **Rank.** Links with an RSSI come first, strongest first, then links
+  without one, longest up first. The first quota of them are
   stable. The rank is recomputed at each eviction.
 - **Eviction.** A stable link is never evicted. Otherwise ADR 0025 and
   ADR 0030 are unchanged: the radio closes the longest link idle for 30 s,
@@ -71,12 +71,30 @@ link, for fleet analysis.
   air traffic, and no wait for fragments.
 - No frame or advert changes, and the Rust core is unaffected.
 
+## Age gate rejected
+
+The first version kept only links up for 60 s. A fleet A/B (`main` with
+PR #68 against it, 600 s per run, all phones at `FULL`) was stopped after
+two runs: a link idles a few seconds after its Resume, so the 30 s idle
+eviction closed it 30–60 s after it came up, before it could be kept.
+
+| | `main` | 60 s gate |
+|---|---:|---:|
+| Phones with links | 19 | 18 |
+| Pairs at 600 s | 62 | 54 |
+| Links up ≥ 60 s when they closed | 38 | 8 |
+| Evictions 30–60 s after link-up | 226 | 254 |
+| Largest live component (mean) | 11.7 | 9.4 |
+| Evicted links with no fresh RSSI | – | 70 of 254 |
+
+The owner chose to drop the gate (2026-10-26).
+
 ## Considered options
 
 - **Seniority.** Keep the longest-up links. No new measurement, but a
   phone keeps whichever links formed first, however weak.
 - **Survival.** Keep the oldest links up 60 s. Rejected for the same
-  reason.
+  reason, and any age gate above the 30 s idle time never applies.
 - **The central tells the peripheral which links to keep.** Both ends
   would agree, but it needs a new record, a spec change to §6 and §7, and
   a model check. Revisit if the ends disagree too often.
