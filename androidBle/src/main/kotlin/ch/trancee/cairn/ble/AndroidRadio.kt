@@ -333,34 +333,13 @@ class AndroidRadio(
                 central.close()
             }
         }, DIAL_TIMEOUT_MS)
-        watch(central)
-    }
-
-    // A target that stopped advertising or changed address is never seen again (ADR 0029).
-    private fun watch(central: Central) {
-        handler.postDelayed({
-            if (centrals[central.address] === central && !central.connected) {
-                val unseen = SystemClock.elapsedRealtime() - central.seenAt
-                if (unseen > band.staleAfterMs) {
-                    Log.i(TAG, "dial ${central.address.takeLast(5)} stale, unseen $unseen ms")
-                    central.close()
-                } else {
-                    watch(central)
-                }
-            }
-        }, FRESHNESS_CHECK_MS)
     }
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val beacon = result.scanRecord?.getServiceData(ParcelUuid(GattProfile.SERVICE))
             val legacy = result.isLegacy
-            handler.post {
-                if (server != null) {
-                    centrals[result.device.address]?.seenAt = SystemClock.elapsedRealtime()
-                    connect(result.device, beacon, legacy)
-                }
-            }
+            handler.post { if (server != null) connect(result.device, beacon, legacy) }
         }
     }
 
@@ -463,12 +442,6 @@ class AndroidRadio(
         lateinit var gatt: BluetoothGatt
         private var stage = Stage.CONNECTING
         val isUp get() = stage == Stage.UP
-
-        /** When the scan last reported this address (ADR 0029). */
-        var seenAt = dialledAt
-
-        /** Whether the controller reported the connection; the target stops advertising then. */
-        var connected = false
         private var mtu = GattProfile.DEFAULT_MTU
         private var link = 0uL
         private lateinit var rx: BluetoothGattCharacteristic
@@ -484,7 +457,6 @@ class AndroidRadio(
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) = post {
             this.status = status
             if (status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_CONNECTED) {
-                connected = true
                 // Both are preferences the controller may decline, so a refusal doesn't close the link.
                 gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
                 gatt.setPreferredPhy(
@@ -764,16 +736,6 @@ class AndroidRadio(
 
         /** ADR 0025: a dial not up by then fails and frees its slot. */
         const val DIAL_TIMEOUT_MS = 10_000L
-
-        /** ADR 0029: how often a dial in flight checks that its target is still seen. */
-        const val FRESHNESS_CHECK_MS = 500L
-
-        /** ADR 0029: a dial fails once its target has gone unseen longer than the band's scan gap allows. */
-        val EnergyBand.staleAfterMs get() = when (this) {
-            EnergyBand.FULL -> 2_000L
-            EnergyBand.SAVE -> 5_000L
-            EnergyBand.LOW -> 7_000L
-        }
 
         /** ADR 0027: the slot budget in energy band `LOW`. */
         const val LOW_SLOTS = 3

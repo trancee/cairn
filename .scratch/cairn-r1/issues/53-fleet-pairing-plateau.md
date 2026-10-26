@@ -322,13 +322,40 @@ enabled, and every phone needs its lock screen off.
   failure class fix B (dial freshness) addresses.
 - Pairs rose 9 % (41.5 against 38), inside the run-to-run spread.
 
+## Dial freshness rejected (fix B, ADR 0029, 2026-10-25)
+
+Fix B cancelled a dial once its target had gone unseen for 2 s at `FULL`
+(PR #66). Four 300 s arms (`main`, fix B, fix B, `main`), all phones forced
+to `FULL` and kept awake (`svc power stayon true`, `wm dismiss-keyguard`).
+26 phones were attached; the 21 that linked in all four are compared. The
+Xiaomi phones installed over adb; three wireless-adb phones dropped out in
+some arms.
+
+| 21 phones | `main` 1 | fix B 1 | fix B 2 | `main` 2 |
+|---|---:|---:|---:|---:|
+| Pairs at 60 s | 35 | 28 | 30 | 32 |
+| Pairs at 300 s | 58 | 60 | 61 | 60 |
+| Failed dials < 1.5 s | 64 | 141 | 181 | 99 |
+| Failed dials 1.5–9 s (stale cancels) | 40 (0) | 339 (316) | 248 (223) | 51 (0) |
+| Dial timeouts (10 s) | 107 | 11 | 34 | 199 |
+| All failed dials | 211 | 491 | 464 | 353 |
+
+- Timeouts fell 80–95 %, but pairs did not rise (60.5 against 59) and fell
+  at 60 s. Dial places held by gone targets do not limit pairing.
+- 214 of 321 cancelled dials in fix B 1 saw no sighting after the dial
+  started; 22 cancelled addresses connected within 30 s.
+- `com.android.bluetooth` died on 3 phones in fix B 2 (none in `main`); one
+  MediaTek phone died 1 s after a stale cancel.
+- Rejected: the code is not merged and ADR 0029 records the result.
+
 ## Open
 
 1. **Plateau.** Slot exhaustion resolved by ADR 0025 (36 to 49 pairs). Still
    open: whether pairing completes in a longer run. A congestion
    controller did not help (ADR 0026). The HCI snoop shows that fast 133s
-   are connection requests lost on the advertising channels, and timeouts
-   dial phones that stopped advertising.
+   are connection requests lost on the advertising channels (fixed by ADR
+   0028), and timeouts dial phones that stopped advertising. Cancelling
+   those dials sooner did not help (ADR 0029).
 2. **Unanswered frames.** Was the notification lost over the air, or did the
    central stall? Needs an HCI snoop on one affected pair. The `out` trace
    is logged when the fragment is queued, so `onNotificationSent` timing

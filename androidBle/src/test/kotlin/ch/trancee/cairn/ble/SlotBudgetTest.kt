@@ -81,12 +81,7 @@ class SlotBudgetTest {
     @Test
     fun aDialThatIsNotUpWithinTenSecondsFails() {
         val gatt = h.discover(address(1))!!
-        // The target stays in sight, so the dial doesn't go stale first (ADR 0029).
-        repeat(9) {
-            advance(1_000)
-            h.sight(address(1))
-        }
-        advance(999)
+        advance(9_999)
         assertFalse(h.shadow(gatt).isClosed)
 
         advance(1)
