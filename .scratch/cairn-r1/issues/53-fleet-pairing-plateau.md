@@ -378,6 +378,32 @@ left out), 23 linked in all four runs:
   must be derived from link up/down lines. Later builds log "slot free;
   advertising resumed" at each restart after a full stop.
 
+## 15-minute run: the plateau is the admission limit (2026-10-26)
+
+One 900 s run of PR #68's build (`main` with ADR 0030), logcat streamed;
+4 wireless phones dropped out of adb but kept running Cairn, and `7XHEIBPB`
+never linked, so 20 phones logged links:
+
+| Pairs by | 60 s | 120 s | 180 s | 300 s | 450 s | 600 s | 900 s |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 20 phones | 22 | 43 | 51 | 58 | 66 | 67 | 68 |
+
+- The last new pair formed at 730 s. 9 of the 20 phones admitted 10
+  neighbours, the §5.6 limit per rolling hour, between 89 s and 729 s; 8 more
+  stopped at 9, their 10th probably with an unlogged phone. No phone reached
+  30 attempts (at most 27). A capped central skips P0 silently, so only 17
+  BUSY replies were sent.
+- So after about 300 s the fleet measures the admission limit, not the radio.
+  The A/Bs above compared arms at 60–300 s, before most phones capped.
+- For a mesh the pair count is the wrong target: the pair graph was one
+  component by 90 s, and every phone was within 4 hops of every other from
+  120 s.
+- Links churn: of 1272 links the median lived 27 s, the 90th percentile 52 s
+  and none 300 s. Links end 30–55 s after their last Resume frame, so idle
+  eviction closes them; the core keeps authenticated links up. A mesh needs
+  stable links to route over, so the owner chose to pin 75 % of the slots to
+  the strongest links (ADR 0031).
+
 ## Open
 
 1. **Plateau.** Slot exhaustion resolved by ADR 0025 (36 to 49 pairs). Still
@@ -385,7 +411,9 @@ left out), 23 linked in all four runs:
    controller did not help (ADR 0026). The HCI snoop shows that fast 133s
    are connection requests lost on the advertising channels (fixed by ADR
    0028), and timeouts dial phones that stopped advertising. Cancelling
-   those dials sooner did not help (ADR 0029).
+   those dials sooner did not help (ADR 0029). In a 15-minute run the
+   plateau is the §5.6 admission limit, and the mesh connects by 90 s; the
+   open question is now link stability (ADR 0031).
 2. **Unanswered frames.** Was the notification lost over the air, or did the
    central stall? Needs an HCI snoop on one affected pair. The `out` trace
    is logged when the fragment is queued, so `onNotificationSent` timing
