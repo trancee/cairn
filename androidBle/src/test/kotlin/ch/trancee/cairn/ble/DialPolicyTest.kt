@@ -139,7 +139,7 @@ class DialPolicyTest {
 
         assertEquals(
             "dial 44:01 failed CONNECTING status 0x85 after 250 ms; retry in 1000 ms",
-            ShadowLog.getLogsForTag("CairnRadio").single { it.msg.startsWith("dial ") }.msg,
+            ShadowLog.getLogsForTag("CairnRadio").single { " failed " in it.msg }.msg,
         )
     }
 }

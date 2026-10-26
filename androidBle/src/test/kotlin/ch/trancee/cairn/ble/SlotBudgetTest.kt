@@ -177,6 +177,46 @@ class SlotBudgetTest {
         )
     }
 
+    private fun logs() = org.robolectric.shadows.ShadowLog.getLogsForTag("CairnRadio").map { it.msg }
+
+    @Test
+    fun logsADialAsItStarts() {
+        h.discover(address(1))
+
+        assertTrue("dial ${address(1).takeLast(5)} started" in logs())
+    }
+
+    @Test
+    fun logsHowLongADialTookToConnect() {
+        val gatt = h.discover(address(1))!!
+        advance(1_234)
+
+        h.callback(gatt).onConnectionStateChange(gatt, 0, BluetoothProfile.STATE_CONNECTED)
+        h.idle()
+
+        assertTrue("dial ${address(1).takeLast(5)} connected after 1234 ms" in logs())
+    }
+
+    @Test
+    fun logsAServerConnectionThatEndsWithoutALink() {
+        serverConnect(20)
+        advance(500)
+
+        serverDisconnect(20)
+
+        assertEquals("server ${address(20).takeLast(5)} disconnected after 500 ms without a link", logs().last())
+    }
+
+    @Test
+    fun doesNotLogAServerConnectionThatBecameALinkAsLinkless() {
+        serverConnect(20)
+        h.subscribe(h.device(address(20)))
+
+        serverDisconnect(20)
+
+        assertTrue(logs().none { "without a link" in it })
+    }
+
     @Test
     fun acceptsAServerConnectionFromAPeerItIsDialling() {
         fill()

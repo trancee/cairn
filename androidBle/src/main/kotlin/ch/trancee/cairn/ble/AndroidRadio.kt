@@ -85,7 +85,7 @@ class AndroidRadio(
     private var evictedAt = -EVICTION_INTERVAL_MS
 
     /** Devices connected to the GATT server, subscribed or not; each holds a slot (ADR 0025). */
-    private val serverConnected = HashSet<String>()
+    private val serverConnected = HashMap<String, Long>()
 
     /** ADR 0025: the AOSP link-record minimum, 7 before API 35 and 8 from it, less 2. */
     private val platformSlots = if (Build.VERSION.SDK_INT >= 35) 6 else 5
@@ -103,7 +103,7 @@ class AndroidRadio(
     private val maxDialsInFlight = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) 1 else 2
 
     // Android allocates one link record per remote address, whichever role opened it.
-    private fun slotsInUse(): Int = (centrals.keys + peripherals.keys + serverConnected).size
+    private fun slotsInUse(): Int = (centrals.keys + peripherals.keys + serverConnected.keys).size
 
     private fun dialsInFlight(): Int = centrals.values.count { !it.isUp }
 
@@ -335,6 +335,7 @@ class AndroidRadio(
         val gatt: BluetoothGatt = device.connectGatt(context, false, central, BluetoothDevice.TRANSPORT_LE) ?: return
         central.gatt = gatt
         centrals[address] = central
+        Log.i(TAG, "dial ${address.takeLast(5)} started")
         budget()
         // A stack may wait 30 s for a peer that is gone, holding the slot (ADR 0025).
         handler.postDelayed({
@@ -486,6 +487,7 @@ class AndroidRadio(
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) = post {
             this.status = status
             if (status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_CONNECTED) {
+                Log.i(TAG, "dial ${address.takeLast(5)} connected after ${SystemClock.elapsedRealtime() - dialledAt} ms")
                 // Both are preferences the controller may decline, so a refusal doesn't close the link.
                 gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
                 gatt.setPreferredPhy(
@@ -672,13 +674,19 @@ class AndroidRadio(
                     Log.i(TAG, "slots full; disconnecting ${address.takeLast(5)}")
                     server.cancelConnection(device)
                 } else {
-                    serverConnected += address
+                    serverConnected[address] = SystemClock.elapsedRealtime()
                     budget()
                 }
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                serverConnected -= address
+                val since = serverConnected.remove(address)
                 serverMtus.remove(address)
-                peripherals.remove(address)?.let { down(it.link) }
+                val peripheral = peripherals.remove(address)
+                if (peripheral != null) {
+                    down(peripheral.link)
+                } else if (since != null) {
+                    val ms = SystemClock.elapsedRealtime() - since
+                    Log.i(TAG, "server ${address.takeLast(5)} disconnected after $ms ms without a link")
+                }
                 budget()
             }
         }
