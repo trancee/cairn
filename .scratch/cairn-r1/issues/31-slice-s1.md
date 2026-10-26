@@ -49,3 +49,17 @@ and `session` fuzz targets run per PR. The `session` fuzzer found peer
 X-Wing faults (an ML-KEM modulus failure, or a low-order X25519 share)
 surfacing as `CoreError::Crypto`. They now fail pairing as malformed. See
 [ADR 0022](../../../docs/adr/0022-cairn-core-contract.md) §8.
+
+2026-10-26: Android device demonstration. `main` at `adb9439`, debug APK
+(`arm64-v8a`, `armeabi-v7a`; SHA-256 prefix `3fc07106486a0c51`), run with
+`am instrument -w ch.trancee.cairn.android/.CoreStatusInstrumentation`.
+This drives `coreStatus()`: two `CairnCore`s pair, chat and close over the
+in-memory loopback, through `:app` → `:sdk` → Rust.
+
+| Role | Device | API | Result |
+|---|---|---:|---|
+| Oldest | Huawei P10 lite (WAS-LX1A, Kirin 658) | 26 | `PASS: paired=1+1 chat=hello rejected=NotRestored closed=true` |
+| Newest | Nothing Phone (2) (A065, SM8475) | 36 | `PASS: paired=1+1 chat=hello rejected=NotRestored closed=true` |
+
+The iPhone demonstration is still missing. The physical-iPhone proof is
+tracked in [issue 48](48-apple-lane-ios-targets.md).
