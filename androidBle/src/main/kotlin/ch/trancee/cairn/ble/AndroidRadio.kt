@@ -320,7 +320,7 @@ class AndroidRadio(
         if (address in centrals || address in peripherals) return
         val now = SystemClock.elapsedRealtime()
         val waiting = address !in serverConnected && now >= (dials[address]?.notBefore ?: now)
-        if (waiting && slotsInUse() >= maxSlots) evict(now, address)
+        if (waiting && slotsInUse() >= maxSlots) evict(now, address, "scan")
         if (beacon != null && !(extended && legacy) && compareUnsigned(advertised, beacon) > 0) return
         if (dialsInFlight() >= maxDialsInFlight || slotsInUse() >= maxSlots) return
         val dial = dials.getOrPut(address) { Dial(now + random.nextLong(0, FIRST_DIAL_SPREAD_MS + 1)) }
@@ -412,16 +412,16 @@ class AndroidRadio(
 
     /**
      * Closes the longest link idle for [LINK_IDLE_MS] that is not stable, at most once per
-     * [EVICTION_INTERVAL_MS] (ADR 0025, ADR 0030, ADR 0031); returns whether it closed one.
+     * [EVICTION_INTERVAL_MS] (ADR 0025, ADR 0030, ADR 0031), logging its [trigger]; returns whether it closed one.
      */
-    private fun evict(now: Long, waiting: String): Boolean {
+    private fun evict(now: Long, waiting: String, trigger: String): Boolean {
         if (now - evictedAt < EVICTION_INTERVAL_MS) return false
         val stable = stable(now)
         val (link, at) = activeAt.filterKeys { it !in stable }.minByOrNull { it.value } ?: return false
         if (now - at < LINK_IDLE_MS) return false
         evictedAt = now
         val rssi = rssi(link, now) ?: "unknown"
-        Log.i(TAG, "slots full; evicting link $link idle ${now - at} ms rssi $rssi for ${waiting.takeLast(5)}")
+        Log.i(TAG, "slots full; evicting link $link idle ${now - at} ms rssi $rssi for ${waiting.takeLast(5)} ($trigger)")
         links.getValue(link).close()
         return true
     }
@@ -665,7 +665,8 @@ class AndroidRadio(
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 // ADR 0032: a full server evicts for the device, else disconnects it; one sharing an
                 // address with our dial costs no slot.
-                if (address !in centrals && slotsInUse() >= maxSlots && !evict(SystemClock.elapsedRealtime(), address)) {
+                if (address !in centrals && slotsInUse() >= maxSlots && !evict(SystemClock.elapsedRealtime(), address, "connect")) {
+                    Log.i(TAG, "slots full; disconnecting ${address.takeLast(5)}")
                     server.cancelConnection(device)
                 } else {
                     serverConnected += address

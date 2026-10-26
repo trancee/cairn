@@ -36,7 +36,9 @@ A full radio keeps advertising, and makes room for a device that connects
   its connection; otherwise the radio disconnects it at once. A device the
   radio is dialling still costs no slot.
 
-The radio logs when it slows and when it resumes the band's mode.
+The radio logs when it slows and when it resumes the band's mode. Each eviction
+log names its trigger, `(scan)` or `(connect)`, and a device disconnected because
+nothing could be evicted is logged too, so fleet runs can count the new path.
 
 ## Consequences
 

@@ -165,7 +165,7 @@ class StableSlotsTest {
         h.sight(waiting)
 
         assertEquals(
-            "slots full; evicting link 1 idle 70000 ms rssi unknown for 44:1E",
+            "slots full; evicting link 1 idle 70000 ms rssi unknown for 44:1E (scan)",
             logs().single { it.startsWith("slots full; evicting") },
         )
     }

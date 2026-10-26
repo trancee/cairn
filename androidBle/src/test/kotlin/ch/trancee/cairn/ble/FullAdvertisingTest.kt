@@ -106,6 +106,26 @@ class FullAdvertisingTest {
     }
 
     @Test
+    fun logsAnEvictionForADeviceThatConnects() {
+        fill()
+        advance(30_000)
+
+        serverConnect(newcomer)
+
+        assertTrue(logs().single { it.startsWith("slots full; evicting") }.endsWith("for ${newcomer.takeLast(5)} (connect)"))
+    }
+
+    @Test
+    fun logsADeviceThatItDisconnects() {
+        fill()
+        advance(29_999)
+
+        serverConnect(newcomer)
+
+        assertEquals("slots full; disconnecting ${newcomer.takeLast(5)}", logs().last())
+    }
+
+    @Test
     fun disconnectsADeviceThatConnectsWhileNoLinkIsIdle() {
         fill()
         advance(29_999)
