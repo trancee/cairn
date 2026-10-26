@@ -400,7 +400,7 @@ class AndroidRadio(
         listener.linkDown(link)
     }
 
-    /** Closes the longest link idle for [LINK_IDLE_MS], at most once per [EVICTION_INTERVAL_MS] (ADR 0025). */
+    /** Closes the longest link idle for [LINK_IDLE_MS], at most once per [EVICTION_INTERVAL_MS] (ADR 0025, ADR 0030). */
     private fun evict(now: Long, waiting: String) {
         if (now - evictedAt < EVICTION_INTERVAL_MS) return
         val (link, at) = activeAt.minByOrNull { it.value } ?: return
@@ -731,8 +731,8 @@ class AndroidRadio(
         /** ADR 0025: a link that carried no fragment for this long may be evicted. */
         const val LINK_IDLE_MS = 30_000L
 
-        /** ADR 0025: at most one eviction per interval. */
-        const val EVICTION_INTERVAL_MS = 60_000L
+        /** ADR 0030: at most one eviction per interval. */
+        const val EVICTION_INTERVAL_MS = 15_000L
 
         /** ADR 0025: a dial not up by then fails and frees its slot. */
         const val DIAL_TIMEOUT_MS = 10_000L
