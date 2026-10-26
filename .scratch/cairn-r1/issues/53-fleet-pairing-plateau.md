@@ -404,16 +404,77 @@ never linked, so 20 phones logged links:
   stable links to route over, so the owner chose to pin 75 % of the slots to
   the strongest links (ADR 0031).
 
+## Stable slots (ADR 0031, 2026-10-26)
+
+A version that kept only links up for at least 60 s was stopped after two
+runs. The 30 s idle eviction closed links before they reached 60 s, so very
+few were kept: 8 links lasted 60 s, against 38 on `main`.
+Without that gate, a 600 s A/B (A = `main`, B = ADR 0031):
+
+| | A₁ | B₁ | B₂ | A₂ |
+|---|---:|---:|---:|---:|
+| Link time in links up > 120 s | 8% | 90% | 89% | 11% |
+| Evictions | 291 | 52 | 40 | 271 |
+| Pairs by 600 s | 65 | 44 | 31 | 66 |
+| Largest live component (mean) | 13.2 of 18 | 13.6 of 18 | 10.4 of 17 | 12.1 of 19 |
+
+Links now stay up, and the live graph is about as connected as before.
+Fewer pairs form because fewer slots rotate. Merged as ADR 0031.
+
+## Advertising while full rejected (ADR 0032, 2026-10-26)
+
+ADR 0032 tested whether a full radio should keep advertising at
+`LOW_POWER`, evicting an idle link that isn't stable for a device that
+connects. It was tested in two versions on 25–28 phones, with 900 s arms:
+
+- **Always advertise while full.** It never evicted for a device that
+  connected; it refused 205 devices. Full radios held 3–4 links, all of them
+  stable, and their other slots held dials and connections that hadn't yet
+  become links.
+- **Advertise only while a link can be evicted.** Advertising happened in
+  22 and 25 of about 450 full spells. The difference in pairs (50 and 63
+  against 53 and 58) and in components is within the noise between arms.
+
+Rejected; the spec is unchanged. Two logs were kept: evictions end in
+`(scan)`, and the radio logs `slots full; disconnecting XX:XX`.
+
+## Slot waste (PR #71, 2026-10-26)
+
+PR #71 logs when a dial starts, how long it took to connect, and server
+connections that ended without becoming a link. One 1200 s run of `main`
+with these logs, on 28 phones:
+
+| Slot time, whole run | slot-s | share |
+|---|---:|---:|
+| Central links | 49 836 | 52.1% |
+| Peripheral links | 28 574 | 29.9% |
+| Server connections that never became links | 9 810 | 10.3% |
+| Dials that timed out (10 s) | 4 192 | 4.4% |
+| Dial → link setup | 2 983 | 3.1% |
+| Dials that failed fast | 259 | 0.3% |
+
+- 93 of the 141 server connections that never became links overlap our
+  own dial or link to the same address, so they take no extra slot. The 48
+  from other phones held 2 526 slot-s (2.6%), with a median of 10.6 s.
+- Of 731 dials, 140 connected and 419 timed out. Time to connect: median
+  0.9 s, p99 6.6 s, max 7.0 s.
+- Taken at the moment a radio goes full, its slots are 54% links and 46%
+  connections still being set up. That moment overstates setup, because a
+  new connection is usually what fills the radio.
+- So about 7% of slot time is wasted. An 8 s dial timeout would save about
+  1%, less than the noise between arms. No change.
+
 ## Open
 
-1. **Plateau.** Slot exhaustion resolved by ADR 0025 (36 to 49 pairs). Still
-   open: whether pairing completes in a longer run. A congestion
-   controller did not help (ADR 0026). The HCI snoop shows that fast 133s
-   are connection requests lost on the advertising channels (fixed by ADR
-   0028), and timeouts dial phones that stopped advertising. Cancelling
-   those dials sooner did not help (ADR 0029). In a 15-minute run the
-   plateau is the §5.6 admission limit, and the mesh connects by 90 s; the
-   open question is now link stability (ADR 0031).
+1. **Plateau.** Resolved. ADR 0025 ended slot exhaustion (36 to 49 pairs).
+   The rest of the plateau is the §5.6 admission limit, and the mesh is one
+   component by 90 s. These didn't help:
+   - a congestion controller (ADR 0026);
+   - cancelling dials sooner (ADR 0029);
+   - advertising while full (ADR 0032).
+
+   Fast 133s were connection requests lost on the advertising channels, and
+   ADR 0028 fixed them. ADR 0031 keeps links up, and slot waste is about 7%.
 2. **Unanswered frames.** Was the notification lost over the air, or did the
    central stall? Needs an HCI snoop on one affected pair. The `out` trace
    is logged when the fragment is queued, so `onNotificationSent` timing

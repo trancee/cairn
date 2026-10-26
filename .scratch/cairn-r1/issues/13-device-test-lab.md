@@ -41,10 +41,10 @@ The rest of the fleet is an extended matrix for regression and soak runs.
 
 | Role | Device | iOS | Why |
 |---|---|---|---|
-| OS floor | iPhone SE (1st gen) | ≤ 15.8 (exact version to confirm) | iOS 15 deployment floor; oldest BLE controller |
+| OS floor | iPhone SE (1st gen) | 15.8.8 | iOS 15 deployment floor; oldest BLE controller |
 | Old OS | iPhone 15 | 17.6.1 | Pre-26: no CryptoKit ML-KEM; mid-range iOS |
-| Newest OS | iPhone 12 mini | 26.6.1 | iOS 26 BLE behaviour; CryptoKit ML-KEM available for cross-checks |
-| Spare | iPhone SE 2 | to confirm | Second iPhone for iOS↔iOS and two-central tests |
+| Newest OS | iPhone 12 mini | 27.0.1 | iOS 26 BLE behaviour; CryptoKit ML-KEM available for cross-checks |
+| Spare | iPhone SE 2 | 18.7.8 | Second iPhone for iOS↔iOS and two-central tests |
 
 The Mac with Xcode is assumed available (the XcodeBuildMCP tooling is present). No sniffer.
 

@@ -1,7 +1,7 @@
 # Slice S1: Walking skeleton (loopback)
 
 Type: task
-Status: open
+Status: resolved
 Blocked by: 26, 30
 
 ## Question
@@ -49,3 +49,35 @@ and `session` fuzz targets run per PR. The `session` fuzzer found peer
 X-Wing faults (an ML-KEM modulus failure, or a low-order X25519 share)
 surfacing as `CoreError::Crypto`. They now fail pairing as malformed. See
 [ADR 0022](../../../docs/adr/0022-cairn-core-contract.md) §8.
+
+2026-10-26: Android device demonstration. `main` at `adb9439`, debug APK
+(`arm64-v8a`, `armeabi-v7a`; SHA-256 prefix `3fc07106486a0c51`), run with
+`am instrument -w ch.trancee.cairn.android/.CoreStatusInstrumentation`.
+This drives `coreStatus()`: two `CairnCore`s pair, chat and close over the
+in-memory loopback, through `:app` → `:sdk` → Rust.
+
+| Role | Device | API | Result |
+|---|---|---:|---|
+| Oldest | Huawei P10 lite (WAS-LX1A, Kirin 658) | 26 | `PASS: paired=1+1 chat=hello rejected=NotRestored closed=true` |
+| Newest | Nothing Phone (2) (A065, SM8475) | 36 | `PASS: paired=1+1 chat=hello rejected=NotRestored closed=true` |
+
+The Android instrumentation now compares against the shared
+`EXPECTED_CORE_STATUS`, and both phones pass again.
+
+iPhone demonstration: `:app` gains iOS targets and a `CairnApp` framework,
+and `iosApp/` is a minimal SwiftUI shell that runs the same `coreStatus()`
+at launch (see `iosApp/README.md`). Built with Xcode 27.1 at `minos 15.0`:
+
+| Device | iOS | Result |
+|---|---|---|
+| iPhone SE (2020) | 18.7.8 | `PASS: paired=1+1 chat=hello rejected=NotRestored closed=true`, exit 0 (`devicectl --console … -selfTest`) |
+| iPhone 12 mini (newest) | 27.0.1 | `PASS: paired=1+1 chat=hello rejected=NotRestored closed=true`, exit 0 (`devicectl --console … -selfTest`) |
+| iPhone 15 | 17.6.1 | `PASS` on screen; installed with `ios-deploy`, because CoreDevice did not list it; the log capture was lost |
+
+Not run: the matrix's oldest phone, the iPhone SE (1st gen) on iOS 15.8.8. Xcode
+27 does not offer it as a destination, so automatic signing cannot add
+it to the profile.
+
+2026-10-26: resolved by the owner. S1 has passed on the oldest and newest
+Android phones and on three iPhones, including the newest (iOS 27.0.1).
+The iOS 15 floor phone moves to [issue 48](48-apple-lane-ios-targets.md).
