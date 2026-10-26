@@ -1,0 +1,31 @@
+# XcodeGen spec for the iOS host app; `xcodegen generate` writes the ignored CairnIos.xcodeproj.
+name: CairnIos
+options:
+  bundleIdPrefix: ch.trancee.cairn
+  deploymentTarget:
+    iOS: "15.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    CODE_SIGN_STYLE: Automatic
+targets:
+  CairnIos:
+    type: application
+    platform: iOS
+    sources: [iosApp]
+    info:
+      path: iosApp/Info.plist
+      properties:
+        CFBundleDisplayName: Cairn
+        UILaunchScreen: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ch.trancee.cairn.ios
+        GENERATE_INFOPLIST_FILE: NO
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        FRAMEWORK_SEARCH_PATHS: $(SRCROOT)/../app/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)
+        OTHER_LDFLAGS: [-framework, CairnApp]
+    preBuildScripts:
+      - name: Build the Kotlin framework
+        script: cd "$SRCROOT/.." && ./gradlew :app:embedAndSignAppleFrameworkForXcode
+        basedOnDependencyAnalysis: false

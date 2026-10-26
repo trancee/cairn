@@ -10,6 +10,10 @@ kotlin {
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
     }
+    // The iOS host app (iosApp/) links this framework; the iOS 15.0 floor is Kotlin/Native's default.
+    listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
+        target.binaries.framework { baseName = "CairnApp" }
+    }
     sourceSets {
         commonMain.dependencies {
             implementation(project(":sdk"))

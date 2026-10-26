@@ -1,6 +1,6 @@
 # PROJECT
 
-state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer + host-only ML-KEM-768/X-Wing/AES-256-GCM/X25519/RNG backends + S1 sans-IO core (pairing, Resume, CHAT) behind the UniFFI `CairnCore` + root Gradle build (JVM/Android/iOS); BLE transport/SDK/application=not implemented.
+state=protocol research/specification/formal models + host-only Rust foundation + unexposed PQ epoch transfer + host-only ML-KEM-768/X-Wing/AES-256-GCM/X25519/RNG backends + S1 sans-IO core (pairing, Resume, CHAT) behind the UniFFI `CairnCore` + root Gradle build (JVM/Android/iOS) + minimal iOS host app (`iosApp/`, core self-test); BLE transport/SDK/application=not implemented.
 
 ## iOS targets in the strict Apple lane (2026-10-24)
 
@@ -99,7 +99,8 @@ KMP target and host proof matrix:
 | `:androidBle`, `:androidApp` | Android host (Robolectric `4.17`, API 26 and 37) | strict `codeql` cell (`repository-jvm`) and Linux x86_64 guest, both offline sandboxes | `testDebugUnitTest koverVerifyDebug` of each | runtime: `AndroidRadio` against shadowed GATT client, server, scanner and advertiser; permission and Bluetooth gates, chat, debug panel and lifecycle in the Compose screen; Kover at 100% lines and branches ([ADR 0023](docs/adr/0023-android-ble-adapter.md) §4) | no real radio; `@Composable` code excluded from coverage; strict cell observed in [run 40111031764](https://github.com/trancee/cairn/actions/runs/40111031764); Linux guest green and uncovered-branch red with label `s2-radio` ([README](proofs/bindings/linux-android/README.md#repository-root-build-lane)) |
 | `:sdk` | Android | same | `:androidApp:assembleDebug` (`-PandroidAbis=x86_64,arm64-v8a`) | APK has `libcairn_ffi.so`, `libuniffi_runtime.so` and `libjnidispatch.so` per ABI | debug only; armeabi-v7a not packaged |
 | `:app`, `:androidApp` | Android API 26 x86_64 | fresh emulator, private network | `run-isolated-android.sh … .CoreStatusInstrumentation` | runtime: `coreStatus()` pairs and chats two `CairnCore`s through `:app` → `:sdk` → Rust | Compose UI not driven; no release build or physical device; not rerun since the `CairnCore` cutover |
-| all | iOS | — | — | none | deferred (ADR 0020) |
+| `:app`, `:androidApp` | Android physical (P10 lite API 26, Nothing Phone (2) API 36) | owner's fleet over adb | `am instrument -w ch.trancee.cairn.android/.CoreStatusInstrumentation` | runtime: `PASS` with `EXPECTED_CORE_STATUS` on both ([issue 31](.scratch/cairn-r1/issues/31-slice-s1.md)) | manual run, not in CI |
+| `:app`, `iosApp/` | iOS physical (iPhone 15 iOS 17.6.1, iPhone SE (2020) iOS 18.7.8) | owner's Mac, Xcode 27.1, automatic signing | `xcodegen generate` in `iosApp/`, then `xcodebuild … -allowProvisioningUpdates build` and `xcrun devicectl device process launch --console … ch.trancee.cairn.ios -- -selfTest` ([README](iosApp/README.md)) | runtime: the same `coreStatus()` reports `PASS`, exit 0 ([issue 31](.scratch/cairn-r1/issues/31-slice-s1.md)) | manual run, not in CI; Swift shell not linted or measured for coverage; iOS 15 floor (SE 1st gen) and iOS 27 (12 mini) not yet run |
 
 Commands and prerequisites are in the
 [Linux/Android README](proofs/bindings/linux-android/README.md#repository-root-build-lane).
