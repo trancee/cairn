@@ -1,0 +1,33 @@
+# iOS host app
+
+A minimal SwiftUI shell around the shared `:app` framework (`CairnApp`). At
+launch it runs `coreStatus()`, the same core self-test as Android's
+`CoreStatusInstrumentation`: two `CairnCore`s pair and chat over an in-memory
+loopback, through `:app` → `:sdk` → Rust. It compares the result with
+`EXPECTED_CORE_STATUS`, shows the verdict and logs it with `NSLog`.
+
+## Build and run on an iPhone
+
+Prerequisites: Xcode, XcodeGen, an Apple Development identity, and an
+iPhone with Developer Mode on, paired with the Mac.
+
+```sh
+cd iosApp
+xcodegen generate   # writes the ignored CairnIos.xcodeproj and Info.plist
+xcodebuild -project CairnIos.xcodeproj -scheme CairnIos -configuration Debug \
+  -destination 'generic/platform=iOS' -derivedDataPath /tmp/cairn-ios-dd \
+  DEVELOPMENT_TEAM=<team-id> -allowProvisioningUpdates build
+APP=/tmp/cairn-ios-dd/Build/Products/Debug-iphoneos/CairnIos.app
+xcrun devicectl device install app --device <udid> "$APP"
+xcrun devicectl device process launch --device <udid> --console \
+  --terminate-existing ch.trancee.cairn.ios -- -selfTest
+```
+
+The build's pre-build script runs `./gradlew :app:embedAndSignAppleFrameworkForXcode`.
+With `-selfTest`, the app exits 0 on `PASS` and 1 on `FAIL`. Without it, the
+app stays open and shows the verdict.
+
+The automatic-signing profile covers only the devices registered with the
+team. If `devicectl` can't see a phone that usbmux can, install it with
+`ios-deploy --id <udid> --bundle "$APP"`, tap the app, and read the verdict
+with `idevicesyslog -u <udid> -p CairnIos`.

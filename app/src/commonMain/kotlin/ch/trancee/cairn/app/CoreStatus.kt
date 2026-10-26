@@ -9,6 +9,9 @@ import ch.trancee.cairn.ffi.GattRole
 
 private val CLOCK = Clock(monoMs = 1_000uL, unixS = 1_761_177_600uL)
 
+/** What [coreStatus] returns when every check passes; each platform's self-test compares against it. */
+const val EXPECTED_CORE_STATUS = "paired=1+1 chat=hello rejected=NotRestored closed=true"
+
 /**
  * Pairs two in-process cores over a memory loopback, sends one chat and checks the typed error and
  * post-close paths, then summarizes the outcome.

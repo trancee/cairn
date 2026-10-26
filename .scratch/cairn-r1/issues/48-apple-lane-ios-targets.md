@@ -22,3 +22,10 @@ iPhones.
   passes the four common tests. CodeQL cannot extract Kotlin/Native; the
   inventory gate blocks iOS-only sources (ADR 0015). Open: the
   oldest/newest-iPhone demonstration on physical devices.
+- 2026-10-26: `iosApp/` (SwiftUI shell over the `:app` framework) runs the
+  S1 core self-test on physical iPhones: iPhone 15 (iOS 17.6.1) and iPhone
+  SE (2020) (iOS 18.7.8) pass, and so does the newest, the iPhone 12 mini
+  (iOS 27.0.1); see [issue 31](31-slice-s1.md). Still open: the iOS 15
+  floor phone (SE 1st gen, iOS 15.8.8). Xcode 27 does not offer it as a
+  destination, so it needs its UDID registered in the developer portal and a
+  tap-to-run, or an older Xcode. The app is not built in CI.
