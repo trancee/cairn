@@ -92,24 +92,27 @@ The owner chose to drop the gate (2026-10-26).
 ## Fleet result
 
 A second A/B ran four 600 s arms (A, B, B, A), with `main` and PR #68 as A
-and this decision as B. Only 12–13 phones formed links in each arm, fewer
-than the 19 of the first A/B, so the absolute values aren't comparable
-with the table above.
+and this decision as B. 17–19 phones formed links in each arm.
 
 | | A₁ | B₁ | B₂ | A₂ |
 |---|---:|---:|---:|---:|
-| Links | 564 | 212 | 166 | 623 |
-| Link time in links up > 120 s | 5% | 91% | 91% | 7% |
-| Links up > 300 s | 1 | 29 | 26 | 1 |
-| Evictions | 176 | 33 | 26 | 184 |
-| Pairs by 600 s | 26 | 20 | 8 | 33 |
-| Largest live component (mean) | 5.4 | 4.9 | 3.7 | 5.6 |
-| Live degree (mean) | 1.06 | 1.04 | 0.80 | 1.00 |
+| Links | 943 | 347 | 267 | 941 |
+| Link time in links up > 120 s | 8% | 90% | 89% | 11% |
+| Links up > 300 s | 2 | 44 | 42 | 3 |
+| Evictions | 291 | 52 | 40 | 271 |
+| Pairs by 600 s | 65 | 44 | 31 | 66 |
+| Largest live component (mean) | 13.2 of 18 | 13.6 of 18 | 10.4 of 17 | 12.1 of 19 |
+| Live degree (mean) | 1.86 | 1.91 | 1.56 | 1.51 |
 
 Stable links hold: nine tenths of B's link time is in links up over two
-minutes. The live graph isn't better connected, though, and fewer pairs
-form. In both arms most closed links close remotely within 3 s, often
-before any frame; that predates this decision.
+minutes, and evictions fall by four fifths. The live graph is about as
+connected as A's. Fewer pairs form, as fewer slots rotate.
+
+Most links that close within 3 s close before any Pairing or Resume
+frame, in both arms. In A, about nine in ten of the frameless central
+links close after the phone has admitted 10 peers: the core reads a
+stranger's beacon, refuses admission (spec §5.6) and closes the link.
+In B they are mostly contacts already in session, or addresses backed off.
 
 ## Considered options
 
