@@ -36,3 +36,7 @@ message through at least one courier.
 The owner chose 8 B tag prefixes in inventories (I8). Queued `inner` gains
 the text length and bucket padding up to 4048 B; only `inner` ≤ 2048 B is
 couriered. Next: `courier.spthy`.
+
+2026-10-26: step 2 done. `courier.spthy` verifies P1–P4 in about 1 s; the
+`OPEN_COMMIT` and `REUSABLE_SLOT` mutations falsify P4 and P3. P5 is argued in
+the models README. Next: Rust core.

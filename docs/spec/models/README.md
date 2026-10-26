@@ -7,6 +7,7 @@ Symbolic models of `cairn-r1` ([spec](../cairn-r1.md)). Under the strict formal-
 | [`resume.spthy`](resume.spthy) | §6 Resume | All four profiles verified with public `pairID` |
 | [`ratchet.spthy`](ratchet.spthy) | §9 | Opt-in refined sources complete; 56 safety certificates and four witnesses replay separately; full assembled/equation acceptance incomplete |
 | [`sas.spthy`](sas.spthy) | §5 Pairing (TOFU, Verify; QR and SAS branches retired) | Verified (draft 0.4) |
+| [`courier.spthy`](courier.spthy) | §8.1 Couriers | Verified (draft 0.16) |
 
 ## Evidence index
 
@@ -707,6 +708,43 @@ So each attempt succeeds with probability at most 10⁻⁶ ≈ 2⁻²⁰ for SAS
 - X-Wing is an ideal KEM. Hashes, HKDF and the MAC are free functions; AEAD is symmetric encryption; cards are constants.
 - The QR reaches only B's camera; `RevQR` lets the attacker photograph it.
 - Not covered: device compromise during pairing, card contents (beacon key, KCI key), the 120 s timeout, and users who confirm without comparing.
+
+## Couriers (`courier.spthy`)
+
+Couriers ([ADR 0033](../../adr/0033-courier-relaying.md), spec §8.1, OI-37) carry sealed envelopes for contacts that are out of range. Every courier is the Dolev-Yao attacker: envelopes go to and come from the network. Honest couriers are modelled only to check tombstones.
+
+Run from this directory:
+
+| Command | Profile | Expected | Time (Apple silicon) |
+|---|---|---|---|
+| `tamarin-prover --prove courier.spthy` | Spec §8.1, draft 0.16 | 5 lemmas verified | ≈ 1 s |
+| `tamarin-prover --prove=tombstone_unforgeable -D=OPEN_COMMIT courier.spthy` | Mutation: `c = s`, so couriers hold the tombstone secret | Falsified: shows the lemma detects forged tombstones | ≈ 1 s |
+| `tamarin-prover --prove=once_only -D=REUSABLE_SLOT courier.spthy` | Mutation: the recipient keeps an index after opening it | Falsified: shows the lemma detects double acceptance | ≈ 1 s |
+
+### Properties
+
+| # | Property | Lemma | Result |
+|---|---|---|---|
+| P1 | A queued message stays secret from couriers unless its pair is corrupted | `message_secrecy` | Verified |
+| P2 | The recipient accepts only what its contact sealed for that direction and index | `authenticity` | Verified |
+| P3 | However couriers replay it, each index is accepted at most once | `once_only` | Verified; falsified by `REUSABLE_SLOT` |
+| P4 | An honest courier accepts a tombstone for an honest envelope only after the recipient opened it or the sender released it | `tombstone_unforgeable` | Verified; falsified by `OPEN_COMMIT` |
+| P5 | Couriers cannot link two envelopes of one pair | — | Argued below, not modelled |
+
+`executable_delivery` shows that an honest envelope is delivered and its tombstone accepted by an honest courier, without corruption or release by the sender.
+
+### Tag unlinkability (P5, argument)
+
+P5 is an equivalence property; a diff-mode model was rejected as too costly (ADR 0033). The argument: a tag is `MAC(K_route, "route", dir ‖ gen ‖ idx)`, and `K_route` is a 32 B key known only to the two contacts (spec §5.5). Each `(dir, gen, idx)` is sealed at most once, so a courier sees the MAC on distinct inputs. If HMAC-SHA-384 is a PRF, these tags are indistinguishable from independent random 16 B strings, so tags of one pair cannot be told apart from tags of different pairs. Tags reveal nothing about `K_route`, `mk_idx` or the sender. The 8 B inventory prefixes are truncations of the same values. This covers tags only: `c`, the padded length bucket, `expiry`, `copies`, timing and who deposits or fetches what are visible to couriers, as the threat model's A8 row states.
+
+### Abstractions and limits
+
+- Pairing and Resume are abstracted to a fresh `RK` per pair; `K_route` and per-direction chain keys derive from it. `Corrupt` reveals `RK`.
+- One generation per direction; `gen` and reseeding are omitted. The chain `mk_i` is abstracted to `kdf(<MC_0, i>, 'mk')`: `Corrupt` is the only way the attacker learns chain keys, and it reveals every key of the pair, so the abstraction gives the attacker the same keys. Forward secrecy by erasure belongs to §8 and the ratchet model.
+- The sender seals each index once and the recipient adds each index to its window once (restrictions `OnceSeal`, `OnceSlot`), as the per-direction counters enforce.
+- AES-256-GCM is `senc` with the AAD index inside the plaintext; opening succeeds only by pattern match. Padding and truncation are omitted.
+- `expiry` and `copies` are unauthenticated: couriers rewrite them freely. Quotas, clamps, spray splitting and inventories affect only availability and are not modelled.
+- The sender may release `s` at any time (the spec waits for an ACK), which only strengthens P4.
 
 ## Modelling notes
 
