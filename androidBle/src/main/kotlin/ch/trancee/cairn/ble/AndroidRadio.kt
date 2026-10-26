@@ -199,21 +199,42 @@ class AndroidRadio(
 
     private var advertising = false
 
-    /** Every slot was in use when last budgeted; logged on each change. */
-    private var full = false
+    /** The advertising state when last budgeted, logged on each change. */
+    private var budgeted = "resumed"
     private var advertisedMode = 0
+
+    /** Tags the pending [budget] at the time a link becomes evictable. */
+    private val rebudget = Any()
 
     /** The energy band's mode (ADR 0027), or `LOW_POWER` while every slot is in use (ADR 0032). */
     private fun advertiseMode() =
         if (slotsInUse() >= maxSlots) AdvertiseSettings.ADVERTISE_MODE_LOW_POWER else band.advertiseMode
 
-    /** Advertises in [advertiseMode]; runs after every change to the slots in use or the band. */
+    /**
+     * Advertises in [advertiseMode] while a slot is free or a link could be evicted for a device
+     * that connects; otherwise stops until one could (ADR 0025, ADR 0032). Runs after every change
+     * to the slots in use or the band.
+     */
     private fun budget() {
         val advertiser = advertiser ?: return
-        val nowFull = slotsInUse() >= maxSlots
-        if (nowFull != full) Log.i(TAG, if (nowFull) "slots full; advertising slowed" else "slot free; advertising resumed")
-        full = nowFull
-        if (!(advertising && advertisedMode == advertiseMode())) {
+        handler.removeCallbacksAndMessages(rebudget)
+        val now = SystemClock.elapsedRealtime()
+        val due = if (slotsInUse() >= maxSlots) candidate(now)?.second ?: Long.MAX_VALUE else now
+        val state = when {
+            due > now -> "stopped"
+            slotsInUse() >= maxSlots -> "slowed"
+            else -> "resumed"
+        }
+        if (state != budgeted) Log.i(TAG, if (state == "resumed") "slot free; advertising resumed" else "slots full; advertising $state")
+        budgeted = state
+        if (due > now) {
+            if (advertising) {
+                stopAdvertising(advertiser)
+                handler.removeCallbacksAndMessages(rotation)
+                advertising = false
+            }
+            if (due != Long.MAX_VALUE) handler.postAtTime(::budget, rebudget, SystemClock.uptimeMillis() + (due - now))
+        } else if (!(advertising && advertisedMode == advertiseMode())) {
             if (advertising) stopAdvertising(advertiser)
             advertise(advertiser)
         }
@@ -270,8 +291,9 @@ class AndroidRadio(
     private fun release() {
         advertiser = null
         advertising = false
-        full = false
+        budgeted = "resumed"
         handler.removeCallbacksAndMessages(rotation)
+        handler.removeCallbacksAndMessages(rebudget)
         handler.removeCallbacksAndMessages(rescanning)
         centrals.values.toList().forEach(Central::close)
         peripherals.values.toList().forEach(Peripheral::close)
@@ -372,7 +394,7 @@ class AndroidRadio(
                 if (setCallback === this && extended && advertiser != null) {
                     extended = false
                     Log.i(TAG, "advertising set failed ($status); advertising legacy")
-                    advertise(advertiser)
+                    if (advertising) advertise(advertiser)
                 }
             }
         }
@@ -415,15 +437,21 @@ class AndroidRadio(
      * [EVICTION_INTERVAL_MS] (ADR 0025, ADR 0030, ADR 0031), logging its [trigger]; returns whether it closed one.
      */
     private fun evict(now: Long, waiting: String, trigger: String): Boolean {
-        if (now - evictedAt < EVICTION_INTERVAL_MS) return false
-        val stable = stable(now)
-        val (link, at) = activeAt.filterKeys { it !in stable }.minByOrNull { it.value } ?: return false
-        if (now - at < LINK_IDLE_MS) return false
+        val (link, due) = candidate(now) ?: return false
+        if (now < due) return false
+        val at = activeAt.getValue(link)
         evictedAt = now
         val rssi = rssi(link, now) ?: "unknown"
         Log.i(TAG, "slots full; evicting link $link idle ${now - at} ms rssi $rssi for ${waiting.takeLast(5)} ($trigger)")
         links.getValue(link).close()
         return true
+    }
+
+    /** The non-stable link idle longest, and when [evict] may close it. */
+    private fun candidate(now: Long): Pair<ULong, Long>? {
+        val stable = stable(now)
+        val (link, at) = activeAt.filterKeys { it !in stable }.minByOrNull { it.value } ?: return null
+        return link to maxOf(at + LINK_IDLE_MS, evictedAt + EVICTION_INTERVAL_MS)
     }
 
     /** ADR 0031: the strongest links, then the oldest unmeasured, up to ¾ of the budget. */

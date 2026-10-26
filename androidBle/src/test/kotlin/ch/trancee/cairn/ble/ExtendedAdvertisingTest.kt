@@ -3,7 +3,6 @@ package ch.trancee.cairn.ble
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.AdvertisingSetCallback
-import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.AdvertisingSetParameters
 import android.bluetooth.le.ScanSettings
 import android.content.Intent
@@ -90,7 +89,7 @@ class ExtendedAdvertisingTest {
     }
 
     @Test
-    fun slowsTheSetWhileTheSlotsAreFull() {
+    fun stopsTheSetWhileTheSlotsAreFull() {
         supported()
         h.radio.start()
 
@@ -99,8 +98,7 @@ class ExtendedAdvertisingTest {
         }
         h.idle()
 
-        assertEquals(listOf(AdvertisingSetParameters.INTERVAL_LOW, AdvertisingSetParameters.INTERVAL_HIGH), intervals())
-        assertEquals(1, recorder.activeSets.size)
+        assertEquals(emptyList(), recorder.activeSets)
     }
 
     @Test
@@ -207,17 +205,20 @@ class ExtendedAdvertisingTest {
     }
 
     @Test
-    fun aSetThatFailsWhileTheSlotsAreFullAdvertisesLegacyAtLowPower() {
+    fun aFailureWhileTheSlotsAreFullAdvertisesLegacyOnceASlotFrees() {
         supported()
         h.radio.start()
-        (1..6).forEach {
-            h.serverCallback().onConnectionStateChange(h.device("00:11:22:33:66:%02X".format(it)), 0, BluetoothProfile.STATE_CONNECTED)
-        }
+        val devices = (1..6).map { h.device("00:11:22:33:66:%02X".format(it)) }
+        devices.forEach { h.serverCallback().onConnectionStateChange(it, 0, BluetoothProfile.STATE_CONNECTED) }
         h.idle()
 
-        fail(1)
+        fail(0)
+        assertEquals(0, recorder.modes.size)
+        h.serverCallback().onConnectionStateChange(devices[0], 0, BluetoothProfile.STATE_DISCONNECTED)
+        h.idle()
 
-        assertEquals(listOf(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER), recorder.modes)
+        assertEquals(1, recorder.modes.size)
+        assertEquals(1, recorder.sets.size)
     }
 
     private fun adapter(state: Int) {

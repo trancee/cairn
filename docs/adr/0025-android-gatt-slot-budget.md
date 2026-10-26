@@ -134,5 +134,5 @@ full radio evicts at most once every 15 s.
 skips up to ⌊¾ × budget⌋ stable links, the strongest by RSSI.
 
 2026-10-26, from [ADR 0032](0032-android-full-advertising.md) (OI-37): a
-full radio advertises at `LOW_POWER`, and evicts an idle link for a device
+full radio advertises at `LOW_POWER` while it could evict a link, and evicts an idle link for a device
 that connects to it instead of disconnecting it.

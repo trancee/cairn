@@ -152,23 +152,25 @@ class EnergyBandRadioTest {
     fun lowCapsTheBudgetAtThreeSlots() {
         battery(10)
         h.radio.start()
+        connectServer(2)
+        val two = advertising()
         connectServer(3)
-        val fourth = h.device("00:11:22:33:66:04")
 
-        h.serverCallback().onConnectionStateChange(fourth, 0, BluetoothProfile.STATE_CONNECTED)
-        h.idle()
-
-        assertTrue(shadowOf(h.server).isConnectionCancelled(fourth))
+        assertEquals(1, two)
+        assertEquals(0, advertising())
     }
 
     @Test
-    fun linksAboveALoweredCapStayUpAndAdvertisingSlows() {
+    fun linksAboveALoweredCapStayUpAndAdvertisingStops() {
         h.radio.start()
         val peers = connectServer(4)
-
         battery(10)
+        val atLow = advertising()
+        h.serverCallback().onConnectionStateChange(peers[0], 0, BluetoothProfile.STATE_DISCONNECTED)
+        h.serverCallback().onConnectionStateChange(peers[1], 0, BluetoothProfile.STATE_DISCONNECTED)
+        h.idle()
 
-        assertTrue(peers.none { shadowOf(h.server).isConnectionCancelled(it) })
+        assertEquals(0, atLow)
         assertEquals(1, advertising())
         assertEquals(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER, advertiseModes().last())
     }

@@ -18,7 +18,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** A full radio keeps advertising, and evicts for a device that connects (spec §10.4, ADR 0032). */
+/** A full radio advertises while it could evict, and evicts for a device that connects (spec §10.4, ADR 0032). */
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [RecordingAdvertiser::class])
 class FullAdvertisingTest {
@@ -53,27 +53,61 @@ class FullAdvertisingTest {
     private fun cancelled(address: String) = shadowOf(h.server).isConnectionCancelled(h.device(address))
 
     @Test
-    fun advertisesAtLowPowerWhileEverySlotIsInUse() {
+    fun stopsAdvertisingWhileNoLinkCanBeEvicted() {
         fill()
 
-        assertEquals(listOf(ADVERTISE_MODE_LOW_LATENCY, ADVERTISE_MODE_LOW_POWER), modes())
+        assertEquals(0, advertising())
+    }
+
+    @Test
+    fun advertisesAtLowPowerOnceALinkCanBeEvicted() {
+        fill()
+
+        advance(30_000)
+
+        assertEquals(1, advertising())
+        assertEquals(ADVERTISE_MODE_LOW_POWER, modes().last())
+    }
+
+    @Test
+    fun staysStoppedWhileEveryLinkIsStable() {
+        (1..quota).forEach(::link)
+        (quota + 1..slots).forEach { serverConnect(address(40 + it)) }
+
+        advance(120_000)
+
+        assertEquals(0, advertising())
+    }
+
+    @Test
+    fun stopsForFifteenSecondsAfterAnEviction() {
+        fill()
+        advance(30_000)
+        serverConnect(newcomer)
+        val afterEviction = advertising()
+
+        advance(15_000)
+
+        assertEquals(0, afterEviction)
         assertEquals(1, advertising())
     }
 
     @Test
     fun returnsToTheBandModeOnceASlotFrees() {
         val gatts = fill()
+        advance(30_000)
 
         h.callback(gatts.last()).onConnectionStateChange(gatts.last(), 0, BluetoothProfile.STATE_DISCONNECTED)
         h.idle()
 
+        assertEquals(1, advertising())
         assertEquals(ADVERTISE_MODE_LOW_LATENCY, modes().last())
-        assertEquals(3, modes().size)
     }
 
     @Test
     fun rotatesTheAdvertWhileFull() {
         fill()
+        advance(30_000)
         val started = modes().size
 
         advance(330_000)
@@ -83,14 +117,15 @@ class FullAdvertisingTest {
     }
 
     @Test
-    fun logsWhenItSlowsAndWhenItResumes() {
+    fun logsWhenItStopsSlowsAndResumes() {
         val gatts = fill()
+        advance(30_000)
         h.callback(gatts.last()).onConnectionStateChange(gatts.last(), 0, BluetoothProfile.STATE_DISCONNECTED)
         h.idle()
 
         assertEquals(
-            listOf("slots full; advertising slowed", "slot free; advertising resumed"),
-            logs().filter { it.startsWith("slot") },
+            listOf("slots full; advertising stopped", "slots full; advertising slowed", "slot free; advertising resumed"),
+            logs().filter { it.startsWith("slot") && "advertising" in it },
         )
     }
 
