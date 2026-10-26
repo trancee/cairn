@@ -77,3 +77,8 @@ Four 300 s runs (`main`, 15 s, 15 s, `main`), every phone forced to band
   once.
 - **Interval per energy band.** `SAVE` and `LOW` would trade pairing speed
   for fewer reconnects. Not measured; all A/Bs so far run at `FULL`.
+
+## Amendments
+
+2026-10-26, from [ADR 0031](0031-android-stable-slots.md) (OI-36): eviction
+skips the stable links; the interval and idle time are unchanged.
