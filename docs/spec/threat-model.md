@@ -1,10 +1,10 @@
 # `cairn-r1` threat model and security goals
 
-Status: **accepted** (2026-10-05, ticket *Threat model and security goals*). This document states the goals that [ADRs 0001–0005](../adr/) must meet. Changing it requires a new review. Amended 2026-10-23 for automatic neighbour admission ([ADR 0021](../adr/0021-automatic-neighbour-admission.md)); the owner reviewed and accepted the consequences listed there.
+Status: **accepted** (2026-10-05, ticket *Threat model and security goals*). This document states the goals that [ADRs 0001–0005](../adr/) must meet. Changing it requires a new review. Amended 2026-10-23 for automatic neighbour admission ([ADR 0021](../adr/0021-automatic-neighbour-admission.md)); the owner reviewed and accepted the consequences listed there. Amended 2026-10-26 for couriers ([ADR 0033](../adr/0033-courier-relaying.md)), adding A8.
 
 ## 1. System and assets
 
-Two **peers** (phones running `cairn`) **pair** once and become **contacts**. Since [ADR 0021](../adr/0021-automatic-neighbour-admission.md) (2026-10-23), pairing is automatic TOFU with every discovered peer, so every contact is an automatically admitted **neighbour** and starts Unverified. After that, every BLE connection starts with a **Resume** and carries real-time messages and **queued messages** (see [`GLOSSARY.md`](../../GLOSSARY.md)).
+Two **peers** (phones running `cairn`) **pair** once and become **contacts**. Since [ADR 0021](../adr/0021-automatic-neighbour-admission.md) (2026-10-23), pairing is automatic TOFU with every discovered peer, so every contact is an automatically admitted **neighbour** and starts Unverified. After that, every BLE connection starts with a **Resume** and carries real-time messages and **queued messages** (see [`GLOSSARY.md`](../../GLOSSARY.md)). Since [ADR 0033](../adr/0033-courier-relaying.md), neighbours also act as **couriers**: they carry sealed **envelopes** of queued messages for contacts that are out of range.
 
 The protected assets are:
 - message content;
@@ -25,6 +25,7 @@ The protected assets are:
 | A5 | Malicious contact | A paired peer that acts maliciously, or whose device is A4b-compromised. Under automatic admission this includes any device that was ever nearby, within the admission limits (§5) |
 | A6 | Tracking attacker | Passive receivers at many places and times, trying to link a device across them |
 | A7 | DoS / battery drain | Floods advertisements, connections, S1 messages or pairing attempts |
+| A8 | Malicious courier | A neighbour (A5) that carries envelopes for others: drops, delays, replays, corrupts or injects envelopes, rewrites `copies` and `expiry`, records inventories and timing, and colludes with other couriers |
 
 ## 3. Security goals
 
@@ -40,6 +41,7 @@ Rows are adversaries, columns are properties. ✓ = claimed; ✗ = explicitly no
 | A5 | ✓ for other contacts' traffic | ✓ cannot impersonate you to others; ✗ KCI toward itself unless the KCI profile is on | ✓ | ✓ | ✗ can track your device beacon | ✓ learns nothing beyond its own pairing | ✗ |
 | A6 | — | — | — | — | ✓ beacon and pseudonym; ✗ fixed UUID, ✗ OS address rotation not under app control | ✓ | — |
 | A7 | — | — | — | — | — | — | best effort (§5) |
+| A8 | ✓ envelopes are sealed under `mk_idx` | ✓ cannot forge, alter or replay a message into the recipient; cannot forge a tombstone | ✓ as queued messages | ✓ as queued messages | ✓ envelope tags (P5, argued); ✗ timing and volume | ✗ first and last couriers together link sender and recipient; one courier learns only its depositor or its fetcher | ✗ redundancy across `L` copies only |
 
 **PCS scope** (spec OI-24): the attacker keeps all state stolen before
 recovery. PQ healing requires a genuinely exchanged fresh epoch whose
@@ -83,6 +85,7 @@ QR and SAS pairing are retired (ADR 0021). Every neighbour is admitted by TOFU a
 - A connection that has not authenticated within 5 s is dropped. ADR 0003's pre-auth frame limits apply.
 - Pairing is automatic but bounded (spec §5.6): one pairing in flight, at most 30 attempts and 10 admissions per rolling hour, at most 256 neighbours, and a back-off per failed address (2 min after a transport failure, doubling up to 1 h; 1 h after a protocol failure). Dropping frames makes a peer retry sooner, but every retry still counts against the 30 attempts. An attacker can use up the hourly budget and delay legitimate admissions.
 - Any neighbour can send messages to the user; admission limits bound how many neighbours exist, not what they send.
+- Couriers (ADR 0033) hold at most 16 envelopes per depositing neighbour (32 if Verified), 256 envelopes and 1 MiB in total, and refuse deposits when full instead of evicting. Each courier clamps `copies` and `expiry` to its own limits, so one courier cannot make an envelope spread or live longer than the next courier allows.
 
 ## 6. Non-goals (explicitly not claimed)
 
@@ -100,4 +103,5 @@ QR and SAS pairing are retired (ADR 0021). Every neighbour is admitted by TOFU a
 
 - Marking a contact **stale** after N days unseen, with optional automatic removal.
 - Per-contact beacons to resist tracking by contacts (rejected for r1 in ADR 0005).
-- Multi-hop relaying through neighbours (courier and routing layer, issue 47). It adds a new adversary: a neighbour that drops, delays or tags mail it carries for others.
+- Messaging a peer that was never a contact through couriers (sealing to a non-adjacent peer; deferred by ADR 0033).
+- Resisting traffic analysis of courier traffic (timing, envelope counts per link) in a dense mesh.
