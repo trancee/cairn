@@ -426,7 +426,7 @@ class AndroidRadio(
         if (now - at < LINK_IDLE_MS) return
         evictedAt = now
         val rssi = rssi(link, now) ?: "unknown"
-        Log.i(TAG, "slots full; evicting link $link idle ${now - at} ms rssi $rssi for ${waiting.takeLast(5)}")
+        Log.i(TAG, "slots full; evicting link $link idle ${now - at} ms rssi $rssi for ${waiting.takeLast(5)} (scan)")
         links.getValue(link).close()
     }
 
@@ -669,6 +669,7 @@ class AndroidRadio(
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 // A device that raced the advert stop; one sharing an address with our dial costs no slot.
                 if (address !in centrals && slotsInUse() >= maxSlots) {
+                    Log.i(TAG, "slots full; disconnecting ${address.takeLast(5)}")
                     server.cancelConnection(device)
                 } else {
                     serverConnected += address
