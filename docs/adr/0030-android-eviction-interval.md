@@ -14,16 +14,16 @@ closes its longest link idle for 30 s, at most once every 60 s.
 
 The fleet A/B of [ADR 0029](0029-android-dial-freshness.md)
 ([issue 53](../../.scratch/cairn-r1/issues/53-fleet-pairing-plateau.md))
-logged each radio's slot state. In the two `main` runs, on the 21 phones
-that linked in every run:
+logged each radio's links. In the two `main` runs, on the 21 phones that
+linked in every run:
 
-- Most phones had every slot in use for 270–300 s of each 300 s run.
-- Of the 3596 and 4348 phone-seconds spent full, 63–82 % had a link idle
-  for 30 s while the 60 s interval forbade eviction. 5–12 % could have
-  evicted but saw no waiting peer, and about 20 % had only links under 30 s
-  old.
 - The radios evicted 59 and 63 times, and about 25 pairs formed after the
   first 60 s.
+- While a phone's open links filled its slots (580 and 229 phone-seconds),
+  93–100 % of the time it had a link idle for 30 s that the 60 s interval
+  kept it from evicting. Dials in flight and devices connected to the GATT
+  server also take slots but are not logged, so the radios were full for
+  longer than this.
 
 Once the slots fill, the 60 s interval sets how fast a phone meets new
 peers.
@@ -43,7 +43,31 @@ waiting peer seen advertising with no link, dial or back-off.
 - A false positive, such as a linked peer seen at a rotated address, can
   close one idle link every 15 s.
 - No frame or advert changes.
-- A fleet A/B against `main` measures pairs, evictions and link churn.
+- A fleet A/B confirmed the gain (below). Bluetooth on one OnePlus phone
+  (CPH2359, extended advertising) restarted in both 15 s runs and in none
+  of six other runs; once after the controller timed out enabling an
+  advertising set. Its advertising stopped about twice as often. One phone
+  is not enough to tell whether the extra advertising restarts cause it.
+
+## Fleet A/B
+
+Four 300 s runs (`main`, 15 s, 15 s, `main`), every phone forced to band
+`FULL`, on the 23 phones that linked in all four:
+
+| 23 phones | `main` 1 | 15 s 1 | 15 s 2 | `main` 2 |
+|---|---:|---:|---:|---:|
+| Pairs at 60 s | 31 | 33 | 39 | 32 |
+| Pairs at 180 s | 43 | 52 | 60 | 45 |
+| Pairs at 300 s | 60 | 63 | 71 | 51 |
+| Evictions | 61 | 141 | 167 | 58 |
+| Links up | 267 | 577 | 529 | 370 |
+| Failed dials | 286 | 422 | 427 | 341 |
+| Bluetooth restarts | 0 | 2 | 2 | 1 |
+
+- Pairs at 300 s rose 21 % (67 against 55.5), and at 180 s 28 %. Both 15 s
+  runs beat both `main` runs.
+- Evictions rose 2.6 times and links up 1.7 times; failed dials rose 34 %.
+- One phone (7XHEI…, MediaTek) restarts Bluetooth in `main` runs as well.
 
 ## Considered options
 
