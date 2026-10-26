@@ -114,13 +114,6 @@ class SlotBudgetTest {
     }
 
     @Test
-    fun stopsAdvertisingWhileEverySlotIsInUse() {
-        fill()
-
-        assertEquals(0, advertising)
-    }
-
-    @Test
     fun advertisesTheCurrentBeaconAgainOnceASlotFrees() {
         fill()
         val next = byteArrayOf(8, 7, 6, 5, 4, 3, 2, 1)
@@ -143,15 +136,6 @@ class SlotBudgetTest {
 
         val logs = org.robolectric.shadows.ShadowLog.getLogsForTag("CairnRadio").map { it.msg }
         assertEquals("slot free; advertising resumed", logs.last())
-    }
-
-    @Test
-    fun doesNotRotateTheAdvertWhileFull() {
-        fill()
-
-        advance(330_000)
-
-        assertEquals(0, advertising)
     }
 
     @Test

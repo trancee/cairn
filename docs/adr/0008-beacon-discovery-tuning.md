@@ -95,3 +95,7 @@ This is the first version. These parameters are policy inside the core and SDK; 
   Android devices that advertise a beacon, only the one with the lower
   beacon dials. A full radio stops advertising, and evicts its longest-idle
   link (idle ≥ 30 s, at most once per 60 s) when a new peer waits.
+
+2026-10-26, from [ADR 0032](0032-android-full-advertising.md) (OI-37): a
+full Android radio no longer stops advertising; it advertises at `LOW_POWER`
+and evicts an idle link for a device that connects to it.
