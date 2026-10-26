@@ -2,7 +2,7 @@
 
 Type: research
 Status: open
-Blocked by: 31
+Blocked by: none (S1, issue 31, resolved 2026-10-26)
 
 ## Question
 

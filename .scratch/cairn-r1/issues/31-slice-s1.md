@@ -1,7 +1,7 @@
 # Slice S1: Walking skeleton (loopback)
 
 Type: task
-Status: open
+Status: resolved
 Blocked by: 26, 30
 
 ## Question
@@ -71,10 +71,13 @@ at launch (see `iosApp/README.md`). Built with Xcode 27.1 at `minos 15.0`:
 | Device | iOS | Result |
 |---|---|---|
 | iPhone SE (2020) | 18.7.8 | `PASS: paired=1+1 chat=hello rejected=NotRestored closed=true`, exit 0 (`devicectl --console … -selfTest`) |
+| iPhone 12 mini (newest) | 27.0.1 | `PASS: paired=1+1 chat=hello rejected=NotRestored closed=true`, exit 0 (`devicectl --console … -selfTest`) |
 | iPhone 15 | 17.6.1 | `PASS` on screen; installed with `ios-deploy`, because CoreDevice did not list it; the log capture was lost |
 
-Not run:
-- the matrix's oldest phone, the iPhone SE (1st gen) on iOS 15.8.8. Xcode
-  27 does not offer it as a destination, so automatic signing cannot add
-  it to the profile.
-- the newest, the iPhone 12 mini on iOS 27.0.1. It stayed locked.
+Not run: the matrix's oldest phone, the iPhone SE (1st gen) on iOS 15.8.8. Xcode
+27 does not offer it as a destination, so automatic signing cannot add
+it to the profile.
+
+2026-10-26: resolved by the owner. S1 has passed on the oldest and newest
+Android phones and on three iPhones, including the newest (iOS 27.0.1).
+The iOS 15 floor phone moves to [issue 48](48-apple-lane-ios-targets.md).
