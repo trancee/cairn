@@ -75,7 +75,7 @@ The owner chose every rule below on 2026-10-26.
    an envelope at expiry. A sender re-deposits an envelope that expired
    while its message is still queued, at most once per lifetime.
 5. **Inventory and delivery.** On each Resume, both sides send the tags they
-   hold, own and carried. A recipient precomputes the tags of the next
+   hold, own and carried, as 8 B prefixes (spec §8.1). A recipient precomputes the tags of the next
    unreceived indices of each live chain of each contact (at most 500 per
    contact, spec §8), matches locally, and fetches only the matches.
    Consumed indices leave the window, so duplicates are never fetched.

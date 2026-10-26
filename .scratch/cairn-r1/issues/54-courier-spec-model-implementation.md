@@ -31,3 +31,8 @@ message through at least one courier.
 ## Comments
 
 2026-10-26: created by ADR 0033, rule 9.
+
+2026-10-26: step 1 done in spec draft 0.16 (OI-37, §5.5, §7.3, §8, §8.1).
+The owner chose 8 B tag prefixes in inventories (I8). Queued `inner` gains
+the text length and bucket padding up to 4048 B; only `inner` ≤ 2048 B is
+couriered. Next: `courier.spthy`.
