@@ -69,15 +69,15 @@ class EvictionTest {
     }
 
     @Test
-    fun evictsAtMostOnceAMinute() {
+    fun evictsAtMostOnceEveryFifteenSeconds() {
         fill()
         advance(30_000)
         h.connect(h.discover(waiting)!!)
-        advance(31_000)
+        advance(14_999)
 
         h.sight(address(32))
         val early = downs().size
-        advance(29_000)
+        advance(1)
         h.sight(address(32))
 
         assertEquals(1, early)

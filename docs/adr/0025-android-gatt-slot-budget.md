@@ -126,3 +126,6 @@ band `LOW` the budget is 3 slots.
 2026-10-25, from [ADR 0028](0028-android-extended-advertising.md) (OI-34): a
 radio that advertises extended dials a peer it sees through a legacy advert
 whatever their beacons.
+
+2026-10-26, from [ADR 0030](0030-android-eviction-interval.md) (OI-35): a
+full radio evicts at most once every 15 s.

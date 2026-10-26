@@ -348,6 +348,35 @@ some arms.
   MediaTek phone died 1 s after a stale cancel.
 - Rejected: the code is not merged and ADR 0029 records the result.
 
+## Eviction interval 15 s (ADR 0030, 2026-10-26)
+
+The 60 s eviction interval of ADR 0025 held back idle links: in the `main`
+runs of the fix B A/B, while a phone's open links filled its slots, 93–100 %
+of the time a link idle for 30 s waited on the interval. ADR 0030 (PR #67)
+shortens it to 15 s. A/B with 25 phones attached (Wireless debugging
+re-enabled; the CPH2385 and a new 22071219CG, which refuses adb installs,
+left out), 23 linked in all four runs:
+
+| 23 phones | `main` 1 | 15 s 1 | 15 s 2 | `main` 2 |
+|---|---:|---:|---:|---:|
+| Pairs at 60 s | 31 | 33 | 39 | 32 |
+| Pairs at 180 s | 43 | 52 | 60 | 45 |
+| Pairs at 300 s | 60 | 63 | 71 | 51 |
+| Evictions | 61 | 141 | 167 | 58 |
+| Links up | 267 | 577 | 529 | 370 |
+| Failed dials | 286 | 422 | 427 | 341 |
+| Bluetooth restarts | 0 | 2 | 2 | 1 |
+
+- Pairs rose 21 % at 300 s and 28 % at 180 s; both 15 s runs beat both
+  `main` runs.
+- Bluetooth restarted twice on `EQUGS85L` (CPH2359) in the 15 s runs and in
+  none of the six other runs of either A/B, once after an HCI timeout on
+  `LE_SET_EXTENDED_ADVERTISING_ENABLE`. `7XHEIBPB` restarts in `main` runs
+  too.
+- Analysis note: the radio logs "advertising stopped" at every stop but
+  logs only the first start, so slot occupancy must be derived from link
+  up/down lines, not from advertising lines.
+
 ## Open
 
 1. **Plateau.** Slot exhaustion resolved by ADR 0025 (36 to 49 pairs). Still
