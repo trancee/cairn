@@ -129,3 +129,7 @@ whatever their beacons.
 
 2026-10-26, from [ADR 0030](0030-android-eviction-interval.md) (OI-35): a
 full radio evicts at most once every 15 s.
+
+2026-10-26, from [ADR 0031](0031-android-stable-slots.md) (OI-36): eviction
+skips up to ⌊¾ × budget⌋ stable links, the strongest by RSSI among those up
+60 s.

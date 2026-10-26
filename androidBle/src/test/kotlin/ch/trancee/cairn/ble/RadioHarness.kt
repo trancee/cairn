@@ -104,16 +104,16 @@ class RadioHarness {
 
     /**
      * Reports [address] as a scan match, advertising [beacon] as service data when given, in a legacy
-     * advert or, unless [legacy], an extended connectable one.
+     * advert or, unless [legacy], an extended connectable one, received at [rssi] dBm.
      */
-    fun sight(address: String, beacon: ByteArray? = null, legacy: Boolean = true) {
+    fun sight(address: String, beacon: ByteArray? = null, legacy: Boolean = true, rssi: Int = -40) {
         val record = beacon?.let(::advert)
         val result = if (legacy) {
-            ScanResult(device(address), record, -40, 0)
+            ScanResult(device(address), record, rssi, 0)
         } else {
             ScanResult(
                 device(address), CONNECTABLE, BluetoothDevice.PHY_LE_1M, BluetoothDevice.PHY_LE_1M,
-                0, ScanResult.TX_POWER_NOT_PRESENT, -40, ScanResult.PERIODIC_INTERVAL_NOT_PRESENT, record, 0,
+                0, ScanResult.TX_POWER_NOT_PRESENT, rssi, ScanResult.PERIODIC_INTERVAL_NOT_PRESENT, record, 0,
             )
         }
         scanCallback().onScanResult(0, result)

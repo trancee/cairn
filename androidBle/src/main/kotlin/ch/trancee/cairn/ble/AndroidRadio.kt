@@ -79,6 +79,9 @@ class AndroidRadio(
 
     /** When each link last carried a fragment, or came up. */
     private val activeAt = HashMap<ULong, Long>()
+
+    /** Each link's latest RSSI reading and when it was taken (ADR 0031). */
+    private val signals = HashMap<ULong, Pair<Int, Long>>()
     private var evictedAt = -EVICTION_INTERVAL_MS
 
     /** Devices connected to the GATT server, subscribed or not; each holds a slot (ADR 0025). */
@@ -346,7 +349,11 @@ class AndroidRadio(
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val beacon = result.scanRecord?.getServiceData(ParcelUuid(GattProfile.SERVICE))
             val legacy = result.isLegacy
-            handler.post { if (server != null) connect(result.device, beacon, legacy) }
+            val rssi = result.rssi
+            handler.post {
+                peripherals[result.device.address]?.let { signals[it.link] = rssi to SystemClock.elapsedRealtime() }
+                if (server != null) connect(result.device, beacon, legacy)
+            }
         }
     }
 
@@ -403,19 +410,34 @@ class AndroidRadio(
         Log.d(TAG, "link $link down at ${since(link)} ms")
         upAt.remove(link)
         activeAt.remove(link)
+        signals.remove(link)
         links.remove(link)
         listener.linkDown(link)
     }
 
-    /** Closes the longest link idle for [LINK_IDLE_MS], at most once per [EVICTION_INTERVAL_MS] (ADR 0025, ADR 0030). */
+    /**
+     * Closes the longest link idle for [LINK_IDLE_MS] that is not stable, at most once per
+     * [EVICTION_INTERVAL_MS] (ADR 0025, ADR 0030, ADR 0031).
+     */
     private fun evict(now: Long, waiting: String) {
         if (now - evictedAt < EVICTION_INTERVAL_MS) return
-        val (link, at) = activeAt.minByOrNull { it.value } ?: return
+        val stable = stable(now)
+        val (link, at) = activeAt.filterKeys { it !in stable }.minByOrNull { it.value } ?: return
         if (now - at < LINK_IDLE_MS) return
         evictedAt = now
-        Log.i(TAG, "slots full; evicting link $link idle ${now - at} ms for ${waiting.takeLast(5)}")
+        val rssi = rssi(link, now) ?: "unknown"
+        Log.i(TAG, "slots full; evicting link $link idle ${now - at} ms rssi $rssi for ${waiting.takeLast(5)}")
         links.getValue(link).close()
     }
+
+    /** ADR 0031: of the links up [STABLE_AFTER_MS], the strongest, then the oldest unmeasured, up to ¾ of the budget. */
+    private fun stable(now: Long): Set<ULong> = upAt.filterValues { now - it >= STABLE_AFTER_MS }.keys
+        .sortedWith(compareBy<ULong, Int?>(nullsLast(reverseOrder())) { rssi(it, now) }.thenBy { upAt.getValue(it) })
+        .take(maxSlots * 3 / 4)
+        .toSet()
+
+    private fun rssi(link: ULong, now: Long): Int? =
+        signals[link]?.takeIf { (_, at) -> now - at <= RSSI_FRESH_MS }?.first
 
     /**
      * When the central may next dial one address (spec §10.4). A dial that fails before link-up is
@@ -522,6 +544,7 @@ class AndroidRadio(
                 dial.linked()
                 link = up(GattRole.CENTRAL, mtu, address)
                 links[link] = this
+                handler.postDelayed(::readRssi, RSSI_INTERVAL_MS)
                 reading = true
                 if (!gatt.readCharacteristic(beacon)) close()
             }
@@ -540,6 +563,20 @@ class AndroidRadio(
             value: ByteArray,
             status: Int,
         ) = post { beaconRead(value, status) }
+
+        // An HCI read outside the ATT queue: AOSP takes no GATT busy lock for it (ADR 0031).
+        private fun readRssi() {
+            if (centrals[address] !== this) return
+            gatt.readRemoteRssi()
+            handler.postDelayed(::readRssi, RSSI_INTERVAL_MS)
+        }
+
+        override fun onReadRemoteRssi(gatt: BluetoothGatt, rssi: Int, status: Int) = post {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                signals[link] = rssi to SystemClock.elapsedRealtime()
+                Log.d(TAG, "link $link rssi $rssi")
+            }
+        }
 
         private fun beaconRead(value: ByteArray, status: Int) {
             reading = false
@@ -740,6 +777,15 @@ class AndroidRadio(
 
         /** ADR 0030: at most one eviction per interval. */
         const val EVICTION_INTERVAL_MS = 15_000L
+
+        /** ADR 0031: a link up this long may be stable. */
+        const val STABLE_AFTER_MS = 60_000L
+
+        /** ADR 0031: how often a central link reads its RSSI. */
+        const val RSSI_INTERVAL_MS = 10_000L
+
+        /** ADR 0031: an older RSSI reading counts as none. */
+        const val RSSI_FRESH_MS = 30_000L
 
         /** ADR 0025: a dial not up by then fails and frees its slot. */
         const val DIAL_TIMEOUT_MS = 10_000L
