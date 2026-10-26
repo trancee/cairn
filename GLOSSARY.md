@@ -70,6 +70,18 @@ _Avoid_: Ping, notification, wake-up
 A chat message sealed at send time that waits for the next session with its contact to be delivered.
 _Avoid_: Offline message, pending message, outbox item
 
+**Courier**:
+A neighbour that carries sealed envelopes for other contacts and hands them on or delivers them, without being able to read them.
+_Avoid_: Relay node, router, mule
+
+**Envelope**:
+A queued message's ciphertext as a courier carries it, addressed by a single-use routing tag that only the two contacts can recognise.
+_Avoid_: Packet, bundle, parcel
+
+**Tombstone**:
+The recipient's proof that an envelope was delivered, which tells couriers to delete their copies.
+_Avoid_: Receipt, delivery ack
+
 **Delivery**:
 The moment a contact's device acknowledges receiving a message. A message that expires first is **not delivered**.
 _Avoid_: Sent, received
