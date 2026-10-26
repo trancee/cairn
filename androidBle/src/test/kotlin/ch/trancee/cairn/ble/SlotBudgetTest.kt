@@ -136,6 +136,16 @@ class SlotBudgetTest {
     }
 
     @Test
+    fun logsWhenAdvertisingResumes() {
+        fill()
+
+        serverDisconnect(2)
+
+        val logs = org.robolectric.shadows.ShadowLog.getLogsForTag("CairnRadio").map { it.msg }
+        assertEquals("slot free; advertising resumed", logs.last())
+    }
+
+    @Test
     fun doesNotRotateTheAdvertWhileFull() {
         fill()
 
