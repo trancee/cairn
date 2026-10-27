@@ -39,3 +39,12 @@ TEE otherwise. Backup and device transfer exclude the database. Robolectric
 covers the sealer through a software `AndroidKeyStore` provider. Not yet done:
 a real-Keystore run and commit-latency measurement on a device, and step 2c
 (iOS).
+
+2026-10-27: step 2b fleet smoke run, debug APK at `cb7396c`. On each phone:
+`pm clear`, a cold start, force-stop, a second cold start. 22 of 22 arm64
+phones (API 26 to 37, including the StrongBox Pixel 4a and Pixel 6 and the
+Samsung S10e and Z Flip4) wrote one sealed 73-byte device row. They reopened
+it on restart with no storage reset and no crash. Cold starts took 0.5–4.8 s.
+The 32-bit-only XCover 4 and A80 have no `armeabi-v7a` core library, so they
+were not run. Five Wi-Fi phones were offline. Commit latency with contacts and
+queued rows still needs the two-phone demonstration.
