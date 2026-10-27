@@ -1,8 +1,8 @@
 # Courier: spec, formal model and implementation
 
 Type: task
-Status: ready-for-agent
-Blocked by: none
+Status: open
+Blocked by: 35
 
 ## Question
 
@@ -40,3 +40,8 @@ couriered. Next: `courier.spthy`.
 2026-10-26: step 2 done. `courier.spthy` verifies P1–P4 in about 1 s; the
 `OPEN_COMMIT` and `REUSABLE_SLOT` mutations falsify P4 and P3. P5 is argued in
 the models README. Next: Rust core.
+
+2026-10-27: step 3 is blocked by issue 35. Couriers carry QUEUED ciphertexts and
+need message chains, skipped keys and ACK, none of which the core has yet. The
+owner chose to build S5's store-and-forward core first (ADR 0034), then
+couriers on top.

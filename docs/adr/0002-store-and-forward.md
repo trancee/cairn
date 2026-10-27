@@ -54,3 +54,8 @@ First version, so nothing to migrate. Changing the layering or the chain derivat
 2026-10-05, from spec consolidation ([`cairn-r1` spec §13](../spec/cairn-r1.md#13-consolidation-issues-resolved-2026-10-05)):
 - Queued messages carry the chain index; the message number moves inside the ciphertext (OI-6).
 - If the 1-byte generation wraps onto a generation that still has outstanding messages, those messages expire (OI-5).
+
+2026-10-27, from [ADR 0034](0034-store-and-forward-core.md) (spec OI-38):
+- R reseeds the message chains only when I's first DATA frame confirms the session.
+- A superseded receive chain is kept for 7 days. Skipped keys are deleted when used, after 7 days or on a generation collision, not on an expired-range notice.
+- A sender that restarts before re-sealing an unacked real-time message expires it and announces it as an expired range.

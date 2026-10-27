@@ -1,9 +1,9 @@
 # `cairn-r1` protocol specification
 
-Status: **draft 0.16** (couriers, §8.1; 2026-10-26). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5, all four profiles of §6 and §8.1 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
+Status: **draft 0.17** (store-and-forward gaps, §8; 2026-10-27). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5, all four profiles of §6 and §8.1 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
 
 This document consolidates, and is normative over:
-- [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md), as amended by [ADR 0021](../adr/0021-automatic-neighbour-admission.md), [ADR 0025](../adr/0025-android-gatt-slot-budget.md), [ADR 0027](../adr/0027-android-energy-bands.md), [ADR 0028](../adr/0028-android-extended-advertising.md), [ADR 0030](../adr/0030-android-eviction-interval.md), [ADR 0031](../adr/0031-android-stable-slots.md) and [ADR 0033](../adr/0033-courier-relaying.md);
+- [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md), as amended by [ADR 0021](../adr/0021-automatic-neighbour-admission.md), [ADR 0025](../adr/0025-android-gatt-slot-budget.md), [ADR 0027](../adr/0027-android-energy-bands.md), [ADR 0028](../adr/0028-android-extended-advertising.md), [ADR 0030](../adr/0030-android-eviction-interval.md), [ADR 0031](../adr/0031-android-stable-slots.md), [ADR 0033](../adr/0033-courier-relaying.md) and [ADR 0034](../adr/0034-store-and-forward-core.md);
 - the [wire-format draft](../research/2026-10-05-wire-format-draft.md);
 - the [threat model](threat-model.md).
 
@@ -334,16 +334,19 @@ nonce = u8(dir << 7) ‖ 0x00 0x00 0x00 ‖ u64(ctr)      dir: 0 = I→R, 1 = R�
   mk_i      = KDF(MC_dir,i, "", "mk", "", 32);   MC_dir,i+1 = KDF(MC_dir,i, "", "next", "", 32)
   ```
   QUEUED carries the chain index `idx = i`; the `msgno` travels inside the ciphertext [OI-6].
-- **Generation collision.** The receiver keeps a chain (and its skipped keys) only for generations with outstanding messages. If a new Resume would reuse a `gen` that still has outstanding messages, both sides treat that generation's undelivered messages as expired: the sender reports them with EXPIRED, and the receiver deletes the old chain [OI-5].
+- **Reseeding.** I reseeds both chains when it commits `CK_{n+1}`. R reseeds them when I's first DATA frame confirms the session (§6); until then R seals under its previous chain [OI-38]. A contact that has never completed a Resume has no chain, and nothing can be queued for it.
+- **Generation retention.** The receiver keeps a superseded receive chain, and its skipped keys, for 7 days after the Resume that superseded it; any message sealed under it has expired by then [OI-38].
+- **Generation collision.** If a new Resume would reuse a `gen` that still has outstanding messages, both sides treat that generation's undelivered messages as expired: the sender reports them with EXPIRED, and the receiver deletes the old chain [OI-5].
 - **Sending.** Sealing advances the chain and erases `mk_i` and `MC_i`. The sealed message and the advanced chain MUST be persisted in one transaction before the UI shows "sent" (ADR 0006).
 - **Delivery.**
   - A real-time CHAT that is unacked when the link drops is re-sealed as QUEUED under the same `msgno`.
   - After each Resume the sender resends every unacked QUEUED message, and the receiver drops duplicates.
+  - A sender persists the numbers of unacked real-time CHATs, but not their text. If it restarts before re-sealing them, it expires them and announces them with EXPIRED [OI-38].
 - **Bounds.**
   - At most 500 queued messages per contact, each kept at most 7 days. A full queue blocks sending.
   - An expired message is announced with EXPIRED.
-  - Skipped keys: at most 500, each kept at most 7 days. They are deleted on EXPIRED.
-- **Receipts.** Delivery is reported by ACK. READ is sent only if the global, reciprocal read-receipt setting is on (the default).
+  - Skipped keys: at most 500, each kept at most 7 days. They are deleted when used, after 7 days, or on a generation collision. EXPIRED names `msgno`s, which the receiver cannot map to chain indices, so it does not delete skipped keys [OI-38].
+- **Receipts.** Delivery is reported by ACK. An ACK counts expired numbers as received, and the receiver sends it in the next DATA frame after any CHAT, QUEUED or EXPIRED record [OI-38]. READ is sent only if the global, reciprocal read-receipt setting is on (the default).
 - **Inner plaintext** [OI-37]. A queued message is sealed as
   ```
   inner = LEB128(msgno) ‖ LEB128(len(text)) ‖ text ‖ 0x00 …
@@ -531,10 +534,12 @@ OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: R
 | OI-36 | Mesh link stability (2026-10-26, issue 53): in a 900 s fleet run the pair graph connected by 90 s and the later plateau is the §5.6 admission limit, but links churn: median lifetime 27 s, none 300 s, closed by idle eviction. A mesh routes over links that stay up | A full Android radio keeps up to ⌊¾ × budget⌋ stable links, the strongest by RSSI (scan RSSI on peripheral links, else age), and evicts only the rest (§10.4, ADR 0031). No wire change (user's choice, 2026-10-26) |
 | OI-33 | Energy (2026-10-25, issue 53): the Android radio advertises and scans at `LOW_LATENCY` whatever the battery, and slower modes cost about 16 % of pairs in a crowd (ADR 0026) | Android energy bands `FULL`/`SAVE`/`LOW` from battery level, plug state and Battery Saver, with hysteresis; `BALANCED` and `LOW_POWER` modes and a 3-slot cap below `FULL` (§10.4, ADR 0027). No wire change (user's choice, 2026-10-25) |
 | OI-37 | Couriers (2026-10-26, ADR 0033, issue 54): ADR 0033 lets contacts carry queued messages for out-of-range contacts but leaves the pairing output, padding and records to the spec. Today's QUEUED body would show couriers `gen`, `idx` and the text length | New pairing output `K_route`; queued `inner` carries the text length and is padded to buckets; envelope `tag ‖ c ‖ expiry ‖ copies ‖ ct`; records 0E–12; inventories list 8 B tag prefixes, with full tags in FETCH, ENVELOPE, CUSTODY and TOMB (§5.5, §7.3, §8, §8.1). Model `courier.spthy` verifies P1–P4; P5 argued (user's choice, 2026-10-26) |
+| OI-38 | Store-and-forward gaps (2026-10-27, ADR 0034, issue 35): the receiver cannot know which generations have outstanding messages; since OI-6 it cannot map an EXPIRED range to skipped keys; R could seal under an unconfirmed `MS_{n+1}`; an unacked CHAT is lost if the process dies before re-sealing it, which stalls the peer's ACK | Superseded receive chains are kept 7 days; skipped keys are deleted when used, after 7 days or on collision, not on EXPIRED; R reseeds on key confirmation; unacked CHAT numbers are persisted and expired after a restart; ACK counts expired numbers (§8). No byte of any frame changes (user's choice, 2026-10-27) |
 | OI-26 | Reassembly semantics for gaps, overlaps and retransmitted chunks are unspecified | Contiguous append only; exact duplicates wholly within the stored prefix are accepted; gaps, conflicting/cross-frontier overlaps, wrong epochs and bounds violations fail closed without partial mutation (§9) (user's choice, 2026-10-05) |
 
 ## 14. Change log
 
+- 0.17 (2026-10-27): accepted OI-38 (store-and-forward gaps, ADR 0034): R reseeds message chains on key confirmation, superseded receive chains are kept 7 days, skipped keys are no longer deleted on EXPIRED, unacked CHATs lost to a restart are expired, and ACK counts expired numbers (§8). No byte of any frame changes.
 - 0.16 (2026-10-26): accepted OI-37 (couriers, ADR 0033): new pairing output `K_route` (§5.5), padded inner plaintext of queued messages (§7.3, §8), courier envelopes, inventories and tombstones in records 0E–12 (§8.1). `courier.spthy` verifies secrecy, authenticity, once-only acceptance and tombstone unforgeability.
 - 0.15 (2026-10-26): accepted OI-36: a full Android radio keeps its strongest links, up to ⌊¾ × budget⌋, and evicts only the rest (§10.4, ADR 0031). No byte of any frame changes.
 - 0.14 (2026-10-26): accepted OI-35: a full Android radio evicts an idle link at most once every 15 s (§10.4, ADR 0030). No byte of any frame changes.
