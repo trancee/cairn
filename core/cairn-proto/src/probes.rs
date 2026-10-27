@@ -133,6 +133,13 @@ pub fn chat_plaintext(msgno: u32, text: &str) -> Option<Vec<u8>> {
     Some(plaintext.to_vec())
 }
 
+/// The canonical encoding of a plaintext's records, or `None` if malformed.
+pub fn canonical_plaintext(plaintext: &[u8]) -> Option<Vec<u8>> {
+    let records = crate::data::parse(plaintext).ok()?;
+    let canonical = crate::data::plaintext(&records).ok()?;
+    Some(canonical.to_vec())
+}
+
 /// The `(msgno, text)` CHAT records of a plaintext, or `None` if malformed.
 /// Other record types are skipped.
 pub fn parse_records(plaintext: &[u8]) -> Option<Vec<(u32, String)>> {
@@ -266,6 +273,21 @@ mod tests {
             (plaintext.len(), records),
             (32, Some(vec![(300, "héllo".into())]))
         );
+    }
+
+    #[test]
+    fn a_plaintext_of_mixed_records_reencodes_to_itself() {
+        let mut input = b"\x05\x02\x01m\x05\x02\x01m\x01\x02\x05m\x05\x02\x01:".repeat(2);
+        input.truncate(32);
+
+        let canonical = canonical_plaintext(&input);
+
+        assert_eq!(canonical, Some(input));
+    }
+
+    #[test]
+    fn a_malformed_plaintext_has_no_canonical_form() {
+        assert_eq!(canonical_plaintext(&[0x02]), None);
     }
 
     #[test]
