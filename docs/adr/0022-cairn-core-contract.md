@@ -265,3 +265,9 @@ Decided while building PR 3; the owner chose the key confirmation.
   empty padded DATA frame already proves.
 - **The full concurrent-Resume rule now.** Issue 31 defers it with rate
   limits; closing the new link is safe and simple.
+
+## Amendments
+
+2026-10-27, from [ADR 0034](0034-store-and-forward-core.md):
+- §6: a message sent with no session is queued once the contact has a message chain; `NoSession` remains only before the first Resume, and a full queue returns `QueueFull`.
+- §7: the single `Persist` blob and blob `Restore` are replaced by device, contact and queued-message rows (blob version 2).
