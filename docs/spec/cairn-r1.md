@@ -1,9 +1,9 @@
 # `cairn-r1` protocol specification
 
-Status: **draft 0.15** (Android stable slots, §10.4; 2026-10-26). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5 and all four profiles of §6 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
+Status: **draft 0.16** (couriers, §8.1; 2026-10-26). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5, all four profiles of §6 and §8.1 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
 
 This document consolidates, and is normative over:
-- [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md), as amended by [ADR 0021](../adr/0021-automatic-neighbour-admission.md), [ADR 0025](../adr/0025-android-gatt-slot-budget.md), [ADR 0027](../adr/0027-android-energy-bands.md), [ADR 0028](../adr/0028-android-extended-advertising.md), [ADR 0030](../adr/0030-android-eviction-interval.md) and [ADR 0031](../adr/0031-android-stable-slots.md);
+- [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md), as amended by [ADR 0021](../adr/0021-automatic-neighbour-admission.md), [ADR 0025](../adr/0025-android-gatt-slot-budget.md), [ADR 0027](../adr/0027-android-energy-bands.md), [ADR 0028](../adr/0028-android-extended-advertising.md), [ADR 0030](../adr/0030-android-eviction-interval.md), [ADR 0031](../adr/0031-android-stable-slots.md) and [ADR 0033](../adr/0033-courier-relaying.md);
 - the [wire-format draft](../research/2026-10-05-wire-format-draft.md);
 - the [threat model](threat-model.md).
 
@@ -197,6 +197,7 @@ caps bits: 0 coc, 1 kci, 2–7 reserved (MUST be 0)
 pairID      = KDF(RK, "", "pairid", "", 16)
 CK_0        = KDF(RK, "", "ck0", "", 32)
 K_door_A→B  = KDF(RK, "", "door A", "", 32);  K_door_B→A = KDF(RK, "", "door B", "", 32)   [OI-10]
+K_route     = KDF(RK, "", "route", "", 32)                                              [OI-37]
 ```
 
 - The stored contact record also holds: pairing role, mode, verification state (Verified / Unverified / Compromised), `th` and `nB` (for a later Verify), the peer card, version, Resume index `n = 0`, and the peer's beacon key.
@@ -301,7 +302,7 @@ nonce = u8(dir << 7) ‖ 0x00 0x00 0x00 ‖ u64(ctr)      dir: 0 = I→R, 1 = R�
 | Type | Name | Body |
 |---|---|---|
 | `01` | CHAT | `LEB128(msgno) ‖ UTF-8 text` |
-| `02` | QUEUED | `gen(1) ‖ LEB128(idx) ‖ Seal(mk_idx, 0^12, gen ‖ idx, LEB128(msgno) ‖ text) ‖ tag` [OI-6] |
+| `02` | QUEUED | `gen(1) ‖ LEB128(idx) ‖ Seal(mk_idx, 0^12, gen ‖ idx, inner) ‖ tag` (§8) [OI-6, OI-37] |
 | `03` | ACK | `LEB128(msgno)`: highest contiguous message number received |
 | `04` | READ | `LEB128(msgno)`: read up to and including this number |
 | `05` | EXPIRED | `LEB128(from) ‖ LEB128(to)`: inclusive range the sender expired |
@@ -313,6 +314,11 @@ nonce = u8(dir << 7) ‖ 0x00 0x00 0x00 ‖ u64(ctr)      dir: 0 = I→R, 1 = R�
 | `0B` | BEACON_ACK | `day(u32)` [OI-3] |
 | `0C` | EPOCH_DONE | `LEB128(epoch)` (§9, *provisional*) [OI-4, OI-21] |
 | `0D` | KEM_PROGRESS | `LEB128(epoch) ‖ kind(1) ‖ LEB128(next_offset)` (§9, *provisional*); kind `01` = EK, `02` = CT [OI-25] |
+| `0E` | INVENTORY | `n × Trunc8(tag)`, `n ≥ 0`; an empty body ends the inventory (§8.1) [OI-37] |
+| `0F` | FETCH | `tag(16)` (§8.1) [OI-37] |
+| `10` | ENVELOPE | `ENV` (§8.1) [OI-37] |
+| `11` | CUSTODY | `tag(16) ‖ code(1)`: 0 accepted, 1 full, 2 duplicate, 3 courier off, 4 invalid (§8.1) [OI-37] |
+| `12` | TOMB | `tag(16) ‖ s(16)` (§8.1) [OI-37] |
 
 - Unknown record types MUST close the link.
 - A record whose length runs past the plaintext end MUST close the link.
@@ -338,6 +344,42 @@ nonce = u8(dir << 7) ‖ 0x00 0x00 0x00 ‖ u64(ctr)      dir: 0 = I→R, 1 = R�
   - An expired message is announced with EXPIRED.
   - Skipped keys: at most 500, each kept at most 7 days. They are deleted on EXPIRED.
 - **Receipts.** Delivery is reported by ACK. READ is sent only if the global, reciprocal read-receipt setting is on (the default).
+- **Inner plaintext** [OI-37]. A queued message is sealed as
+  ```
+  inner = LEB128(msgno) ‖ LEB128(len(text)) ‖ text ‖ 0x00 …
+  ```
+  padded with zeros to the smallest bucket in {32, 64, 128, 256, 512, 1024, 2048, 4048} that fits. A receiver checks the padding is zero in constant time and rejects any other length. Only messages whose `inner` is at most 2048 B are given to couriers (§8.1).
+
+### 8.1 Couriers (ADR 0033) [OI-37]
+
+A **courier** is a contact that carries **envelopes** of queued messages for other contacts. Couriers carry only messages between existing contacts.
+
+- **Envelope.** When it seals a queued message, the sender also computes, before erasing `mk_idx`:
+  ```
+  tag  = MAC(K_route, "route", dir ‖ u8(gen) ‖ LEB128(idx))     dir ∈ {"I","R"} as for MC_dir
+  s    = KDF(mk_idx, "", "delivered", "", 16)
+  c    = Trunc16(H(lp("cairn-r1 delivered") ‖ s))
+  ENV  = tag(16) ‖ c(16) ‖ u32(expiry) ‖ u8(copies) ‖ ct        ct = the QUEUED ciphertext and AEAD tag
+  ```
+  `expiry` is in Unix minutes. `ct` MUST be 16 B longer than an `inner` bucket of at most 2048 B; any other length is invalid. The sender keeps `s` until the message is delivered or expired. `expiry` and `copies` are not authenticated.
+- **Configuration.** Each device has a copy budget `L` (default 6, 1–16) and an envelope lifetime `T` (default 24 h, 1 h – 7 d). Couriering is on by default; the user can turn it off.
+- **Deposit.** A queued message with `inner` ≤ 2048 B becomes an **own envelope** with `copies = L` and `expiry = now + T`. A device holds at most 256 own envelopes; beyond that, new queued messages wait for direct delivery only. An own envelope that expires while its message is still queued gets a new `expiry` and `copies = L` once.
+- **Holding.** A courier stores an accepted envelope with `copies = min(copies, L)` and `expiry = min(expiry, now + T)`, and deletes it at `expiry`. It holds at most 16 envelopes per depositing contact (32 if that contact is Verified), 256 envelopes and 1 MiB of `ENV` in total.
+- **Recipient window.** For each contact, a device computes the tags of every index whose message key it could still derive: its skipped keys (§8) and the next unreceived indices of each live receive chain, at most 500 per contact. It looks tags up in constant time (§11) by the full 16 B tag and drops a tag as soon as its index is consumed.
+- **Session exchange.** After every Resume, each side:
+  1. Sends INVENTORY records listing `Trunc8(tag)` of every envelope it holds, own and carried (at most 512 entries), then an empty INVENTORY. Own envelopes are listed like carried ones, except those for this peer: their messages travel as QUEUED, and they are neither listed nor deposited with it.
+  2. When the peer's inventory is complete:
+     - sends FETCH for each entry matching its recipient window;
+     - sends TOMB for each entry matching a stored tombstone;
+     - for each envelope it holds with `copies > 1` whose `Trunc8(tag)` the peer did not list and that has no tombstone, sends ENVELOPE with `copies = ⌊copies / 2⌋`, unless the peer answered CUSTODY 3 in this session.
+- **On FETCH**, a holder of that tag answers ENVELOPE unchanged. It ignores a FETCH for a tag it does not hold.
+- **On ENVELOPE:**
+  - If `tag` is in the recipient window, the device opens `ct` with `mk_idx` and AAD `u8(gen) ‖ LEB128(idx)`. On success it handles the message as a QUEUED record (duplicates by `msgno` are dropped), stores the tombstone and answers TOMB. On failure it does not consume `mk_idx`, closes the link with CLOSE 1, and does not fetch that tag from that peer again.
+  - Otherwise it acts as a courier and answers CUSTODY: 3 if couriering is off; 4 if `ct` has an invalid length, `copies = 0` or `expiry ≤ now`; 2 if it holds the tag or a tombstone for it; 1 if a limit above would be exceeded; else 0, and it stores the envelope.
+  - A courier never opens an envelope.
+- **On CUSTODY 0**, the giver subtracts the copies it handed over. On any other code it keeps them. Custody passes only on CUSTODY 0, so a dropped link can duplicate an envelope but never lose it.
+- **Tombstones.** A device stores a tombstone `tag ‖ s` only after checking `Trunc16(H(lp("cairn-r1 delivered") ‖ s)) == c` against an envelope it holds, or after creating it as recipient or sender. A holder that receives a valid TOMB deletes the envelope. A TOMB that fails the check closes the link with CLOSE 1; a TOMB for a tag the device does not hold is ignored. A sender that receives an ACK covering a message stores the tombstone of its own envelope for it and deletes the envelope. A device keeps at most 1024 tombstones, each until the envelope's `expiry` (or `now + T` if it never held one), and drops the earliest-expiring first when full.
+- **EXPIRED.** A message the sender expires (§8) deletes its own envelope; carried copies expire on their own.
 
 ## 9. Post-quantum ratchet
 
@@ -488,10 +530,12 @@ OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: R
 | OI-35 | Fleet pairing plateau, slot turnover (2026-10-26, issue 53): with the slot budget, while a phone's links fill its slots, 93–100 % of the time a link idle for 30 s waits only on the 60 s eviction interval; in a 23-phone A/B a 15 s interval paired 21 % more phones in 300 s | A full radio evicts at most once every 15 s; the 30 s idle time and the waiting-peer condition are unchanged (§10.4, ADR 0030). No wire change (user's choice, 2026-10-26) |
 | OI-36 | Mesh link stability (2026-10-26, issue 53): in a 900 s fleet run the pair graph connected by 90 s and the later plateau is the §5.6 admission limit, but links churn: median lifetime 27 s, none 300 s, closed by idle eviction. A mesh routes over links that stay up | A full Android radio keeps up to ⌊¾ × budget⌋ stable links, the strongest by RSSI (scan RSSI on peripheral links, else age), and evicts only the rest (§10.4, ADR 0031). No wire change (user's choice, 2026-10-26) |
 | OI-33 | Energy (2026-10-25, issue 53): the Android radio advertises and scans at `LOW_LATENCY` whatever the battery, and slower modes cost about 16 % of pairs in a crowd (ADR 0026) | Android energy bands `FULL`/`SAVE`/`LOW` from battery level, plug state and Battery Saver, with hysteresis; `BALANCED` and `LOW_POWER` modes and a 3-slot cap below `FULL` (§10.4, ADR 0027). No wire change (user's choice, 2026-10-25) |
+| OI-37 | Couriers (2026-10-26, ADR 0033, issue 54): ADR 0033 lets contacts carry queued messages for out-of-range contacts but leaves the pairing output, padding and records to the spec. Today's QUEUED body would show couriers `gen`, `idx` and the text length | New pairing output `K_route`; queued `inner` carries the text length and is padded to buckets; envelope `tag ‖ c ‖ expiry ‖ copies ‖ ct`; records 0E–12; inventories list 8 B tag prefixes, with full tags in FETCH, ENVELOPE, CUSTODY and TOMB (§5.5, §7.3, §8, §8.1). Model `courier.spthy` verifies P1–P4; P5 argued (user's choice, 2026-10-26) |
 | OI-26 | Reassembly semantics for gaps, overlaps and retransmitted chunks are unspecified | Contiguous append only; exact duplicates wholly within the stored prefix are accepted; gaps, conflicting/cross-frontier overlaps, wrong epochs and bounds violations fail closed without partial mutation (§9) (user's choice, 2026-10-05) |
 
 ## 14. Change log
 
+- 0.16 (2026-10-26): accepted OI-37 (couriers, ADR 0033): new pairing output `K_route` (§5.5), padded inner plaintext of queued messages (§7.3, §8), courier envelopes, inventories and tombstones in records 0E–12 (§8.1). `courier.spthy` verifies secrecy, authenticity, once-only acceptance and tombstone unforgeability.
 - 0.15 (2026-10-26): accepted OI-36: a full Android radio keeps its strongest links, up to ⌊¾ × budget⌋, and evicts only the rest (§10.4, ADR 0031). No byte of any frame changes.
 - 0.14 (2026-10-26): accepted OI-35: a full Android radio evicts an idle link at most once every 15 s (§10.4, ADR 0030). No byte of any frame changes.
 - 0.13 (2026-10-25): accepted OI-34: Android advertises extended connectable PDUs where the controller supports them, and an extended advertiser dials legacy advertisers (§10.1, §10.4, ADR 0028). No byte of any frame changes.

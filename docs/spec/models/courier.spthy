@@ -1,0 +1,151 @@
+theory CairnCourier
+begin
+
+/*
+ * Symbolic model of cairn-r1 couriers (docs/spec/cairn-r1.md §8.1, ADR 0033, OI-37).
+ * Ticket: local issue 54, step 2. Tool: Tamarin 1.12.
+ *
+ * Every courier is the Dolev-Yao attacker: envelopes are sent to and fetched from the network.
+ * Honest holders are modelled only to check tombstones (P4).
+ *
+ * Flags:
+ *   (none)          spec §8.1 as of draft 0.16
+ *   OPEN_COMMIT     mutation: c = s, so any courier holds the tombstone secret; P4 must fail
+ *   REUSABLE_SLOT   mutation: the recipient keeps a window index after opening it; P3 must fail
+ *
+ * Abstractions:
+ *  - Pairing (sas.spthy) and Resume (resume.spthy) are abstracted to a fresh root key RK per
+ *    contact pair, from which K_route and the per-direction chain keys derive. Corrupt reveals RK,
+ *    which covers every later key of that pair (threat model A4b, A5 towards itself).
+ *  - One generation per direction: gen and Resume reseeding are omitted. idx is a public value.
+ *    The sender seals each index once and the recipient adds each index to its window once
+ *    (restrictions OnceSeal, OnceSlot): both are the implementation's per-direction counter.
+ *  - The message-key chain mk_i = kdf(MC_i, 'mk'), MC_{i+1} = kdf(MC_i, 'next') is abstracted to
+ *    mk_i = kdf(<MC_0, i>, 'mk'). Corrupt reveals RK, hence every key of the pair, and nothing
+ *    else reveals a chain key, so both derivations give the attacker the same keys. Forward
+ *    secrecy by erasure is a property of §8 (ratchet.spthy scope), not of couriers.
+ *  - AES-256-GCM is senc with the AAD idx inside the plaintext; Open succeeds only by
+ *    pattern match, which models AEAD integrity. Padding, lengths and truncation are omitted.
+ *  - expiry and copies are unauthenticated: the sender emits constants and every receiver
+ *    accepts any term, so couriers rewrite them freely. Quotas,
+ *    clamps, spray splitting and inventories affect availability only and are not modelled.
+ *  - The recipient window is one linear Slot fact per index, consumed when opened (§8.1).
+ *  - The sender releases s after an ACK on the authenticated pairwise link; the model lets it
+ *    release at any time, which only strengthens P4.
+ *  - P5 (tag unlinkability) is an equivalence property and is argued in prose (README.md).
+ */
+
+builtins: hashing, symmetric-encryption
+functions: kdf/2, mac/2
+
+#ifdef OPEN_COMMIT
+macros: COMMIT(s) = s
+#else
+macros: COMMIT(s) = h(<'delivered', s>)
+#endif
+
+restriction OnceSeal:
+  "All pid dir i #a #b. SealIndex(pid, dir, i)@a & SealIndex(pid, dir, i)@b ==> #a = #b"
+
+restriction OnceSlot:
+  "All pid dir i #a #b. SlotIndex(pid, dir, i)@a & SlotIndex(pid, dir, i)@b ==> #a = #b"
+
+// Pairing of $A (role I) and $B (role R). pid identifies the contact pair.
+rule Pair:
+    [ Fr(~rk) ]
+  --[ Paired($A, $B, h(~rk)) ]->
+    [ !PairKey(h(~rk), ~rk)
+    , !Chain($A, $B, h(~rk), 'I', kdf(~rk, 'chainI'), kdf(~rk, 'route'))
+    , !Chain($B, $A, h(~rk), 'R', kdf(~rk, 'chainR'), kdf(~rk, 'route'))
+    , Out(h(~rk)) ]
+
+rule Corrupt:
+    [ !PairKey(pid, rk) ]
+  --[ Corrupt(pid) ]->
+    [ Out(rk) ]
+
+// The sender seals queued message i and deposits its envelope with the couriers.
+rule Seal:
+    let mk  = kdf(<mc, $i>, 'mk')
+        s   = kdf(mk, 'delivered')
+        tag = mac(kr, <dir, $i>)
+        c   = COMMIT(s)
+    in
+    [ !Chain(A, B, pid, dir, mc, kr), Fr(~m) ]
+  --[ SealIndex(pid, dir, $i), Sent(A, B, pid, dir, ~m, $i), Deposit(A, B, pid, tag, c) ]->
+    [ !Own(A, B, pid, tag, s)
+    , Out(<tag, c, 'expiry', 'copies', senc(<~m, $i>, mk)>) ]
+
+// The sender publishes the tombstone of its own envelope (after an ACK, spec §8.1).
+rule Release:
+    [ !Own(A, B, pid, tag, s) ]
+  --[ Released(A, B, pid, tag) ]->
+    [ Out(<tag, s>) ]
+
+// The recipient B adds index i of A's direction to its window.
+rule Window:
+    [ !Chain(A, B, pid, dir, mc, kr) ]
+  --[ SlotIndex(pid, dir, $i) ]->
+    [ Slot(B, A, pid, dir, $i, kdf(<mc, $i>, 'mk'), mac(kr, <dir, $i>)) ]
+
+// The recipient opens a fetched envelope whose tag is in its window and answers TOMB.
+#ifdef REUSABLE_SLOT
+rule Open:
+    let s = kdf(mk, 'delivered') in
+    [ Slot(B, A, pid, dir, i, mk, tag)
+    , In(<tag, c, expiry, copies, senc(<m, i>, mk)>) ]
+  --[ Accept(B, A, pid, dir, m, i), Opened(B, A, pid, tag) ]->
+    [ Out(<tag, s>), Slot(B, A, pid, dir, i, mk, tag) ]
+#else
+rule Open:
+    let s = kdf(mk, 'delivered') in
+    [ Slot(B, A, pid, dir, i, mk, tag)
+    , In(<tag, c, expiry, copies, senc(<m, i>, mk)>) ]
+  --[ Accept(B, A, pid, dir, m, i), Opened(B, A, pid, tag) ]->
+    [ Out(<tag, s>) ]
+#endif
+
+// An honest courier stores an envelope from the network.
+rule Hold:
+    [ In(<tag, c, expiry, copies, ct>), Fr(~h) ]
+  -->
+    [ Held(~h, tag, c) ]
+
+// An honest courier deletes its copy on a tombstone that matches c (spec §8.1).
+rule Tomb:
+    [ Held(hid, tag, COMMIT(s)), In(<tag, s>) ]
+  --[ TombOK(tag, COMMIT(s)) ]->
+    [ ]
+
+lemma executable_delivery:
+  exists-trace
+  "Ex A B pid dir m i tag c #s #o #t.
+     Sent(A, B, pid, dir, m, i)@s & Accept(B, A, pid, dir, m, i)@o
+     & Opened(B, A, pid, tag)@o & Deposit(A, B, pid, tag, c)@s & TombOK(tag, c)@t
+     & not (Ex #k. Corrupt(pid)@k)
+     & not (Ex #k. Released(A, B, pid, tag)@k)"
+
+// P1: a queued message stays secret from couriers unless its pair is corrupted.
+lemma message_secrecy:
+  "All A B pid dir m i #s. Sent(A, B, pid, dir, m, i)@s
+     ==> not (Ex #k. K(m)@k) | (Ex #c. Corrupt(pid)@c)"
+
+// P2: the recipient accepts only what its contact sealed for that index.
+lemma authenticity:
+  "All A B pid dir m i #o. Accept(B, A, pid, dir, m, i)@o
+     ==> (Ex #s. Sent(A, B, pid, dir, m, i)@s & s < o) | (Ex #c. Corrupt(pid)@c)"
+
+// P3: however couriers replay it, each index is accepted at most once.
+lemma once_only:
+  "All A B pid dir m n i #o1 #o2.
+     Accept(B, A, pid, dir, m, i)@o1 & Accept(B, A, pid, dir, n, i)@o2 ==> #o1 = #o2"
+
+// P4: an honest courier accepts a tombstone for an honest envelope only after the recipient
+// opened it or the sender released it.
+lemma tombstone_unforgeable:
+  "All A B pid tag c #d #t. Deposit(A, B, pid, tag, c)@d & TombOK(tag, c)@t
+     ==> (Ex #o. Opened(B, A, pid, tag)@o & o < t)
+       | (Ex #r. Released(A, B, pid, tag)@r & r < t)
+       | (Ex #k. Corrupt(pid)@k)"
+
+end
