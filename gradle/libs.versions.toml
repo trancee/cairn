@@ -41,6 +41,7 @@ junit = { module = "junit:junit", version.ref = "junit" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
+sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
 sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 robolectric-android-all-sdk26 = { module = "org.robolectric:android-all-instrumented", version.ref = "robolectric-sdk26" }
 robolectric-android-all-sdk37 = { module = "org.robolectric:android-all-instrumented", version.ref = "robolectric-sdk37" }

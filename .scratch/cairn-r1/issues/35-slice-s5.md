@@ -31,3 +31,11 @@ actions in a single transaction before its other actions, and reports
 `STORAGE_RESET`. The app still uses the in-memory `RowStore`. Remaining work:
 the Android Keystore sealer (2b), the iOS CryptoKit sealer (2c) and the device
 demonstration.
+
+2026-10-29: step 2b on `feat/s5-android-sealer`: the Android app stores rows
+in a SQLDelight database sealed by `KeystoreSealer`. The sealer uses a
+non-exportable AES-256-GCM Keystore key, in StrongBox when present and in the
+TEE otherwise. Backup and device transfer exclude the database. Robolectric
+covers the sealer through a software `AndroidKeyStore` provider. Not yet done:
+a real-Keystore run and commit-latency measurement on a device, and step 2c
+(iOS).

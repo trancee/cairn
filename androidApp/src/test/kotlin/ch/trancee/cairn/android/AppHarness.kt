@@ -37,6 +37,7 @@ class TestCairnApplication : CairnApplication() {
     val engine = FakeEngine()
 
     init {
+        FakeAndroidKeyStore.install()
         engineFactory = { engine }
     }
 }

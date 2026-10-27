@@ -90,6 +90,10 @@ compromise, and OS rollback is out of scope.
   in-memory `RowStore` remains for tests.
 - A restore reads and opens every row. That cost grows with queued
   messages, which are bounded by contacts × 500.
+- On Android, every commit seals rows synchronously on the session thread,
+  which is the main looper. StrongBox seals are slow on some devices
+  (ADR 0006 risk). The device demonstration measures commit latency. If it
+  is too slow, the store moves to a worker thread or the key moves to the TEE.
 - A single corrupt row resets all storage. This favours a clean failure
   over guessing which state is still consistent.
 
