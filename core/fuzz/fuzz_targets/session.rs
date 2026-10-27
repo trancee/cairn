@@ -3,7 +3,7 @@
 //! Two cores pair, resume and chat over a loopback whose fragments the input
 //! drops, truncates, corrupts or replaces. `Net` panics if `handle` ever
 //! returns an error for a contract-valid event; every received chat must be
-//! one the peer sent under that number.
+//! one the peer sent or queued under that number.
 
 #[path = "../../cairn-proto/tests/support/mod.rs"]
 mod support;
@@ -112,7 +112,9 @@ fuzz_target!(|input: &[u8]| {
                 );
                 net.run();
                 for action in &net.devices[device].log[before..] {
-                    if let Action::ChatSent { msgno, .. } = action {
+                    if let Action::ChatSent { msgno, .. } | Action::ChatQueued { msgno, .. } =
+                        action
+                    {
                         sent.entry((device, *msgno))
                             .or_default()
                             .insert(text.clone());
