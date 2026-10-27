@@ -83,6 +83,11 @@ class Session(private val context: Context, handler: Handler, newEngine: () -> E
         refresh()
     }
 
+    /** Marks [contact]'s conversation read up to its last received message, if any. */
+    fun read(contact: ULong) {
+        model.lastReceived(contact)?.let { driver.markRead(contact, it) }
+    }
+
     private fun refresh() {
         model.links = driver.links()
     }

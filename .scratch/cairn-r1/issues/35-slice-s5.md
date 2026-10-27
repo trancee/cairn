@@ -17,3 +17,8 @@ chose the rules in [ADR 0034](../../../docs/adr/0034-store-and-forward-core.md)
 (spec OI-38, draft 0.17). Order: (1) Rust core and FFI/Kotlin contract with
 row persistence and an in-memory store; (2) SQLDelight sealed storage per
 ADR 0006; then couriers (issue 54).
+
+2026-10-28: step 1 implemented on `feat/s5-store-and-forward-core`: the core
+holds QUEUED chats, ACK/READ/EXPIRED notices and the four row actions; the
+FFI, the Kotlin `RowStore` and the Android app adopt them. Rust and Kover
+coverage are 100%. Steps 2 (SQLDelight) and the device demonstration remain.

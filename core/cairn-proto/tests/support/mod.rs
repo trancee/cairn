@@ -5,7 +5,10 @@
 
 pub mod seeded;
 
-use cairn_proto::{Action, Clock, Core, Event, GattRole, LinkId, Persisted, TimerId};
+use cairn_proto::{
+    Action, Clock, ContactId, ContactRow, Core, Event, GattRole, LinkId, Persisted, QueuedRow,
+    TimerId,
+};
 use seeded::Seeded;
 use std::collections::{BTreeMap, VecDeque};
 
@@ -15,11 +18,67 @@ pub const START: Clock = Clock {
     unix_s: 1_761_177_600,
 };
 
+/// The rows a platform stores (ADR 0034 §1).
+#[derive(Debug, Clone, Default)]
+pub struct Store {
+    pub device: Option<Persisted>,
+    pub contacts: BTreeMap<ContactId, Persisted>,
+    pub queued: BTreeMap<(ContactId, u32), Persisted>,
+}
+
+impl Store {
+    /// The `Restore` event for these rows.
+    pub fn restore(&self) -> Event {
+        Event::Restore {
+            device: self.device.clone(),
+            contacts: self
+                .contacts
+                .iter()
+                .map(|(&contact, state)| ContactRow {
+                    contact,
+                    state: state.clone(),
+                })
+                .collect(),
+            queued: self
+                .queued
+                .iter()
+                .map(|(&(contact, msgno), state)| QueuedRow {
+                    contact,
+                    msgno,
+                    state: state.clone(),
+                })
+                .collect(),
+        }
+    }
+
+    /// Stores a row action; `false` for any other action.
+    pub fn apply(&mut self, action: &Action) -> bool {
+        match action {
+            Action::PersistDevice { state } => self.device = Some(state.clone()),
+            Action::PersistContact { contact, state } => {
+                self.contacts.insert(*contact, state.clone());
+            }
+            Action::PutQueued {
+                contact,
+                msgno,
+                state,
+            } => {
+                self.queued.insert((*contact, *msgno), state.clone());
+            }
+            Action::DeleteQueued { contact, msgno } => {
+                self.queued.remove(&(*contact, *msgno));
+            }
+            _ => return false,
+        }
+        true
+    }
+}
+
 pub struct Device {
     pub core: Core<Seeded>,
     /// Every action this device emitted, in order.
     pub log: Vec<Action>,
-    pub persisted: Option<Persisted>,
+    pub store: Store,
     pub timers: BTreeMap<TimerId, u64>,
     /// Seconds this device's wall clock runs behind the network's.
     pub lag_s: u64,
@@ -46,7 +105,7 @@ impl Net {
                 .map(|_| Device {
                     core: Core::new(),
                     log: Vec::new(),
-                    persisted: None,
+                    store: Store::default(),
                     timers: BTreeMap::new(),
                     lag_s: 0,
                 })
@@ -58,7 +117,7 @@ impl Net {
             next_link: 0,
         };
         for device in 0..count {
-            net.inject(device, Event::Restore { state: None });
+            net.inject(device, Store::default().restore());
         }
         net.run();
         net
@@ -133,7 +192,7 @@ impl Net {
                         self.inject(peer, Event::LinkDown { link: peer_link });
                     }
                 }
-                Action::Persist { state } => self.devices[device].persisted = Some(state),
+                ref row if self.devices[device].store.apply(row) => {}
                 Action::SetTimer { timer, at_mono_ms } => {
                     self.devices[device].timers.insert(timer, at_mono_ms);
                 }

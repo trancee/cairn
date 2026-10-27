@@ -26,6 +26,8 @@ pub(crate) struct Keys {
     pub(crate) r_to_i: Zeroizing<[u8; 32]>,
     /// `CK_{n+1}`.
     pub(crate) next_ck: Zeroizing<[u8; 32]>,
+    /// `MS_{n+1}`, the seed of both message chains (spec §8).
+    pub(crate) msg_seed: Zeroizing<[u8; 32]>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -215,7 +217,7 @@ fn auth_i<B: CryptoBackend>(
     kdf::<B, 32>(chain.ck, &[], &label, &[&ctx(chain)])
 }
 
-/// `prk = HKDF-Extract(CK_n, dh)`, expanded to `SK_I→R`, `SK_R→I` and `CK_{n+1}`.
+/// `prk = HKDF-Extract(CK_n, dh)`, expanded to `SK_I→R`, `SK_R→I`, `CK_{n+1}` and `MS_{n+1}`.
 fn derive<B: CryptoBackend>(
     ck: &[u8; 32],
     context: &[u8; 24],
@@ -227,6 +229,7 @@ fn derive<B: CryptoBackend>(
         i_to_r: expand(b"sk I")?,
         r_to_i: expand(b"sk R")?,
         next_ck: expand(b"ratchet")?,
+        msg_seed: expand(b"msg seed")?,
     })
 }
 
@@ -287,7 +290,9 @@ mod tests {
         assert_eq!(i.i_to_r, r.i_to_r);
         assert_eq!(i.r_to_i, r.r_to_i);
         assert_eq!(i.next_ck, r.next_ck);
+        assert_eq!(i.msg_seed, r.msg_seed);
         assert_ne!(i.i_to_r, i.r_to_i);
+        assert_ne!(i.msg_seed, i.next_ck);
         assert_ne!(*i.next_ck, CK);
     }
 
@@ -380,6 +385,7 @@ mod tests {
         assert_eq!(keys.i_to_r[..], expand(b"sk I")[..]);
         assert_eq!(keys.r_to_i[..], expand(b"sk R")[..]);
         assert_eq!(keys.next_ck[..], expand(b"ratchet")[..]);
+        assert_eq!(keys.msg_seed[..], expand(b"msg seed")[..]);
     }
 
     #[test]

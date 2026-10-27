@@ -125,17 +125,32 @@ pub fn padding_is_zero(padding: &[u8]) -> u8 {
 
 /// The padded CHAT plaintext, or `None` for a message too long.
 pub fn chat_plaintext(msgno: u32, text: &str) -> Option<Vec<u8>> {
-    let plaintext = crate::data::chat_plaintext(msgno, text).ok()?;
+    let chat = crate::data::Record::Chat(crate::data::Chat {
+        msgno,
+        text: text.into(),
+    });
+    let plaintext = crate::data::plaintext(&[chat]).ok()?;
     Some(plaintext.to_vec())
 }
 
+/// The canonical encoding of a plaintext's records, or `None` if malformed.
+pub fn canonical_plaintext(plaintext: &[u8]) -> Option<Vec<u8>> {
+    let records = crate::data::parse(plaintext).ok()?;
+    let canonical = crate::data::plaintext(&records).ok()?;
+    Some(canonical.to_vec())
+}
+
 /// The `(msgno, text)` CHAT records of a plaintext, or `None` if malformed.
+/// Other record types are skipped.
 pub fn parse_records(plaintext: &[u8]) -> Option<Vec<(u32, String)>> {
-    let chats = crate::data::parse(plaintext).ok()?;
+    let records = crate::data::parse(plaintext).ok()?;
     Some(
-        chats
+        records
             .into_iter()
-            .map(|chat| (chat.msgno, chat.text))
+            .filter_map(|record| match record {
+                crate::data::Record::Chat(chat) => Some((chat.msgno, chat.text)),
+                _ => None,
+            })
             .collect(),
     )
 }
@@ -258,6 +273,37 @@ mod tests {
             (plaintext.len(), records),
             (32, Some(vec![(300, "héllo".into())]))
         );
+    }
+
+    #[test]
+    fn a_plaintext_of_mixed_records_reencodes_to_itself() {
+        let mut input = b"\x05\x02\x01m\x05\x02\x01m\x01\x02\x05m\x05\x02\x01:".repeat(2);
+        input.truncate(32);
+
+        let canonical = canonical_plaintext(&input);
+
+        assert_eq!(canonical, Some(input));
+    }
+
+    #[test]
+    fn a_malformed_plaintext_has_no_canonical_form() {
+        assert_eq!(canonical_plaintext(&[0x02]), None);
+    }
+
+    #[test]
+    fn only_chat_records_are_returned() {
+        let plaintext = crate::data::plaintext(&[
+            crate::data::Record::Ack(4),
+            crate::data::Record::Chat(crate::data::Chat {
+                msgno: 5,
+                text: "hi".into(),
+            }),
+        ])
+        .unwrap();
+
+        let records = parse_records(&plaintext);
+
+        assert_eq!(records, Some(vec![(5, "hi".into())]));
     }
 
     #[test]

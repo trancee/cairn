@@ -3,6 +3,7 @@ package ch.trancee.cairn.android
 import ch.trancee.cairn.ffi.Action
 import ch.trancee.cairn.ffi.Event
 import ch.trancee.cairn.ffi.GattRole
+import ch.trancee.cairn.sdk.Notice
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -20,7 +21,7 @@ class SessionTest {
         app.session
         app.session
 
-        assertEquals(listOf<Event>(Event.Restore(null)), app.engine.events)
+        assertEquals(listOf<Event>(Event.Restore(null, emptyList(), emptyList())), app.engine.events)
     }
 
     @Test
@@ -87,7 +88,17 @@ class SessionTest {
         app.session.send(3u, "hi")
 
         assertEquals(Event.SendChat(3u, "hi"), app.engine.events.last())
-        assertEquals(listOf(Message("hi", MessageStatus.Sent)), app.session.model.messages(3u))
+        assertEquals(listOf(Message("hi", MessageStatus.Sent, 1u)), app.session.model.messages(3u))
+    }
+
+    @Test
+    fun readingAConversationMarksItsLastReceivedMessageRead() {
+        app.session.read(3u)
+        app.session.model.onNotice(Notice.ChatReceived(3u, 2u, "hi"))
+
+        app.session.read(3u)
+
+        assertEquals(listOf<Event>(Event.MarkRead(3u, 2u)), app.engine.events.drop(1))
     }
 
     @Test

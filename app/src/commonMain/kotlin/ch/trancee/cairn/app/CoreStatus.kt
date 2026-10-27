@@ -40,7 +40,7 @@ fun coreStatus(): String {
         } catch (error: CoreException.NotRestored) {
             "NotRestored"
         }
-        cores.indices.forEach { deliver(it, Event.Restore(null)) }
+        cores.indices.forEach { deliver(it, Event.Restore(null, emptyList(), emptyList())) }
         deliver(0, Event.LinkUp(0uL, GattRole.CENTRAL, 185u, byteArrayOf(1)))
         deliver(1, Event.LinkUp(1uL, GattRole.PERIPHERAL, 185u, byteArrayOf(0)))
         deliver(0, Event.BeaconRead(0uL, cores[1].beacon(CLOCK.unixS)))

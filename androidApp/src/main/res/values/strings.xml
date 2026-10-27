@@ -16,11 +16,17 @@
     <string name="message_hint">Message</string>
     <string name="send">Send</string>
     <string name="back">Back</string>
+    <string name="state_queued">Waiting for a connection</string>
     <string name="state_sent">Sent</string>
+    <string name="state_delivered">Delivered</string>
+    <string name="state_read">Read</string>
+    <string name="state_expired">Not delivered: gave up</string>
     <string name="state_failed">Not sent: internal error</string>
     <string name="rejection_no_session">Not sent: no secure session yet</string>
     <string name="rejection_too_long">Not sent: message too long</string>
     <string name="rejection_exhausted">Not sent: message counter used up</string>
+    <string name="rejection_queue_full">Not sent: too many undelivered messages</string>
+    <string name="missed">Messages %1$d–%2$d expired before they arrived</string>
     <string name="debug_show">Show links</string>
     <string name="debug_hide">Hide links</string>
     <string name="debug_empty">No links</string>

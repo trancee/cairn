@@ -1,8 +1,9 @@
 //! The UniFFI boundary: one `CairnCore` per device (ADR 0022).
 //!
 //! Keys, `pairID` and session state stay inside the core. Two values that
-//! carry secrets do cross by design: the `Persist` blob, which the platform
-//! seals with its keystore, and chat text (ADR 0004, ADR 0022 §7).
+//! carry secrets do cross by design: the persisted row blobs, which the
+//! platform seals with its keystore, and chat text (ADR 0004, ADR 0022 §7,
+//! ADR 0034 §1).
 
 use std::sync::{Mutex, MutexGuard};
 
@@ -42,6 +43,7 @@ pub enum ChatRejection {
     NoSession,
     TooLong,
     Exhausted,
+    QueueFull,
 }
 
 // `Event`, `Action` and `ContactInfo` mirror the core types with plain `u64`
@@ -57,12 +59,29 @@ pub struct ContactInfo {
     pub verification: Verification,
 }
 
+/// One stored contact row.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ContactRow {
+    pub contact: u64,
+    pub state: Persisted,
+}
+
+/// One stored queued message.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct QueuedRow {
+    pub contact: u64,
+    pub msgno: u32,
+    pub state: Persisted,
+}
+
 /// An input to [`CairnCore::handle`]; ids are `LinkId`, `TimerId` and `ContactId`.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
 pub enum Event {
-    /// The first event; `None` is a fresh install.
+    /// The first event: the stored rows; `device: None` is a fresh install.
     Restore {
-        state: Option<Persisted>,
+        device: Option<Persisted>,
+        contacts: Vec<ContactRow>,
+        queued: Vec<QueuedRow>,
     },
     LinkUp {
         link: u64,
@@ -93,14 +112,40 @@ pub enum Event {
         contact: u64,
         text: String,
     },
+    /// The user has read the peer's messages up to `msgno`.
+    MarkRead {
+        contact: u64,
+        msgno: u32,
+    },
+    /// The global, reciprocal read-receipt setting.
+    SetReadReceipts {
+        enabled: bool,
+    },
 }
 
-/// An output of [`CairnCore::handle`], executed by the platform in order.
+/// An output of [`CairnCore::handle`], executed by the platform in order. The
+/// row actions of one result are stored in one transaction before any later
+/// action (ADR 0034 §1).
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
 pub enum Action {
-    /// Seal and store `state` before executing any later action.
-    Persist {
+    /// Seal and store the device row.
+    PersistDevice {
         state: Persisted,
+    },
+    /// Seal and store one contact row.
+    PersistContact {
+        contact: u64,
+        state: Persisted,
+    },
+    /// Seal and store one queued message.
+    PutQueued {
+        contact: u64,
+        msgno: u32,
+        state: Persisted,
+    },
+    DeleteQueued {
+        contact: u64,
+        msgno: u32,
     },
     Send {
         link: u64,
@@ -133,12 +178,59 @@ pub enum Action {
         contact: u64,
         reason: ChatRejection,
     },
+    /// The message was sealed and stored for the next Resume.
+    ChatQueued {
+        contact: u64,
+        msgno: u32,
+    },
+    /// The peer's ACK covers the message.
+    ChatDelivered {
+        contact: u64,
+        msgno: u32,
+    },
+    /// The peer has read the messages up to `msgno`.
+    ChatRead {
+        contact: u64,
+        msgno: u32,
+    },
+    /// This device gave up on the message.
+    ChatExpired {
+        contact: u64,
+        msgno: u32,
+    },
+    /// The peer gave up on the messages `from..=to`.
+    ChatsExpired {
+        contact: u64,
+        from: u32,
+        to: u32,
+    },
 }
 
 impl From<Event> for cairn_proto::Event {
     fn from(event: Event) -> Self {
         match event {
-            Event::Restore { state } => Self::Restore { state },
+            Event::Restore {
+                device,
+                contacts,
+                queued,
+            } => Self::Restore {
+                device,
+                contacts: contacts
+                    .into_iter()
+                    .map(|row| cairn_proto::ContactRow {
+                        contact: ContactId(row.contact),
+                        state: row.state,
+                    })
+                    .collect(),
+                queued: queued
+                    .into_iter()
+                    .map(|row| cairn_proto::QueuedRow {
+                        contact: ContactId(row.contact),
+                        msgno: row.msgno,
+                        state: row.state,
+                    })
+                    .collect(),
+            },
             Event::LinkUp {
                 link,
                 gatt_role,
@@ -170,6 +262,11 @@ impl From<Event> for cairn_proto::Event {
                 contact: ContactId(contact),
                 text,
             },
+            Event::MarkRead { contact, msgno } => Self::MarkRead {
+                contact: ContactId(contact),
+                msgno,
+            },
+            Event::SetReadReceipts { enabled } => Self::SetReadReceipts { enabled },
         }
     }
 }
@@ -178,7 +275,24 @@ impl From<cairn_proto::Action> for Action {
     fn from(action: cairn_proto::Action) -> Self {
         use cairn_proto::Action as Proto;
         match action {
-            Proto::Persist { state } => Self::Persist { state },
+            Proto::PersistDevice { state } => Self::PersistDevice { state },
+            Proto::PersistContact { contact, state } => Self::PersistContact {
+                contact: contact.0,
+                state,
+            },
+            Proto::PutQueued {
+                contact,
+                msgno,
+                state,
+            } => Self::PutQueued {
+                contact: contact.0,
+                msgno,
+                state,
+            },
+            Proto::DeleteQueued { contact, msgno } => Self::DeleteQueued {
+                contact: contact.0,
+                msgno,
+            },
             Proto::Send { link, fragment } => Self::Send {
                 link: link.0,
                 fragment,
@@ -206,6 +320,27 @@ impl From<cairn_proto::Action> for Action {
             Proto::ChatRejected { contact, reason } => Self::ChatRejected {
                 contact: contact.0,
                 reason,
+            },
+            Proto::ChatQueued { contact, msgno } => Self::ChatQueued {
+                contact: contact.0,
+                msgno,
+            },
+            Proto::ChatDelivered { contact, msgno } => Self::ChatDelivered {
+                contact: contact.0,
+                msgno,
+            },
+            Proto::ChatRead { contact, msgno } => Self::ChatRead {
+                contact: contact.0,
+                msgno,
+            },
+            Proto::ChatExpired { contact, msgno } => Self::ChatExpired {
+                contact: contact.0,
+                msgno,
+            },
+            Proto::ChatsExpired { contact, from, to } => Self::ChatsExpired {
+                contact: contact.0,
+                from,
+                to,
             },
         }
     }
@@ -337,15 +472,41 @@ mod tests {
     fn every_event_crosses_the_boundary_and_maps_to_the_core_event() {
         let cases = [
             (
-                Event::Restore { state: None },
-                ProtoEvent::Restore { state: None },
+                Event::Restore {
+                    device: None,
+                    contacts: Vec::new(),
+                    queued: Vec::new(),
+                },
+                ProtoEvent::Restore {
+                    device: None,
+                    contacts: Vec::new(),
+                    queued: Vec::new(),
+                },
             ),
             (
                 Event::Restore {
-                    state: Some(state()),
+                    device: Some(state()),
+                    contacts: vec![ContactRow {
+                        contact: 2,
+                        state: state(),
+                    }],
+                    queued: vec![QueuedRow {
+                        contact: 2,
+                        msgno: 3,
+                        state: state(),
+                    }],
                 },
                 ProtoEvent::Restore {
-                    state: Some(state()),
+                    device: Some(state()),
+                    contacts: vec![cairn_proto::ContactRow {
+                        contact: ContactId(2),
+                        state: state(),
+                    }],
+                    queued: vec![cairn_proto::QueuedRow {
+                        contact: ContactId(2),
+                        msgno: 3,
+                        state: state(),
+                    }],
                 },
             ),
             (
@@ -423,6 +584,20 @@ mod tests {
                     text: "hi".into(),
                 },
             ),
+            (
+                Event::MarkRead {
+                    contact: 8,
+                    msgno: 9,
+                },
+                ProtoEvent::MarkRead {
+                    contact: ContactId(8),
+                    msgno: 9,
+                },
+            ),
+            (
+                Event::SetReadReceipts { enabled: false },
+                ProtoEvent::SetReadReceipts { enabled: false },
+            ),
         ];
 
         for (event, expected) in cases {
@@ -434,8 +609,40 @@ mod tests {
     fn every_action_maps_from_the_core_action_and_crosses_the_boundary() {
         let cases = [
             (
-                ProtoAction::Persist { state: state() },
-                Action::Persist { state: state() },
+                ProtoAction::PersistDevice { state: state() },
+                Action::PersistDevice { state: state() },
+            ),
+            (
+                ProtoAction::PersistContact {
+                    contact: ContactId(4),
+                    state: state(),
+                },
+                Action::PersistContact {
+                    contact: 4,
+                    state: state(),
+                },
+            ),
+            (
+                ProtoAction::PutQueued {
+                    contact: ContactId(4),
+                    msgno: 5,
+                    state: state(),
+                },
+                Action::PutQueued {
+                    contact: 4,
+                    msgno: 5,
+                    state: state(),
+                },
+            ),
+            (
+                ProtoAction::DeleteQueued {
+                    contact: ContactId(4),
+                    msgno: 5,
+                },
+                Action::DeleteQueued {
+                    contact: 4,
+                    msgno: 5,
+                },
             ),
             (
                 ProtoAction::Send {
@@ -523,6 +730,68 @@ mod tests {
                     reason: ChatRejection::Exhausted,
                 },
             ),
+            (
+                ProtoAction::ChatRejected {
+                    contact: ContactId(4),
+                    reason: ChatRejection::QueueFull,
+                },
+                Action::ChatRejected {
+                    contact: 4,
+                    reason: ChatRejection::QueueFull,
+                },
+            ),
+            (
+                ProtoAction::ChatQueued {
+                    contact: ContactId(4),
+                    msgno: 7,
+                },
+                Action::ChatQueued {
+                    contact: 4,
+                    msgno: 7,
+                },
+            ),
+            (
+                ProtoAction::ChatDelivered {
+                    contact: ContactId(4),
+                    msgno: 7,
+                },
+                Action::ChatDelivered {
+                    contact: 4,
+                    msgno: 7,
+                },
+            ),
+            (
+                ProtoAction::ChatRead {
+                    contact: ContactId(4),
+                    msgno: 7,
+                },
+                Action::ChatRead {
+                    contact: 4,
+                    msgno: 7,
+                },
+            ),
+            (
+                ProtoAction::ChatExpired {
+                    contact: ContactId(4),
+                    msgno: 7,
+                },
+                Action::ChatExpired {
+                    contact: 4,
+                    msgno: 7,
+                },
+            ),
+            (
+                ProtoAction::ChatsExpired {
+                    contact: ContactId(4),
+                    from: 7,
+                    to: 9,
+                },
+                Action::ChatsExpired {
+                    contact: 4,
+                    from: 7,
+                    to: 9,
+                },
+            ),
         ];
 
         for (action, expected) in cases {
@@ -605,7 +874,11 @@ mod tests {
                     mono_ms: 0,
                     unix_s: 0,
                 },
-                Event::Restore { state: None },
+                Event::Restore {
+                    device: None,
+                    contacts: Vec::new(),
+                    queued: Vec::new(),
+                },
             ),
             Err(CoreError::Poisoned)
         );

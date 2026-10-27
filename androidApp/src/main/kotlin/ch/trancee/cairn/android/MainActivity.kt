@@ -49,4 +49,6 @@ class MainActivity : ComponentActivity(), ScreenActions {
     override fun enableBluetooth() = bluetooth.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
 
     override fun send(contact: ULong, text: String) = session.send(contact, text)
+
+    override fun read(contact: ULong) = session.read(contact)
 }

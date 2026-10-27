@@ -7,7 +7,6 @@ import ch.trancee.cairn.ffi.ContactInfo
 import ch.trancee.cairn.ffi.CoreException
 import ch.trancee.cairn.ffi.Event
 import ch.trancee.cairn.ffi.GattRole
-import ch.trancee.cairn.ffi.Persisted
 
 /** What the [LinkDriver] tells the app, on the driver's thread. */
 sealed interface Notice {
@@ -19,6 +18,21 @@ sealed interface Notice {
 
     data class ChatRejected(val contact: ULong, val reason: ChatRejection) : Notice
 
+    /** Sealed for a later session and stored (ADR 0034 §2). */
+    data class ChatQueued(val contact: ULong, val msgno: UInt) : Notice
+
+    /** The peer's ACK covers it. */
+    data class ChatDelivered(val contact: ULong, val msgno: UInt) : Notice
+
+    /** The peer marked it read; shown only while read receipts are on. */
+    data class ChatRead(val contact: ULong, val msgno: UInt) : Notice
+
+    /** This device gave up on it: a restart lost it, or it outlived 7 days. */
+    data class ChatExpired(val contact: ULong, val msgno: UInt) : Notice
+
+    /** The peer gave up on its messages [from]..[to]; they will never arrive. */
+    data class ChatsExpired(val contact: ULong, val from: UInt, val to: UInt) : Notice
+
     data class Fault(val kind: FaultKind) : Notice
 }
 
@@ -26,7 +40,7 @@ enum class FaultKind {
     /** The core's crypto backend failed; that batch of actions was dropped (ADR 0022 §3). */
     CRYPTO,
 
-    /** The core panicked; the driver closed every link and restored a new core from the last blob. */
+    /** The core panicked; the driver closed every link and restored a new core from the last rows. */
     POISONED,
 }
 
@@ -70,12 +84,11 @@ class LinkDriver(
     private val links = LinkedHashMap<ULong, Link>()
     private val activeTimers = LinkedHashSet<ULong>()
 
-    /** The last blob the core asked to persist; S2 keeps it in memory only. */
-    var persisted: Persisted? = null
-        private set
+    /** The rows the core asked to persist; kept in memory only until ADR 0006 storage lands. */
+    val rows = RowStore()
 
     /** Restores a fresh core; call once, first. */
-    fun start() = dispatch(Event.Restore(null))
+    fun start() = dispatch(rows.restore())
 
     override fun linkUp(role: GattRole, mtu: UShort, address: ByteArray): ULong {
         val now = clock.now()
@@ -118,6 +131,12 @@ class LinkDriver(
     }
 
     fun sendChat(contact: ULong, text: String) = dispatch(Event.SendChat(contact, text))
+
+    /** Marks [contact]'s messages up to [msgno] read; READ goes out now or at the next session. */
+    fun markRead(contact: ULong, msgno: UInt) = dispatch(Event.MarkRead(contact, msgno))
+
+    /** Turns sending and showing read receipts on or off, for every contact. */
+    fun setReadReceipts(enabled: Boolean) = dispatch(Event.SetReadReceipts(enabled))
 
     /** The value for the local `beacon` characteristic. */
     override fun beacon(): ByteArray = query { it.beacon(clock.now().unixS) }
@@ -168,13 +187,13 @@ class LinkDriver(
         activeTimers.clear()
         engine = newEngine()
         // A replacement that fails its restore propagates rather than looping.
-        engine.handle(clock.now(), Event.Restore(persisted)).forEach(::perform)
+        engine.handle(clock.now(), rows.restore()).forEach(::perform)
         listener(Notice.Fault(FaultKind.POISONED))
     }
 
     private fun perform(action: Action) {
         when (action) {
-            is Action.Persist -> persisted = action.state
+            is Action.PersistDevice, is Action.PersistContact, is Action.PutQueued, is Action.DeleteQueued -> rows.apply(action)
             is Action.Send -> enqueue(action.link, action.fragment)
             is Action.Disconnect -> links[action.link]?.let { disconnect(action.link, it) }
             is Action.SetTimer -> {
@@ -189,6 +208,11 @@ class LinkDriver(
             is Action.ChatReceived -> listener(Notice.ChatReceived(action.contact, action.msgno, action.text))
             is Action.ChatSent -> listener(Notice.ChatSent(action.contact, action.msgno))
             is Action.ChatRejected -> listener(Notice.ChatRejected(action.contact, action.reason))
+            is Action.ChatQueued -> listener(Notice.ChatQueued(action.contact, action.msgno))
+            is Action.ChatDelivered -> listener(Notice.ChatDelivered(action.contact, action.msgno))
+            is Action.ChatRead -> listener(Notice.ChatRead(action.contact, action.msgno))
+            is Action.ChatExpired -> listener(Notice.ChatExpired(action.contact, action.msgno))
+            is Action.ChatsExpired -> listener(Notice.ChatsExpired(action.contact, action.from, action.to))
         }
     }
 

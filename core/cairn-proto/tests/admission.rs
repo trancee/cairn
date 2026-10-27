@@ -8,7 +8,7 @@ use cairn_proto::{
     Verification,
 };
 use support::seeded::Seeded;
-use support::{Net, START};
+use support::{Net, START, Store};
 
 const STRANGER_BEACON: [u8; 8] = [0x5a; 8];
 
@@ -107,9 +107,17 @@ fn b_persists_the_contact_before_sending_p4() {
         .unwrap();
     let persists = log[..p4]
         .iter()
-        .filter(|action| matches!(action, Action::Persist { .. }))
+        .filter(|action| {
+            matches!(
+                action,
+                Action::PersistDevice { .. } | Action::PersistContact { .. }
+            )
+        })
         .count();
-    assert_eq!(persists, 2, "the fresh install, then the contact");
+    assert_eq!(
+        persists, 3,
+        "the fresh install, then the device and its contact"
+    );
 }
 
 #[test]
@@ -122,8 +130,8 @@ fn persisted_contacts_survive_a_restore() {
     let mut restored: Vec<Core<Seeded>> = (0..2).map(|_| Core::new()).collect();
 
     for (device, core) in restored.iter_mut().enumerate() {
-        let state = net.devices[device].persisted.clone();
-        core.handle(START, Event::Restore { state }).unwrap();
+        let event = net.devices[device].store.restore();
+        core.handle(START, event).unwrap();
     }
 
     for (device, core) in restored.iter().enumerate() {
@@ -136,9 +144,9 @@ fn persisted_contacts_survive_a_restore() {
 fn a_fresh_install_persists_its_new_device_key() {
     let net = Net::new(1, 5);
 
-    let persisted = net.devices[0].persisted.as_ref().unwrap();
+    let persisted = net.devices[0].store.device.as_ref().unwrap();
 
-    assert_eq!(persisted.version, 1);
+    assert_eq!(persisted.version, 2);
 }
 
 #[test]
@@ -353,8 +361,8 @@ fn malformed_or_unexpected_frames_close_the_link_without_a_reply() {
 fn caller_contract_violations_are_errors() {
     let mut fresh = Core::<Seeded>::new();
     let not_restored = fresh.handle(START, Event::LinkDown { link: LinkId(0) });
-    fresh.handle(START, Event::Restore { state: None }).unwrap();
-    let twice = fresh.handle(START, Event::Restore { state: None });
+    fresh.handle(START, Store::default().restore()).unwrap();
+    let twice = fresh.handle(START, Store::default().restore());
     let unknown_contact = fresh.handle(
         START,
         Event::SendChat {
@@ -395,10 +403,12 @@ fn caller_contract_violations_are_errors() {
     let wrong_version = Core::<Seeded>::new().handle(
         START,
         Event::Restore {
-            state: Some(Persisted {
+            device: Some(Persisted {
                 blob: Vec::new(),
-                version: 2,
+                version: 3,
             }),
+            contacts: Vec::new(),
+            queued: Vec::new(),
         },
     );
 
@@ -440,7 +450,7 @@ fn link_up(link: LinkId, gatt_role: GattRole, mtu: u16) -> Event {
 
 fn restored(clock: Clock) -> Core<Seeded> {
     let mut core = Core::default();
-    core.handle(clock, Event::Restore { state: None }).unwrap();
+    core.handle(clock, Store::default().restore()).unwrap();
     core
 }
 
@@ -690,7 +700,7 @@ fn backend_failures_are_returned_to_the_caller() {
             fragment: last.clone(),
         },
     );
-    let fresh_install = Core::<Seeded>::new().handle(START, Event::Restore { state: None });
+    let fresh_install = Core::<Seeded>::new().handle(START, Store::default().restore());
 
     let failure = Some(CoreError::Crypto(CryptoError::BackendFailure));
     assert_eq!(
