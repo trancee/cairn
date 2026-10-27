@@ -81,7 +81,7 @@ fn is_send(action: &Action, header: u8) -> bool {
 }
 
 fn is_persist(action: &Action) -> bool {
-    matches!(action, Action::Persist { .. })
+    matches!(action, Action::PersistContact { .. })
 }
 
 #[test]
@@ -125,9 +125,9 @@ fn neighbours_chat_both_ways_after_resume() {
 
 #[test]
 #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
-fn the_largest_chat_fills_one_session_frame() {
+fn the_largest_chat_fills_the_largest_queued_bucket() {
     let (mut net, _, _) = paired(102);
-    let text = "x".repeat(4075);
+    let text = "x".repeat(4045);
 
     chat(&mut net, 0, &text);
 
@@ -236,9 +236,9 @@ fn restored_cores_resume_on_their_persisted_chains() {
     net.drop_link(0, central);
 
     for device in 0..2 {
-        let state = net.devices[device].persisted.clone();
+        let event = net.devices[device].store.restore();
         let mut core = Core::new();
-        core.handle(net.clock, Event::Restore { state }).unwrap();
+        core.handle(net.clock, event).unwrap();
         net.devices[device].core = core;
         net.devices[device].log.clear();
     }
@@ -416,12 +416,12 @@ fn an_unknown_pseudonym_or_misplaced_resume_frame_closes_the_link() {
 
 #[test]
 #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
-fn chats_are_rejected_without_a_session_or_when_too_long() {
+fn chats_are_rejected_when_too_long_and_queued_without_a_session() {
     let (mut net, central, _) = paired(118);
 
-    let too_long = send_chat(&mut net, 0, &"x".repeat(4076));
+    let too_long = send_chat(&mut net, 0, &"x".repeat(4046));
     net.drop_link(0, central);
-    let no_session = send_chat(&mut net, 0, "hi");
+    let queued = send_chat(&mut net, 0, "hi");
     let next = {
         let (link, _) = net.connect(0, 1);
         net.read_beacon_of(0, link, 1);
@@ -433,10 +433,16 @@ fn chats_are_rejected_without_a_session_or_when_too_long() {
         reason,
     };
     assert_eq!(too_long, [rejection(ChatRejection::TooLong)]);
-    assert_eq!(no_session, [rejection(ChatRejection::NoSession)]);
+    assert_eq!(
+        queued.last(),
+        Some(&Action::ChatQueued {
+            contact: ContactId(0),
+            msgno: 1
+        })
+    );
     assert!(next.contains(&Action::ChatSent {
         contact: ContactId(0),
-        msgno: 1
+        msgno: 2
     }));
 }
 

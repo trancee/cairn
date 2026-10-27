@@ -31,6 +31,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -72,6 +73,9 @@ interface ScreenActions {
     fun enableBluetooth()
 
     fun send(contact: ULong, text: String)
+
+    /** The user sees [contact]'s conversation, so its received messages are read. */
+    fun read(contact: ULong)
 }
 
 /** The reference chat: a permission or Bluetooth gate, the contacts, one conversation and the debug panel. */
@@ -114,7 +118,11 @@ fun CairnScreen(model: ChatModel, actions: ScreenActions) {
                     if (open == null) {
                         Contacts(model.contacts) { model.open = it }
                     } else {
-                        key(open.id) { Conversation(model.messages(open.id)) { actions.send(open.id, it) } }
+                        key(open.id) {
+                            val messages = model.messages(open.id)
+                            LaunchedEffect(messages) { actions.read(open.id) }
+                            Conversation(messages) { actions.send(open.id, it) }
+                        }
                     }
                 }
             }
@@ -230,27 +238,44 @@ private fun Conversation(messages: List<Message>, onSend: (String) -> Unit) {
 
 @Composable
 private fun Bubble(message: Message) {
-    val incoming = message.status == MessageStatus.Received
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = if (incoming) Alignment.Start else Alignment.End) {
-        Surface(
-            color = if (incoming) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primaryContainer,
-            shape = MaterialTheme.shapes.medium,
-        ) {
-            Text(message.text, Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+    val status = message.status
+    val incoming = status == MessageStatus.Received
+    val missed = status is MessageStatus.Missed
+    val alignment = when {
+        incoming -> Alignment.Start
+        missed -> Alignment.CenterHorizontally
+        else -> Alignment.End
+    }
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = alignment) {
+        if (!missed) {
+            Surface(
+                color = if (incoming) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primaryContainer,
+                shape = MaterialTheme.shapes.medium,
+            ) {
+                Text(message.text, Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+            }
         }
-        status(message.status)?.let {
-            Text(stringResource(it), style = MaterialTheme.typography.labelSmall)
-        }
+        label(status)?.let { Text(it, style = MaterialTheme.typography.labelSmall) }
     }
 }
 
-private fun status(status: MessageStatus): Int? = when (status) {
+/** The line under a message, or the whole line for a missed range. */
+@Composable
+private fun label(status: MessageStatus): String? = when (status) {
     MessageStatus.Received -> null
-    MessageStatus.Sent -> R.string.state_sent
-    MessageStatus.Failed -> R.string.state_failed
-    is MessageStatus.Rejected -> when (status.reason) {
-        ChatRejection.NO_SESSION -> R.string.rejection_no_session
-        ChatRejection.TOO_LONG -> R.string.rejection_too_long
-        ChatRejection.EXHAUSTED -> R.string.rejection_exhausted
-    }
+    is MessageStatus.Missed -> stringResource(R.string.missed, status.from.toLong(), status.to.toLong())
+    MessageStatus.Queued -> stringResource(R.string.state_queued)
+    MessageStatus.Sent -> stringResource(R.string.state_sent)
+    MessageStatus.Delivered -> stringResource(R.string.state_delivered)
+    MessageStatus.Read -> stringResource(R.string.state_read)
+    MessageStatus.Expired -> stringResource(R.string.state_expired)
+    MessageStatus.Failed -> stringResource(R.string.state_failed)
+    is MessageStatus.Rejected -> stringResource(
+        when (status.reason) {
+            ChatRejection.NO_SESSION -> R.string.rejection_no_session
+            ChatRejection.TOO_LONG -> R.string.rejection_too_long
+            ChatRejection.EXHAUSTED -> R.string.rejection_exhausted
+            ChatRejection.QUEUE_FULL -> R.string.rejection_queue_full
+        },
+    )
 }

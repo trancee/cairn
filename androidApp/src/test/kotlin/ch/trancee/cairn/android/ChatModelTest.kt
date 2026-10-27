@@ -23,7 +23,7 @@ class ChatModelTest {
     fun aReceivedChatJoinsOnlyItsContactsConversation() {
         model.onNotice(Notice.ChatReceived(1u, 1u, "hi"))
 
-        assertEquals(listOf(Message("hi", MessageStatus.Received)), model.messages(1u))
+        assertEquals(listOf(Message("hi", MessageStatus.Received, 1u)), model.messages(1u))
         assertEquals(emptyList(), model.messages(2u))
     }
 
@@ -31,7 +31,72 @@ class ChatModelTest {
     fun aSendIsSentWhenTheCoreSealsIt() {
         model.send(1u, "hello") { model.onNotice(Notice.ChatSent(1u, 1u)) }
 
-        assertEquals(listOf(Message("hello", MessageStatus.Sent)), model.messages(1u))
+        assertEquals(listOf(Message("hello", MessageStatus.Sent, 1u)), model.messages(1u))
+    }
+
+    @Test
+    fun aSendWithoutASessionIsQueued() {
+        model.send(1u, "later") { model.onNotice(Notice.ChatQueued(1u, 4u)) }
+
+        assertEquals(listOf(Message("later", MessageStatus.Queued, 4u)), model.messages(1u))
+    }
+
+    @Test
+    fun receiptsMoveOnlyTheirOwnContactsMessages() {
+        for (msgno in 1u..3u) model.send(1u, "m$msgno") { model.onNotice(Notice.ChatSent(1u, msgno)) }
+        model.send(2u, "other") { model.onNotice(Notice.ChatSent(2u, 1u)) }
+
+        model.onNotice(Notice.ChatDelivered(1u, 1u))
+        model.onNotice(Notice.ChatDelivered(1u, 2u))
+        model.onNotice(Notice.ChatRead(1u, 1u))
+        model.onNotice(Notice.ChatDelivered(1u, 1u))
+        model.onNotice(Notice.ChatExpired(1u, 3u))
+
+        assertEquals(
+            listOf(MessageStatus.Read, MessageStatus.Delivered, MessageStatus.Expired),
+            model.messages(1u).map { it.status },
+        )
+        assertEquals(listOf(MessageStatus.Sent), model.messages(2u).map { it.status })
+    }
+
+    @Test
+    fun aReadReceiptCoversEverySentMessageUpToIt() {
+        model.onNotice(Notice.ChatReceived(1u, 1u, "hi"))
+        model.send(1u, "a") { model.onNotice(Notice.ChatQueued(1u, 1u)) }
+        model.send(1u, "b") { model.onNotice(Notice.ChatSent(1u, 2u)) }
+        model.send(1u, "c") { model.onNotice(Notice.ChatSent(1u, 3u)) }
+        model.send(1u, "d") { model.onNotice(Notice.ChatRejected(1u, ChatRejection.QUEUE_FULL)) }
+        model.onNotice(Notice.ChatExpired(1u, 2u))
+
+        model.onNotice(Notice.ChatRead(1u, 2u))
+
+        assertEquals(
+            listOf(
+                MessageStatus.Received,
+                MessageStatus.Read,
+                MessageStatus.Expired,
+                MessageStatus.Sent,
+                MessageStatus.Rejected(ChatRejection.QUEUE_FULL),
+            ),
+            model.messages(1u).map { it.status },
+        )
+    }
+
+    @Test
+    fun aPeersExpiredRangeIsShownInTheConversation() {
+        model.onNotice(Notice.ChatsExpired(1u, 2u, 5u))
+
+        assertEquals(listOf(Message("", MessageStatus.Missed(2u, 5u))), model.messages(1u))
+    }
+
+    @Test
+    fun theLastReceivedNumberIsWhatToMarkRead() {
+        model.onNotice(Notice.ChatReceived(1u, 1u, "a"))
+        model.onNotice(Notice.ChatReceived(1u, 3u, "c"))
+        model.send(1u, "b") { model.onNotice(Notice.ChatSent(1u, 9u)) }
+
+        assertEquals(3u, model.lastReceived(1u))
+        assertNull(model.lastReceived(2u))
     }
 
     @Test

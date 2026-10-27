@@ -7,7 +7,6 @@ import ch.trancee.cairn.ffi.ContactInfo
 import ch.trancee.cairn.ffi.CoreException
 import ch.trancee.cairn.ffi.Event
 import ch.trancee.cairn.ffi.GattRole
-import ch.trancee.cairn.ffi.Persisted
 import ch.trancee.cairn.ffi.Verification
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -16,32 +15,35 @@ import kotlin.test.assertFailsWith
 
 private val CLOCK = Clock(monoMs = 1_000uL, unixS = 1_761_177_600uL)
 
-/** One core and every action it returned, in order. */
-private class Device(state: Persisted?) {
+/** One core, its rows and every action it returned, in order. */
+private class Device(restore: Event.Restore) {
     val core = CairnCore()
+    val rows = RowStore()
     val log = mutableListOf<Action>()
 
     init {
-        log += core.handle(CLOCK, Event.Restore(state))
+        record(core.handle(CLOCK, restore))
     }
 
-    val persisted: Persisted?
-        get() = log.filterIsInstance<Action.Persist>().lastOrNull()?.state
+    fun record(actions: List<Action>) {
+        actions.forEach(rows::apply)
+        log += actions
+    }
 
     val chats: List<Pair<ULong, String>>
         get() = log.filterIsInstance<Action.ChatReceived>().map { it.contact to it.text }
 }
 
 /** Two cores joined in memory; device 0's link `n` is device 1's link `n xor 1`. */
-private class Loopback(states: List<Persisted?> = listOf(null, null)) {
-    val devices = states.map(::Device)
+private class Loopback(restores: List<Event.Restore> = List(2) { RowStore().restore() }) {
+    val devices = restores.map(::Device)
 
     fun deliver(from: Int, event: Event) {
         val stack = ArrayDeque(listOf(from to event))
         while (stack.isNotEmpty()) {
             val (device, next) = stack.removeLast()
             val actions = devices[device].core.handle(CLOCK, next)
-            devices[device].log += actions
+            devices[device].record(actions)
             val peer = 1 - device
             for (action in actions.asReversed()) {
                 when (action) {
@@ -70,7 +72,8 @@ private class Loopback(states: List<Persisted?> = listOf(null, null)) {
 class CoreLoopbackTest {
     private val opened = mutableListOf<Loopback>()
 
-    private fun loopback(states: List<Persisted?> = listOf(null, null)) = Loopback(states).also { opened += it }
+    private fun loopback(restores: List<Event.Restore> = List(2) { RowStore().restore() }) =
+        Loopback(restores).also { opened += it }
 
     @AfterTest
     fun closeCores() = opened.forEach(Loopback::close)
@@ -92,13 +95,32 @@ class CoreLoopbackTest {
             connect(2uL)
             disconnect(2uL)
         }
-        val net = loopback(first.devices.map { it.persisted })
+        val net = loopback(first.devices.map { it.rows.restore() })
         val (a, b) = net.devices.map { it.core.contacts().single().id }
 
         net.connect(4uL)
         net.deliver(0, Event.SendChat(a, "again"))
 
         assertEquals(listOf(b to "again"), net.devices[1].chats)
+    }
+
+    @Test
+    fun aChatQueuedOfflineSurvivesARestartAndIsDelivered() {
+        val first = loopback().apply {
+            connect(2uL)
+            disconnect(2uL)
+        }
+        val a = first.devices[0].core.contacts().single().id
+        first.deliver(0, Event.SendChat(a, "later"))
+        val net = loopback(first.devices.map { it.rows.restore() })
+        val b = net.devices[1].core.contacts().single().id
+
+        net.connect(4uL)
+
+        assertEquals(listOf<Action>(Action.ChatQueued(a, 1u)), first.devices[0].log.filterIsInstance<Action.ChatQueued>())
+        assertEquals(listOf(b to "later"), net.devices[1].chats)
+        assertEquals(listOf<Action>(Action.ChatDelivered(a, 1u)), net.devices[0].log.filterIsInstance<Action.ChatDelivered>())
+        assertEquals(RowStore().restore().queued, net.devices[0].rows.restore().queued)
     }
 
     @Test

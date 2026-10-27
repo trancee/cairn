@@ -4,10 +4,12 @@ import ch.trancee.cairn.ffi.Action
 import ch.trancee.cairn.ffi.ChatRejection
 import ch.trancee.cairn.ffi.Clock
 import ch.trancee.cairn.ffi.ContactInfo
+import ch.trancee.cairn.ffi.ContactRow
 import ch.trancee.cairn.ffi.CoreException
 import ch.trancee.cairn.ffi.Event
 import ch.trancee.cairn.ffi.GattRole
 import ch.trancee.cairn.ffi.Persisted
+import ch.trancee.cairn.ffi.QueuedRow
 import ch.trancee.cairn.ffi.Verification
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -75,7 +77,7 @@ private class Rig {
     val notices = mutableListOf<Notice>()
     var now = Clock(monoMs = 1_000uL, unixS = 1_761_177_600uL)
     val driver = LinkDriver(
-        newEngine = { FakeEngine { if (it is Event.Restore) listOf(Action.Persist(BLOB)) else emptyList() }.also { engines += it } },
+        newEngine = { FakeEngine { if (it is Event.Restore) listOf(Action.PersistDevice(BLOB)) else emptyList() }.also { engines += it } },
         radio = radio,
         timers = timers,
         clock = { now },
@@ -98,7 +100,12 @@ private fun bytes(size: Int, fill: Int = 0) = ByteArray(size) { fill.toByte() }
 
 /** Generated events hold byte arrays, which data-class equality compares by reference. */
 private fun key(event: Event): List<Any?> = when (event) {
-    is Event.Restore -> listOf("Restore", event.state?.blob?.toList(), event.state?.version)
+    is Event.Restore -> listOf(
+        "Restore",
+        event.device?.let(::key),
+        event.contacts.map { listOf(it.contact, key(it.state)) },
+        event.queued.map { listOf(it.contact, it.msgno, key(it.state)) },
+    )
     is Event.LinkUp -> listOf("LinkUp", event.link, event.gattRole, event.mtu, event.address.toList())
     is Event.MtuChanged -> listOf("MtuChanged", event.link, event.mtu)
     is Event.BeaconRead -> listOf("BeaconRead", event.link, event.beacon.toList())
@@ -106,17 +113,21 @@ private fun key(event: Event): List<Any?> = when (event) {
     is Event.LinkDown -> listOf("LinkDown", event.link)
     is Event.TimerFired -> listOf("TimerFired", event.timer)
     is Event.SendChat -> listOf("SendChat", event.contact, event.text)
+    is Event.MarkRead -> listOf("MarkRead", event.contact, event.msgno)
+    is Event.SetReadReceipts -> listOf("SetReadReceipts", event.enabled)
 }
+
+private fun key(state: Persisted): List<Any> = listOf(state.blob.toList(), state.version)
 
 private fun keys(vararg events: Event) = events.map(::key)
 
 class LinkDriverTest {
     @Test
-    fun startRestoresAFreshCoreAndKeepsItsBlob() {
+    fun startRestoresAFreshCoreAndKeepsItsDeviceRow() {
         val rig = Rig()
 
-        assertEquals(keys(Event.Restore(null)), rig.engine.events)
-        assertEquals(BLOB, rig.driver.persisted)
+        assertEquals(keys(Event.Restore(null, emptyList(), emptyList())), rig.engine.events)
+        assertEquals(keys(Event.Restore(BLOB, emptyList(), emptyList())), keys(rig.driver.rows.restore()))
     }
 
     @Test
@@ -296,6 +307,11 @@ class LinkDriverTest {
             Action.ChatReceived(7uL, 1u, "hey"),
             Action.ChatSent(7uL, 2u),
             Action.ChatRejected(7uL, ChatRejection.TOO_LONG),
+            Action.ChatQueued(7uL, 3u),
+            Action.ChatDelivered(7uL, 2u),
+            Action.ChatRead(7uL, 2u),
+            Action.ChatExpired(7uL, 3u),
+            Action.ChatsExpired(7uL, 4u, 6u),
         )
 
         rig.driver.sendChat(7uL, "a")
@@ -306,20 +322,51 @@ class LinkDriverTest {
                 Notice.ChatReceived(7uL, 1u, "hey"),
                 Notice.ChatSent(7uL, 2u),
                 Notice.ChatRejected(7uL, ChatRejection.TOO_LONG),
+                Notice.ChatQueued(7uL, 3u),
+                Notice.ChatDelivered(7uL, 2u),
+                Notice.ChatRead(7uL, 2u),
+                Notice.ChatExpired(7uL, 3u),
+                Notice.ChatsExpired(7uL, 4u, 6u),
             ),
             rig.notices,
         )
     }
 
     @Test
-    fun persistKeepsTheLatestBlob() {
+    fun rowActionsKeepTheLatestRows() {
         val rig = Rig()
-        val later = Persisted(byteArrayOf(4), 1u)
-        rig.answer(Event.SendChat(7uL, "a"), Action.Persist(later))
+        val row = { fill: Int -> Persisted(byteArrayOf(fill.toByte()), 2u) }
+        rig.answer(
+            Event.SendChat(7uL, "a"),
+            Action.PersistDevice(row(1)),
+            Action.PersistContact(7uL, row(2)),
+            Action.PersistContact(8uL, row(3)),
+            Action.PersistContact(7uL, row(4)),
+            Action.PutQueued(7uL, 2u, row(5)),
+            Action.PutQueued(7uL, 1u, row(6)),
+            Action.PutQueued(8uL, 1u, row(7)),
+            Action.DeleteQueued(7uL, 2u),
+            Action.DeleteQueued(9uL, 1u),
+        )
 
         rig.driver.sendChat(7uL, "a")
 
-        assertEquals(later, rig.driver.persisted)
+        val expected = Event.Restore(
+            row(1),
+            listOf(ContactRow(7uL, row(4)), ContactRow(8uL, row(3))),
+            listOf(QueuedRow(7uL, 1u, row(6)), QueuedRow(8uL, 1u, row(7))),
+        )
+        assertEquals(keys(expected), keys(rig.driver.rows.restore()))
+    }
+
+    @Test
+    fun readMarksAndTheReceiptSettingGoToTheCore() {
+        val rig = Rig()
+
+        rig.driver.markRead(7uL, 3u)
+        rig.driver.setReadReceipts(false)
+
+        assertEquals(keys(Event.MarkRead(7uL, 3u), Event.SetReadReceipts(false)), rig.engine.events.drop(1))
     }
 
     @Test
@@ -345,7 +392,7 @@ class LinkDriverTest {
     }
 
     @Test
-    fun aPoisonedCoreIsReplacedFromTheLastBlob() {
+    fun aPoisonedCoreIsReplacedFromTheLastRows() {
         val rig = Rig()
         val first = rig.driver.linkUp(GattRole.CENTRAL, 23u, byteArrayOf())
         val second = rig.driver.linkUp(GattRole.PERIPHERAL, 23u, byteArrayOf())
@@ -361,7 +408,7 @@ class LinkDriverTest {
         assertTrue(poisoned.closed)
         assertEquals(listOf(first, second), rig.radio.disconnected)
         assertEquals(listOf(3uL), rig.timers.cancelled)
-        assertEquals(keys(Event.Restore(BLOB), Event.LinkUp(third, GattRole.CENTRAL, 23u, byteArrayOf())), rig.engine.events)
+        assertEquals(keys(Event.Restore(BLOB, emptyList(), emptyList()), Event.LinkUp(third, GattRole.CENTRAL, 23u, byteArrayOf())), rig.engine.events)
         assertEquals(3uL, third)
         assertEquals(listOf<Notice>(Notice.Fault(FaultKind.POISONED)), rig.notices)
     }

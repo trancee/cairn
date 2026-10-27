@@ -208,14 +208,64 @@ class MainActivityTest {
             model.send(2u, "a") { model.onNotice(Notice.ChatRejected(2u, ChatRejection.NO_SESSION)) }
             model.send(2u, "b") { model.onNotice(Notice.ChatRejected(2u, ChatRejection.TOO_LONG)) }
             model.send(2u, "c") { model.onNotice(Notice.ChatRejected(2u, ChatRejection.EXHAUSTED)) }
+            model.send(2u, "e") { model.onNotice(Notice.ChatRejected(2u, ChatRejection.QUEUE_FULL)) }
             model.send(2u, "d") {}
 
             compose.onNodeWithText("Ada").performClick()
 
-            for (reason in listOf(R.string.rejection_no_session, R.string.rejection_too_long, R.string.rejection_exhausted, R.string.state_failed)) {
+            val reasons = listOf(
+                R.string.rejection_no_session,
+                R.string.rejection_too_long,
+                R.string.rejection_exhausted,
+                R.string.rejection_queue_full,
+                R.string.state_failed,
+            )
+            for (reason in reasons) {
                 compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(s(reason)))
                 compose.onNodeWithText(s(reason)).assertIsDisplayed()
             }
+        }
+    }
+
+    @Test
+    fun deliveryStatesAndMissedMessagesAreShown() {
+        running().use {
+            showContacts()
+            for (msgno in 1u..4u) model.send(2u, "m$msgno") { model.onNotice(Notice.ChatSent(2u, msgno)) }
+            model.send(2u, "m5") { model.onNotice(Notice.ChatQueued(2u, 5u)) }
+            model.onNotice(Notice.ChatRead(2u, 1u))
+            model.onNotice(Notice.ChatDelivered(2u, 2u))
+            model.onNotice(Notice.ChatExpired(2u, 3u))
+            model.onNotice(Notice.ChatsExpired(2u, 1u, 2u))
+
+            compose.onNodeWithText("Ada").performClick()
+
+            val shown = listOf(
+                s(R.string.state_read),
+                s(R.string.state_delivered),
+                s(R.string.state_expired),
+                s(R.string.state_sent),
+                s(R.string.state_queued),
+                app.getString(R.string.missed, 1, 2),
+            )
+            for (text in shown) {
+                compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(text))
+                compose.onNodeWithText(text).assertIsDisplayed()
+            }
+        }
+    }
+
+    @Test
+    fun anOpenConversationMarksArrivingMessagesRead() {
+        running().use {
+            showContacts()
+            compose.onNodeWithText("Ada").performClick()
+
+            model.onNotice(Notice.ChatReceived(2u, 1u, "hey"))
+            compose.waitForIdle()
+
+            compose.onNodeWithText("hey").assertIsDisplayed()
+            assertEquals(Event.MarkRead(2u, 1u), app.engine.events.last())
         }
     }
 

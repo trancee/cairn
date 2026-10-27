@@ -352,6 +352,7 @@ nonce = u8(dir << 7) ‖ 0x00 0x00 0x00 ‖ u64(ctr)      dir: 0 = I→R, 1 = R�
   inner = LEB128(msgno) ‖ LEB128(len(text)) ‖ text ‖ 0x00 …
   ```
   padded with zeros to the smallest bucket in {32, 64, 128, 256, 512, 1024, 2048, 4048} that fits. A receiver checks the padding is zero in constant time and rejects any other length. Only messages whose `inner` is at most 2048 B are given to couriers (§8.1).
+- **Text limit.** A real-time CHAT may have to be re-sealed as QUEUED, so a sender rejects any text whose `inner` exceeds 4048 B, whether or not a session is up. That is at most 4045 B of text for `msgno` 1–127 and 4044 B for `msgno` 128–16383.
 
 ### 8.1 Couriers (ADR 0033) [OI-37]
 

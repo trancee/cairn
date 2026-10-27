@@ -144,6 +144,8 @@ counter is exhausted is closed and the chat returns `NoSession`.
 
 ### 7. Persistence
 
+*(Amended by [ADR 0034](0034-store-and-forward-core.md): four row actions replace `Persist`, and `Restore` takes rows.)*
+
 - `version` is the blob format version, `1` for S1. Restore rejects any
   other version; r1 has no released blobs, so there is no migration yet.
 - The blob is one canonical, strictly decoded encoding (fixed-width

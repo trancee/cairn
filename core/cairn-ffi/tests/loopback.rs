@@ -1,8 +1,10 @@
 //! Two `CairnCore`s with the real backend, driven only through the exported surface.
 
+use std::collections::BTreeMap;
+
 use cairn_ffi::{
-    Action, CairnCore, ChatRejection, Clock, ContactInfo, CoreError, Event, GattRole, Persisted,
-    Verification,
+    Action, CairnCore, Clock, ContactInfo, ContactRow, CoreError, Event, GattRole, Persisted,
+    QueuedRow, Verification,
 };
 
 const CLOCK: Clock = Clock {
@@ -10,29 +12,81 @@ const CLOCK: Clock = Clock {
     unix_s: 1_761_177_600,
 };
 
+/// The platform's row store (ADR 0034 §1).
+#[derive(Default)]
+struct Store {
+    device: Option<Persisted>,
+    contacts: BTreeMap<u64, Persisted>,
+    queued: BTreeMap<(u64, u32), Persisted>,
+}
+
+impl Store {
+    fn apply(&mut self, action: &Action) {
+        match action {
+            Action::PersistDevice { state } => self.device = Some(state.clone()),
+            Action::PersistContact { contact, state } => {
+                self.contacts.insert(*contact, state.clone());
+            }
+            Action::PutQueued {
+                contact,
+                msgno,
+                state,
+            } => {
+                self.queued.insert((*contact, *msgno), state.clone());
+            }
+            Action::DeleteQueued { contact, msgno } => {
+                self.queued.remove(&(*contact, *msgno));
+            }
+            _ => {}
+        }
+    }
+
+    fn restore(&self) -> Event {
+        Event::Restore {
+            device: self.device.clone(),
+            contacts: self
+                .contacts
+                .iter()
+                .map(|(&contact, state)| ContactRow {
+                    contact,
+                    state: state.clone(),
+                })
+                .collect(),
+            queued: self
+                .queued
+                .iter()
+                .map(|(&(contact, msgno), state)| QueuedRow {
+                    contact,
+                    msgno,
+                    state: state.clone(),
+                })
+                .collect(),
+        }
+    }
+}
+
 struct Device {
     core: CairnCore,
     log: Vec<Action>,
-    persisted: Option<Persisted>,
+    store: Store,
 }
 
 impl Device {
-    fn restored(state: Option<Persisted>) -> Self {
+    fn restored(store: Store) -> Self {
+        let restore = store.restore();
         let mut device = Self {
             core: CairnCore::new(),
             log: Vec::new(),
-            persisted: None,
+            store,
         };
-        let actions = device.core.handle(CLOCK, Event::Restore { state }).unwrap();
+        let actions = device.core.handle(CLOCK, restore).unwrap();
         device.record(&actions);
         device
     }
 
     fn record(&mut self, actions: &[Action]) {
         for action in actions {
-            if let Action::Persist { state } = action {
-                self.persisted = Some(state.clone());
-            }
+            self.store.apply(action);
         }
         self.log.extend_from_slice(actions);
     }
@@ -112,7 +166,10 @@ fn disconnect(devices: &mut [Device; 2], link: u64) {
 }
 
 fn paired() -> [Device; 2] {
-    let mut devices = [Device::restored(None), Device::restored(None)];
+    let mut devices = [
+        Device::restored(Store::default()),
+        Device::restored(Store::default()),
+    ];
     connect(&mut devices, 2);
     devices
 }
@@ -146,7 +203,7 @@ fn two_cores_pair_and_chat_over_the_exported_surface() {
 fn restored_cores_resume_on_a_new_link() {
     let mut devices = paired();
     disconnect(&mut devices, 2);
-    let mut devices = devices.map(|device| Device::restored(device.persisted));
+    let mut devices = devices.map(|device| Device::restored(device.store));
     let (a, b) = (
         devices[0].core.contacts().unwrap()[0].id,
         devices[1].core.contacts().unwrap()[0].id,
@@ -166,26 +223,29 @@ fn restored_cores_resume_on_a_new_link() {
 }
 
 #[test]
-fn a_chat_without_a_session_is_rejected() {
+fn a_chat_sent_offline_is_queued_and_delivered_at_the_next_resume() {
     let mut devices = paired();
-    let a = devices[0].contact();
+    let (a, b) = (devices[0].contact(), devices[1].contact());
     disconnect(&mut devices, 2);
 
-    let actions = devices[0].core.handle(
-        CLOCK,
+    drive(
+        &mut devices,
+        0,
         Event::SendChat {
             contact: a,
             text: "later".into(),
         },
     );
+    let stored = devices[0].store.queued.len();
+    connect(&mut devices, 4);
 
-    assert_eq!(
-        actions,
-        Ok(vec![Action::ChatRejected {
-            contact: a,
-            reason: ChatRejection::NoSession,
-        }])
-    );
+    assert_eq!(stored, 1);
+    assert_eq!(devices[1].chats(), [(b, "later".to_string())]);
+    assert!(devices[0].log.contains(&Action::ChatDelivered {
+        contact: a,
+        msgno: 1
+    }));
+    assert!(devices[0].store.queued.is_empty());
 }
 
 #[test]

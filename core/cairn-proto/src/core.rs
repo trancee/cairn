@@ -3,17 +3,19 @@
 use crate::admission::{Admission, TieBreak, tie_break};
 use crate::beacon::{self, DayKey, day, window};
 use crate::card::Card;
-use crate::data::{EMPTY, Session, chat_plaintext, parse};
+use crate::chain::{self, Dir, MAX_SKIPPED, Opened, RETENTION_S, SendChain};
+use crate::data::{Chat, EMPTY, Record, Session, parse, plaintext};
 use crate::epoch::PairingRole;
 use crate::framing::{
     MIN_ATT_MTU, PRE_AUTH_FRAME_LIMIT, Reassembler, SESSION_FRAME_LIMIT, fragment,
 };
 use crate::pairing::{AwaitingP2, AwaitingP3, AwaitingP4, Paired, PairingError};
 use crate::resume::{self, Chain, Initiator, MAX_ATTEMPT, ResumeError, respond, s1_pseudonym};
-use crate::state::{Contact, Device, Persisted};
+use crate::state::{Contact, ContactRow, Device, Outgoing, Pending, Persisted, QueuedRow};
 use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
+use alloc::vec;
 use alloc::vec::Vec;
 use cairn_crypto::{CryptoBackend, CryptoError};
 use cairn_wire::{FrameType, Header};
@@ -57,18 +59,23 @@ pub enum Verification {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChatRejection {
+    /// The contact has never completed a Resume, so it has no message chain.
     NoSession,
     TooLong,
-    /// Every `msgno` up to 2^32 − 1 has been sent to this contact.
+    /// Every `msgno` up to 2^32 − 1, or every chain index, has been used.
     Exhausted,
+    /// 500 messages to this contact are queued or unacked (spec §8).
+    QueueFull,
 }
 
 /// An input to [`Core::handle`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
-    /// The first event; `None` is a fresh install.
+    /// The first event: the stored rows; `device: None` is a fresh install.
     Restore {
-        state: Option<Persisted>,
+        device: Option<Persisted>,
+        contacts: Vec<ContactRow>,
+        queued: Vec<QueuedRow>,
     },
     LinkUp {
         link: LinkId,
@@ -100,14 +107,40 @@ pub enum Event {
         contact: ContactId,
         text: String,
     },
+    /// The user has read the peer's messages up to `msgno`.
+    MarkRead {
+        contact: ContactId,
+        msgno: u32,
+    },
+    /// The global, reciprocal read-receipt setting (ADR 0002).
+    SetReadReceipts {
+        enabled: bool,
+    },
 }
 
-/// An output of [`Core::handle`], executed by the platform in order.
+/// An output of [`Core::handle`], executed by the platform in order. The
+/// row actions of one result are stored in one transaction before any
+/// later action (ADR 0034 §1).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
-    /// Seal and store `state` before executing any later action.
-    Persist {
+    /// Seal and store the device row.
+    PersistDevice {
         state: Persisted,
+    },
+    /// Seal and store one contact row.
+    PersistContact {
+        contact: ContactId,
+        state: Persisted,
+    },
+    /// Seal and store one queued message.
+    PutQueued {
+        contact: ContactId,
+        msgno: u32,
+        state: Persisted,
+    },
+    DeleteQueued {
+        contact: ContactId,
+        msgno: u32,
     },
     Send {
         link: LinkId,
@@ -139,6 +172,32 @@ pub enum Action {
     ChatRejected {
         contact: ContactId,
         reason: ChatRejection,
+    },
+    /// The message was sealed and stored for the next Resume.
+    ChatQueued {
+        contact: ContactId,
+        msgno: u32,
+    },
+    /// The peer's ACK covers the message.
+    ChatDelivered {
+        contact: ContactId,
+        msgno: u32,
+    },
+    /// The peer has read the messages up to `msgno`.
+    ChatRead {
+        contact: ContactId,
+        msgno: u32,
+    },
+    /// This device gave up on the message.
+    ChatExpired {
+        contact: ContactId,
+        msgno: u32,
+    },
+    /// The peer gave up on the messages `from..=to`.
+    ChatsExpired {
+        contact: ContactId,
+        from: u32,
+        to: u32,
     },
 }
 
@@ -268,6 +327,11 @@ pub struct Core<B> {
     admission: Admission,
     /// Resume attempts per contact since its chain key last changed (OI-8).
     tries: BTreeMap<ContactId, u32>,
+    /// The texts of unacked in-session CHATs with their send times, kept to
+    /// re-seal them as QUEUED when the link drops (ADR 0034 §2).
+    unacked: BTreeMap<(ContactId, u32), (u64, Zeroizing<String>)>,
+    /// `Clock.unix_s` of the event being handled.
+    now_s: u64,
     backend: PhantomData<B>,
 }
 
@@ -286,6 +350,8 @@ impl<B: CryptoBackend> Core<B> {
             next_timer: 0,
             admission: Admission::default(),
             tries: BTreeMap::new(),
+            unacked: BTreeMap::new(),
+            now_s: 0,
             backend: PhantomData,
         }
     }
@@ -310,9 +376,22 @@ impl<B: CryptoBackend> Core<B> {
 
     pub fn handle(&mut self, clock: Clock, event: Event) -> Result<Vec<Action>, CoreError> {
         let mut actions = Vec::new();
+        self.now_s = clock.unix_s;
+        if !matches!(event, Event::Restore { .. }) {
+            if self.device.is_none() {
+                return Err(CoreError::NotRestored);
+            }
+            self.maintain(&mut actions);
+        }
         match event {
-            Event::Restore { state } => self.restore(clock, state.as_ref(), &mut actions)?,
-            _ if self.device.is_none() => return Err(CoreError::NotRestored),
+            Event::Restore {
+                device,
+                contacts,
+                queued,
+            } => {
+                self.restore(clock, device.as_ref(), &contacts, &queued, &mut actions)?;
+                self.maintain(&mut actions);
+            }
             Event::LinkUp {
                 link,
                 gatt_role,
@@ -338,6 +417,14 @@ impl<B: CryptoBackend> Core<B> {
                 }
             }
             Event::SendChat { contact, text } => self.send_chat(contact, &text, &mut actions)?,
+            Event::MarkRead { contact, msgno } => self.mark_read(contact, msgno, &mut actions)?,
+            Event::SetReadReceipts { enabled } => {
+                let device = self.device.as_mut().expect("restored");
+                device.read_receipts = enabled;
+                actions.push(Action::PersistDevice {
+                    state: device.row(),
+                });
+            }
         }
         Ok(actions)
     }
@@ -345,15 +432,32 @@ impl<B: CryptoBackend> Core<B> {
     fn restore(
         &mut self,
         clock: Clock,
-        state: Option<&Persisted>,
+        device: Option<&Persisted>,
+        contacts: &[ContactRow],
+        queued: &[QueuedRow],
         actions: &mut Vec<Action>,
     ) -> Result<(), CoreError> {
         if self.device.is_some() {
             return Err(CoreError::AlreadyRestored);
         }
-        if let Some(state) = state {
-            self.device = Some(Device::restore(state).map_err(|_| CoreError::InvalidBlob)?);
+        if let Some(device) = device {
+            let restored =
+                Device::restore(device, contacts, queued).map_err(|_| CoreError::InvalidBlob)?;
+            let lost: Vec<ContactId> = restored
+                .contacts
+                .iter()
+                .filter(|contact| !contact.unacked.is_empty())
+                .map(|contact| contact.id)
+                .collect();
+            self.device = Some(restored);
+            for contact in lost {
+                let msgnos = core::mem::take(&mut self.contact_mut(contact).unacked);
+                self.expire_messages(contact, &msgnos, actions);
+            }
             return Ok(());
+        }
+        if !contacts.is_empty() || !queued.is_empty() {
+            return Err(CoreError::InvalidBlob);
         }
         let mut beacon_key = Zeroizing::new([0; 32]);
         B::fill_random(&mut beacon_key[..])?;
@@ -361,10 +465,11 @@ impl<B: CryptoBackend> Core<B> {
             beacon_day: day(clock.unix_s),
             beacon_key,
             next_contact: 0,
+            read_receipts: true,
             contacts: Vec::new(),
         };
-        actions.push(Action::Persist {
-            state: device.persist(),
+        actions.push(Action::PersistDevice {
+            state: device.row(),
         });
         self.device = Some(device);
         Ok(())
@@ -525,8 +630,7 @@ impl<B: CryptoBackend> Core<B> {
             };
             let contact = link.contact;
             let confirms = core::mem::replace(&mut link.unconfirmed, false);
-            self.receive_data(id, contact, opened, confirms, actions);
-            return Ok(());
+            return self.receive_data(id, contact, opened, confirms, actions);
         }
         let state = core::mem::replace(&mut link.state, LinkState::Fresh);
         let pairing = state.pairing();
@@ -673,9 +777,10 @@ impl<B: CryptoBackend> Core<B> {
         let contact = ContactId(device.next_contact);
         device.next_contact += 1;
         device.contacts.push(Contact::new(contact, paired));
-        actions.push(Action::Persist {
-            state: device.persist(),
+        actions.push(Action::PersistDevice {
+            state: device.row(),
         });
+        self.persist_contact(contact, actions);
         self.links
             .get_mut(&id)
             .expect("admitted on a live link")
@@ -701,8 +806,8 @@ impl<B: CryptoBackend> Core<B> {
     ) -> Result<(), CoreError> {
         let record = self.contact(contact);
         let tries = self.tries.get(&contact).copied().unwrap_or(0);
-        let (n, ck) = match &record.pending_chain_key {
-            Some(pending) if tries % 2 == 0 => (record.resume_index + 1, pending),
+        let (n, ck) = match &record.pending {
+            Some(pending) if tries % 2 == 0 => (record.resume_index + 1, &pending.chain_key),
             _ => (record.resume_index, &record.chain_key),
         };
         let chain = Chain {
@@ -737,16 +842,21 @@ impl<B: CryptoBackend> Core<B> {
         let (contact, promoted, keys, s2) = answer;
         let record = self.contact_mut(contact);
         if promoted {
-            record.chain_key = record.pending_chain_key.take().expect("matched candidate");
+            let pending = record.pending.take().expect("matched candidate");
+            record.chain_key = pending.chain_key;
             record.resume_index += 1;
             self.tries.remove(&contact);
+            self.reseed(contact, &pending.msg_seed, Dir::R, actions)?;
         }
         let record = self.contact_mut(contact);
-        record.pending_chain_key = Some(keys.next_ck.clone());
-        self.persist(actions);
+        record.pending = Some(Pending {
+            chain_key: keys.next_ck.clone(),
+            msg_seed: keys.msg_seed.clone(),
+        });
+        self.persist_contact(contact, actions);
         self.establish(id, contact, Session::new(&keys, false), true, actions);
         self.send(id, &s2, actions);
-        Ok(())
+        self.flush(contact, actions)
     }
 
     /// The matched contact, whether it matched the pending key, the keys and S2;
@@ -763,7 +873,7 @@ impl<B: CryptoBackend> Core<B> {
         let candidates: Vec<(&Contact, bool)> = contacts
             .iter()
             .flat_map(|contact| {
-                let pending = contact.pending_chain_key.is_some();
+                let pending = contact.pending.is_some();
                 [(contact, false)]
                     .into_iter()
                     .chain(pending.then_some((contact, true)))
@@ -805,22 +915,32 @@ impl<B: CryptoBackend> Core<B> {
         };
         let contact = resuming.contact;
         let record = self.contact_mut(contact);
+        let pending = record.pending.take();
+        if resuming.n > record.resume_index {
+            // S1 used the key R left pending, so the peer committed it and
+            // may have queued under its chains (spec §8).
+            let pending = pending.expect("S1 used the pending key");
+            record.resume_index = resuming.n;
+            self.reseed(contact, &pending.msg_seed, Dir::R, actions)?;
+        }
+        let record = self.contact_mut(contact);
         record.chain_key = keys.next_ck.clone();
         record.resume_index = resuming.n + 1;
-        record.pending_chain_key = None;
         self.tries.remove(&contact);
-        self.persist(actions);
+        self.reseed(contact, &keys.msg_seed, Dir::I, actions)?;
+        self.persist_contact(contact, actions);
         let mut session = Session::new(&keys, true);
         let confirmation = session
             .seal::<B>(&EMPTY)?
             .expect("a new session has counters left");
         self.establish(id, contact, session, false, actions);
         self.send(id, &confirmation, actions);
-        Ok(())
+        self.flush(contact, actions)
     }
 
     /// Handles an opened DATA frame, or closes the link if it did not open.
-    /// R's first frame commits `CK_{n+1}` before any message is shown (spec §6, §7).
+    /// R's first frame commits `CK_{n+1}` and reseeds its chains before any
+    /// message is shown (spec §6, §8).
     fn receive_data(
         &mut self,
         id: LinkId,
@@ -828,30 +948,144 @@ impl<B: CryptoBackend> Core<B> {
         opened: Option<Zeroizing<Vec<u8>>>,
         confirms: bool,
         actions: &mut Vec<Action>,
-    ) {
+    ) -> Result<(), CoreError> {
         let Some(plaintext) = opened else {
             self.close(id, actions);
-            return;
+            return Ok(());
         };
         if confirms {
             let record = self.contact_mut(contact);
-            record.chain_key = record.pending_chain_key.take().expect("R holds CK_{n+1}");
+            let pending = record.pending.take().expect("R holds CK_{n+1}");
+            record.chain_key = pending.chain_key;
             record.resume_index += 1;
             self.tries.remove(&contact);
-            self.persist(actions);
+            self.reseed(contact, &pending.msg_seed, Dir::R, actions)?;
+            self.persist_contact(contact, actions);
         }
-        match parse(&plaintext) {
-            Ok(chats) => actions.extend(chats.into_iter().map(|chat| Action::ChatReceived {
+        let Ok(records) = parse(&plaintext) else {
+            self.close(id, actions);
+            return Ok(());
+        };
+        let sent = self.contact(contact).sent_msgno;
+        let beyond = records.iter().any(|record| match record {
+            Record::Ack(msgno) | Record::Read(msgno) => *msgno > sent,
+            _ => false,
+        });
+        if beyond {
+            self.close(id, actions);
+            return Ok(());
+        }
+        let mut shown = Vec::new();
+        let mut ack_due = false;
+        let mut malformed = false;
+        for record in records {
+            match record {
+                Record::Chat(chat) => {
+                    ack_due = true;
+                    self.accept(contact, chat.msgno, chat.text, &mut shown);
+                }
+                Record::Queued(queued) => {
+                    let now = self.now_s;
+                    let receiver = &mut self.contact_mut(contact).receiver;
+                    let message = match receiver.open::<B>(&queued, now)? {
+                        Ok(Opened::Message(inner)) => chain::parse_inner(&inner).map(Some),
+                        Ok(Opened::Unknown) => Ok(None),
+                        Err(error) => Err(error),
+                    };
+                    let Ok(message) = message else {
+                        malformed = true;
+                        break;
+                    };
+                    ack_due = true;
+                    if let Some((msgno, text)) = message {
+                        self.accept(contact, msgno, text, &mut shown);
+                    }
+                }
+                Record::Ack(msgno) => self.acked(contact, msgno, actions, &mut shown),
+                Record::Read(msgno) => {
+                    let receipts = self.device.as_ref().expect("restored").read_receipts;
+                    let record = self.contact_mut(contact);
+                    if receipts && msgno > record.peer_read {
+                        record.peer_read = msgno;
+                        shown.push(Action::ChatRead { contact, msgno });
+                    }
+                }
+                Record::Expired { from, to } => {
+                    ack_due = true;
+                    let received = &mut self.contact_mut(contact).received;
+                    if !received.covers(from, to) {
+                        received.insert(from, to);
+                        shown.push(Action::ChatsExpired { contact, from, to });
+                    }
+                }
+            }
+        }
+        self.persist_contact(contact, actions);
+        actions.extend(shown);
+        if malformed {
+            self.close(id, actions);
+        } else if ack_due {
+            let ack = Record::Ack(self.contact(contact).received.contiguous);
+            self.send_records(contact, vec![ack], actions)?;
+        }
+        Ok(())
+    }
+
+    /// Shows a received message unless it is a duplicate.
+    fn accept(&mut self, contact: ContactId, msgno: u32, text: String, shown: &mut Vec<Action>) {
+        let received = &mut self.contact_mut(contact).received;
+        if !received.contains(msgno) {
+            received.insert(msgno, msgno);
+            shown.push(Action::ChatReceived {
                 contact,
-                msgno: chat.msgno,
-                text: chat.text,
-            })),
-            Err(_) => self.close(id, actions),
+                msgno,
+                text,
+            });
         }
     }
 
-    /// Seals one CHAT on the contact's session; the new `msgno` is persisted
-    /// before the frame is sent (spec §7, §8).
+    /// Handles the peer's ACK: every message up to `msgno` was delivered.
+    fn acked(
+        &mut self,
+        contact: ContactId,
+        msgno: u32,
+        actions: &mut Vec<Action>,
+        shown: &mut Vec<Action>,
+    ) {
+        let record = self.contact_mut(contact);
+        if msgno <= record.peer_acked {
+            return;
+        }
+        record.peer_acked = msgno;
+        record.expired.retain(|&(_, to)| to > msgno);
+        let mut delivered: Vec<u32> = record
+            .unacked
+            .iter()
+            .copied()
+            .filter(|&sent| sent <= msgno)
+            .collect();
+        record.unacked.retain(|&sent| sent > msgno);
+        let rest = record.queued.split_off(&(msgno + 1));
+        let queued = core::mem::replace(&mut record.queued, rest);
+        for &sent in queued.keys() {
+            actions.push(Action::DeleteQueued {
+                contact,
+                msgno: sent,
+            });
+        }
+        delivered.extend(queued.into_keys());
+        delivered.sort_unstable();
+        for sent in delivered {
+            self.unacked.remove(&(contact, sent));
+            shown.push(Action::ChatDelivered {
+                contact,
+                msgno: sent,
+            });
+        }
+    }
+
+    /// Sends CHAT on the contact's session, or seals and stores it as
+    /// QUEUED; the rows are persisted before the message is shown (spec §8).
     fn send_chat(
         &mut self,
         contact: ContactId,
@@ -862,43 +1096,282 @@ impl<B: CryptoBackend> Core<B> {
             return Err(CoreError::UnknownContact);
         }
         let reject = |reason| Action::ChatRejected { contact, reason };
-        let found = self
-            .links
-            .iter_mut()
-            .find_map(|(id, link)| match &mut link.state {
-                LinkState::Session(session) if session.contact == contact => Some((*id, session)),
-                _ => None,
-            });
-        let Some((id, session)) = found else {
+        let record = self.contact(contact);
+        if record.send.is_none() {
             actions.push(reject(ChatRejection::NoSession));
             return Ok(());
+        }
+        let Some(msgno) = record.next_msgno() else {
+            actions.push(reject(ChatRejection::Exhausted));
+            return Ok(());
         };
-        let Some(msgno) = self
+        if record.unacked.len() + record.queued.len() >= MAX_SKIPPED {
+            actions.push(reject(ChatRejection::QueueFull));
+            return Ok(());
+        }
+        let Ok(inner) = chain::inner(msgno, text) else {
+            actions.push(reject(ChatRejection::TooLong));
+            return Ok(());
+        };
+        if let Some((id, link)) = self.session_mut(contact) {
+            let chat = Record::Chat(Chat {
+                msgno,
+                text: text.into(),
+            });
+            let plaintext = plaintext(&[chat]).expect("an inner-sized text fits a CHAT");
+            if let Some(frame) = link.session.seal::<B>(&plaintext)? {
+                let record = self.contact_mut(contact);
+                record.sent_msgno = msgno;
+                record.unacked.push(msgno);
+                self.unacked
+                    .insert((contact, msgno), (self.now_s, Zeroizing::new(text.into())));
+                self.persist_contact(contact, actions);
+                self.send(id, &frame, actions);
+                actions.push(Action::ChatSent { contact, msgno });
+                return Ok(());
+            }
+            self.close(id, actions);
+        }
+        let now = self.now_s;
+        let record = self.contact_mut(contact);
+        let Some(queued) = record.send.as_mut().expect("checked").seal::<B>(&inner)? else {
+            actions.push(reject(ChatRejection::Exhausted));
+            return Ok(());
+        };
+        record.sent_msgno = msgno;
+        let outgoing = Outgoing {
+            created_s: now,
+            queued,
+        };
+        let row = outgoing.row(contact, msgno);
+        record.queued.insert(msgno, outgoing);
+        self.persist_contact(contact, actions);
+        actions.push(Action::PutQueued {
+            contact,
+            msgno,
+            state: row.state,
+        });
+        actions.push(Action::ChatQueued { contact, msgno });
+        Ok(())
+    }
+
+    /// Raises the local read mark and sends READ in session (ADR 0034 §4).
+    fn mark_read(
+        &mut self,
+        contact: ContactId,
+        msgno: u32,
+        actions: &mut Vec<Action>,
+    ) -> Result<(), CoreError> {
+        if !self.has_contact(contact) {
+            return Err(CoreError::UnknownContact);
+        }
+        let record = self.contact_mut(contact);
+        if msgno <= record.read_marked || !record.received.contains(msgno) {
+            return Ok(());
+        }
+        record.read_marked = msgno;
+        self.persist_contact(contact, actions);
+        let receipts = self.device.as_ref().expect("restored").read_receipts;
+        if receipts && self.session_mut(contact).is_some() {
+            self.send_records(contact, vec![Record::Read(msgno)], actions)?;
+        }
+        Ok(())
+    }
+
+    /// Installs generation `resume_index mod 256` from `msg_seed`; queued
+    /// messages of a colliding generation expire (spec §8, OI-5).
+    fn reseed(
+        &mut self,
+        contact: ContactId,
+        msg_seed: &[u8; 32],
+        own: Dir,
+        actions: &mut Vec<Action>,
+    ) -> Result<(), CoreError> {
+        let peer = match own {
+            Dir::I => Dir::R,
+            Dir::R => Dir::I,
+        };
+        let send = chain::seed::<B>(msg_seed, own)?;
+        let receive = chain::seed::<B>(msg_seed, peer)?;
+        let now = self.now_s;
+        let record = self.contact_mut(contact);
+        let gen_ = record.resume_index as u8;
+        let colliding: Vec<u32> = record
+            .queued
+            .iter()
+            .filter(|(_, outgoing)| outgoing.queued.gen_ == gen_)
+            .map(|(&msgno, _)| msgno)
+            .collect();
+        record.send = Some(SendChain {
+            gen_,
+            idx: 0,
+            key: send,
+        });
+        record.receiver.reseed(gen_, receive, now);
+        self.expire_messages(contact, &colliding, actions);
+        Ok(())
+    }
+
+    /// Gives up on `msgnos`: queued rows are deleted and the numbers are
+    /// announced with EXPIRED at the next session.
+    fn expire_messages(&mut self, contact: ContactId, msgnos: &[u32], actions: &mut Vec<Action>) {
+        if msgnos.is_empty() {
+            return;
+        }
+        let record = self.contact_mut(contact);
+        let mut deleted = Vec::new();
+        for &msgno in msgnos {
+            if record.queued.remove(&msgno).is_some() {
+                deleted.push(msgno);
+            }
+            insert_range(&mut record.expired, msgno);
+        }
+        self.persist_contact(contact, actions);
+        actions.extend(
+            deleted
+                .into_iter()
+                .map(|msgno| Action::DeleteQueued { contact, msgno }),
+        );
+        for &msgno in msgnos {
+            self.unacked.remove(&(contact, msgno));
+            actions.push(Action::ChatExpired { contact, msgno });
+        }
+    }
+
+    /// Applies the 7-day bounds to every contact (spec §8, ADR 0034 §4).
+    fn maintain(&mut self, actions: &mut Vec<Action>) {
+        let now = self.now_s;
+        let ids: Vec<ContactId> = self
             .device
             .as_ref()
             .expect("restored")
             .contacts
             .iter()
-            .find(|record| record.id == contact)
-            .and_then(Contact::next_msgno)
-        else {
-            actions.push(reject(ChatRejection::Exhausted));
-            return Ok(());
-        };
-        let Ok(plaintext) = chat_plaintext(msgno, text) else {
-            actions.push(reject(ChatRejection::TooLong));
-            return Ok(());
-        };
-        let Some(frame) = session.session.seal::<B>(&plaintext)? else {
-            self.close(id, actions);
-            actions.push(reject(ChatRejection::NoSession));
-            return Ok(());
-        };
-        self.contact_mut(contact).sent_msgno = msgno;
-        self.persist(actions);
-        self.send(id, &frame, actions);
-        actions.push(Action::ChatSent { contact, msgno });
+            .map(|contact| contact.id)
+            .collect();
+        for contact in ids {
+            let record = self.contact_mut(contact);
+            let receiver = &mut record.receiver;
+            let before = (receiver.chains.len(), receiver.skipped.len());
+            receiver.prune(now);
+            let pruned = before != (receiver.chains.len(), receiver.skipped.len());
+            let stale: Vec<u32> = record
+                .queued
+                .iter()
+                .filter(|(_, outgoing)| outgoing.created_s.saturating_add(RETENTION_S) <= now)
+                .map(|(&msgno, _)| msgno)
+                .collect();
+            if stale.is_empty() && pruned {
+                self.persist_contact(contact, actions);
+            }
+            self.expire_messages(contact, &stale, actions);
+        }
+    }
+
+    /// Re-seals the contact's unacked in-session CHATs as QUEUED under the
+    /// same numbers; without a chain they expire (spec §8).
+    fn reseal(&mut self, contact: ContactId, actions: &mut Vec<Action>) {
+        let record = self.contact_mut(contact);
+        let msgnos = core::mem::take(&mut record.unacked);
+        if msgnos.is_empty() {
+            return;
+        }
+        let mut rows = Vec::new();
+        let mut lost = Vec::new();
+        for msgno in msgnos {
+            let (created_s, text) = self.unacked.remove(&(contact, msgno)).expect("held text");
+            let inner = chain::inner(msgno, &text).expect("checked when sent");
+            let record = self.contact_mut(contact);
+            let sealed = record
+                .send
+                .as_mut()
+                .map(|send| send.seal::<B>(&inner))
+                .transpose()
+                .ok()
+                .flatten()
+                .flatten();
+            match sealed {
+                Some(queued) => {
+                    let outgoing = Outgoing { created_s, queued };
+                    rows.push(outgoing.row(contact, msgno));
+                    record.queued.insert(msgno, outgoing);
+                }
+                None => lost.push(msgno),
+            }
+        }
+        self.persist_contact(contact, actions);
+        actions.extend(rows.into_iter().map(|row| Action::PutQueued {
+            contact,
+            msgno: row.msgno,
+            state: row.state,
+        }));
+        self.expire_messages(contact, &lost, actions);
+    }
+
+    /// Sends every queued message, the expired ranges and the read mark at
+    /// the start of a session (spec §8).
+    fn flush(&mut self, contact: ContactId, actions: &mut Vec<Action>) -> Result<(), CoreError> {
+        let receipts = self.device.as_ref().expect("restored").read_receipts;
+        let record = self.contact(contact);
+        let mut records: Vec<Record> = record
+            .queued
+            .values()
+            .map(|outgoing| Record::Queued(outgoing.queued.clone()))
+            .collect();
+        records.extend(
+            record
+                .expired
+                .iter()
+                .map(|&(from, to)| Record::Expired { from, to }),
+        );
+        if receipts && record.read_marked > 0 {
+            records.push(Record::Read(record.read_marked));
+        }
+        self.send_records(contact, records, actions)
+    }
+
+    /// Packs `records` greedily into DATA frames; a session out of counters
+    /// closes the link (spec §7).
+    fn send_records(
+        &mut self,
+        contact: ContactId,
+        records: Vec<Record>,
+        actions: &mut Vec<Action>,
+    ) -> Result<(), CoreError> {
+        let mut frames = Vec::new();
+        let mut batch: Vec<Record> = Vec::new();
+        for record in records {
+            batch.push(record);
+            if plaintext(&batch).is_err() {
+                let record = batch.pop().expect("just pushed");
+                frames.push(plaintext(&batch).expect("fitted before"));
+                batch = vec![record];
+            }
+        }
+        if !batch.is_empty() {
+            frames.push(plaintext(&batch).expect("one record fits a frame"));
+        }
+        for frame in frames {
+            let (id, link) = self.session_mut(contact).expect("in session");
+            let Some(sealed) = link.session.seal::<B>(&frame)? else {
+                self.close(id, actions);
+                return Ok(());
+            };
+            self.send(id, &sealed, actions);
+        }
         Ok(())
+    }
+
+    /// The contact's established session link.
+    fn session_mut(&mut self, contact: ContactId) -> Option<(LinkId, &mut SessionLink)> {
+        self.links
+            .iter_mut()
+            .find_map(|(&id, link)| match &mut link.state {
+                LinkState::Session(session) if session.contact == contact => {
+                    Some((id, &mut **session))
+                }
+                _ => None,
+            })
     }
 
     /// Ends the pre-auth phase: the deadline is cancelled and frames may grow
@@ -927,9 +1400,11 @@ impl<B: CryptoBackend> Core<B> {
         actions.push(Action::CancelTimer { timer });
     }
 
-    fn persist(&self, actions: &mut Vec<Action>) {
-        actions.push(Action::Persist {
-            state: self.device.as_ref().expect("restored").persist(),
+    fn persist_contact(&self, contact: ContactId, actions: &mut Vec<Action>) {
+        let row = self.contact(contact).row();
+        actions.push(Action::PersistContact {
+            contact,
+            state: row.state,
         });
     }
 
@@ -998,6 +1473,9 @@ impl<B: CryptoBackend> Core<B> {
                 timer: link.deadline,
             });
         }
+        if let LinkState::Session(session) = &link.state {
+            self.reseal(session.contact, actions);
+        }
         link
     }
 
@@ -1061,10 +1539,29 @@ impl<B: CryptoBackend> Core<B> {
     }
 }
 
+/// Adds `msgno` to canonical, non-adjacent ascending ranges.
+fn insert_range(ranges: &mut Vec<(u32, u32)>, msgno: u32) {
+    let at = ranges.partition_point(|&(_, to)| to < msgno);
+    if ranges.get(at).is_some_and(|&(from, _)| from <= msgno) {
+        return;
+    }
+    let joins_below = at > 0 && ranges[at - 1].1 + 1 == msgno;
+    let joins_above = ranges.get(at).is_some_and(|&(from, _)| from - 1 == msgno);
+    match (joins_below, joins_above) {
+        (true, true) => {
+            ranges[at - 1].1 = ranges[at].1;
+            ranges.remove(at);
+        }
+        (true, false) => ranges[at - 1].1 = msgno,
+        (false, true) => ranges[at].0 = msgno,
+        (false, false) => ranges.insert(at, (msgno, msgno)),
+    }
+}
+
 /// R's chain `CK_n`, or the pending `CK_{n+1}`, with I's pairing role (spec §6).
 fn candidate(contact: &Contact, pending: bool) -> (Chain<'_>, PairingRole) {
-    let ck = match &contact.pending_chain_key {
-        Some(key) if pending => key,
+    let ck = match &contact.pending {
+        Some(key) if pending => &key.chain_key,
         _ => &contact.chain_key,
     };
     let chain = Chain {
@@ -1108,7 +1605,9 @@ fn check_mtu(mtu: u16) -> Result<(), CoreError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::chain::{Queued, ReceiveChain, Receiver, SendChain};
     use crate::resume::Keys;
+    use crate::state::Received;
     use cairn_crypto::Reference;
 
     const CLOCK: Clock = Clock {
@@ -1123,6 +1622,7 @@ mod tests {
             i_to_r: Zeroizing::new([1; 32]),
             r_to_i: Zeroizing::new([2; 32]),
             next_ck: Zeroizing::new([3; 32]),
+            msg_seed: Zeroizing::new([12; 32]),
         }
     }
 
@@ -1146,21 +1646,46 @@ mod tests {
             resume_index: 0,
             chain_key: Zeroizing::new([10; 32]),
             sent_msgno,
-            pending_chain_key: pending.then(|| Zeroizing::new([11; 32])),
+            pending: pending.then(|| Pending {
+                chain_key: Zeroizing::new([11; 32]),
+                msg_seed: Zeroizing::new([13; 32]),
+            }),
+            send: None,
+            receiver: Receiver::default(),
+            peer_acked: 0,
+            peer_read: 0,
+            read_marked: 0,
+            received: Received::default(),
+            unacked: Vec::new(),
+            expired: Vec::new(),
+            queued: BTreeMap::new(),
         }
     }
 
+    const FRESH: fn() -> Event = || Event::Restore {
+        device: None,
+        contacts: Vec::new(),
+        queued: Vec::new(),
+    };
+
     /// R's core in `session` with contact 0 on `LINK`, and I's session;
-    /// `unconfirmed` leaves R holding `CK_{n+1}`.
+    /// `unconfirmed` leaves R holding `CK_{n+1}`. Contact 0 has a message
+    /// chain; contact 1 has never resumed.
     fn in_session(
         sent_msgno: u32,
         session: Session,
         unconfirmed: bool,
     ) -> (Core<Reference>, Session) {
         let mut core = Core::<Reference>::new();
-        core.handle(CLOCK, Event::Restore { state: None }).unwrap();
+        core.handle(CLOCK, FRESH()).unwrap();
         let contacts = &mut core.device.as_mut().unwrap().contacts;
-        contacts.push(contact(CONTACT, sent_msgno, unconfirmed));
+        let mut resumed = contact(CONTACT, sent_msgno, unconfirmed);
+        resumed.send = Some(SendChain {
+            gen_: 0,
+            idx: 0,
+            key: Zeroizing::new([14; 32]),
+        });
+        contacts.push(resumed);
         contacts.push(contact(ContactId(1), 0, false));
         core.handle(
             CLOCK,
@@ -1213,6 +1738,16 @@ mod tests {
         .unwrap()
     }
 
+    fn sealed(peer: &mut Session, records: &[Record]) -> Vec<u8> {
+        peer.seal::<Reference>(&plaintext(records).unwrap())
+            .unwrap()
+            .unwrap()
+    }
+
+    fn count(actions: &[Action], pick: impl Fn(&Action) -> bool) -> usize {
+        actions.iter().filter(|action| pick(action)).count()
+    }
+
     // `Core<B>` methods are counted per test binary, so this module covers the
     // DATA paths whole, including those the loopback cannot reach.
 
@@ -1221,29 +1756,42 @@ mod tests {
     fn r_commits_the_pending_key_before_showing_the_first_chat() {
         let (mut core, mut peer) = in_session(0, responder(), true);
         let frame = peer
-            .seal::<Reference>(&chat_plaintext(1, "hi").unwrap())
+            .seal::<Reference>(
+                &plaintext(&[Record::Chat(Chat {
+                    msgno: 1,
+                    text: "hi".into(),
+                })])
+                .unwrap(),
+            )
             .unwrap()
             .unwrap();
 
         let actions = receive(&mut core, frame);
 
-        assert!(matches!(actions[0], Action::Persist { .. }));
-        assert_eq!(
-            actions[1..],
-            [Action::ChatReceived {
-                contact: CONTACT,
-                msgno: 1,
-                text: "hi".into(),
-            }]
-        );
+        let shown = actions
+            .iter()
+            .position(|action| {
+                *action
+                    == Action::ChatReceived {
+                        contact: CONTACT,
+                        msgno: 1,
+                        text: "hi".into(),
+                    }
+            })
+            .unwrap();
+        assert!(matches!(actions[0], Action::PersistContact { .. }));
+        assert!(matches!(actions[1], Action::PersistContact { .. }));
+        assert_eq!(shown, 2);
+        assert!(matches!(actions[3], Action::Send { link: LINK, .. }), "ACK");
         let record = core.contact(CONTACT);
         assert_eq!(
             (
                 *record.chain_key,
-                record.pending_chain_key.is_none(),
-                record.resume_index
+                record.pending.is_none(),
+                record.resume_index,
+                record.send.as_ref().map(|send| send.gen_),
             ),
-            ([11; 32], true, 1)
+            ([11; 32], true, 1, Some(1))
         );
     }
 
@@ -1269,7 +1817,7 @@ mod tests {
         assert!(matches!(
             &actions[..],
             [
-                Action::Persist { .. },
+                Action::PersistContact { .. },
                 Action::Send { link: LINK, .. },
                 Action::ChatSent {
                     contact: CONTACT,
@@ -1286,7 +1834,7 @@ mod tests {
 
         let results = [
             send(&mut core, ContactId(9), "hi"),
-            send(&mut core, CONTACT, &"x".repeat(4076)),
+            send(&mut core, CONTACT, &"x".repeat(4046)),
         ];
 
         assert_eq!(
@@ -1331,7 +1879,7 @@ mod tests {
 
     #[test]
     #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
-    fn a_session_out_of_nonces_closes_instead_of_sending() {
+    fn a_session_out_of_nonces_closes_and_queues_the_chat() {
         let mut exhausted = responder();
         exhausted.exhaust();
         let (mut core, _) = in_session(0, exhausted, false);
@@ -1341,12 +1889,13 @@ mod tests {
         assert!(actions.contains(&Action::Disconnect { link: LINK }));
         assert_eq!(
             actions.last(),
-            Some(&Action::ChatRejected {
+            Some(&Action::ChatQueued {
                 contact: CONTACT,
-                reason: ChatRejection::NoSession,
+                msgno: 1,
             })
         );
-        assert_eq!(core.contact(CONTACT).sent_msgno, 0);
+        assert_eq!(core.contact(CONTACT).sent_msgno, 1);
+        assert_eq!(core.contact(CONTACT).queued.len(), 1);
     }
 
     #[test]
@@ -1369,7 +1918,7 @@ mod tests {
     #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
     fn a_beacon_read_keeps_contact_beacon_keys_current() {
         let mut core = Core::<Reference>::new();
-        core.handle(CLOCK, Event::Restore { state: None }).unwrap();
+        core.handle(CLOCK, FRESH()).unwrap();
         let mut stale = contact(CONTACT, 0, false);
         stale.peer.beacon_day = day(CLOCK.unix_s) - 3;
         core.device.as_mut().unwrap().contacts.push(stale);
@@ -1397,6 +1946,596 @@ mod tests {
             core.contact(CONTACT).peer.beacon_day,
             day(CLOCK.unix_s - 300)
         );
+    }
+
+    #[test]
+    fn rows_without_a_device_row_are_invalid() {
+        let queued = Outgoing {
+            created_s: 0,
+            queued: Queued {
+                gen_: 0,
+                idx: 0,
+                ct: vec![0; 48],
+            },
+        };
+        let restore = |contacts, queued| {
+            Core::<Reference>::new().handle(
+                CLOCK,
+                Event::Restore {
+                    device: None,
+                    contacts,
+                    queued,
+                },
+            )
+        };
+
+        let results = [
+            restore(vec![contact(CONTACT, 0, false).row()], Vec::new()),
+            restore(Vec::new(), vec![queued.row(CONTACT, 1)]),
+        ];
+
+        assert_eq!(
+            results,
+            [Err(CoreError::InvalidBlob), Err(CoreError::InvalidBlob)]
+        );
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn an_ack_beyond_the_last_sent_number_closes_the_link() {
+        let (mut core, mut peer) = in_session(0, responder(), false);
+        let frame = sealed(&mut peer, &[Record::Ack(1)]);
+
+        let actions = receive(&mut core, frame);
+
+        assert_eq!(actions.last(), Some(&Action::Disconnect { link: LINK }));
+        assert_eq!(
+            count(&actions, |a| matches!(a, Action::PersistContact { .. })),
+            0
+        );
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn a_queued_record_of_an_unknown_generation_is_acked_but_not_shown() {
+        let (mut core, mut peer) = in_session(0, responder(), false);
+        let unknown = Record::Queued(Queued {
+            gen_: 9,
+            idx: 0,
+            ct: vec![0; 48],
+        });
+        let frame = sealed(&mut peer, &[unknown]);
+
+        let actions = receive(&mut core, frame);
+
+        assert!(matches!(
+            actions[..],
+            [
+                Action::PersistContact { .. },
+                Action::Send { link: LINK, .. }
+            ]
+        ));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn a_queued_record_that_does_not_open_closes_the_link() {
+        let (mut core, mut peer) = in_session(0, responder(), false);
+        let receiver = &mut core.contact_mut(CONTACT).receiver;
+        receiver.reseed(0, Zeroizing::new([15; 32]), CLOCK.unix_s);
+        let forged = Record::Queued(Queued {
+            gen_: 0,
+            idx: 0,
+            ct: vec![0; 48],
+        });
+        let frame = sealed(&mut peer, &[forged]);
+
+        let actions = receive(&mut core, frame);
+
+        assert_eq!(actions.last(), Some(&Action::Disconnect { link: LINK }));
+        assert_eq!(count(&actions, |a| matches!(a, Action::Send { .. })), 0);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn stale_receipts_and_repeated_expiry_notices_change_nothing() {
+        let (mut core, mut peer) = in_session(2, responder(), false);
+        let expired = Record::Expired { from: 2, to: 3 };
+        let frame = sealed(
+            &mut peer,
+            &[
+                Record::Ack(2),
+                Record::Ack(1),
+                Record::Read(1),
+                Record::Read(1),
+                expired.clone(),
+                expired,
+            ],
+        );
+
+        let actions = receive(&mut core, frame);
+
+        let shown = (
+            count(&actions, |a| matches!(a, Action::ChatRead { .. })),
+            count(&actions, |a| matches!(a, Action::ChatsExpired { .. })),
+            core.contact(CONTACT).peer_acked,
+        );
+        assert_eq!(shown, (1, 1, 2));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn a_read_mark_is_not_shown_with_receipts_off() {
+        let (mut core, mut peer) = in_session(1, responder(), false);
+        core.device.as_mut().unwrap().read_receipts = false;
+        let frame = sealed(&mut peer, &[Record::Read(1)]);
+
+        let actions = receive(&mut core, frame);
+
+        assert_eq!(count(&actions, |a| matches!(a, Action::ChatRead { .. })), 0);
+        assert_eq!(core.contact(CONTACT).peer_read, 0);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn a_session_out_of_nonces_closes_instead_of_acking() {
+        let mut exhausted = responder();
+        exhausted.exhaust();
+        let (mut core, mut peer) = in_session(0, exhausted, false);
+        let chat = Record::Chat(Chat {
+            msgno: 1,
+            text: "hi".into(),
+        });
+        let frame = sealed(&mut peer, &[chat]);
+
+        let actions = receive(&mut core, frame);
+
+        assert_eq!(count(&actions, |a| matches!(a, Action::Send { .. })), 0);
+        assert_eq!(actions.last(), Some(&Action::Disconnect { link: LINK }));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn a_chat_with_neither_session_nonces_nor_chain_indices_is_rejected() {
+        let mut exhausted = responder();
+        exhausted.exhaust();
+        let (mut core, _) = in_session(0, exhausted, false);
+        core.contact_mut(CONTACT).send.as_mut().unwrap().idx = u32::MAX;
+
+        let actions = send_chat(&mut core, CONTACT);
+
+        assert_eq!(
+            actions.last(),
+            Some(&Action::ChatRejected {
+                contact: CONTACT,
+                reason: ChatRejection::Exhausted,
+            })
+        );
+        assert!(core.contact(CONTACT).queued.is_empty());
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn a_chat_to_a_contact_without_a_session_is_queued_beside_another_session() {
+        let (mut core, _) = in_session(0, responder(), false);
+        core.contact_mut(ContactId(1)).send = Some(SendChain {
+            gen_: 0,
+            idx: 0,
+            key: Zeroizing::new([14; 32]),
+        });
+
+        let actions = send_chat(&mut core, ContactId(1));
+
+        assert_eq!(
+            actions.last(),
+            Some(&Action::ChatQueued {
+                contact: ContactId(1),
+                msgno: 1,
+            })
+        );
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn marking_read_needs_a_known_contact_and_a_new_received_message() {
+        let (mut core, _) = in_session(0, responder(), false);
+        let mut mark = |contact, msgno| core.handle(CLOCK, Event::MarkRead { contact, msgno });
+
+        let results = [mark(ContactId(9), 1), mark(CONTACT, 0), mark(CONTACT, 3)];
+
+        assert_eq!(
+            results,
+            [Err(CoreError::UnknownContact), Ok(vec![]), Ok(vec![])]
+        );
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn pruning_an_old_receive_chain_persists_the_contact() {
+        let (mut core, _) = in_session(0, responder(), false);
+        core.contact_mut(CONTACT)
+            .receiver
+            .chains
+            .push(ReceiveChain {
+                gen_: 3,
+                next: 0,
+                key: Zeroizing::new([15; 32]),
+                superseded_s: Some(CLOCK.unix_s - RETENTION_S),
+            });
+
+        let actions = core
+            .handle(CLOCK, Event::SetReadReceipts { enabled: true })
+            .unwrap();
+
+        assert!(matches!(
+            actions[..],
+            [
+                Action::PersistContact {
+                    contact: CONTACT,
+                    ..
+                },
+                Action::PersistDevice { .. }
+            ]
+        ));
+        assert!(core.contact(CONTACT).receiver.chains.is_empty());
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn an_unacked_chat_expires_when_the_link_drops_without_chain_indices_left() {
+        let (mut core, _) = in_session(0, responder(), false);
+        send_chat(&mut core, CONTACT);
+        core.contact_mut(CONTACT).send.as_mut().unwrap().idx = u32::MAX;
+
+        let actions = core.handle(CLOCK, Event::LinkDown { link: LINK }).unwrap();
+
+        assert!(actions.contains(&Action::ChatExpired {
+            contact: CONTACT,
+            msgno: 1,
+        }));
+        assert_eq!(core.contact(CONTACT).expired, [(1, 1)]);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn a_restart_expires_chats_that_were_sent_but_never_acked() {
+        let (mut core, _) = in_session(0, responder(), false);
+        send_chat(&mut core, CONTACT);
+        core.device.as_mut().unwrap().next_contact = 2;
+        let device = core.device.as_ref().unwrap();
+        let rows = Event::Restore {
+            device: Some(device.row()),
+            contacts: device.contacts.iter().map(Contact::row).collect(),
+            queued: Vec::new(),
+        };
+        let mut restarted = Core::<Reference>::new();
+
+        let actions = restarted.handle(CLOCK, rows).unwrap();
+
+        assert!(actions.contains(&Action::ChatExpired {
+            contact: CONTACT,
+            msgno: 1,
+        }));
+        assert!(restarted.contact(CONTACT).unacked.is_empty());
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn a_queued_record_opens_under_the_receive_chain_and_is_shown() {
+        let (mut core, mut peer) = in_session(0, responder(), false);
+        let key = || Zeroizing::new([15; 32]);
+        let receiver = &mut core.contact_mut(CONTACT).receiver;
+        receiver.reseed(0, key(), CLOCK.unix_s);
+        let mut chain = SendChain {
+            gen_: 0,
+            idx: 0,
+            key: key(),
+        };
+        let inner = chain::inner(1, "later").unwrap();
+        let queued = chain.seal::<Reference>(&inner).unwrap().unwrap();
+        let frame = sealed(&mut peer, &[Record::Queued(queued)]);
+
+        let actions = receive(&mut core, frame);
+
+        assert!(actions.contains(&Action::ChatReceived {
+            contact: CONTACT,
+            msgno: 1,
+            text: "later".into(),
+        }));
+        assert_eq!(
+            actions.last().map(|a| matches!(a, Action::Send { .. })),
+            Some(true)
+        );
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn a_queued_chat_expires_seven_days_after_it_was_sealed() {
+        let (mut core, _) = in_session(1, responder(), false);
+        let outgoing = Outgoing {
+            created_s: CLOCK.unix_s - RETENTION_S,
+            queued: Queued {
+                gen_: 0,
+                idx: 0,
+                ct: vec![0; 48],
+            },
+        };
+        core.contact_mut(CONTACT).queued.insert(1, outgoing);
+
+        let actions = core
+            .handle(CLOCK, Event::SetReadReceipts { enabled: true })
+            .unwrap();
+
+        assert!(actions.contains(&Action::DeleteQueued {
+            contact: CONTACT,
+            msgno: 1,
+        }));
+        assert!(actions.contains(&Action::ChatExpired {
+            contact: CONTACT,
+            msgno: 1,
+        }));
+        assert_eq!(core.contact(CONTACT).expired, [(1, 1)]);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn a_new_read_mark_is_persisted_and_sent_in_session() {
+        let (mut core, _) = in_session(0, responder(), false);
+        core.contact_mut(CONTACT).received.insert(1, 1);
+
+        let actions = core
+            .handle(
+                CLOCK,
+                Event::MarkRead {
+                    contact: CONTACT,
+                    msgno: 1,
+                },
+            )
+            .unwrap();
+
+        assert!(matches!(
+            actions[..],
+            [
+                Action::PersistContact {
+                    contact: CONTACT,
+                    ..
+                },
+                Action::Send { link: LINK, .. }
+            ]
+        ));
+        assert_eq!(core.contact(CONTACT).read_marked, 1);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn five_hundred_undelivered_chats_fill_the_queue() {
+        let (mut core, _) = in_session(500, responder(), false);
+        core.contact_mut(CONTACT).unacked = (1..=500).collect();
+
+        let actions = send_chat(&mut core, CONTACT);
+
+        assert_eq!(
+            actions,
+            [Action::ChatRejected {
+                contact: CONTACT,
+                reason: ChatRejection::QueueFull,
+            }]
+        );
+    }
+
+    #[test]
+    fn events_before_restore_are_refused() {
+        let mut core = Core::<Reference>::new();
+
+        let result = core.handle(CLOCK, Event::SetReadReceipts { enabled: true });
+
+        assert_eq!(result, Err(CoreError::NotRestored));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn a_second_restore_is_refused() {
+        let (mut core, _) = in_session(0, responder(), false);
+
+        let result = core.handle(CLOCK, FRESH());
+
+        assert_eq!(result, Err(CoreError::AlreadyRestored));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn an_ack_delivers_unacked_and_queued_chats_in_order() {
+        let (mut core, mut peer) = in_session(2, responder(), false);
+        let outgoing = Outgoing {
+            created_s: CLOCK.unix_s,
+            queued: Queued {
+                gen_: 0,
+                idx: 0,
+                ct: vec![0; 48],
+            },
+        };
+        let record = core.contact_mut(CONTACT);
+        record.unacked = vec![1];
+        record.queued.insert(2, outgoing);
+        let frame = sealed(&mut peer, &[Record::Ack(2)]);
+
+        let actions = receive(&mut core, frame);
+
+        let delivered: Vec<&Action> = actions
+            .iter()
+            .filter(|a| {
+                matches!(
+                    a,
+                    Action::ChatDelivered { .. } | Action::DeleteQueued { .. }
+                )
+            })
+            .collect();
+        assert_eq!(
+            delivered,
+            [
+                &Action::DeleteQueued {
+                    contact: CONTACT,
+                    msgno: 2,
+                },
+                &Action::ChatDelivered {
+                    contact: CONTACT,
+                    msgno: 1,
+                },
+                &Action::ChatDelivered {
+                    contact: CONTACT,
+                    msgno: 2,
+                },
+            ]
+        );
+        assert!(core.contact(CONTACT).queued.is_empty());
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn a_read_mark_is_persisted_but_not_sent_with_receipts_off() {
+        let (mut core, _) = in_session(0, responder(), false);
+        core.device.as_mut().unwrap().read_receipts = false;
+        core.contact_mut(CONTACT).received.insert(1, 1);
+
+        let actions = core
+            .handle(
+                CLOCK,
+                Event::MarkRead {
+                    contact: CONTACT,
+                    msgno: 1,
+                },
+            )
+            .unwrap();
+
+        assert!(matches!(
+            actions[..],
+            [Action::PersistContact {
+                contact: CONTACT,
+                ..
+            }]
+        ));
+        assert_eq!(core.contact(CONTACT).read_marked, 1);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn a_read_mark_without_a_session_is_persisted_for_the_next_one() {
+        let (mut core, _) = in_session(0, responder(), false);
+        core.contact_mut(ContactId(1)).received.insert(1, 1);
+
+        let actions = core
+            .handle(
+                CLOCK,
+                Event::MarkRead {
+                    contact: ContactId(1),
+                    msgno: 1,
+                },
+            )
+            .unwrap();
+
+        assert!(matches!(
+            actions[..],
+            [Action::PersistContact {
+                contact: ContactId(1),
+                ..
+            }]
+        ));
+        assert_eq!(core.contact(ContactId(1)).read_marked, 1);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn an_unacked_chat_is_resealed_when_the_link_drops() {
+        let (mut core, _) = in_session(0, responder(), false);
+        send_chat(&mut core, CONTACT);
+
+        let actions = core.handle(CLOCK, Event::LinkDown { link: LINK }).unwrap();
+
+        assert!(actions.iter().any(|a| matches!(
+            a,
+            Action::PutQueued {
+                contact: CONTACT,
+                ..
+            }
+        )));
+        let record = core.contact(CONTACT);
+        assert!(record.unacked.is_empty());
+        assert_eq!(record.queued.keys().copied().collect::<Vec<_>>(), [1]);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn records_beyond_one_frame_are_split_and_none_send_nothing() {
+        let (mut core, _) = in_session(0, responder(), false);
+        let mut expected_session = responder();
+        let chat = |msgno| {
+            Record::Chat(Chat {
+                msgno,
+                text: "x".repeat(3000),
+            })
+        };
+        let expected: Vec<Action> = [chat(1), chat(2)]
+            .into_iter()
+            .flat_map(|record| {
+                let frame = sealed(&mut expected_session, &[record]);
+                fragment(&frame, 185).unwrap()
+            })
+            .map(|fragment| Action::Send {
+                link: LINK,
+                fragment,
+            })
+            .collect();
+        let mut actions = Vec::new();
+
+        core.send_records(CONTACT, Vec::new(), &mut actions)
+            .unwrap();
+        let empty = actions.len();
+        core.send_records(CONTACT, vec![chat(1), chat(2)], &mut actions)
+            .unwrap();
+
+        assert_eq!(empty, 0);
+        assert_eq!(actions, expected);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn mtu_changes_and_timers_reach_their_link() {
+        let mut core = Core::<Reference>::new();
+        core.handle(CLOCK, FRESH()).unwrap();
+        core.handle(
+            CLOCK,
+            Event::LinkUp {
+                link: LINK,
+                gatt_role: GattRole::Peripheral,
+                mtu: 185,
+                address: Vec::new(),
+            },
+        )
+        .unwrap();
+        let timer = *core.timers.keys().next().unwrap();
+
+        for link in [LINK, LinkId(9)] {
+            core.handle(CLOCK, Event::MtuChanged { link, mtu: 247 })
+                .unwrap();
+        }
+        let mtu = core.links[&LINK].mtu;
+        let fired = core.handle(CLOCK, Event::TimerFired { timer }).unwrap();
+        let again = core.handle(CLOCK, Event::TimerFired { timer }).unwrap();
+
+        assert_eq!(mtu, 247);
+        assert_eq!(fired.last(), Some(&Action::Disconnect { link: LINK }));
+        assert!(again.is_empty());
+    }
+
+    #[test]
+    fn expired_numbers_merge_into_canonical_ranges() {
+        let mut ranges = vec![(1, 1), (3, 3), (6, 6), (10, 12)];
+
+        for msgno in [2, 7, 9, 11, 14] {
+            insert_range(&mut ranges, msgno);
+        }
+
+        assert_eq!(ranges, [(1, 3), (6, 7), (9, 12), (14, 14)]);
     }
 
     #[test]
