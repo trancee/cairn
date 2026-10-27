@@ -33,5 +33,6 @@
     <string name="debug_link">Link %1$d · %2$s · MTU %3$d · up at %4$d ms\nout %5$d / %6$d B · in %7$d / %8$d B</string>
     <string name="fault_crypto">The crypto backend failed; one step was dropped.</string>
     <string name="fault_poisoned">The core restarted; every link was closed.</string>
+    <string name="fault_storage_reset">Secure storage was reset; contacts must pair again.</string>
     <string name="dismiss">Dismiss</string>
 </resources>

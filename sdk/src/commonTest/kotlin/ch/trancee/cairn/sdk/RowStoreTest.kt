@@ -10,9 +10,10 @@ class RowStoreTest {
     fun otherActionsAreNotRows() {
         val rows = RowStore()
 
-        val applied = rows.apply(Action.ChatSent(7uL, 1u))
+        rows.commit(listOf(Action.ChatSent(7uL, 1u)))
 
-        assertFalse(applied)
-        assertEquals(RowStore().restore(), rows.restore())
+        val restored = rows.restore()
+        assertEquals(RowStore().restore(), restored)
+        assertFalse(restored.reset)
     }
 }

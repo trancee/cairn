@@ -26,7 +26,7 @@ private class Device(restore: Event.Restore) {
     }
 
     fun record(actions: List<Action>) {
-        actions.forEach(rows::apply)
+        rows.commit(actions)
         log += actions
     }
 
@@ -35,7 +35,7 @@ private class Device(restore: Event.Restore) {
 }
 
 /** Two cores joined in memory; device 0's link `n` is device 1's link `n xor 1`. */
-private class Loopback(restores: List<Event.Restore> = List(2) { RowStore().restore() }) {
+private class Loopback(restores: List<Event.Restore> = List(2) { RowStore().restore().event }) {
     val devices = restores.map(::Device)
 
     fun deliver(from: Int, event: Event) {
@@ -72,7 +72,7 @@ private class Loopback(restores: List<Event.Restore> = List(2) { RowStore().rest
 class CoreLoopbackTest {
     private val opened = mutableListOf<Loopback>()
 
-    private fun loopback(restores: List<Event.Restore> = List(2) { RowStore().restore() }) =
+    private fun loopback(restores: List<Event.Restore> = List(2) { RowStore().restore().event }) =
         Loopback(restores).also { opened += it }
 
     @AfterTest
@@ -95,7 +95,7 @@ class CoreLoopbackTest {
             connect(2uL)
             disconnect(2uL)
         }
-        val net = loopback(first.devices.map { it.rows.restore() })
+        val net = loopback(first.devices.map { it.rows.restore().event })
         val (a, b) = net.devices.map { it.core.contacts().single().id }
 
         net.connect(4uL)
@@ -112,7 +112,7 @@ class CoreLoopbackTest {
         }
         val a = first.devices[0].core.contacts().single().id
         first.deliver(0, Event.SendChat(a, "later"))
-        val net = loopback(first.devices.map { it.rows.restore() })
+        val net = loopback(first.devices.map { it.rows.restore().event })
         val b = net.devices[1].core.contacts().single().id
 
         net.connect(4uL)
@@ -120,7 +120,7 @@ class CoreLoopbackTest {
         assertEquals(listOf<Action>(Action.ChatQueued(a, 1u)), first.devices[0].log.filterIsInstance<Action.ChatQueued>())
         assertEquals(listOf(b to "later"), net.devices[1].chats)
         assertEquals(listOf<Action>(Action.ChatDelivered(a, 1u)), net.devices[0].log.filterIsInstance<Action.ChatDelivered>())
-        assertEquals(RowStore().restore().queued, net.devices[0].rows.restore().queued)
+        assertEquals(RowStore().restore().event.queued, net.devices[0].rows.restore().event.queued)
     }
 
     @Test

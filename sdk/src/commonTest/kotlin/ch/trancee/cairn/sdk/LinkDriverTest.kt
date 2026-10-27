@@ -69,14 +69,29 @@ private class FakeTimers : Timers {
     }
 }
 
+/** An in-memory [RowStore] that records what the radio had sent at each commit. */
+private class RecordingRows(private val radio: FakeRadio, private val reset: Boolean = false) : Rows {
+    val store = RowStore()
+    val commits = mutableListOf<Pair<Int, List<Action>>>()
+
+    override fun commit(actions: List<Action>) {
+        commits += radio.sent.size to actions
+        store.commit(actions)
+    }
+
+    override fun restore() = Restored(store.restore().event, reset)
+}
+
 /** A started driver over fakes; [engines] lists every engine the driver created, in order. */
-private class Rig {
+private class Rig(resetStorage: Boolean = false) {
     val engines = mutableListOf<FakeEngine>()
     val radio = FakeRadio()
     val timers = FakeTimers()
     val notices = mutableListOf<Notice>()
+    val rows = RecordingRows(radio, resetStorage)
     var now = Clock(monoMs = 1_000uL, unixS = 1_761_177_600uL)
     val driver = LinkDriver(
+        rows = rows,
         newEngine = { FakeEngine { if (it is Event.Restore) listOf(Action.PersistDevice(BLOB)) else emptyList() }.also { engines += it } },
         radio = radio,
         timers = timers,
@@ -127,7 +142,33 @@ class LinkDriverTest {
         val rig = Rig()
 
         assertEquals(keys(Event.Restore(null, emptyList(), emptyList())), rig.engine.events)
-        assertEquals(keys(Event.Restore(BLOB, emptyList(), emptyList())), keys(rig.driver.rows.restore()))
+        assertEquals(keys(Event.Restore(BLOB, emptyList(), emptyList())), keys(rig.driver.rows.restore().event))
+    }
+
+    @Test
+    fun rowActionsOfOneResultAreCommittedTogetherBeforeAnyOtherAction() {
+        val rig = Rig()
+        val link = rig.driver.linkUp(GattRole.CENTRAL, 185u, byteArrayOf(9))
+        val actions = listOf(
+            Action.Send(link, bytes(1)),
+            Action.PersistContact(7uL, BLOB),
+            Action.ChatSent(7uL, 1u),
+            Action.PutQueued(7uL, 1u, BLOB),
+        )
+        rig.answer(Event.SendChat(7uL, "a"), *actions.toTypedArray())
+
+        rig.driver.sendChat(7uL, "a")
+
+        assertEquals(0 to actions, rig.rows.commits.last())
+        assertEquals(listOf(link to bytes(1).toList()), rig.radio.sent)
+    }
+
+    @Test
+    fun aStorageResetIsReportedBeforeTheCoreRestoresAnEmptyState() {
+        val rig = Rig(resetStorage = true)
+
+        assertEquals(listOf<Notice>(Notice.Fault(FaultKind.STORAGE_RESET)), rig.notices)
+        assertEquals(keys(Event.Restore(null, emptyList(), emptyList())), rig.engine.events)
     }
 
     @Test
@@ -356,7 +397,7 @@ class LinkDriverTest {
             listOf(ContactRow(7uL, row(4)), ContactRow(8uL, row(3))),
             listOf(QueuedRow(7uL, 1u, row(6)), QueuedRow(8uL, 1u, row(7))),
         )
-        assertEquals(keys(expected), keys(rig.driver.rows.restore()))
+        assertEquals(keys(expected), keys(rig.driver.rows.restore().event))
     }
 
     @Test

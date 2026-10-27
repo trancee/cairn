@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.ubique.uniffi)
     alias(libs.plugins.kover)
+    alias(libs.plugins.sqldelight)
 }
 
 cargo {
@@ -33,19 +34,33 @@ kotlin {
         target.binaries.framework { baseName = "CairnSdk" }
     }
     sourceSets {
+        commonMain.dependencies {
+            implementation(libs.sqldelight.runtime)
+        }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+        }
+        jvmTest.dependencies {
+            implementation(libs.sqldelight.sqlite.driver)
+        }
+    }
+}
+
+sqldelight {
+    databases {
+        create("RowDatabase") {
+            packageName = "ch.trancee.cairn.sdk.db"
         }
     }
 }
 
 // Constitution T3: the handwritten SDK keeps full line and branch coverage. Kover measures the JVM
-// test run, which executes commonMain; the generated bindings are UniFFI's, not ours.
+// test run, which executes commonMain; the generated UniFFI bindings and SQLDelight queries are not ours.
 kover {
     reports {
         filters {
             excludes {
-                packages("ch.trancee.cairn.ffi")
+                packages("ch.trancee.cairn.ffi", "ch.trancee.cairn.sdk.db")
             }
         }
         verify {

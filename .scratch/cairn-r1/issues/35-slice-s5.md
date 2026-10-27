@@ -22,3 +22,12 @@ ADR 0006; then couriers (issue 54).
 holds QUEUED chats, ACK/READ/EXPIRED notices and the four row actions; the
 FFI, the Kotlin `RowStore` and the Android app adopt them. Rust and Kover
 coverage are 100%. Steps 2 (SQLDelight) and the device demonstration remain.
+
+2026-10-29: step 2a on `feat/s5-sealed-storage`:
+[ADR 0035](../../../docs/adr/0035-sealed-row-storage.md) fixes the sealed row
+format, AAD and wipe-on-failure rule. The SDK gains the `Rows` and `RowSealer`
+seams and a SQLDelight `SealedRowStore`. `LinkDriver` commits one result's row
+actions in a single transaction before its other actions, and reports
+`STORAGE_RESET`. The app still uses the in-memory `RowStore`. Remaining work:
+the Android Keystore sealer (2b), the iOS CryptoKit sealer (2c) and the device
+demonstration.

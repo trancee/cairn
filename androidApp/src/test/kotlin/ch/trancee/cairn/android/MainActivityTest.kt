@@ -294,6 +294,9 @@ class MainActivityTest {
 
             model.onNotice(Notice.Fault(FaultKind.POISONED))
             compose.onNodeWithText(s(R.string.fault_poisoned)).assertIsDisplayed()
+
+            model.onNotice(Notice.Fault(FaultKind.STORAGE_RESET))
+            compose.onNodeWithText(s(R.string.fault_storage_reset)).assertIsDisplayed()
         }
     }
 

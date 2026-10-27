@@ -64,3 +64,10 @@ Platform floors are Android 8 (API 26) and iOS 15.
 ## Migration
 
 This is the first version. Changing the schema uses versioned SQLDelight migrations. Changing the wrapping or availability class requires re-wrapping on first launch after an upgrade, never a silent downgrade.
+
+## Amendments
+
+2026-10-27, from [ADR 0035](0035-sealed-row-storage.md):
+- A platform `RowSealer` (Android Keystore, iOS CryptoKit) seals every row, so the master key never reaches Kotlin common code. Queued rows are sealed too.
+- The AAD becomes `"cairn row v1" ‖ kind ‖ contact ‖ msgno ‖ version`, binding each row to its slot.
+- The tables are `device`, `contact` and `queued`. `history` waits until the core emits history rows.
