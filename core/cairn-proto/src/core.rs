@@ -1,5 +1,7 @@
 //! The `CairnCore` event loop (ADR 0004, ADR 0022).
 
+mod couriering;
+
 use crate::admission::{Admission, TieBreak, tie_break};
 use crate::beacon::{self, DayKey, day, window};
 use crate::card::Card;
@@ -11,9 +13,12 @@ use crate::framing::{
 };
 use crate::pairing::{AwaitingP2, AwaitingP3, AwaitingP4, Paired, PairingError};
 use crate::resume::{self, Chain, Initiator, MAX_ATTEMPT, ResumeError, respond, s1_pseudonym};
-use crate::state::{Contact, ContactRow, Device, Outgoing, Pending, Persisted, QueuedRow};
+use crate::state::{
+    Contact, ContactRow, CourierConfig, CourierRow, Device, Outgoing, Pending, Persisted,
+    QueuedRow, Tombstone,
+};
 use alloc::boxed::Box;
-use alloc::collections::BTreeMap;
+use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
@@ -76,6 +81,7 @@ pub enum Event {
         device: Option<Persisted>,
         contacts: Vec<ContactRow>,
         queued: Vec<QueuedRow>,
+        courier: Vec<CourierRow>,
     },
     LinkUp {
         link: LinkId,
@@ -116,6 +122,13 @@ pub enum Event {
     SetReadReceipts {
         enabled: bool,
     },
+    /// The courier settings (spec §8.1, ADR 0036 §4): `copies` is the copy
+    /// budget, 1–16, and `lifetime_minutes` the envelope lifetime, 60–10080.
+    SetCourier {
+        enabled: bool,
+        copies: u8,
+        lifetime_minutes: u16,
+    },
 }
 
 /// An output of [`Core::handle`], executed by the platform in order. The
@@ -141,6 +154,14 @@ pub enum Action {
     DeleteQueued {
         contact: ContactId,
         msgno: u32,
+    },
+    /// Seal and store one courier row: a carried envelope or a tombstone.
+    PutCourier {
+        slot: u64,
+        state: Persisted,
+    },
+    DeleteCourier {
+        slot: u64,
     },
     Send {
         link: LinkId,
@@ -214,6 +235,8 @@ pub enum CoreError {
     /// `BeaconRead` arrived on a peripheral link or after the first read.
     UnexpectedBeaconRead,
     UnknownContact,
+    /// Courier copies outside 1–16 or a lifetime outside 60–10080 minutes.
+    InvalidCourierConfig,
     Crypto(CryptoError),
 }
 
@@ -233,6 +256,7 @@ impl core::fmt::Display for CoreError {
             Self::InvalidMtu => "ATT MTU below 23",
             Self::UnexpectedBeaconRead => "beacon read outside a fresh central link",
             Self::UnknownContact => "unknown contact",
+            Self::InvalidCourierConfig => "courier settings out of range",
             Self::Crypto(_) => "cryptographic backend failure",
         })
     }
@@ -299,6 +323,7 @@ struct SessionLink {
     session: Session,
     /// R still holds `CK_n` and the pending `CK_{n+1}` until I's first DATA frame.
     unconfirmed: bool,
+    exchange: couriering::Exchange,
 }
 
 /// The result of one accepted pairing frame.
@@ -330,6 +355,10 @@ pub struct Core<B> {
     /// The texts of unacked in-session CHATs with their send times, kept to
     /// re-seal them as QUEUED when the link drops (ADR 0034 §2).
     unacked: BTreeMap<(ContactId, u32), (u64, Zeroizing<String>)>,
+    /// Envelope tags that failed to open, by the peer that sent them (spec §8.1).
+    bad_tags: BTreeSet<(ContactId, [u8; 16])>,
+    /// The recipient window's tags as last computed.
+    tags: BTreeMap<couriering::TagKey, [u8; 16]>,
     /// `Clock.unix_s` of the event being handled.
     now_s: u64,
     backend: PhantomData<B>,
@@ -351,6 +380,8 @@ impl<B: CryptoBackend> Core<B> {
             admission: Admission::default(),
             tries: BTreeMap::new(),
             unacked: BTreeMap::new(),
+            bad_tags: BTreeSet::new(),
+            tags: BTreeMap::new(),
             now_s: 0,
             backend: PhantomData,
         }
@@ -388,8 +419,10 @@ impl<B: CryptoBackend> Core<B> {
                 device,
                 contacts,
                 queued,
+                courier,
             } => {
-                self.restore(clock, device.as_ref(), &contacts, &queued, &mut actions)?;
+                let rows = (contacts.as_slice(), queued.as_slice(), courier.as_slice());
+                self.restore(clock, device.as_ref(), rows, &mut actions)?;
                 self.maintain(&mut actions);
             }
             Event::LinkUp {
@@ -425,6 +458,19 @@ impl<B: CryptoBackend> Core<B> {
                     state: device.row(),
                 });
             }
+            Event::SetCourier {
+                enabled,
+                copies,
+                lifetime_minutes,
+            } => {
+                let config = CourierConfig::new(enabled, copies, lifetime_minutes)
+                    .ok_or(CoreError::InvalidCourierConfig)?;
+                let device = self.device.as_mut().expect("restored");
+                device.courier = config;
+                actions.push(Action::PersistDevice {
+                    state: device.row(),
+                });
+            }
         }
         Ok(actions)
     }
@@ -433,16 +479,15 @@ impl<B: CryptoBackend> Core<B> {
         &mut self,
         clock: Clock,
         device: Option<&Persisted>,
-        contacts: &[ContactRow],
-        queued: &[QueuedRow],
+        (contacts, queued, courier): (&[ContactRow], &[QueuedRow], &[CourierRow]),
         actions: &mut Vec<Action>,
     ) -> Result<(), CoreError> {
         if self.device.is_some() {
             return Err(CoreError::AlreadyRestored);
         }
         if let Some(device) = device {
-            let restored =
-                Device::restore(device, contacts, queued).map_err(|_| CoreError::InvalidBlob)?;
+            let restored = Device::restore(device, contacts, queued, courier)
+                .map_err(|_| CoreError::InvalidBlob)?;
             let lost: Vec<ContactId> = restored
                 .contacts
                 .iter()
@@ -456,7 +501,7 @@ impl<B: CryptoBackend> Core<B> {
             }
             return Ok(());
         }
-        if !contacts.is_empty() || !queued.is_empty() {
+        if !contacts.is_empty() || !queued.is_empty() || !courier.is_empty() {
             return Err(CoreError::InvalidBlob);
         }
         let mut beacon_key = Zeroizing::new([0; 32]);
@@ -466,7 +511,10 @@ impl<B: CryptoBackend> Core<B> {
             beacon_key,
             next_contact: 0,
             read_receipts: true,
+            courier: CourierConfig::default(),
             contacts: Vec::new(),
+            held: BTreeMap::new(),
+            next_slot: 0,
         };
         actions.push(Action::PersistDevice {
             state: device.row(),
@@ -976,6 +1024,7 @@ impl<B: CryptoBackend> Core<B> {
             return Ok(());
         }
         let mut shown = Vec::new();
+        let mut replies = Vec::new();
         let mut ack_due = false;
         let mut malformed = false;
         for record in records {
@@ -1018,17 +1067,26 @@ impl<B: CryptoBackend> Core<B> {
                         shown.push(Action::ChatsExpired { contact, from, to });
                     }
                 }
+                Record::Courier(courier) => {
+                    if self.courier_record(contact, courier, &mut replies, &mut shown, actions)? {
+                        malformed = true;
+                        break;
+                    }
+                }
             }
         }
         self.persist_contact(contact, actions);
         actions.extend(shown);
         if malformed {
             self.close(id, actions);
-        } else if ack_due {
-            let ack = Record::Ack(self.contact(contact).received.contiguous);
-            self.send_records(contact, vec![ack], actions)?;
+            return Ok(());
         }
-        Ok(())
+        let ack = ack_due.then(|| Record::Ack(self.contact(contact).received.contiguous));
+        let records = ack
+            .into_iter()
+            .chain(replies.into_iter().map(Record::Courier))
+            .collect();
+        self.send_records(contact, records, actions)
     }
 
     /// Shows a received message unless it is a duplicate.
@@ -1067,11 +1125,19 @@ impl<B: CryptoBackend> Core<B> {
         record.unacked.retain(|&sent| sent > msgno);
         let rest = record.queued.split_off(&(msgno + 1));
         let queued = core::mem::replace(&mut record.queued, rest);
-        for &sent in queued.keys() {
+        for (&sent, outgoing) in &queued {
             actions.push(Action::DeleteQueued {
                 contact,
                 msgno: sent,
             });
+            if let Some(own) = &outgoing.envelope {
+                let tombstone = Tombstone {
+                    tag: own.tag,
+                    s: *own.s,
+                    expiry_min: own.expiry_min,
+                };
+                self.store_tombstone(tombstone, actions);
+            }
         }
         delivered.extend(queued.into_keys());
         delivered.sort_unstable();
@@ -1134,14 +1200,18 @@ impl<B: CryptoBackend> Core<B> {
         }
         let now = self.now_s;
         let record = self.contact_mut(contact);
-        let Some(queued) = record.send.as_mut().expect("checked").seal::<B>(&inner)? else {
+        let Some((queued, delivered)) = record.send.as_mut().expect("checked").seal::<B>(&inner)?
+        else {
             actions.push(reject(ChatRejection::Exhausted));
             return Ok(());
         };
         record.sent_msgno = msgno;
+        let envelope = self.own_envelope(contact, &queued, delivered, inner.len())?;
+        let record = self.contact_mut(contact);
         let outgoing = Outgoing {
             created_s: now,
             queued,
+            envelope,
         };
         let row = outgoing.row(contact, msgno);
         record.queued.insert(msgno, outgoing);
@@ -1187,10 +1257,7 @@ impl<B: CryptoBackend> Core<B> {
         own: Dir,
         actions: &mut Vec<Action>,
     ) -> Result<(), CoreError> {
-        let peer = match own {
-            Dir::I => Dir::R,
-            Dir::R => Dir::I,
-        };
+        let peer = own.peer();
         let send = chain::seed::<B>(msg_seed, own)?;
         let receive = chain::seed::<B>(msg_seed, peer)?;
         let now = self.now_s;
@@ -1204,10 +1271,11 @@ impl<B: CryptoBackend> Core<B> {
             .collect();
         record.send = Some(SendChain {
             gen_,
+            dir: own,
             idx: 0,
             key: send,
         });
-        record.receiver.reseed(gen_, receive, now);
+        record.receiver.reseed(gen_, peer, receive, now);
         self.expire_messages(contact, &colliding, actions);
         Ok(())
     }
@@ -1266,6 +1334,7 @@ impl<B: CryptoBackend> Core<B> {
             }
             self.expire_messages(contact, &stale, actions);
         }
+        self.maintain_couriers(actions);
     }
 
     /// Re-seals the contact's unacked in-session CHATs as QUEUED under the
@@ -1290,14 +1359,21 @@ impl<B: CryptoBackend> Core<B> {
                 .ok()
                 .flatten()
                 .flatten();
-            match sealed {
-                Some(queued) => {
-                    let outgoing = Outgoing { created_s, queued };
-                    rows.push(outgoing.row(contact, msgno));
-                    record.queued.insert(msgno, outgoing);
-                }
-                None => lost.push(msgno),
-            }
+            let Some((queued, delivered)) = sealed else {
+                lost.push(msgno);
+                continue;
+            };
+            let envelope = self
+                .own_envelope(contact, &queued, delivered, inner.len())
+                .ok()
+                .flatten();
+            let outgoing = Outgoing {
+                created_s,
+                queued,
+                envelope,
+            };
+            rows.push(outgoing.row(contact, msgno));
+            self.contact_mut(contact).queued.insert(msgno, outgoing);
         }
         self.persist_contact(contact, actions);
         actions.extend(rows.into_iter().map(|row| Action::PutQueued {
@@ -1327,6 +1403,7 @@ impl<B: CryptoBackend> Core<B> {
         if receipts && record.read_marked > 0 {
             records.push(Record::Read(record.read_marked));
         }
+        records.extend(self.inventory(contact).into_iter().map(Record::Courier));
         self.send_records(contact, records, actions)
     }
 
@@ -1391,6 +1468,7 @@ impl<B: CryptoBackend> Core<B> {
             contact,
             session,
             unconfirmed,
+            exchange: couriering::Exchange::default(),
         }));
     }
 
@@ -1606,16 +1684,17 @@ fn check_mtu(mtu: u16) -> Result<(), CoreError> {
 mod tests {
     use super::*;
     use crate::chain::{Queued, ReceiveChain, Receiver, SendChain};
+    use crate::data::CourierRecord;
     use crate::resume::Keys;
-    use crate::state::Received;
+    use crate::state::{Held, Received};
     use cairn_crypto::Reference;
 
-    const CLOCK: Clock = Clock {
+    pub(super) const CLOCK: Clock = Clock {
         mono_ms: 0,
         unix_s: 1_761_177_600,
     };
-    const LINK: LinkId = LinkId(0);
-    const CONTACT: ContactId = ContactId(0);
+    pub(super) const LINK: LinkId = LinkId(0);
+    pub(super) const CONTACT: ContactId = ContactId(0);
 
     fn keys() -> Keys {
         Keys {
@@ -1643,6 +1722,7 @@ mod tests {
             },
             door_a_to_b: Zeroizing::new([8; 32]),
             door_b_to_a: Zeroizing::new([9; 32]),
+            route_key: Zeroizing::new([12; 32]),
             resume_index: 0,
             chain_key: Zeroizing::new([10; 32]),
             sent_msgno,
@@ -1666,12 +1746,13 @@ mod tests {
         device: None,
         contacts: Vec::new(),
         queued: Vec::new(),
+        courier: Vec::new(),
     };
 
     /// R's core in `session` with contact 0 on `LINK`, and I's session;
     /// `unconfirmed` leaves R holding `CK_{n+1}`. Contact 0 has a message
     /// chain; contact 1 has never resumed.
-    fn in_session(
+    pub(super) fn in_session(
         sent_msgno: u32,
         session: Session,
         unconfirmed: bool,
@@ -1682,6 +1763,7 @@ mod tests {
         let mut resumed = contact(CONTACT, sent_msgno, unconfirmed);
         resumed.send = Some(SendChain {
             gen_: 0,
+            dir: Dir::R,
             idx: 0,
             key: Zeroizing::new([14; 32]),
         });
@@ -1701,11 +1783,12 @@ mod tests {
             contact: CONTACT,
             session,
             unconfirmed,
+            exchange: couriering::Exchange::default(),
         }));
         (core, Session::new(&keys(), true))
     }
 
-    fn responder() -> Session {
+    pub(super) fn responder() -> Session {
         Session::new(&keys(), false)
     }
 
@@ -1862,6 +1945,18 @@ mod tests {
     }
 
     #[test]
+    fn a_second_inventory_end_closes_the_link() {
+        let (mut core, mut peer) = in_session(0, responder(), false);
+        let end = || Record::Courier(CourierRecord::Inventory(Vec::new()));
+        let frame = sealed(&mut peer, &[end(), end()]);
+
+        let actions = receive(&mut core, frame);
+
+        assert_eq!(actions.last(), Some(&Action::Disconnect { link: LINK }));
+        assert!(core.links.is_empty());
+    }
+
+    #[test]
     #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
     fn a_contact_out_of_message_numbers_rejects_chats() {
         let (mut core, _) = in_session(u32::MAX, responder(), false);
@@ -1957,27 +2052,72 @@ mod tests {
                 idx: 0,
                 ct: vec![0; 48],
             },
+            envelope: None,
         };
-        let restore = |contacts, queued| {
+        let tombstone = Held::Tombstone(crate::state::Tombstone {
+            tag: [1; 16],
+            s: [1; 16],
+            expiry_min: 1,
+        });
+        let restore = |contacts, queued, courier| {
             Core::<Reference>::new().handle(
                 CLOCK,
                 Event::Restore {
                     device: None,
                     contacts,
                     queued,
+                    courier,
                 },
             )
         };
 
         let results = [
-            restore(vec![contact(CONTACT, 0, false).row()], Vec::new()),
-            restore(Vec::new(), vec![queued.row(CONTACT, 1)]),
+            restore(
+                vec![contact(CONTACT, 0, false).row()],
+                Vec::new(),
+                Vec::new(),
+            ),
+            restore(Vec::new(), vec![queued.row(CONTACT, 1)], Vec::new()),
+            restore(Vec::new(), Vec::new(), vec![tombstone.row(0)]),
         ];
 
         assert_eq!(
             results,
-            [Err(CoreError::InvalidBlob), Err(CoreError::InvalidBlob)]
+            [
+                Err(CoreError::InvalidBlob),
+                Err(CoreError::InvalidBlob),
+                Err(CoreError::InvalidBlob)
+            ]
         );
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn courier_settings_outside_their_ranges_are_refused() {
+        let mut core = in_session(0, responder(), false).0;
+        let mut set = |copies, lifetime_minutes| {
+            core.handle(
+                CLOCK,
+                Event::SetCourier {
+                    enabled: true,
+                    copies,
+                    lifetime_minutes,
+                },
+            )
+            .err()
+        };
+
+        let results = [
+            set(0, 1440),
+            set(17, 1440),
+            set(6, 59),
+            set(6, 10_081),
+            set(16, 60),
+            set(1, 10_080),
+        ];
+
+        let refused = Some(CoreError::InvalidCourierConfig);
+        assert_eq!(results, [refused, refused, refused, refused, None, None]);
     }
 
     #[test]
@@ -2022,7 +2162,7 @@ mod tests {
     fn a_queued_record_that_does_not_open_closes_the_link() {
         let (mut core, mut peer) = in_session(0, responder(), false);
         let receiver = &mut core.contact_mut(CONTACT).receiver;
-        receiver.reseed(0, Zeroizing::new([15; 32]), CLOCK.unix_s);
+        receiver.reseed(0, Dir::R, Zeroizing::new([15; 32]), CLOCK.unix_s);
         let forged = Record::Queued(Queued {
             gen_: 0,
             idx: 0,
@@ -2120,6 +2260,7 @@ mod tests {
         let (mut core, _) = in_session(0, responder(), false);
         core.contact_mut(ContactId(1)).send = Some(SendChain {
             gen_: 0,
+            dir: Dir::R,
             idx: 0,
             key: Zeroizing::new([14; 32]),
         });
@@ -2158,6 +2299,7 @@ mod tests {
             .chains
             .push(ReceiveChain {
                 gen_: 3,
+                dir: Dir::R,
                 next: 0,
                 key: Zeroizing::new([15; 32]),
                 superseded_s: Some(CLOCK.unix_s - RETENTION_S),
@@ -2207,6 +2349,7 @@ mod tests {
             device: Some(device.row()),
             contacts: device.contacts.iter().map(Contact::row).collect(),
             queued: Vec::new(),
+            courier: Vec::new(),
         };
         let mut restarted = Core::<Reference>::new();
 
@@ -2225,14 +2368,15 @@ mod tests {
         let (mut core, mut peer) = in_session(0, responder(), false);
         let key = || Zeroizing::new([15; 32]);
         let receiver = &mut core.contact_mut(CONTACT).receiver;
-        receiver.reseed(0, key(), CLOCK.unix_s);
+        receiver.reseed(0, Dir::R, key(), CLOCK.unix_s);
         let mut chain = SendChain {
             gen_: 0,
+            dir: Dir::R,
             idx: 0,
             key: key(),
         };
         let inner = chain::inner(1, "later").unwrap();
-        let queued = chain.seal::<Reference>(&inner).unwrap().unwrap();
+        let (queued, _) = chain.seal::<Reference>(&inner).unwrap().unwrap();
         let frame = sealed(&mut peer, &[Record::Queued(queued)]);
 
         let actions = receive(&mut core, frame);
@@ -2259,6 +2403,7 @@ mod tests {
                 idx: 0,
                 ct: vec![0; 48],
             },
+            envelope: None,
         };
         core.contact_mut(CONTACT).queued.insert(1, outgoing);
 
@@ -2344,6 +2489,58 @@ mod tests {
 
     #[test]
     #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn an_ack_tombstones_the_envelope_of_a_delivered_chat() {
+        let (mut core, mut peer) = in_session(1, responder(), false);
+        let outgoing = Outgoing {
+            created_s: CLOCK.unix_s,
+            queued: Queued {
+                gen_: 0,
+                idx: 0,
+                ct: vec![0; 48],
+            },
+            envelope: Some(crate::state::OwnEnvelope {
+                tag: [7; 16],
+                s: Zeroizing::new([8; 16]),
+                expiry_min: u32::MAX,
+                copies: 6,
+                renewed: false,
+            }),
+        };
+        core.contact_mut(CONTACT).queued.insert(1, outgoing);
+        let frame = sealed(&mut peer, &[Record::Ack(1)]);
+
+        receive(&mut core, frame);
+
+        let held: Vec<&Held> = core.device.as_ref().unwrap().held.values().collect();
+        let tombstone = Held::Tombstone(crate::state::Tombstone {
+            tag: [7; 16],
+            s: [8; 16],
+            expiry_min: u32::MAX,
+        });
+        assert_eq!(held, [&tombstone]);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+    fn a_device_blob_that_does_not_decode_is_invalid() {
+        let device = Persisted {
+            blob: vec![0xff],
+            version: 1,
+        };
+        let restore = Event::Restore {
+            device: Some(device),
+            contacts: Vec::new(),
+            queued: Vec::new(),
+            courier: Vec::new(),
+        };
+
+        let result = Core::<Reference>::new().handle(CLOCK, restore);
+
+        assert_eq!(result, Err(CoreError::InvalidBlob));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
     fn an_ack_delivers_unacked_and_queued_chats_in_order() {
         let (mut core, mut peer) = in_session(2, responder(), false);
         let outgoing = Outgoing {
@@ -2353,6 +2550,7 @@ mod tests {
                 idx: 0,
                 ct: vec![0; 48],
             },
+            envelope: None,
         };
         let record = core.contact_mut(CONTACT);
         record.unacked = vec![1];

@@ -25,7 +25,7 @@ class SessionTest {
         app.session
         app.session
 
-        assertEquals(listOf<Event>(Event.Restore(null, emptyList(), emptyList())), app.engine.events)
+        assertEquals(listOf<Event>(Event.Restore(null, emptyList(), emptyList(), emptyList())), app.engine.events)
     }
 
     @Test
@@ -175,7 +175,7 @@ class SessionTest {
 
         val session = restart(engine)
 
-        assertEquals(listOf<Event>(Event.Restore(null, emptyList(), emptyList())), engine.events)
+        assertEquals(listOf<Event>(Event.Restore(null, emptyList(), emptyList(), emptyList())), engine.events)
         assertEquals(FaultKind.STORAGE_RESET, session.model.fault)
     }
 

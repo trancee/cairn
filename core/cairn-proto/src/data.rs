@@ -1,6 +1,7 @@
 //! DATA frames, padding and records (spec §7).
 
 use crate::chain::Queued;
+use crate::courier::{Custody, Envelope};
 use crate::resume::Keys;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -16,6 +17,11 @@ const QUEUED: u8 = 0x02;
 const ACK: u8 = 0x03;
 const READ: u8 = 0x04;
 const EXPIRED: u8 = 0x05;
+const INVENTORY: u8 = 0x0e;
+const FETCH: u8 = 0x0f;
+const ENVELOPE: u8 = 0x10;
+const CUSTODY: u8 = 0x11;
+const TOMB: u8 = 0x12;
 /// An all-padding plaintext: I's key confirmation right after S2 (ADR 0022).
 pub(crate) const EMPTY: [u8; 32] = [0; 32];
 /// A sender closes the session before `ctr` reaches 2^32 (spec §7.1).
@@ -49,6 +55,91 @@ pub(crate) enum Record {
         from: u32,
         to: u32,
     },
+    Courier(CourierRecord),
+}
+
+/// A record of the courier exchange (spec §8.1).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum CourierRecord {
+    /// `Trunc8` tags of held envelopes; an empty list ends the inventory.
+    Inventory(Vec<[u8; 8]>),
+    Fetch([u8; 16]),
+    Envelope(Envelope),
+    Custody {
+        tag: [u8; 16],
+        code: Custody,
+    },
+    Tomb {
+        tag: [u8; 16],
+        s: [u8; 16],
+    },
+}
+
+impl CourierRecord {
+    /// Appends the body to `body` and returns the record type.
+    fn encode(&self, body: &mut Vec<u8>) -> Result<u8, TooLong> {
+        Ok(match self {
+            Self::Inventory(tags) => {
+                for tag in tags {
+                    body.extend_from_slice(tag);
+                }
+                INVENTORY
+            }
+            Self::Fetch(tag) => {
+                body.extend_from_slice(tag);
+                FETCH
+            }
+            Self::Envelope(envelope) => {
+                if envelope.ct.len() > BUCKETS[7] {
+                    return Err(TooLong);
+                }
+                envelope.encode(body);
+                ENVELOPE
+            }
+            Self::Custody { tag, code } => {
+                body.extend_from_slice(tag);
+                body.push(*code as u8);
+                CUSTODY
+            }
+            Self::Tomb { tag, s } => {
+                body.extend_from_slice(tag);
+                body.extend_from_slice(s);
+                TOMB
+            }
+        })
+    }
+
+    /// One courier record body of type `kind`.
+    fn decode(kind: u8, body: &[u8]) -> Result<Self, Malformed> {
+        match kind {
+            INVENTORY => {
+                let (tags, rest) = body.as_chunks::<8>();
+                if !rest.is_empty() {
+                    return Err(Malformed);
+                }
+                Ok(Self::Inventory(tags.to_vec()))
+            }
+            FETCH => <[u8; 16]>::try_from(body)
+                .map(Self::Fetch)
+                .map_err(|_| Malformed),
+            ENVELOPE => Envelope::decode(body).map(Self::Envelope).ok_or(Malformed),
+            CUSTODY => match body.split_first_chunk::<16>() {
+                Some((tag, [code])) => Ok(Self::Custody {
+                    tag: *tag,
+                    code: Custody::from_code(*code).ok_or(Malformed)?,
+                }),
+                _ => Err(Malformed),
+            },
+            TOMB => match body.split_first_chunk::<16>() {
+                Some((tag, s)) => Ok(Self::Tomb {
+                    tag: *tag,
+                    s: <[u8; 16]>::try_from(s).map_err(|_| Malformed)?,
+                }),
+                None => Err(Malformed),
+            },
+            _ => Err(Malformed),
+        }
+    }
 }
 
 /// Appends the minimal unsigned LEB128 encoding of `value`.
@@ -109,6 +200,7 @@ pub(crate) fn plaintext(records: &[Record]) -> Result<Zeroizing<Vec<u8>>, TooLon
                 leb128(*to, &mut body);
                 EXPIRED
             }
+            Record::Courier(courier) => courier.encode(&mut body)?,
         };
         plaintext.push(kind);
         leb128(body.len() as u32, &mut plaintext);
@@ -158,7 +250,7 @@ fn record(kind: u8, body: &[u8]) -> Result<Record, Malformed> {
             }
             Ok(Record::Expired { from, to })
         }
-        _ => Err(Malformed),
+        _ => CourierRecord::decode(kind, body).map(Record::Courier),
     }
 }
 
@@ -276,6 +368,7 @@ pub(crate) fn peer_fault(error: CryptoError) -> Result<(), CryptoError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::courier::{Custody, Envelope};
     use cairn_crypto::Reference;
 
     fn encoded(value: u32) -> std::vec::Vec<u8> {
@@ -420,6 +513,107 @@ mod tests {
     }
 
     #[test]
+    fn courier_records_round_trip_in_one_plaintext() {
+        let records = [
+            CourierRecord::Inventory(std::vec![[1; 8], [2; 8]]),
+            CourierRecord::Inventory(std::vec![]),
+            CourierRecord::Fetch([3; 16]),
+            CourierRecord::Envelope(Envelope {
+                tag: [4; 16],
+                c: [5; 16],
+                expiry_min: 0x0102_0304,
+                copies: 6,
+                ct: std::vec![7; 48],
+            }),
+            CourierRecord::Custody {
+                tag: [8; 16],
+                code: Custody::Invalid,
+            },
+            CourierRecord::Tomb {
+                tag: [9; 16],
+                s: [10; 16],
+            },
+        ]
+        .map(Record::Courier);
+
+        let plaintext = plaintext(&records).unwrap();
+
+        assert_eq!(plaintext[..4], [INVENTORY, 16, 1, 1]);
+        assert_eq!(plaintext[18..22], [INVENTORY, 0, FETCH, 16]);
+        assert_eq!(plaintext[38..41], [ENVELOPE, 85, 4]);
+        assert_eq!(plaintext[72..78], [1, 2, 3, 4, 6, 7]);
+        assert_eq!(plaintext[125..128], [CUSTODY, 17, 8]);
+        assert_eq!(plaintext[143..147], [4, TOMB, 32, 9]);
+        assert_eq!(parse(&plaintext), Ok(records.to_vec()));
+    }
+
+    #[test]
+    fn every_custody_code_round_trips() {
+        let codes = [
+            Custody::Accepted,
+            Custody::Full,
+            Custody::Duplicate,
+            Custody::Off,
+            Custody::Invalid,
+        ];
+
+        let record = |code| Record::Courier(CourierRecord::Custody { tag: [0; 16], code });
+
+        let parsed = codes.map(|code| parse(&plaintext(&[record(code)]).unwrap()));
+
+        assert_eq!(parsed, codes.map(|code| Ok(std::vec![record(code)])));
+        assert_eq!(codes.map(|code| code as u8), [0, 1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn bad_courier_records_are_malformed() {
+        let mut short_envelope = std::vec![ENVELOPE, 36];
+        short_envelope.resize(38, 1);
+        let plaintexts: [&[u8]; 8] = [
+            &[INVENTORY, 0x07, 0, 0, 0, 0, 0, 0, 0],
+            &[TOMB, 0x0f, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            &[FETCH, 0x0f, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            &[TOMB, 0x10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            &[
+                CUSTODY, 0x10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ],
+            &[
+                CUSTODY, 0x11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5,
+            ],
+            &short_envelope,
+            &[INVENTORY, 0x03, 0, 0, 0],
+        ];
+
+        let results = plaintexts.map(|plaintext| parse(plaintext).err());
+
+        assert_eq!(results, [Some(Malformed); 8]);
+    }
+
+    #[test]
+    fn an_envelope_with_any_ciphertext_length_parses_but_a_huge_one_does_not_seal() {
+        let envelope = |length| {
+            Record::Courier(CourierRecord::Envelope(Envelope {
+                tag: [0; 16],
+                c: [0; 16],
+                expiry_min: 0,
+                copies: 0,
+                ct: std::vec![0; length],
+            }))
+        };
+
+        let results = (
+            parse(&plaintext(&[envelope(3)]).unwrap()),
+            plaintext(&[envelope(4079)]).err(),
+            plaintext(&[envelope(4080)]).err(),
+        );
+
+        assert_eq!(
+            results,
+            (Ok(std::vec![envelope(3)]), Some(TooLong), Some(TooLong))
+        );
+    }
+
+    #[test]
     fn a_largest_queued_record_fits_the_4079_byte_bucket() {
         let queued = Record::Queued(Queued {
             gen_: 1,
@@ -471,7 +665,7 @@ mod tests {
     fn bad_plaintexts_are_malformed() {
         let plaintexts: [&[u8]; 8] = [
             &[0x02, 0x01],
-            &[0x0e, 0x00],
+            &[0x13, 0x00],
             &[0x01, 0x05, 0x01, b'a'],
             &[0x01, 0x02, 0x01, b'a', 0x00, 0x00, 0x01],
             &[0x01, 0x02, 0x00, b'a'],

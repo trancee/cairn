@@ -21,6 +21,13 @@ CREATE TABLE queued (
     PRIMARY KEY (contact, msgno)
 );
 
+-- Carried envelopes and tombstones, keyed by the core's slot (ADR 0036 §3).
+CREATE TABLE courier (
+    slot INTEGER NOT NULL PRIMARY KEY,
+    version INTEGER NOT NULL,
+    ciphertext BLOB NOT NULL
+);
+
 putDevice:
 INSERT OR REPLACE INTO device (id, version, ciphertext) VALUES (0, ?, ?);
 
@@ -33,6 +40,12 @@ INSERT OR REPLACE INTO queued (contact, msgno, version, ciphertext) VALUES (?, ?
 deleteQueued:
 DELETE FROM queued WHERE contact = ? AND msgno = ?;
 
+putCourier:
+INSERT OR REPLACE INTO courier (slot, version, ciphertext) VALUES (?, ?, ?);
+
+deleteCourier:
+DELETE FROM courier WHERE slot = ?;
+
 device:
 SELECT version, ciphertext FROM device;
 
@@ -42,6 +55,9 @@ SELECT id, version, ciphertext FROM contact;
 queuedRows:
 SELECT contact, msgno, version, ciphertext FROM queued;
 
+courierRows:
+SELECT slot, version, ciphertext FROM courier;
+
 wipeDevice:
 DELETE FROM device;
 
@@ -50,3 +66,6 @@ DELETE FROM contact;
 
 wipeQueued:
 DELETE FROM queued;
+
+wipeCourier:
+DELETE FROM courier;

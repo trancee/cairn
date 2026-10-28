@@ -143,6 +143,14 @@ class LinkDriver(
     /** Turns sending and showing read receipts on or off, for every contact. */
     fun setReadReceipts(enabled: Boolean) = dispatch(Event.SetReadReceipts(enabled))
 
+    /**
+     * Sets couriering: carrying envelopes for others, and the [copies] (1–16) and [lifetimeMinutes]
+     * (60–10080) of this device's own envelopes. Out-of-range values throw
+     * [CoreException.InvalidCourierConfig].
+     */
+    fun setCourier(enabled: Boolean, copies: UByte, lifetimeMinutes: UShort) =
+        dispatch(Event.SetCourier(enabled, copies, lifetimeMinutes))
+
     /** The value for the local `beacon` characteristic. */
     override fun beacon(): ByteArray = query { it.beacon(clock.now().unixS) }
 
@@ -210,7 +218,9 @@ class LinkDriver(
 
     private fun perform(action: Action) {
         when (action) {
-            is Action.PersistDevice, is Action.PersistContact, is Action.PutQueued, is Action.DeleteQueued -> {}
+            is Action.PersistDevice, is Action.PersistContact, is Action.PutQueued, is Action.DeleteQueued,
+            is Action.PutCourier, is Action.DeleteCourier,
+            -> {}
             is Action.Send -> enqueue(action.link, action.fragment)
             is Action.Disconnect -> links[action.link]?.let { disconnect(action.link, it) }
             is Action.SetTimer -> {

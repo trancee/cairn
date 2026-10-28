@@ -33,6 +33,7 @@ mod beacon;
 mod card;
 mod chain;
 mod core;
+mod courier;
 mod data;
 mod epoch;
 mod framing;
@@ -53,7 +54,7 @@ pub use epoch::{Epoch, EpochExhausted, ObjectKind, PairingRole};
 pub use framing::{
     MtuTooSmall, PRE_AUTH_FRAME_LIMIT, Reassembler, ReassemblyError, SESSION_FRAME_LIMIT, fragment,
 };
-pub use state::{ContactRow, Persisted, QueuedRow};
+pub use state::{ContactRow, CourierRow, Persisted, QueuedRow};
 pub use transfer::{
     ChunkOutcome, IncomingObject, ObjectLengthInvalid, OutgoingChunk, OutgoingObject,
     ProgressRejected, TransferInvalid,

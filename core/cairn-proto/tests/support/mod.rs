@@ -6,8 +6,8 @@
 pub mod seeded;
 
 use cairn_proto::{
-    Action, Clock, ContactId, ContactRow, Core, Event, GattRole, LinkId, Persisted, QueuedRow,
-    TimerId,
+    Action, Clock, ContactId, ContactRow, Core, CourierRow, Event, GattRole, LinkId, Persisted,
+    QueuedRow, TimerId,
 };
 use seeded::Seeded;
 use std::collections::{BTreeMap, VecDeque};
@@ -24,6 +24,7 @@ pub struct Store {
     pub device: Option<Persisted>,
     pub contacts: BTreeMap<ContactId, Persisted>,
     pub queued: BTreeMap<(ContactId, u32), Persisted>,
+    pub courier: BTreeMap<u64, Persisted>,
 }
 
 impl Store {
@@ -48,6 +49,14 @@ impl Store {
                     state: state.clone(),
                 })
                 .collect(),
+            courier: self
+                .courier
+                .iter()
+                .map(|(&slot, state)| CourierRow {
+                    slot,
+                    state: state.clone(),
+                })
+                .collect(),
         }
     }
 
@@ -67,6 +76,12 @@ impl Store {
             }
             Action::DeleteQueued { contact, msgno } => {
                 self.queued.remove(&(*contact, *msgno));
+            }
+            Action::PutCourier { slot, state } => {
+                self.courier.insert(*slot, state.clone());
+            }
+            Action::DeleteCourier { slot } => {
+                self.courier.remove(slot);
             }
             _ => return false,
         }
@@ -234,6 +249,15 @@ impl Net {
         let (peer, peer_link) = self.ends[&(device, link)];
         self.lose(device, link);
         self.inject(peer, Event::LinkDown { link: peer_link });
+        self.run();
+    }
+
+    /// Replaces `device`'s core with one restored from its rows.
+    pub fn restart(&mut self, device: usize) {
+        self.devices[device].core = Core::new();
+        self.devices[device].timers.clear();
+        let restore = self.devices[device].store.restore();
+        self.inject(device, restore);
         self.run();
     }
 

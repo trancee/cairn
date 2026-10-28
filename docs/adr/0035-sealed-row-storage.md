@@ -47,8 +47,8 @@ the 2^32 seals NIST SP 800-38D allows under one key with random nonces.
 AAD = "cairn row v1" ‖ kind(1) ‖ u64be(contact) ‖ u32be(msgno) ‖ u32be(version)
 ```
 
-`kind` is 0 for the device row, 1 for a contact row and 2 for a queued
-row. Fields a kind lacks are zero. A row copied into another slot, or
+`kind` is 0 for the device row, 1 for a contact row, 2 for a queued
+row and 3 for a courier row ([ADR 0036](0036-courier-state.md) §3). Fields a kind lacks are zero. A row copied into another slot, or
 relabelled with another version, fails to open.
 
 ### 3. Schema
@@ -57,6 +57,8 @@ One SQLDelight database with three tables: `device` (at most one row),
 `contact` (keyed by contact id) and `queued` (keyed by contact id and
 `msgno`). Each row stores `version` in clear and the sealed blob.
 `history` waits until the core produces history rows.
+[ADR 0036](0036-courier-state.md) adds a fourth table, `courier`, keyed
+by slot.
 
 ### 4. Atomicity
 

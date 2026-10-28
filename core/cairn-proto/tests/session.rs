@@ -4,7 +4,7 @@ mod support;
 
 use cairn_proto::{Action, ChatRejection, ContactId, Core, CoreError, Event, LinkId};
 use support::seeded::Seeded;
-use support::{Net, START};
+use support::{Intercept, Net, START};
 
 const STRANGER_BEACON: [u8; 8] = [0x5a; 8];
 const DAY_S: u64 = 86_400;
@@ -84,6 +84,16 @@ fn is_persist(action: &Action) -> bool {
     matches!(action, Action::PersistContact { .. })
 }
 
+/// Drops everything `silent` sends from its S2 on: an ordered link that
+/// stalls after S1, so the responder's S2 and session frames never arrive.
+fn silence_after_s2(silent: usize) -> Intercept {
+    let mut stalled = false;
+    Box::new(move |device, fragment| {
+        stalled |= device == silent && fragment[0] == 0x20;
+        !(stalled && device == silent)
+    })
+}
+
 #[test]
 #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
 fn the_central_resumes_right_after_pairing_and_confirms_with_empty_data() {
@@ -91,11 +101,11 @@ fn the_central_resumes_right_after_pairing_and_confirms_with_empty_data() {
 
     assert_eq!(
         first_fragment_headers(&net, 0, central),
-        [0x00, 0x02, 0x04, 0x10, 0x30]
+        [0x00, 0x02, 0x04, 0x10, 0x30, 0x30]
     );
     assert_eq!(
         first_fragment_headers(&net, 1, peripheral),
-        [0x01, 0x03, 0x20]
+        [0x01, 0x03, 0x20, 0x30]
     );
     assert!(received(&net, 1).is_empty(), "confirmation carries no chat");
 }
@@ -266,9 +276,7 @@ fn an_unconfirmed_responder_alternates_its_pending_and_current_keys() {
     );
     net.run();
     net.drop_link(0, central);
-    net.intercept = Some(Box::new(|device, fragment| {
-        !(device == 0 && fragment[0] == 0x20)
-    }));
+    net.intercept = Some(silence_after_s2(0));
 
     let mut answers = Vec::new();
     for attempt in 0..3 {
@@ -282,7 +290,7 @@ fn an_unconfirmed_responder_alternates_its_pending_and_current_keys() {
     }
     chat(&mut net, 1, "made it");
 
-    assert_eq!(answers, [vec![0x20], vec![], vec![0x20]]);
+    assert_eq!(answers, [vec![0x20, 0x30], vec![], vec![0x20, 0x30]]);
     assert_eq!(received(&net, 0), [(ContactId(0), 1, "made it".into())]);
 }
 
@@ -323,9 +331,7 @@ fn tampered_resume_or_data_frames_close_the_link_without_back_off() {
 #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
 fn an_unanswered_s1_times_out() {
     let mut net = Net::new(2, 113);
-    net.intercept = Some(Box::new(|device, fragment| {
-        !(device == 1 && fragment[0] == 0x20)
-    }));
+    net.intercept = Some(silence_after_s2(1));
     let (central, _) = net.connect(0, 1);
     net.inject(
         0,
@@ -364,9 +370,7 @@ fn a_second_link_to_a_contact_in_session_is_closed() {
 fn a_second_link_to_a_contact_mid_resume_is_closed() {
     let (mut net, central, _) = paired(120);
     net.drop_link(0, central);
-    net.intercept = Some(Box::new(|device, fragment| {
-        !(device == 1 && fragment[0] == 0x20)
-    }));
+    net.intercept = Some(silence_after_s2(1));
     let (resuming, _) = net.connect(0, 1);
     net.read_beacon_of(0, resuming, 1);
 

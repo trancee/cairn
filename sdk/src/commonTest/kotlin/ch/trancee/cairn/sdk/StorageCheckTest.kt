@@ -17,7 +17,7 @@ private class ResetRows(private val inner: Rows) : Rows by inner {
 private class LostRows : Rows {
     override fun commit(actions: List<Action>) = Unit
 
-    override fun restore(): Restored = Restored(Event.Restore(null, emptyList(), emptyList()))
+    override fun restore(): Restored = Restored(Event.Restore(null, emptyList(), emptyList(), emptyList()))
 }
 
 class StorageCheckTest {

@@ -22,4 +22,4 @@ class TimedRows(
 
 private fun Action.isRow() =
     this is Action.PersistDevice || this is Action.PersistContact || this is Action.PutQueued ||
-        this is Action.DeleteQueued
+        this is Action.DeleteQueued || this is Action.PutCourier || this is Action.DeleteCourier

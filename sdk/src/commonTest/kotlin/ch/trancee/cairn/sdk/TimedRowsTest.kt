@@ -32,12 +32,19 @@ class TimedRowsTest {
     }
 
     @Test
-    fun deletesAndContactsCountAsRows() {
+    fun deletesContactsAndCourierRowsCountAsRows() {
         val reports = mutableListOf<Int>()
         val rows = TimedRows(RowStore(), { 0L }) { count, _ -> reports += count }
 
-        rows.commit(listOf(Action.PersistContact(7uL, row), Action.DeleteQueued(7uL, 1u)))
+        rows.commit(
+            listOf(
+                Action.PersistContact(7uL, row),
+                Action.DeleteQueued(7uL, 1u),
+                Action.PutCourier(1uL, row),
+                Action.DeleteCourier(2uL),
+            ),
+        )
 
-        assertEquals(listOf(2), reports)
+        assertEquals(listOf(4), reports)
     }
 }
