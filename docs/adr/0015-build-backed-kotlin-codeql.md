@@ -388,12 +388,7 @@ than leave the root Kotlin unscanned. The same database (source root still
 1. `jvm`: the fixture build, unchanged except that finalization moves out.
 2. `repository-bindings` (build sandbox, private IPC, 900 seconds):
    `check-repository-build.sh bindings` assembles `repository-build` in
-   bounded scratch from frozen inputs and runs `:sdk:buildBindings` and
-   `:sdk:generateSqlDelightInterface` offline. SQLDelight (ADR 0035) always
-   generates in a process-isolated Gradle worker JVM, which exits with
-   SIGSEGV under the CodeQL tracer (run `40582874901`). Generating it here,
-   untraced, leaves the task up to date for step 3. The generated Kotlin is
-   still compiled, and so extracted, in step 3.
+   bounded scratch from frozen inputs and runs `:sdk:buildBindings` offline.
 3. `repository-codeql` (CodeQL sandbox, private IPC, 900 seconds):
    `check-codeql-repository.sh` traces the compile tasks of every tracked
    Kotlin source set (`:sdk:compileKotlinJvm`, `:sdk:compileTestKotlinJvm`,

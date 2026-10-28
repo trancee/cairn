@@ -8,9 +8,7 @@ test "$tools" = /opt/cairn-apple-tools
 inputs="$tools/repository-inputs"
 project="$HOME/repository-build"
 case "$mode" in
-  # SQLDelight generation runs in a process-isolated worker JVM that crashes
-  # under the CodeQL tracer, so it is generated here, untraced.
-  bindings) tasks=(:sdk:buildBindings :sdk:generateSqlDelightInterface) ;;
+  bindings) tasks=(:sdk:buildBindings) ;;
   native)
     tasks=(:sdk:linkDebugFrameworkIosArm64 :sdk:linkDebugFrameworkIosSimulatorArm64
       :sdk:linkDebugTestIosSimulatorArm64) ;;
