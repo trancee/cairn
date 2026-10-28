@@ -12,11 +12,20 @@ kotlin {
     }
     // The iOS host app (iosApp/) links this framework; the iOS 15.0 floor is Kotlin/Native's default.
     listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
-        target.binaries.framework { baseName = "CairnApp" }
+        target.binaries.framework {
+            baseName = "CairnApp"
+            // Swift seals rows and opens the SQLDelight database itself (ADR 0035).
+            export(project(":sdk"))
+            export(libs.sqldelight.native.driver)
+            linkerOpts("-lsqlite3")
+        }
     }
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":sdk"))
+            api(project(":sdk"))
+        }
+        iosMain.dependencies {
+            api(libs.sqldelight.native.driver)
         }
     }
 }

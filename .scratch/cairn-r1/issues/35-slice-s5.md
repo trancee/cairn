@@ -48,3 +48,12 @@ it on restart with no storage reset and no crash. Cold starts took 0.5–4.8 s.
 The 32-bit-only XCover 4 and A80 have no `armeabi-v7a` core library, so they
 were not run. Five Wi-Fi phones were offline. Commit latency with contacts and
 queued rows still needs the two-phone demonstration.
+
+2026-10-28: step 2c on `feat/s5-ios-sealer`: the iOS app stores rows in a
+SQLDelight database sealed by `KeychainRowSealer`. The sealer uses CryptoKit
+AES-256-GCM with a random key in a `…AfterFirstUnlockThisDeviceOnly` Keychain
+item. The database directory is excluded from backup. A missing database
+deletes stale keys. Nine XCTest cases pass on the iPhone 16 simulator. The
+launch self-test reports `storage=new`, then `storage=restored`, on the
+simulator and on the iPhone 12 mini (iOS 27). The SE 2020 is not in the
+signing profile. Still to do: the two-phone demonstration with commit latency.

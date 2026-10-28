@@ -29,3 +29,21 @@ targets:
       - name: Build the Kotlin framework
         script: cd "$SRCROOT/.." && ./gradlew :app:embedAndSignAppleFrameworkForXcode
         basedOnDependencyAnalysis: false
+  CairnIosTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [iosAppTests]
+    dependencies:
+      - target: CairnIos
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ch.trancee.cairn.ios.tests
+        GENERATE_INFOPLIST_FILE: YES
+        FRAMEWORK_SEARCH_PATHS: $(SRCROOT)/../app/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)
+schemes:
+  CairnIos:
+    build:
+      targets:
+        CairnIos: all
+    test:
+      targets: [CairnIosTests]
