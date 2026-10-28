@@ -100,8 +100,13 @@ private class Rig(resetStorage: Boolean = false) {
     )
     val engine get() = engines.last()
 
+    /** What [LinkDriver.start] told the app; [notices] holds only what came after. */
+    val startNotices: List<Notice>
+
     init {
         driver.start()
+        startNotices = notices.toList()
+        notices.clear()
     }
 
     /** Makes the current engine answer [trigger] with [actions] once. */
@@ -164,10 +169,17 @@ class LinkDriverTest {
     }
 
     @Test
+    fun startTellsTheAppTheRestoredContacts() {
+        val rig = Rig()
+
+        assertEquals(listOf<Notice>(Notice.ContactsChanged(listOf(CONTACT))), rig.startNotices)
+    }
+
+    @Test
     fun aStorageResetIsReportedBeforeTheCoreRestoresAnEmptyState() {
         val rig = Rig(resetStorage = true)
 
-        assertEquals(listOf<Notice>(Notice.Fault(FaultKind.STORAGE_RESET)), rig.notices)
+        assertEquals(Notice.Fault(FaultKind.STORAGE_RESET), rig.startNotices.first())
         assertEquals(keys(Event.Restore(null, emptyList(), emptyList())), rig.engine.events)
     }
 

@@ -94,6 +94,10 @@ compromise, and OS rollback is out of scope.
   which is the main looper. StrongBox seals are slow on some devices
   (ADR 0006 risk). The device demonstration measures commit latency. If it
   is too slow, the store moves to a worker thread or the key moves to the TEE.
+  On 2026-10-28 the demonstration measured these per-commit times: 14–38 ms
+  on a Nothing Phone (2), 42–115 ms on the P10 lite (TEE key), and 34–125 ms
+  on a Pixel 6 (StrongBox). Commits happen once per pairing or message
+  event, so the store stays on the session thread.
 - On iOS, `KeychainRowSealer` and `RowStorage` live in the Swift host app,
   because the CodeQL inventory rejects iOS-only Kotlin (ADR 0015). XCTest
   covers them on a simulator, but they are outside CI and the coverage gates.
