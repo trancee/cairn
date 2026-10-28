@@ -150,6 +150,7 @@ private fun FaultBanner(kind: FaultKind, onDismiss: () -> Unit) {
             val text = when (kind) {
                 FaultKind.CRYPTO -> R.string.fault_crypto
                 FaultKind.POISONED -> R.string.fault_poisoned
+                FaultKind.STORAGE_RESET -> R.string.fault_storage_reset
             }
             Text(stringResource(text), Modifier.weight(1f))
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.dismiss)) }

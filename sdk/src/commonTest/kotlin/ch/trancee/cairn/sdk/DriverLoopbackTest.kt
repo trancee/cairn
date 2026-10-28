@@ -17,7 +17,7 @@ private class Air(mtu: UShort) {
     val notices = listOf(mutableListOf<Notice>(), mutableListOf())
     private val peerLink = mutableMapOf<Pair<Int, ULong>, ULong>()
     val drivers: List<LinkDriver> = (0..1).map { side ->
-        LinkDriver(::CoreEngine, AirRadio(side), NoTimers, clock) { notices[side] += it }
+        LinkDriver(RowStore(), ::CoreEngine, AirRadio(side), NoTimers, clock) { notices[side] += it }
     }
 
     private inner class AirRadio(private val side: Int) : Radio {

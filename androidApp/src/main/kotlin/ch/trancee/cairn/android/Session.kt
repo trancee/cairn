@@ -10,6 +10,7 @@ import ch.trancee.cairn.ffi.GattRole
 import ch.trancee.cairn.sdk.Engine
 import ch.trancee.cairn.sdk.LinkDriver
 import ch.trancee.cairn.sdk.RadioListener
+import ch.trancee.cairn.sdk.RowStore
 
 /**
  * One core, its [LinkDriver] and the [AndroidRadio], all on [handler]'s thread (ADR 0023 §2).
@@ -20,7 +21,9 @@ class Session(private val context: Context, handler: Handler, newEngine: () -> E
 
     internal val radio = AndroidRadio(context, handler)
 
+    // ADR 0035: sealed storage replaces this in-memory store once the Keystore sealer lands.
     private val driver: LinkDriver = LinkDriver(
+        RowStore(),
         newEngine,
         radio,
         HandlerTimers(handler) { driver.timerFired(it) },

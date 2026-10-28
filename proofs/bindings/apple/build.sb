@@ -3,6 +3,9 @@
 (allow process-exec)
 (allow process-fork)
 (allow sysctl-read)
+; HotSpot on macOS resolves the home directory with getpwuid() when HOME is
+; unset, as in Gradle process-isolated workers; denial crashes the JVM.
+(allow mach-lookup (global-name "com.apple.system.opendirectoryd.libinfo"))
 (allow file-read-metadata)
 (allow file-read*
   (literal "/")

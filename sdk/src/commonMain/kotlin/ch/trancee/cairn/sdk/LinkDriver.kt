@@ -42,6 +42,9 @@ enum class FaultKind {
 
     /** The core panicked; the driver closed every link and restored a new core from the last rows. */
     POISONED,
+
+    /** Stored rows failed to open and were wiped; contacts must pair again (ADR 0035 §5). */
+    STORAGE_RESET,
 }
 
 /** Debug-panel counters for one link (ADR 0023 §2); nothing secret. */
@@ -62,6 +65,8 @@ data class LinkStats(
  * Not thread-safe: the platform calls every method from one thread and posts BLE callbacks there.
  */
 class LinkDriver(
+    /** The core's durable rows; [SealedRowStore] in apps (ADR 0035). */
+    val rows: Rows,
     private val newEngine: () -> Engine,
     private val radio: Radio,
     private val timers: Timers,
@@ -84,11 +89,8 @@ class LinkDriver(
     private val links = LinkedHashMap<ULong, Link>()
     private val activeTimers = LinkedHashSet<ULong>()
 
-    /** The rows the core asked to persist; kept in memory only until ADR 0006 storage lands. */
-    val rows = RowStore()
-
     /** Restores a fresh core; call once, first. */
-    fun start() = dispatch(rows.restore())
+    fun start() = dispatch(restore())
 
     override fun linkUp(role: GattRole, mtu: UShort, address: ByteArray): ULong {
         val now = clock.now()
@@ -168,7 +170,19 @@ class LinkDriver(
             replaceEngine()
             return
         }
+        execute(actions)
+    }
+
+    /** ADR 0035 §4: a result's rows are stored before anything else in it runs. */
+    private fun execute(actions: List<Action>) {
+        rows.commit(actions)
         actions.forEach(::perform)
+    }
+
+    private fun restore(): Event.Restore {
+        val restored = rows.restore()
+        if (restored.reset) listener(Notice.Fault(FaultKind.STORAGE_RESET))
+        return restored.event
     }
 
     private fun <T> query(read: (Engine) -> T): T = try {
@@ -187,13 +201,13 @@ class LinkDriver(
         activeTimers.clear()
         engine = newEngine()
         // A replacement that fails its restore propagates rather than looping.
-        engine.handle(clock.now(), rows.restore()).forEach(::perform)
+        execute(engine.handle(clock.now(), restore()))
         listener(Notice.Fault(FaultKind.POISONED))
     }
 
     private fun perform(action: Action) {
         when (action) {
-            is Action.PersistDevice, is Action.PersistContact, is Action.PutQueued, is Action.DeleteQueued -> rows.apply(action)
+            is Action.PersistDevice, is Action.PersistContact, is Action.PutQueued, is Action.DeleteQueued -> {}
             is Action.Send -> enqueue(action.link, action.fragment)
             is Action.Disconnect -> links[action.link]?.let { disconnect(action.link, it) }
             is Action.SetTimer -> {

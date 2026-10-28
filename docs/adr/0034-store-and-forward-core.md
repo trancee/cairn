@@ -112,7 +112,8 @@ match ADR 0006's tables:
 
 1. The Rust core and its FFI/Kotlin contract, with an in-memory row store
    in tests. One PR.
-2. SQLDelight sealed storage (ADR 0006). A separate PR.
+2. SQLDelight sealed storage (ADR 0006), specified by
+   [ADR 0035](0035-sealed-row-storage.md). A separate PR.
 3. Couriers ([ADR 0033](0033-courier-relaying.md)) on top.
 
 ## Formal model

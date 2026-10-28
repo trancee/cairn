@@ -15,6 +15,7 @@ jvm-toolchain = "21"
 kotlin = "2.4.21"
 kover = "0.9.11"
 robolectric = "4.17"
+sqldelight = "2.4.1"
 # The android-all jars Robolectric 4.17 runs for API 26 and 37; host tests load them offline (ADR 0023 §4).
 robolectric-sdk26 = "8.0.0_r4-robolectric-r1-i7"
 robolectric-sdk37 = "17-robolectric-15733970-i7"
@@ -39,6 +40,8 @@ androidx-test-espresso-core = { module = "androidx.test.espresso:espresso-core",
 junit = { module = "junit:junit", version.ref = "junit" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
+sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 robolectric-android-all-sdk26 = { module = "org.robolectric:android-all-instrumented", version.ref = "robolectric-sdk26" }
 robolectric-android-all-sdk37 = { module = "org.robolectric:android-all-instrumented", version.ref = "robolectric-sdk37" }
 floor-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "floor-bouncycastle" }
@@ -97,4 +100,5 @@ android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 ubique-uniffi = { id = "ch.ubique.uniffi.plugin", version.ref = "ubique-uniffi" }
