@@ -596,6 +596,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        miri,
+        ignore = "1000 key derivations take 25 min under Miri; runs under careful (ADR 0007)"
+    )]
     fn the_skip_bound_counts_keys_already_held() {
         let mut chain = advanced(1, MAX_SKIPPED as u32 - 1);
         let edge = sealed(&mut chain, 1);

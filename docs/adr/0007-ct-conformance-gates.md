@@ -23,7 +23,7 @@ CI runs on **GitHub Actions**: `ubuntu-latest` (x86_64), `ubuntu-24.04-arm` (aar
 **Per PR (blocking):**
 - `cargo fmt --check`, `cargo clippy -D warnings`, and `cargo test` for all crates with **both** backend adapters.
 - `cargo deny check` (advisories, licences, sources) with a committed `Cargo.lock`.
-- `cargo miri test` on `cairn-wire` and `cairn-proto`, excluding RNG and key-generation paths. `cargo careful test` on `cairn-crypto` and `cairn-ffi`.
+- `cargo miri test` on `cairn-wire` and `cairn-proto`, excluding RNG and key-generation paths and tests that only repeat a covered path up to a size bound (such as 1000 skipped keys), which would exceed the job's 30 min. `cargo careful test` on `cairn-crypto` and `cairn-ffi`.
 - **Known-answer tests:**
   - NIST ACVP for ML-KEM-768 keyGen/encapDecap, AES-256-GCM, HMAC-SHA-384 and HKDF (KDA).
   - Wycheproof for AES-GCM, X25519, HKDF, HMAC, and ML-KEM where vectors exist.
