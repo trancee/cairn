@@ -74,5 +74,6 @@ Evidence is row counts per table read from each phone's `cairn.db` with
 screen text. Not measured: delivery over real distance, iOS couriers, and
 the battery cost of the exchange. On the B–C link, B sent two 145 B frames:
 the FETCH answer and the halved spray copy, both decided at inventory
-completion. The spec allows this. The duplicate is answered with CUSTODY 2
-and costs one frame.
+completion. The spec allows this. By the code, C answers the duplicate with
+CUSTODY 2, since it already holds the tombstone; that answer could not
+be seen in the encrypted frames.
