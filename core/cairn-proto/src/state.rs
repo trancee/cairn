@@ -1,15 +1,16 @@
-//! Durable device state and its version-2 rows (ADR 0034 §1).
+//! Durable device state and its version-3 rows (ADR 0034 §1).
 
 use crate::PairingRole;
 use crate::card::Card;
-use crate::chain::{MAX_SKIPPED, Queued, ReceiveChain, Receiver, SendChain, Skipped};
+use crate::chain::{Dir, MAX_SKIPPED, Queued, ReceiveChain, Receiver, SendChain, Skipped};
 use crate::core::{ContactId, Verification};
+use crate::courier::Envelope;
 use crate::pairing::Paired;
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use zeroize::Zeroizing;
 
-pub(crate) const BLOB_VERSION: u32 = 2;
+pub(crate) const BLOB_VERSION: u32 = 3;
 const MODE_TOFU: u8 = 0x03;
 
 /// The sealed-by-the-platform state of a core; it contains secrets.
@@ -43,6 +44,163 @@ pub struct QueuedRow {
     pub state: Persisted,
 }
 
+/// One stored courier row: a carried envelope or a tombstone (ADR 0036 §3).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CourierRow {
+    pub slot: u64,
+    pub state: Persisted,
+}
+
+/// The device's courier settings (spec §8.1, ADR 0036 §4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct CourierConfig {
+    pub(crate) enabled: bool,
+    /// The copy budget `L`.
+    pub(crate) copies: u8,
+    /// The envelope lifetime `T`.
+    pub(crate) lifetime_min: u16,
+}
+
+impl Default for CourierConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            copies: 6,
+            lifetime_min: 1440,
+        }
+    }
+}
+
+impl CourierConfig {
+    /// `None` outside 1–16 copies or 60–10080 minutes.
+    pub(crate) fn new(enabled: bool, copies: u8, lifetime_min: u16) -> Option<Self> {
+        ((1..=16).contains(&copies) && (60..=10_080).contains(&lifetime_min)).then_some(Self {
+            enabled,
+            copies,
+            lifetime_min,
+        })
+    }
+}
+
+/// The courier copies of one queued message (ADR 0036 §2).
+#[derive(Clone, PartialEq, Eq)]
+pub(crate) struct OwnEnvelope {
+    pub(crate) tag: [u8; 16],
+    /// The delivery secret; its commitment `c` is derived when sent.
+    pub(crate) s: Zeroizing<[u8; 16]>,
+    pub(crate) expiry_min: u32,
+    pub(crate) copies: u8,
+    pub(crate) renewed: bool,
+}
+
+impl core::fmt::Debug for OwnEnvelope {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("OwnEnvelope")
+            .field("expiry_min", &self.expiry_min)
+            .field("copies", &self.copies)
+            .field("renewed", &self.renewed)
+            .finish_non_exhaustive()
+    }
+}
+
+/// Proof that a message was delivered, kept until `expiry_min`.
+#[derive(Clone, PartialEq, Eq)]
+pub(crate) struct Tombstone {
+    pub(crate) tag: [u8; 16],
+    pub(crate) s: [u8; 16],
+    pub(crate) expiry_min: u32,
+}
+
+impl core::fmt::Debug for Tombstone {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("Tombstone")
+            .field("expiry_min", &self.expiry_min)
+            .finish_non_exhaustive()
+    }
+}
+
+/// One courier row's content.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Held {
+    Carried {
+        depositor: ContactId,
+        envelope: Envelope,
+    },
+    Tombstone(Tombstone),
+}
+
+const CARRIED: u8 = 0;
+const TOMBSTONE: u8 = 1;
+
+impl Held {
+    pub(crate) fn tag(&self) -> &[u8; 16] {
+        match self {
+            Self::Carried { envelope, .. } => &envelope.tag,
+            Self::Tombstone(tombstone) => &tombstone.tag,
+        }
+    }
+
+    pub(crate) fn expiry_min(&self) -> u32 {
+        match self {
+            Self::Carried { envelope, .. } => envelope.expiry_min,
+            Self::Tombstone(tombstone) => tombstone.expiry_min,
+        }
+    }
+
+    pub(crate) fn row(&self, slot: u64) -> CourierRow {
+        let mut blob = Vec::new();
+        match self {
+            Self::Carried {
+                depositor,
+                envelope,
+            } => {
+                blob.push(CARRIED);
+                blob.extend_from_slice(&depositor.0.to_be_bytes());
+                envelope.encode(&mut blob);
+            }
+            Self::Tombstone(tombstone) => {
+                blob.push(TOMBSTONE);
+                blob.extend_from_slice(&tombstone.tag);
+                blob.extend_from_slice(&tombstone.s);
+                blob.extend_from_slice(&tombstone.expiry_min.to_be_bytes());
+            }
+        }
+        CourierRow {
+            slot,
+            state: persisted(&blob),
+        }
+    }
+
+    fn decode(row: &CourierRow) -> Result<Self, InvalidBlob> {
+        let mut reader = reader(&row.state)?;
+        match reader.byte()? {
+            CARRIED => {
+                let depositor = ContactId(reader.u64()?);
+                let envelope = Envelope::decode(reader.0).ok_or(InvalidBlob)?;
+                if !envelope.valid(0) {
+                    return Err(InvalidBlob);
+                }
+                Ok(Self::Carried {
+                    depositor,
+                    envelope,
+                })
+            }
+            TOMBSTONE => {
+                let tombstone = Tombstone {
+                    tag: reader.array()?,
+                    s: reader.array()?,
+                    expiry_min: reader.u32()?,
+                };
+                reader.end()?;
+                Ok(Self::Tombstone(tombstone))
+            }
+            _ => Err(InvalidBlob),
+        }
+    }
+}
+
 /// `CK_{n+1}` and `MS_{n+1}` while R awaits I's key confirmation.
 #[derive(Clone)]
 pub(crate) struct Pending {
@@ -55,6 +213,7 @@ pub(crate) struct Pending {
 pub(crate) struct Outgoing {
     pub(crate) created_s: u64,
     pub(crate) queued: Queued,
+    pub(crate) envelope: Option<OwnEnvelope>,
 }
 
 /// The message numbers received from, or expired by, the peer.
@@ -124,6 +283,8 @@ pub(crate) struct Contact {
     pub(crate) peer: Card,
     pub(crate) door_a_to_b: Zeroizing<[u8; 32]>,
     pub(crate) door_b_to_a: Zeroizing<[u8; 32]>,
+    /// `K_route` (spec §8.1).
+    pub(crate) route_key: Zeroizing<[u8; 32]>,
     /// Resume index `n` of `chain_key` (spec §6).
     pub(crate) resume_index: u64,
     pub(crate) chain_key: Zeroizing<[u8; 32]>,
@@ -159,6 +320,7 @@ impl Contact {
             chain_key,
             door_a_to_b,
             door_b_to_a,
+            route_key,
         } = paired;
         Self {
             id,
@@ -170,6 +332,7 @@ impl Contact {
             peer,
             door_a_to_b,
             door_b_to_a,
+            route_key,
             resume_index: 0,
             chain_key,
             sent_msgno: 0,
@@ -213,6 +376,7 @@ impl Contact {
         blob.extend_from_slice(&card);
         blob.extend_from_slice(&self.door_a_to_b[..]);
         blob.extend_from_slice(&self.door_b_to_a[..]);
+        blob.extend_from_slice(&self.route_key[..]);
         blob.extend_from_slice(&self.resume_index.to_be_bytes());
         blob.extend_from_slice(&self.chain_key[..]);
         blob.extend_from_slice(&self.sent_msgno.to_be_bytes());
@@ -229,6 +393,7 @@ impl Contact {
             Some(chain) => {
                 blob.push(1);
                 blob.push(chain.gen_);
+                blob.push(chain.dir.label());
                 blob.extend_from_slice(&chain.idx.to_be_bytes());
                 blob.extend_from_slice(&chain.key[..]);
             }
@@ -236,6 +401,7 @@ impl Contact {
         put_count(self.receiver.chains.len(), &mut blob);
         for chain in &self.receiver.chains {
             blob.push(chain.gen_);
+            blob.push(chain.dir.label());
             blob.extend_from_slice(&chain.next.to_be_bytes());
             blob.extend_from_slice(&chain.key[..]);
             match chain.superseded_s {
@@ -249,6 +415,7 @@ impl Contact {
         put_count(self.receiver.skipped.len(), &mut blob);
         for skipped in &self.receiver.skipped {
             blob.push(skipped.gen_);
+            blob.push(skipped.dir.label());
             blob.extend_from_slice(&skipped.idx.to_be_bytes());
             blob.extend_from_slice(&skipped.key[..]);
             blob.extend_from_slice(&skipped.created_s.to_be_bytes());
@@ -297,6 +464,7 @@ impl Contact {
         let peer = Card::decode(reader.take(card_len)?).map_err(|_| InvalidBlob)?;
         let door_a_to_b = reader.key()?;
         let door_b_to_a = reader.key()?;
+        let route_key = reader.key()?;
         let resume_index = reader.u64()?;
         let chain_key = reader.key()?;
         let sent_msgno = reader.u32()?;
@@ -311,6 +479,7 @@ impl Contact {
             false => None,
             true => Some(SendChain {
                 gen_: reader.byte()?,
+                dir: reader.dir()?,
                 idx: reader.u32()?,
                 key: reader.key()?,
             }),
@@ -319,6 +488,7 @@ impl Contact {
         for _ in 0..reader.count()? {
             receiver.chains.push(ReceiveChain {
                 gen_: reader.byte()?,
+                dir: reader.dir()?,
                 next: reader.u64()?,
                 key: reader.key()?,
                 superseded_s: match reader.flag()? {
@@ -330,6 +500,7 @@ impl Contact {
         for _ in 0..reader.count()? {
             receiver.skipped.push(Skipped {
                 gen_: reader.byte()?,
+                dir: reader.dir()?,
                 idx: reader.u32()?,
                 key: reader.key()?,
                 created_s: reader.u64()?,
@@ -357,6 +528,7 @@ impl Contact {
             peer,
             door_a_to_b,
             door_b_to_a,
+            route_key,
             resume_index,
             chain_key,
             sent_msgno,
@@ -419,8 +591,16 @@ fn canonical(ranges: &[(u32, u32)], first: u64) -> bool {
 
 impl Outgoing {
     pub(crate) fn row(&self, contact: ContactId, msgno: u32) -> QueuedRow {
-        let mut blob = Vec::with_capacity(8 + 6 + self.queued.ct.len());
+        let mut blob = Zeroizing::new(Vec::with_capacity(8 + 39 + 6 + self.queued.ct.len()));
         blob.extend_from_slice(&self.created_s.to_be_bytes());
+        blob.push(u8::from(self.envelope.is_some()));
+        if let Some(envelope) = &self.envelope {
+            blob.extend_from_slice(&envelope.tag);
+            blob.extend_from_slice(&envelope.s[..]);
+            blob.extend_from_slice(&envelope.expiry_min.to_be_bytes());
+            blob.push(envelope.copies);
+            blob.push(u8::from(envelope.renewed));
+        }
         blob.extend_from_slice(&self.queued.encode());
         QueuedRow {
             contact,
@@ -432,8 +612,23 @@ impl Outgoing {
     fn decode(row: &QueuedRow) -> Result<Self, InvalidBlob> {
         let mut reader = reader(&row.state)?;
         let created_s = reader.u64()?;
+        let envelope = if reader.flag()? {
+            Some(OwnEnvelope {
+                tag: reader.array()?,
+                s: Zeroizing::new(reader.array()?),
+                expiry_min: reader.u32()?,
+                copies: reader.byte()?,
+                renewed: reader.flag()?,
+            })
+        } else {
+            None
+        };
         let queued = Queued::decode(reader.0).map_err(|_| InvalidBlob)?;
-        Ok(Self { created_s, queued })
+        Ok(Self {
+            created_s,
+            queued,
+            envelope,
+        })
     }
 }
 
@@ -470,21 +665,29 @@ pub(crate) struct Device {
     pub(crate) next_contact: u64,
     /// The global, reciprocal read-receipt setting (ADR 0034 §4).
     pub(crate) read_receipts: bool,
+    pub(crate) courier: CourierConfig,
     pub(crate) contacts: Vec<Contact>,
+    /// Carried envelopes and tombstones by slot (ADR 0036 §3).
+    pub(crate) held: BTreeMap<u64, Held>,
+    /// One above the highest slot ever used since `Restore`.
+    pub(crate) next_slot: u64,
 }
 
-/// The rows do not decode as version 2 or do not fit together.
+/// The rows do not decode as version 3 or do not fit together.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct InvalidBlob;
 
 impl Device {
     /// The device row; contacts are separate rows.
     pub(crate) fn row(&self) -> Persisted {
-        let mut blob = Zeroizing::new(Vec::with_capacity(45));
+        let mut blob = Zeroizing::new(Vec::with_capacity(49));
         blob.extend_from_slice(&self.beacon_day.to_be_bytes());
         blob.extend_from_slice(&self.beacon_key[..]);
         blob.extend_from_slice(&self.next_contact.to_be_bytes());
         blob.push(u8::from(self.read_receipts));
+        blob.push(u8::from(self.courier.enabled));
+        blob.push(self.courier.copies);
+        blob.extend_from_slice(&self.courier.lifetime_min.to_be_bytes());
         persisted(&blob)
     }
 
@@ -492,12 +695,19 @@ impl Device {
         device: &Persisted,
         contacts: &[ContactRow],
         queued: &[QueuedRow],
+        courier: &[CourierRow],
     ) -> Result<Self, InvalidBlob> {
         let mut reader = reader(device)?;
         let beacon_day = reader.u32()?;
         let beacon_key = reader.key()?;
         let next_contact = reader.u64()?;
         let read_receipts = reader.flag()?;
+        let config = CourierConfig::new(
+            reader.flag()?,
+            reader.byte()?,
+            u16::from_be_bytes(reader.array()?),
+        )
+        .ok_or(InvalidBlob)?;
         reader.end()?;
         let mut restored: Vec<Contact> = Vec::with_capacity(contacts.len());
         for row in contacts {
@@ -520,12 +730,27 @@ impl Device {
                 return Err(InvalidBlob);
             }
         }
+        let mut held = BTreeMap::new();
+        for row in courier {
+            let entry = Held::decode(row)?;
+            let known = match &entry {
+                Held::Carried { depositor, .. } => depositor.0 < next_contact,
+                Held::Tombstone(_) => true,
+            };
+            if !known || held.insert(row.slot, entry).is_some() {
+                return Err(InvalidBlob);
+            }
+        }
+        let next_slot = held.last_key_value().map_or(0, |(slot, _)| slot + 1);
         Ok(Self {
             beacon_day,
             beacon_key,
             next_contact,
             read_receipts,
+            courier: config,
             contacts: restored,
+            held,
+            next_slot,
         })
     }
 }
@@ -551,6 +776,14 @@ impl<'a> Reader<'a> {
         match self.byte()? {
             0 => Ok(false),
             1 => Ok(true),
+            _ => Err(InvalidBlob),
+        }
+    }
+
+    fn dir(&mut self) -> Result<Dir, InvalidBlob> {
+        match self.byte()? {
+            b'I' => Ok(Dir::I),
+            b'R' => Ok(Dir::R),
             _ => Err(InvalidBlob),
         }
     }
@@ -607,6 +840,7 @@ mod tests {
             },
             door_a_to_b: key(6),
             door_b_to_a: key(7),
+            route_key: key(21),
             resume_index: 8,
             chain_key: key(9),
             sent_msgno: 12,
@@ -631,7 +865,35 @@ mod tests {
                 idx,
                 ct: std::vec![idx as u8; 48],
             },
+            envelope: (idx == 2).then(|| OwnEnvelope {
+                tag: [22; 16],
+                s: Zeroizing::new([23; 16]),
+                expiry_min: 30_000_000,
+                copies: 3,
+                renewed: true,
+            }),
         }
+    }
+
+    fn carried() -> Held {
+        Held::Carried {
+            depositor: ContactId(2),
+            envelope: Envelope {
+                tag: [24; 16],
+                c: [25; 16],
+                expiry_min: 30_000_100,
+                copies: 2,
+                ct: std::vec![26; 48],
+            },
+        }
+    }
+
+    fn tombstone() -> Held {
+        Held::Tombstone(Tombstone {
+            tag: [27; 16],
+            s: [28; 16],
+            expiry_min: 30_000_200,
+        })
     }
 
     fn full(id: u64) -> Contact {
@@ -639,12 +901,14 @@ mod tests {
             chains: std::vec![
                 ReceiveChain {
                     gen_: 2,
+                    dir: Dir::R,
                     next: 4,
                     key: key(13),
                     superseded_s: Some(1_800_000_000),
                 },
                 ReceiveChain {
                     gen_: 3,
+                    dir: Dir::I,
                     next: 0,
                     key: key(14),
                     superseded_s: None,
@@ -652,6 +916,7 @@ mod tests {
             ],
             skipped: std::vec![Skipped {
                 gen_: 2,
+                dir: Dir::R,
                 idx: 1,
                 key: key(15),
                 created_s: 1_799_999_000,
@@ -666,6 +931,7 @@ mod tests {
             }),
             send: Some(SendChain {
                 gen_: 3,
+                dir: Dir::R,
                 idx: 7,
                 key: key(16),
             }),
@@ -690,7 +956,10 @@ mod tests {
             beacon_key: key(17),
             next_contact: 3,
             read_receipts: false,
+            courier: CourierConfig::new(false, 3, 120).unwrap(),
             contacts: std::vec![bare(0), full(2)],
+            held: [(4, carried()), (9, tombstone())].into(),
+            next_slot: 10,
         }
     }
 
@@ -698,6 +967,7 @@ mod tests {
         device: Persisted,
         contacts: Vec<ContactRow>,
         queued: Vec<QueuedRow>,
+        courier: Vec<CourierRow>,
     }
 
     fn rows(device: &Device) -> Rows {
@@ -714,11 +984,16 @@ mod tests {
                         .map(|(msgno, outgoing)| outgoing.row(contact.id, *msgno))
                 })
                 .collect(),
+            courier: device
+                .held
+                .iter()
+                .map(|(slot, held)| held.row(*slot))
+                .collect(),
         }
     }
 
     fn restore(rows: &Rows) -> Result<Device, InvalidBlob> {
-        Device::restore(&rows.device, &rows.contacts, &rows.queued)
+        Device::restore(&rows.device, &rows.contacts, &rows.queued, &rows.courier)
     }
 
     #[test]
@@ -729,16 +1004,29 @@ mod tests {
 
         let again = self::rows(&restored);
         assert_eq!(
-            (again.device, again.contacts, again.queued),
-            (rows.device, rows.contacts, rows.queued)
+            (again.device, again.contacts, again.queued, again.courier),
+            (rows.device, rows.contacts, rows.queued, rows.courier)
         );
+        assert_eq!(restored.courier, CourierConfig::new(false, 3, 120).unwrap());
+        assert_eq!(restored.held, device().held);
+        assert_eq!(restored.next_slot, 10);
         let contact = &restored.contacts[1];
         assert_eq!(contact.id, ContactId(2));
         assert_eq!(contact.role, PairingRole::A);
         assert_eq!(contact.verification, Verification::Compromised);
         assert_eq!(contact.peer.name, "Bo");
+        assert_eq!(contact.route_key[..], [21; 32]);
         assert_eq!(contact.pending.as_ref().unwrap().msg_seed[..], [11; 32]);
         assert_eq!(contact.send.as_ref().unwrap().idx, 7);
+        assert_eq!(contact.send.as_ref().unwrap().dir, Dir::R);
+        assert_eq!(
+            (
+                contact.receiver.chains[0].dir,
+                contact.receiver.chains[1].dir
+            ),
+            (Dir::R, Dir::I)
+        );
+        assert_eq!(contact.receiver.skipped[0].dir, Dir::R);
         assert_eq!(contact.receiver.chains[0].superseded_s, Some(1_800_000_000));
         assert_eq!(contact.receiver.skipped[0].created_s, 1_799_999_000);
         assert_eq!(contact.received.above, [(11, 11), (14, 20)]);
@@ -747,21 +1035,71 @@ mod tests {
     }
 
     #[test]
-    fn rows_are_version_2_and_queued_rows_carry_their_key() {
+    fn rows_are_version_3_and_queued_rows_carry_their_key() {
         let rows = rows(&device());
 
         let versions = (rows.device.version, rows.contacts[1].state.version);
 
-        assert_eq!(versions, (2, 2));
+        assert_eq!(versions, (3, 3));
         assert_eq!(
             (rows.queued[1].contact, rows.queued[1].msgno),
             (ContactId(2), 10)
         );
-        assert_eq!(rows.queued[1].state.blob.len(), 8 + 2 + 48);
+        assert_eq!(rows.queued[0].state.blob.len(), 8 + 1 + 2 + 48);
+        assert_eq!(
+            rows.queued[1].state.blob.len(),
+            8 + 1 + 16 + 16 + 4 + 1 + 1 + 2 + 48
+        );
+        assert_eq!(
+            (rows.courier[0].slot, rows.courier[0].state.blob.len()),
+            (4, 1 + 8 + 37 + 48)
+        );
+        assert_eq!(
+            (rows.courier[1].slot, rows.courier[1].state.blob.len()),
+            (9, 1 + 16 + 16 + 4)
+        );
     }
 
     #[test]
-    fn a_device_row_takes_45_bytes_and_a_fresh_contact_221_plus_its_card() {
+    fn a_fresh_device_couriers_six_copies_for_a_day() {
+        let config = CourierConfig::default();
+
+        let bounds = [
+            CourierConfig::new(true, 0, 1440),
+            CourierConfig::new(true, 17, 1440),
+            CourierConfig::new(true, 6, 59),
+            CourierConfig::new(true, 6, 10_081),
+        ];
+
+        assert_eq!(
+            (config.enabled, config.copies, config.lifetime_min),
+            (true, 6, 1440)
+        );
+        assert_eq!(bounds, [None; 4]);
+        assert_eq!(
+            CourierConfig::new(true, 16, 60).map(|config| config.lifetime_min),
+            Some(60)
+        );
+        assert_eq!(
+            CourierConfig::new(true, 1, 10_080).map(|config| config.copies),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn restored_slots_continue_above_the_highest_and_start_at_zero() {
+        let mut device = device();
+        let rows = rows(&device);
+        device.held.clear();
+        let empty = self::rows(&device);
+
+        let next = [restore(&rows), restore(&empty)].map(|device| device.unwrap().next_slot);
+
+        assert_eq!(next, [10, 0]);
+    }
+
+    #[test]
+    fn a_device_row_takes_49_bytes_and_a_fresh_contact_253_plus_its_card() {
         let device = device();
         let card = device.contacts[0].peer.encode().len();
 
@@ -770,7 +1108,7 @@ mod tests {
             device.contacts[0].row().state.blob.len(),
         );
 
-        assert_eq!(sizes, (4 + 32 + 8 + 1, 221 + card));
+        assert_eq!(sizes, (4 + 32 + 8 + 1 + 1 + 1 + 2, 253 + card));
     }
 
     #[test]
@@ -843,9 +1181,13 @@ mod tests {
             blob.resize(length, 0);
             rejected.push(
                 Device::restore(
-                    &Persisted { blob, version: 2 },
+                    &Persisted {
+                        blob,
+                        version: BLOB_VERSION,
+                    },
                     &rows.contacts,
                     &rows.queued,
+                    &rows.courier,
                 )
                 .is_err(),
             );
@@ -853,17 +1195,32 @@ mod tests {
         for length in 0..=rows.contacts[1].state.blob.len() + 1 {
             let mut contacts = rows.contacts.clone();
             contacts[1].state.blob.resize(length, 0);
-            rejected.push(Device::restore(&rows.device, &contacts, &rows.queued).is_err());
+            rejected.push(
+                Device::restore(&rows.device, &contacts, &rows.queued, &rows.courier).is_err(),
+            );
         }
-        for length in 0..=rows.queued[0].state.blob.len() + 1 {
-            let mut queued = rows.queued.clone();
-            queued[0].state.blob.resize(length, 0);
-            rejected.push(Device::restore(&rows.device, &rows.contacts, &queued).is_err());
+        for index in 0..2 {
+            for length in 0..=rows.queued[index].state.blob.len() + 1 {
+                let mut queued = rows.queued.clone();
+                queued[index].state.blob.resize(length, 0);
+                rejected.push(
+                    Device::restore(&rows.device, &rows.contacts, &queued, &rows.courier).is_err(),
+                );
+            }
+        }
+        for index in 0..2 {
+            for length in 0..=rows.courier[index].state.blob.len() + 1 {
+                let mut courier = rows.courier.clone();
+                courier[index].state.blob.resize(length, 0);
+                rejected.push(
+                    Device::restore(&rows.device, &rows.contacts, &rows.queued, &courier).is_err(),
+                );
+            }
         }
 
         let accepted = rejected.iter().filter(|rejected| !**rejected).count();
 
-        assert_eq!(accepted, 3);
+        assert_eq!(accepted, 6);
     }
 
     #[test]
@@ -933,7 +1290,7 @@ mod tests {
         let corrupt = |index: usize, value: u8| {
             let mut contacts = rows.contacts.clone();
             contacts[1].state.blob[index] = value;
-            Device::restore(&rows.device, &contacts, &rows.queued).err()
+            Device::restore(&rows.device, &contacts, &rows.queued, &rows.courier).err()
         };
         let extra = rows.contacts[1].state.blob.len() - rows.contacts[0].state.blob.len();
         let mut bad_flag = rows.device.blob.clone();
@@ -955,15 +1312,17 @@ mod tests {
             corrupt(0, 2),
             corrupt(1, 1),
             corrupt(2, 3),
-            corrupt(193 + 40, 2),
-            corrupt(194 + 40 + 64, 2),
+            corrupt(225 + 40, 2),
+            corrupt(226 + 40 + 64, 2),
+            corrupt(226 + 40 + 64 + 2, b'X'),
             Device::restore(
                 &Persisted {
                     blob: bad_flag,
-                    version: 2,
+                    version: BLOB_VERSION,
                 },
                 &rows.contacts,
                 &rows.queued,
+                &rows.courier,
             )
             .err(),
             Device::restore(
@@ -973,17 +1332,73 @@ mod tests {
                 },
                 &rows.contacts,
                 &rows.queued,
+                &rows.courier,
             )
             .err(),
-            Device::restore(&rows.device, &duplicate, &rows.queued).err(),
-            Device::restore(&rows.device, &rows.contacts, &orphan).err(),
-            Device::restore(&rows.device, &rows.contacts, &zero).err(),
-            Device::restore(&rows.device, &rows.contacts, &twice).err(),
-            Device::restore(&rows.device, &wrong_version, &rows.queued).err(),
-            Device::restore(&rows.device, &unknown, &rows.queued).err(),
+            Device::restore(&rows.device, &duplicate, &rows.queued, &rows.courier).err(),
+            Device::restore(&rows.device, &rows.contacts, &orphan, &rows.courier).err(),
+            Device::restore(&rows.device, &rows.contacts, &zero, &rows.courier).err(),
+            Device::restore(&rows.device, &rows.contacts, &twice, &rows.courier).err(),
+            Device::restore(&rows.device, &wrong_version, &rows.queued, &rows.courier).err(),
+            Device::restore(&rows.device, &unknown, &rows.queued, &rows.courier).err(),
         ];
 
-        assert_eq!(extra, 64 + 37 + 50 + 42 + 45 + 2 * 8 + 2 * 4 + 8);
+        assert_eq!(extra, 64 + 38 + 51 + 43 + 46 + 2 * 8 + 2 * 4 + 8);
+        assert_eq!(results, [Some(InvalidBlob); 14]);
+    }
+
+    #[test]
+    fn corrupt_courier_state_is_rejected() {
+        let rows = rows(&device());
+        let device_with = |index: usize, value: u8| {
+            let mut device = rows.device.clone();
+            device.blob[index] = value;
+            Device::restore(&device, &rows.contacts, &rows.queued, &rows.courier).err()
+        };
+        let queued_with = |index: usize, value: u8| {
+            let mut queued = rows.queued.clone();
+            queued[1].state.blob[index] = value;
+            Device::restore(&rows.device, &rows.contacts, &queued, &rows.courier).err()
+        };
+        let courier_with = |row: usize, index: usize, value: u8| {
+            let mut courier = rows.courier.clone();
+            courier[row].state.blob[index] = value;
+            Device::restore(&rows.device, &rows.contacts, &rows.queued, &courier).err()
+        };
+        let mut same_slot = rows.courier.clone();
+        same_slot[1].slot = 4;
+        let mut old = rows.courier.clone();
+        old[0].state.version = 2;
+
+        let results = [
+            device_with(45, 2),
+            device_with(46, 0),
+            device_with(46, 17),
+            device_with(48, 59),
+            device_with(47, 0x28),
+            queued_with(8, 2),
+            queued_with(8 + 1 + 16 + 16 + 4 + 1, 2),
+            courier_with(0, 0, 2),
+            courier_with(0, 8, 3),
+            courier_with(0, 1 + 8 + 36, 0),
+            courier_with(1, 0, 0),
+            Device::restore(&rows.device, &rows.contacts, &rows.queued, &same_slot).err(),
+            Device::restore(&rows.device, &rows.contacts, &rows.queued, &old).err(),
+        ];
+
         assert_eq!(results, [Some(InvalidBlob); 13]);
+    }
+
+    #[test]
+    fn own_envelopes_and_tombstones_omit_their_secrets_from_debug_output() {
+        let envelope = outgoing(2).envelope.unwrap();
+        let tombstone = tombstone();
+
+        let output = std::format!("{envelope:?} {tombstone:?}");
+
+        assert!(!output.contains("23"));
+        assert!(!output.contains("28"));
+        assert!(output.contains("copies: 3"));
+        assert!(output.contains("expiry_min: 30000200"));
     }
 }

@@ -68,11 +68,11 @@ fn a_central_admits_a_stranger_after_a_non_matching_beacon_read() {
     assert!(net.is_up(0, central), "the link survives pairing");
     assert_eq!(
         first_fragment_headers(&net, 0, central),
-        [0x00, 0x02, 0x04, 0x10, 0x30]
+        [0x00, 0x02, 0x04, 0x10, 0x30, 0x30]
     );
     assert_eq!(
         first_fragment_headers(&net, 1, peripheral),
-        [0x01, 0x03, 0x20]
+        [0x01, 0x03, 0x20, 0x30]
     );
 }
 
@@ -146,7 +146,7 @@ fn a_fresh_install_persists_its_new_device_key() {
 
     let persisted = net.devices[0].store.device.as_ref().unwrap();
 
-    assert_eq!(persisted.version, 2);
+    assert_eq!(persisted.version, 3);
 }
 
 #[test]
@@ -243,7 +243,7 @@ fn a_contacts_beacon_resumes_even_while_a_stranger_is_pairing() {
     let (contact, _) = net.connect(0, 1);
     net.read_beacon_of(0, contact, 1);
 
-    assert_eq!(first_fragment_headers(&net, 0, contact), [0x10, 0x30]);
+    assert_eq!(first_fragment_headers(&net, 0, contact), [0x10, 0x30, 0x30]);
     assert!(net.is_up(0, contact));
 }
 
@@ -409,6 +409,7 @@ fn caller_contract_violations_are_errors() {
             }),
             contacts: Vec::new(),
             queued: Vec::new(),
+            courier: Vec::new(),
         },
     );
 
@@ -475,6 +476,7 @@ fn core_errors_have_stable_messages() {
         CoreError::InvalidMtu,
         CoreError::UnexpectedBeaconRead,
         CoreError::UnknownContact,
+        CoreError::InvalidCourierConfig,
         CoreError::Crypto(CryptoError::BackendFailure),
     ];
 
@@ -490,6 +492,7 @@ fn core_errors_have_stable_messages() {
             "ATT MTU below 23",
             "beacon read outside a fresh central link",
             "unknown contact",
+            "courier settings out of range",
             "cryptographic backend failure",
         ]
     );

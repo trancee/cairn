@@ -7,19 +7,37 @@ use alloc::vec::Vec;
 use cairn_crypto::{CryptoBackend, CryptoError};
 use zeroize::Zeroizing;
 
-const INNER_BUCKETS: [usize; 8] = [32, 64, 128, 256, 512, 1024, 2048, 4048];
+pub(crate) const INNER_BUCKETS: [usize; 8] = [32, 64, 128, 256, 512, 1024, 2048, 4048];
 const ZERO_NONCE: [u8; 12] = [0; 12];
-const TAG_LEN: usize = 16;
+pub(crate) const TAG_LEN: usize = 16;
 /// Skipped keys a receiver holds per contact (spec §8).
 pub(crate) const MAX_SKIPPED: usize = 500;
 /// How long a skipped key or a superseded receive chain is kept (spec §8, OI-38).
 pub(crate) const RETENTION_S: u64 = 7 * 24 * 60 * 60;
 
 /// The direction of a message chain, named after the sender's Resume role.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum Dir {
     I,
     R,
+}
+
+impl Dir {
+    /// The other side's direction in the same Resume.
+    pub(crate) fn peer(self) -> Self {
+        match self {
+            Self::I => Self::R,
+            Self::R => Self::I,
+        }
+    }
+
+    /// The label byte used in route tags and in persisted rows: `I` or `R`.
+    pub(crate) fn label(self) -> u8 {
+        match self {
+            Self::I => b'I',
+            Self::R => b'R',
+        }
+    }
 }
 
 /// `MC_dir,0 = KDF(MS_{n+1}, "", "chain " ‖ dir, "", 32)`.
@@ -139,22 +157,27 @@ impl Queued {
 #[derive(Clone)]
 pub(crate) struct SendChain {
     pub(crate) gen_: u8,
+    pub(crate) dir: Dir,
     pub(crate) idx: u32,
     pub(crate) key: Zeroizing<[u8; 32]>,
 }
 
+/// The courier delivery secret `s` of one message (spec §8.1).
+pub(crate) type Delivered = Zeroizing<[u8; 16]>;
+
 impl SendChain {
     /// Seals `inner` under `mk_idx` and advances the chain, erasing `mk_idx`
-    /// and `MC_idx`. `None` once the index space is exhausted.
+    /// and `MC_idx` once `s` is derived. `None` once the index space is exhausted.
     pub(crate) fn seal<B: CryptoBackend>(
         &mut self,
         inner: &[u8],
-    ) -> Result<Option<Queued>, CryptoError> {
+    ) -> Result<Option<(Queued, Delivered)>, CryptoError> {
         if self.idx == u32::MAX {
             return Ok(None);
         }
         let (mk, next) = step::<B>(&self.key)?;
         let ct = B::aes256gcm_seal(&mk, &ZERO_NONCE, &aad(self.gen_, self.idx), inner)?;
+        let delivered = crate::courier::delivered::<B>(&mk)?;
         let queued = Queued {
             gen_: self.gen_,
             idx: self.idx,
@@ -162,7 +185,7 @@ impl SendChain {
         };
         self.key = next;
         self.idx += 1;
-        Ok(Some(queued))
+        Ok(Some((queued, delivered)))
     }
 }
 
@@ -170,6 +193,7 @@ impl SendChain {
 #[derive(Clone)]
 pub(crate) struct ReceiveChain {
     pub(crate) gen_: u8,
+    pub(crate) dir: Dir,
     pub(crate) next: u64,
     pub(crate) key: Zeroizing<[u8; 32]>,
     /// When a newer Resume superseded it, in Unix seconds.
@@ -179,6 +203,7 @@ pub(crate) struct ReceiveChain {
 #[derive(Clone)]
 pub(crate) struct Skipped {
     pub(crate) gen_: u8,
+    pub(crate) dir: Dir,
     pub(crate) idx: u32,
     pub(crate) key: Zeroizing<[u8; 32]>,
     pub(crate) created_s: u64,
@@ -203,7 +228,7 @@ impl Receiver {
     /// Installs a new generation. The live chain becomes superseded at
     /// `now_s`; a chain with the same `gen` is deleted with its skipped keys
     /// (OI-5).
-    pub(crate) fn reseed(&mut self, gen_: u8, key: Zeroizing<[u8; 32]>, now_s: u64) {
+    pub(crate) fn reseed(&mut self, gen_: u8, dir: Dir, key: Zeroizing<[u8; 32]>, now_s: u64) {
         self.chains.retain(|chain| chain.gen_ != gen_);
         self.skipped.retain(|skipped| skipped.gen_ != gen_);
         for chain in &mut self.chains {
@@ -211,6 +236,7 @@ impl Receiver {
         }
         self.chains.push(ReceiveChain {
             gen_,
+            dir,
             next: 0,
             key,
             superseded_s: None,
@@ -235,21 +261,34 @@ impl Receiver {
         queued: &Queued,
         now_s: u64,
     ) -> Result<Result<Opened, Malformed>, CryptoError> {
+        Ok(self.open_delivered::<B>(queued, now_s)?.map(|opened| {
+            opened.map_or(Opened::Unknown, |(plaintext, _)| Opened::Message(plaintext))
+        }))
+    }
+
+    /// As [`Self::open`], with the sender's delivery secret `s` of an opened
+    /// message; `None` is [`Opened::Unknown`].
+    #[allow(clippy::type_complexity)]
+    pub(crate) fn open_delivered<B: CryptoBackend>(
+        &mut self,
+        queued: &Queued,
+        now_s: u64,
+    ) -> Result<Result<Option<(Zeroizing<Vec<u8>>, Delivered)>, Malformed>, CryptoError> {
         let aad = aad(queued.gen_, queued.idx);
         let held = self
             .skipped
             .iter()
             .position(|skipped| skipped.gen_ == queued.gen_ && skipped.idx == queued.idx);
         if let Some(index) = held {
-            return Ok(
-                match open_with::<B>(&self.skipped[index].key, &aad, &queued.ct)? {
-                    Some(plaintext) => {
-                        self.skipped.swap_remove(index);
-                        Ok(Opened::Message(plaintext))
-                    }
-                    None => Err(Malformed),
-                },
-            );
+            let key = &self.skipped[index].key;
+            return Ok(match open_with::<B>(key, &aad, &queued.ct)? {
+                Some(plaintext) => {
+                    let delivered = crate::courier::delivered::<B>(key)?;
+                    self.skipped.swap_remove(index);
+                    Ok(Some((plaintext, delivered)))
+                }
+                None => Err(Malformed),
+            });
         }
         let idx = u64::from(queued.idx);
         let Some(chain) = self
@@ -257,7 +296,7 @@ impl Receiver {
             .iter_mut()
             .find(|chain| chain.gen_ == queued.gen_ && idx >= chain.next)
         else {
-            return Ok(Ok(Opened::Unknown));
+            return Ok(Ok(None));
         };
         let gap = (idx - chain.next) as usize;
         if self.skipped.len() + gap > MAX_SKIPPED {
@@ -269,6 +308,7 @@ impl Receiver {
             let (mk, next) = step::<B>(&key)?;
             skipped.push(Skipped {
                 gen_: queued.gen_,
+                dir: chain.dir,
                 idx: skipped_idx as u32,
                 key: mk,
                 created_s: now_s,
@@ -279,10 +319,33 @@ impl Receiver {
         let Some(plaintext) = open_with::<B>(&mk, &aad, &queued.ct)? else {
             return Ok(Err(Malformed));
         };
+        let delivered = crate::courier::delivered::<B>(&mk)?;
         chain.key = next;
         chain.next = idx + 1;
         self.skipped.extend(skipped);
-        Ok(Ok(Opened::Message(plaintext)))
+        Ok(Ok(Some((plaintext, delivered))))
+    }
+
+    /// The `(dir, gen, idx)` of every message key this receiver could still
+    /// derive: skipped keys, then the next indices of the newest chains, at
+    /// most [`MAX_SKIPPED`] in total (spec §8.1).
+    pub(crate) fn window(&self) -> Vec<(Dir, u8, u32)> {
+        let mut window: Vec<(Dir, u8, u32)> = self
+            .skipped
+            .iter()
+            .map(|skipped| (skipped.dir, skipped.gen_, skipped.idx))
+            .collect();
+        let reach = (MAX_SKIPPED - self.skipped.len()) as u64;
+        for chain in self.chains.iter().rev() {
+            let last = (chain.next + reach).min(u64::from(u32::MAX));
+            for idx in chain.next..=last {
+                if window.len() == MAX_SKIPPED {
+                    return window;
+                }
+                window.push((chain.dir, chain.gen_, idx as u32));
+            }
+        }
+        window
     }
 }
 
@@ -300,6 +363,7 @@ mod tests {
     fn sender(gen_: u8) -> SendChain {
         SendChain {
             gen_,
+            dir: Dir::R,
             idx: 0,
             key: chain_key(gen_),
         }
@@ -315,7 +379,7 @@ mod tests {
 
     fn receiver(gen_: u8) -> Receiver {
         let mut receiver = Receiver::default();
-        receiver.reseed(gen_, chain_key(gen_), NOW);
+        receiver.reseed(gen_, Dir::R, chain_key(gen_), NOW);
         receiver
     }
 
@@ -324,6 +388,7 @@ mod tests {
             .seal::<Reference>(&inner(msgno, "hi").unwrap())
             .unwrap()
             .unwrap()
+            .0
     }
 
     fn opened(receiver: &mut Receiver, queued: &Queued, now_s: u64) -> Result<Opened, Malformed> {
@@ -441,9 +506,13 @@ mod tests {
         let mc_1 = kdf::<Reference, 32>(&mc_0[..], &[], b"next", &[]).unwrap();
         let plaintext = inner(1, "hi").unwrap();
 
-        let queued = chain.seal::<Reference>(&plaintext).unwrap().unwrap();
+        let (queued, delivered) = chain.seal::<Reference>(&plaintext).unwrap().unwrap();
 
         assert_eq!((queued.gen_, queued.idx, chain.idx), (4, 0, 1));
+        assert_eq!(
+            *delivered,
+            *crate::courier::delivered::<Reference>(&mk_0).unwrap()
+        );
         assert_eq!(
             queued.ct,
             Reference::aes256gcm_seal(&mk_0, &[0; 12], &[4, 0], &plaintext).unwrap()
@@ -458,7 +527,7 @@ mod tests {
 
         let sealed = chain.seal::<Reference>(&[0; 32]).unwrap();
 
-        assert_eq!(sealed, None);
+        assert!(sealed.is_none());
     }
 
     #[test]
@@ -527,6 +596,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        miri,
+        ignore = "1000 key derivations take 25 min under Miri; runs under careful (ADR 0007)"
+    )]
     fn the_skip_bound_counts_keys_already_held() {
         let mut chain = advanced(1, MAX_SKIPPED as u32 - 1);
         let edge = sealed(&mut chain, 1);
@@ -542,7 +615,7 @@ mod tests {
         assert_eq!(receiver.skipped.len(), MAX_SKIPPED - 1);
         let mut over = advanced(2, 2);
         let beyond = sealed(&mut over, 3);
-        receiver.reseed(2, chain_key(2), NOW);
+        receiver.reseed(2, Dir::R, chain_key(2), NOW);
         assert_eq!(opened(&mut receiver, &beyond, NOW), Err(Malformed));
     }
 
@@ -554,7 +627,7 @@ mod tests {
         let mut fresh = sender(2);
         let current = sealed(&mut fresh, 3);
         let mut receiver = receiver(1);
-        receiver.reseed(2, chain_key(2), NOW + 10);
+        receiver.reseed(2, Dir::R, chain_key(2), NOW + 10);
 
         let results = [
             opened(&mut receiver, &current, NOW + 10),
@@ -591,10 +664,60 @@ mod tests {
         let mut receiver = receiver(1);
         opened(&mut receiver, &second, NOW).unwrap();
 
-        receiver.reseed(1, chain_key(9), NOW);
+        receiver.reseed(1, Dir::R, chain_key(9), NOW);
 
         assert!(receiver.skipped.is_empty());
         assert_eq!(receiver.chains.len(), 1);
         assert_eq!(opened(&mut receiver, &first, NOW), Err(Malformed));
+    }
+
+    #[test]
+    fn the_receiver_learns_the_senders_delivery_secret_when_a_message_opens() {
+        let mut chain = sender(2);
+        let (queued, delivered) = chain
+            .seal::<Reference>(&inner(1, "hi").unwrap())
+            .unwrap()
+            .unwrap();
+        let mut receiver = receiver(2);
+
+        let opened = receiver.open_delivered::<Reference>(&queued, NOW).unwrap();
+
+        let (plaintext, learned) = opened.unwrap().unwrap();
+        assert_eq!(plaintext, inner(1, "hi").unwrap());
+        assert_eq!(*learned, *delivered);
+        assert!(matches!(
+            receiver.open_delivered::<Reference>(&queued, NOW),
+            Ok(Ok(None))
+        ));
+    }
+
+    #[test]
+    fn the_window_lists_skipped_keys_then_the_newest_chains_up_to_500() {
+        let mut chain = sender(1);
+        let queued = [1, 2, 3].map(|msgno| sealed(&mut chain, msgno));
+        let mut receiver = receiver(1);
+        opened(&mut receiver, &queued[2], NOW).unwrap();
+        receiver.reseed(2, Dir::I, chain_key(2), NOW);
+
+        let window = receiver.window();
+
+        assert_eq!(window.len(), MAX_SKIPPED);
+        assert_eq!(
+            window[..3],
+            [(Dir::R, 1, 0), (Dir::R, 1, 1), (Dir::I, 2, 0)]
+        );
+        assert_eq!(window[MAX_SKIPPED - 1], (Dir::I, 2, 497));
+    }
+
+    #[test]
+    fn the_window_reaches_older_chains_and_stops_at_the_last_index() {
+        let mut receiver = receiver(1);
+        receiver.chains[0].next = u64::from(u32::MAX) - 1;
+        receiver.reseed(2, Dir::I, chain_key(2), NOW);
+        receiver.chains[1].next = u64::from(u32::MAX) + 1;
+
+        let window = receiver.window();
+
+        assert_eq!(window, [(Dir::R, 1, u32::MAX - 1), (Dir::R, 1, u32::MAX)]);
     }
 }

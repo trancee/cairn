@@ -6,6 +6,7 @@ import ch.trancee.cairn.ffi.Clock
 import ch.trancee.cairn.ffi.ContactInfo
 import ch.trancee.cairn.ffi.ContactRow
 import ch.trancee.cairn.ffi.CoreException
+import ch.trancee.cairn.ffi.CourierRow
 import ch.trancee.cairn.ffi.Event
 import ch.trancee.cairn.ffi.GattRole
 import ch.trancee.cairn.ffi.Persisted
@@ -125,6 +126,7 @@ private fun key(event: Event): List<Any?> = when (event) {
         event.device?.let(::key),
         event.contacts.map { listOf(it.contact, key(it.state)) },
         event.queued.map { listOf(it.contact, it.msgno, key(it.state)) },
+        event.courier.map { listOf(it.slot, key(it.state)) },
     )
     is Event.LinkUp -> listOf("LinkUp", event.link, event.gattRole, event.mtu, event.address.toList())
     is Event.MtuChanged -> listOf("MtuChanged", event.link, event.mtu)
@@ -135,6 +137,7 @@ private fun key(event: Event): List<Any?> = when (event) {
     is Event.SendChat -> listOf("SendChat", event.contact, event.text)
     is Event.MarkRead -> listOf("MarkRead", event.contact, event.msgno)
     is Event.SetReadReceipts -> listOf("SetReadReceipts", event.enabled)
+    is Event.SetCourier -> listOf("SetCourier", event.enabled, event.copies, event.lifetimeMinutes)
 }
 
 private fun key(state: Persisted): List<Any> = listOf(state.blob.toList(), state.version)
@@ -146,8 +149,8 @@ class LinkDriverTest {
     fun startRestoresAFreshCoreAndKeepsItsDeviceRow() {
         val rig = Rig()
 
-        assertEquals(keys(Event.Restore(null, emptyList(), emptyList())), rig.engine.events)
-        assertEquals(keys(Event.Restore(BLOB, emptyList(), emptyList())), keys(rig.driver.rows.restore().event))
+        assertEquals(keys(Event.Restore(null, emptyList(), emptyList(), emptyList())), rig.engine.events)
+        assertEquals(keys(Event.Restore(BLOB, emptyList(), emptyList(), emptyList())), keys(rig.driver.rows.restore().event))
     }
 
     @Test
@@ -180,7 +183,7 @@ class LinkDriverTest {
         val rig = Rig(resetStorage = true)
 
         assertEquals(Notice.Fault(FaultKind.STORAGE_RESET), rig.startNotices.first())
-        assertEquals(keys(Event.Restore(null, emptyList(), emptyList())), rig.engine.events)
+        assertEquals(keys(Event.Restore(null, emptyList(), emptyList(), emptyList())), rig.engine.events)
     }
 
     @Test
@@ -400,6 +403,11 @@ class LinkDriverTest {
             Action.PutQueued(8uL, 1u, row(7)),
             Action.DeleteQueued(7uL, 2u),
             Action.DeleteQueued(9uL, 1u),
+            Action.PutCourier(ULong.MAX_VALUE, row(8)),
+            Action.PutCourier(2uL, row(9)),
+            Action.PutCourier(3uL, row(10)),
+            Action.DeleteCourier(3uL),
+            Action.DeleteCourier(4uL),
         )
 
         rig.driver.sendChat(7uL, "a")
@@ -408,18 +416,23 @@ class LinkDriverTest {
             row(1),
             listOf(ContactRow(7uL, row(4)), ContactRow(8uL, row(3))),
             listOf(QueuedRow(7uL, 1u, row(6)), QueuedRow(8uL, 1u, row(7))),
+            listOf(CourierRow(2uL, row(9)), CourierRow(ULong.MAX_VALUE, row(8))),
         )
         assertEquals(keys(expected), keys(rig.driver.rows.restore().event))
     }
 
     @Test
-    fun readMarksAndTheReceiptSettingGoToTheCore() {
+    fun readMarksAndTheReceiptAndCourierSettingsGoToTheCore() {
         val rig = Rig()
 
         rig.driver.markRead(7uL, 3u)
         rig.driver.setReadReceipts(false)
+        rig.driver.setCourier(enabled = false, copies = 4u, lifetimeMinutes = 120u)
 
-        assertEquals(keys(Event.MarkRead(7uL, 3u), Event.SetReadReceipts(false)), rig.engine.events.drop(1))
+        assertEquals(
+            keys(Event.MarkRead(7uL, 3u), Event.SetReadReceipts(false), Event.SetCourier(false, 4u, 120u)),
+            rig.engine.events.drop(1),
+        )
     }
 
     @Test
@@ -461,7 +474,7 @@ class LinkDriverTest {
         assertTrue(poisoned.closed)
         assertEquals(listOf(first, second), rig.radio.disconnected)
         assertEquals(listOf(3uL), rig.timers.cancelled)
-        assertEquals(keys(Event.Restore(BLOB, emptyList(), emptyList()), Event.LinkUp(third, GattRole.CENTRAL, 23u, byteArrayOf())), rig.engine.events)
+        assertEquals(keys(Event.Restore(BLOB, emptyList(), emptyList(), emptyList()), Event.LinkUp(third, GattRole.CENTRAL, 23u, byteArrayOf())), rig.engine.events)
         assertEquals(3uL, third)
         assertEquals(listOf<Notice>(Notice.Fault(FaultKind.POISONED)), rig.notices)
     }

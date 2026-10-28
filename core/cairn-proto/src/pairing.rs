@@ -62,6 +62,8 @@ pub(crate) struct Paired {
     pub(crate) chain_key: Zeroizing<[u8; 32]>,
     pub(crate) door_a_to_b: Zeroizing<[u8; 32]>,
     pub(crate) door_b_to_a: Zeroizing<[u8; 32]>,
+    /// `K_route`: the courier envelope tag key (spec §8.1).
+    pub(crate) route_key: Zeroizing<[u8; 32]>,
 }
 
 /// Keys derived from `RK`; `RK` itself is erased as soon as they exist.
@@ -71,6 +73,7 @@ struct Keys {
     chain_key: Zeroizing<[u8; 32]>,
     door_a_to_b: Zeroizing<[u8; 32]>,
     door_b_to_a: Zeroizing<[u8; 32]>,
+    route_key: Zeroizing<[u8; 32]>,
     conf_a: Zeroizing<[u8; 32]>,
     conf_b: Zeroizing<[u8; 32]>,
     card_a: Zeroizing<[u8; 32]>,
@@ -87,6 +90,7 @@ impl Keys {
             chain_key: kdf::<B, 32>(&rk[..], &[], b"ck0", &[])?,
             door_a_to_b: kdf::<B, 32>(&rk[..], &[], b"door A", &[])?,
             door_b_to_a: kdf::<B, 32>(&rk[..], &[], b"door B", &[])?,
+            route_key: kdf::<B, 32>(&rk[..], &[], b"route", &[])?,
             conf_a: kdf::<B, 32>(&rk[..], &[], b"conf A", &[])?,
             conf_b: kdf::<B, 32>(&rk[..], &[], b"conf B", &[])?,
             card_a: kdf::<B, 32>(&rk[..], &[], b"card A", &[])?,
@@ -104,6 +108,7 @@ impl Keys {
             chain_key: self.chain_key,
             door_a_to_b: self.door_a_to_b,
             door_b_to_a: self.door_b_to_a,
+            route_key: self.route_key,
         }
     }
 }
@@ -356,6 +361,8 @@ mod tests {
         assert_eq!(a.door_a_to_b, b.door_a_to_b);
         assert_eq!(a.door_b_to_a, b.door_b_to_a);
         assert_ne!(a.door_a_to_b, a.door_b_to_a);
+        assert_eq!(a.route_key, b.route_key);
+        assert_ne!(a.route_key, a.chain_key);
         assert_eq!((a.th, a.nonce_b), (b.th, b.nonce_b));
     }
 

@@ -3,6 +3,7 @@ package ch.trancee.cairn.sdk
 import app.cash.sqldelight.db.SqlDriver
 import ch.trancee.cairn.ffi.Action
 import ch.trancee.cairn.ffi.ContactRow
+import ch.trancee.cairn.ffi.CourierRow
 import ch.trancee.cairn.ffi.Event
 import ch.trancee.cairn.ffi.Persisted
 import ch.trancee.cairn.ffi.QueuedRow
@@ -11,9 +12,13 @@ import ch.trancee.cairn.sdk.db.RowDatabase
 private const val DEVICE = 0
 private const val CONTACT = 1
 private const val QUEUED = 2
+private const val COURIER = 3
 private val AAD_LABEL = "cairn row v1".encodeToByteArray()
 
-/** `"cairn row v1" ‖ kind ‖ u64be(contact) ‖ u32be(msgno) ‖ u32be(version)` (ADR 0035 §2). */
+/**
+ * `"cairn row v1" ‖ kind ‖ u64be(contact) ‖ u32be(msgno) ‖ u32be(version)` (ADR 0035 §2); a
+ * courier row puts its slot in the contact field (ADR 0036 §3).
+ */
 internal fun rowAad(kind: Int, contact: ULong, msgno: UInt, version: UInt): ByteArray =
     AAD_LABEL + byteArrayOf(kind.toByte()) +
         ByteArray(8) { (contact shr (56 - 8 * it)).toByte() } +
@@ -44,6 +49,12 @@ class SealedRowStore(driver: SqlDriver, private val sealer: RowSealer) : Rows {
                     seal(QUEUED, action.contact, action.msgno, action.state),
                 )
                 is Action.DeleteQueued -> queries.deleteQueued(action.contact.toLong(), action.msgno.toLong())
+                is Action.PutCourier -> queries.putCourier(
+                    action.slot.toLong(),
+                    action.state.version.toLong(),
+                    seal(COURIER, action.slot, 0u, action.state),
+                )
+                is Action.DeleteCourier -> queries.deleteCourier(action.slot.toLong())
                 else -> {}
             }
         }
@@ -56,8 +67,9 @@ class SealedRowStore(driver: SqlDriver, private val sealer: RowSealer) : Rows {
             queries.wipeDevice()
             queries.wipeContacts()
             queries.wipeQueued()
+            queries.wipeCourier()
         }
-        return Restored(Event.Restore(null, emptyList(), emptyList()), reset = true)
+        return Restored(Event.Restore(null, emptyList(), emptyList(), emptyList()), reset = true)
     }
 
     private fun read(): Event.Restore? {
@@ -73,10 +85,15 @@ class SealedRowStore(driver: SqlDriver, private val sealer: RowSealer) : Rows {
             val msgno = row.msgno.toUInt()
             QueuedRow(contact, msgno, open(QUEUED, contact, msgno, row.version, row.ciphertext) ?: return null)
         }
+        val courier = queries.courierRows().executeAsList().map { row ->
+            val slot = row.slot.toULong()
+            CourierRow(slot, open(COURIER, slot, 0u, row.version, row.ciphertext) ?: return null)
+        }
         return Event.Restore(
             device,
             contacts.sortedBy { it.contact },
             queued.sortedWith(compareBy({ it.contact }, { it.msgno })),
+            courier.sortedBy { it.slot },
         )
     }
 

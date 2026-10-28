@@ -74,6 +74,13 @@ pub struct QueuedRow {
     pub state: Persisted,
 }
 
+/// One stored courier row: a carried envelope or a tombstone.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct CourierRow {
+    pub slot: u64,
+    pub state: Persisted,
+}
+
 /// An input to [`CairnCore::handle`]; ids are `LinkId`, `TimerId` and `ContactId`.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
 pub enum Event {
@@ -82,6 +89,7 @@ pub enum Event {
         device: Option<Persisted>,
         contacts: Vec<ContactRow>,
         queued: Vec<QueuedRow>,
+        courier: Vec<CourierRow>,
     },
     LinkUp {
         link: u64,
@@ -121,6 +129,12 @@ pub enum Event {
     SetReadReceipts {
         enabled: bool,
     },
+    /// The courier settings: `copies` is 1–16 and `lifetime_minutes` 60–10080.
+    SetCourier {
+        enabled: bool,
+        copies: u8,
+        lifetime_minutes: u16,
+    },
 }
 
 /// An output of [`CairnCore::handle`], executed by the platform in order. The
@@ -146,6 +160,14 @@ pub enum Action {
     DeleteQueued {
         contact: u64,
         msgno: u32,
+    },
+    /// Seal and store one courier row.
+    PutCourier {
+        slot: u64,
+        state: Persisted,
+    },
+    DeleteCourier {
+        slot: u64,
     },
     Send {
         link: u64,
@@ -213,6 +235,7 @@ impl From<Event> for cairn_proto::Event {
                 device,
                 contacts,
                 queued,
+                courier,
             } => Self::Restore {
                 device,
                 contacts: contacts
@@ -227,6 +250,13 @@ impl From<Event> for cairn_proto::Event {
                     .map(|row| cairn_proto::QueuedRow {
                         contact: ContactId(row.contact),
                         msgno: row.msgno,
+                        state: row.state,
+                    })
+                    .collect(),
+                courier: courier
+                    .into_iter()
+                    .map(|row| cairn_proto::CourierRow {
+                        slot: row.slot,
                         state: row.state,
                     })
                     .collect(),
@@ -267,6 +297,15 @@ impl From<Event> for cairn_proto::Event {
                 msgno,
             },
             Event::SetReadReceipts { enabled } => Self::SetReadReceipts { enabled },
+            Event::SetCourier {
+                enabled,
+                copies,
+                lifetime_minutes,
+            } => Self::SetCourier {
+                enabled,
+                copies,
+                lifetime_minutes,
+            },
         }
     }
 }
@@ -293,6 +332,8 @@ impl From<cairn_proto::Action> for Action {
                 contact: contact.0,
                 msgno,
             },
+            Proto::PutCourier { slot, state } => Self::PutCourier { slot, state },
+            Proto::DeleteCourier { slot } => Self::DeleteCourier { slot },
             Proto::Send { link, fragment } => Self::Send {
                 link: link.0,
                 fragment,
@@ -366,6 +407,7 @@ pub enum CoreError {
     InvalidMtu,
     UnexpectedBeaconRead,
     UnknownContact,
+    InvalidCourierConfig,
     /// The cryptographic backend failed, for example the platform RNG.
     Crypto,
     /// An earlier call panicked; the core refuses every later call.
@@ -383,6 +425,7 @@ impl std::fmt::Display for CoreError {
             Self::InvalidMtu => Proto::InvalidMtu,
             Self::UnexpectedBeaconRead => Proto::UnexpectedBeaconRead,
             Self::UnknownContact => Proto::UnknownContact,
+            Self::InvalidCourierConfig => Proto::InvalidCourierConfig,
             Self::Crypto => Proto::Crypto(cairn_crypto::CryptoError::BackendFailure),
             Self::Poisoned => return formatter.write_str("core refused after an earlier panic"),
         };
@@ -403,6 +446,7 @@ impl From<cairn_proto::CoreError> for CoreError {
             Proto::InvalidMtu => Self::InvalidMtu,
             Proto::UnexpectedBeaconRead => Self::UnexpectedBeaconRead,
             Proto::UnknownContact => Self::UnknownContact,
+            Proto::InvalidCourierConfig => Self::InvalidCourierConfig,
             Proto::Crypto(_) => Self::Crypto,
         }
     }
@@ -476,11 +520,13 @@ mod tests {
                     device: None,
                     contacts: Vec::new(),
                     queued: Vec::new(),
+                    courier: Vec::new(),
                 },
                 ProtoEvent::Restore {
                     device: None,
                     contacts: Vec::new(),
                     queued: Vec::new(),
+                    courier: Vec::new(),
                 },
             ),
             (
@@ -495,6 +541,10 @@ mod tests {
                         msgno: 3,
                         state: state(),
                     }],
+                    courier: vec![CourierRow {
+                        slot: 4,
+                        state: state(),
+                    }],
                 },
                 ProtoEvent::Restore {
                     device: Some(state()),
@@ -505,6 +555,10 @@ mod tests {
                     queued: vec![cairn_proto::QueuedRow {
                         contact: ContactId(2),
                         msgno: 3,
+                        state: state(),
+                    }],
+                    courier: vec![cairn_proto::CourierRow {
+                        slot: 4,
                         state: state(),
                     }],
                 },
@@ -598,6 +652,18 @@ mod tests {
                 Event::SetReadReceipts { enabled: false },
                 ProtoEvent::SetReadReceipts { enabled: false },
             ),
+            (
+                Event::SetCourier {
+                    enabled: true,
+                    copies: 6,
+                    lifetime_minutes: 1440,
+                },
+                ProtoEvent::SetCourier {
+                    enabled: true,
+                    copies: 6,
+                    lifetime_minutes: 1440,
+                },
+            ),
         ];
 
         for (event, expected) in cases {
@@ -643,6 +709,20 @@ mod tests {
                     contact: 4,
                     msgno: 5,
                 },
+            ),
+            (
+                ProtoAction::PutCourier {
+                    slot: 6,
+                    state: state(),
+                },
+                Action::PutCourier {
+                    slot: 6,
+                    state: state(),
+                },
+            ),
+            (
+                ProtoAction::DeleteCourier { slot: 6 },
+                Action::DeleteCourier { slot: 6 },
             ),
             (
                 ProtoAction::Send {
@@ -844,6 +924,7 @@ mod tests {
             (Proto::InvalidMtu, CoreError::InvalidMtu),
             (Proto::UnexpectedBeaconRead, CoreError::UnexpectedBeaconRead),
             (Proto::UnknownContact, CoreError::UnknownContact),
+            (Proto::InvalidCourierConfig, CoreError::InvalidCourierConfig),
             (
                 Proto::Crypto(CryptoError::BackendFailure),
                 CoreError::Crypto,
@@ -878,6 +959,7 @@ mod tests {
                     device: None,
                     contacts: Vec::new(),
                     queued: Vec::new(),
+                    courier: Vec::new(),
                 },
             ),
             Err(CoreError::Poisoned)

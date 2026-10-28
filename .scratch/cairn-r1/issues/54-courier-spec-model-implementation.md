@@ -45,3 +45,10 @@ the models README. Next: Rust core.
 need message chains, skipped keys and ACK, none of which the core has yet. The
 owner chose to build S5's store-and-forward core first (ADR 0034), then
 couriers on top.
+
+2026-10-28: step 3 core and SDK done ([ADR 0036](../../../docs/adr/0036-courier-state.md)).
+The Rust core seals own envelopes, keeps the recipient tag window, exchanges
+INVENTORY, FETCH, ENVELOPE, CUSTODY and TOMB after every Resume, and stores
+carried envelopes and tombstones as courier rows. The SDK seals courier rows
+(kind 3) and exposes `LinkDriver.setCourier`. Both pass their gates at 100%
+coverage. Remaining: the fleet run.

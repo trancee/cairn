@@ -39,16 +39,16 @@ private class Loopback(restores: List<Event.Restore> = List(2) { RowStore().rest
     val devices = restores.map(::Device)
 
     fun deliver(from: Int, event: Event) {
-        val stack = ArrayDeque(listOf(from to event))
-        while (stack.isNotEmpty()) {
-            val (device, next) = stack.removeLast()
+        val queue = ArrayDeque(listOf(from to event))
+        while (queue.isNotEmpty()) {
+            val (device, next) = queue.removeFirst()
             val actions = devices[device].core.handle(CLOCK, next)
             devices[device].record(actions)
             val peer = 1 - device
-            for (action in actions.asReversed()) {
+            for (action in actions) {
                 when (action) {
-                    is Action.Send -> stack.addLast(peer to Event.Received(action.link xor 1uL, action.fragment))
-                    is Action.Disconnect -> stack.addLast(peer to Event.LinkDown(action.link xor 1uL))
+                    is Action.Send -> queue.addLast(peer to Event.Received(action.link xor 1uL, action.fragment))
+                    is Action.Disconnect -> queue.addLast(peer to Event.LinkDown(action.link xor 1uL))
                     else -> Unit
                 }
             }

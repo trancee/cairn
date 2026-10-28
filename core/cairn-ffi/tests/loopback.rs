@@ -1,10 +1,10 @@
 //! Two `CairnCore`s with the real backend, driven only through the exported surface.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 
 use cairn_ffi::{
-    Action, CairnCore, Clock, ContactInfo, ContactRow, CoreError, Event, GattRole, Persisted,
-    QueuedRow, Verification,
+    Action, CairnCore, Clock, ContactInfo, ContactRow, CoreError, CourierRow, Event, GattRole,
+    Persisted, QueuedRow, Verification,
 };
 
 const CLOCK: Clock = Clock {
@@ -18,6 +18,7 @@ struct Store {
     device: Option<Persisted>,
     contacts: BTreeMap<u64, Persisted>,
     queued: BTreeMap<(u64, u32), Persisted>,
+    courier: BTreeMap<u64, Persisted>,
 }
 
 impl Store {
@@ -36,6 +37,12 @@ impl Store {
             }
             Action::DeleteQueued { contact, msgno } => {
                 self.queued.remove(&(*contact, *msgno));
+            }
+            Action::PutCourier { slot, state } => {
+                self.courier.insert(*slot, state.clone());
+            }
+            Action::DeleteCourier { slot } => {
+                self.courier.remove(slot);
             }
             _ => {}
         }
@@ -58,6 +65,14 @@ impl Store {
                 .map(|(&(contact, msgno), state)| QueuedRow {
                     contact,
                     msgno,
+                    state: state.clone(),
+                })
+                .collect(),
+            courier: self
+                .courier
+                .iter()
+                .map(|(&slot, state)| CourierRow {
+                    slot,
                     state: state.clone(),
                 })
                 .collect(),
@@ -113,16 +128,17 @@ impl Device {
 }
 
 /// Delivers `event` to `devices[from]`, then every resulting `Send` or
-/// `Disconnect` to the other device's end of the link, which is `link ^ 1`.
+/// `Disconnect`, in order, to the other device's end of the link, which is
+/// `link ^ 1`: a link delivers its fragments in order.
 fn drive(devices: &mut [Device; 2], from: usize, event: Event) {
-    let mut queue = vec![(from, event)];
-    while let Some((device, event)) = queue.pop() {
+    let mut queue = VecDeque::from([(from, event)]);
+    while let Some((device, event)) = queue.pop_front() {
         let actions = devices[device].core.handle(CLOCK, event).unwrap();
         devices[device].record(&actions);
         let peer = 1 - device;
-        for action in actions.into_iter().rev() {
+        for action in actions {
             match action {
-                Action::Send { link, fragment } => queue.push((
+                Action::Send { link, fragment } => queue.push_back((
                     peer,
                     Event::Received {
                         link: link ^ 1,
@@ -130,7 +146,7 @@ fn drive(devices: &mut [Device; 2], from: usize, event: Event) {
                     },
                 )),
                 Action::Disconnect { link } => {
-                    queue.push((peer, Event::LinkDown { link: link ^ 1 }))
+                    queue.push_back((peer, Event::LinkDown { link: link ^ 1 }))
                 }
                 _ => {}
             }

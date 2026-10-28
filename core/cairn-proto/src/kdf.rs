@@ -57,7 +57,7 @@ pub(crate) fn commit<B: CryptoBackend>(nonce: &[u8; 16]) -> [u8; 32] {
 }
 
 /// `lp("cairn-r1 " ‖ label)`.
-fn labelled(label: &[u8]) -> alloc::vec::Vec<u8> {
+pub(crate) fn labelled(label: &[u8]) -> alloc::vec::Vec<u8> {
     let length = u16::try_from(9 + label.len()).expect("labels are short constants");
     let mut output = alloc::vec::Vec::with_capacity(2 + usize::from(length));
     output.extend_from_slice(&length.to_be_bytes());
