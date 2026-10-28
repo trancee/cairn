@@ -94,6 +94,9 @@ compromise, and OS rollback is out of scope.
   which is the main looper. StrongBox seals are slow on some devices
   (ADR 0006 risk). The device demonstration measures commit latency. If it
   is too slow, the store moves to a worker thread or the key moves to the TEE.
+- On iOS, `KeychainRowSealer` and `RowStorage` live in the Swift host app,
+  because the CodeQL inventory rejects iOS-only Kotlin (ADR 0015). XCTest
+  covers them on a simulator, but they are outside CI and the coverage gates.
 - A single corrupt row resets all storage. This favours a clean failure
   over guessing which state is still consistent.
 

@@ -6,6 +6,28 @@ launch it runs `coreStatus()`, the same core self-test as Android's
 loopback, through `:app` → `:sdk` → Rust. It compares the result with
 `EXPECTED_CORE_STATUS`, shows the verdict and logs it with `NSLog`.
 
+It then runs `checkStorage()` against the app's sealed row database (ADR 0006,
+ADR 0035). `RowStorage` opens `cairn.db` in Application Support/`databases`,
+excluded from backup. `KeychainRowSealer` seals each row with CryptoKit
+AES-256-GCM under a random key in a `…AfterFirstUnlockThisDeviceOnly` Keychain
+item. When the database is missing, as after a reinstall, the stale key is deleted
+first. The first launch reports `storage=new`, later launches report
+`storage=restored`, and a `reset` or a missing device row is a `FAIL`.
+
+## Unit tests
+
+`iosAppTests` holds XCTest cases for the sealer and the storage. They run
+hosted in the app on a simulator:
+
+```sh
+cd iosApp
+xcodegen generate
+xcodebuild -project CairnIos.xcodeproj -scheme CairnIos \
+  -destination 'platform=iOS Simulator,name=iPhone 16' test
+```
+
+CI does not build or run the Swift shell.
+
 ## Build and run on an iPhone
 
 Prerequisites: Xcode, XcodeGen, an Apple Development identity, and an
