@@ -72,7 +72,10 @@ Facts this answers:
   after launch: `link 1 up CENTRAL mtu 515`, pairing (`0x00`–`0x04`), then
   Resume (`0x10`/`0x20`/`0x30`) on both sides. iOS as central works.
 - So Core Bluetooth doesn't report Android's extended adverts, although
-  `supports(.extendedScanAndConnect)` is true. ADR 0028 stays: an extended
+  `supports(.extendedScanAndConnect)` is true. Root cause, found by A/B on
+  three iPhones (iOS 17, 18, 27) and two Android controllers: iOS reports an
+  extended advert only when its auxiliary packet is on LE 2M. ADR 0038
+  (proposed) and issue 56. ADR 0028 stays: an extended
   Android phone dials iOS's legacy advert whatever the beacons, so every pair
   links; iOS dials only legacy-advertising Android peers.
 - The P30 lite's legacy advert failed with `ADVERTISE_FAILED_TOO_MANY_ADVERTISERS`
