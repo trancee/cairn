@@ -1938,3 +1938,28 @@ removed. All other constraints above are unchanged: hosted root and UID 59000
 only, a five-second deadline inside the ten-second cleanup window, a failed
 bootout is fatal, empty-UID verification follows, no system/runner/GUI
 domain is touched and printed domain structure is not parsed.
+
+## Amendment (2026-10-28): user-record lookup for JVM workers
+
+SQLDelight 2.4.1 (ADR 0035) generates code in a Gradle process-isolated
+worker. Gradle 9.7 starts such workers with an almost empty environment and
+no `HOME`. When `HOME` is unset, HotSpot on macOS
+(`os::init_system_properties_values`) falls back to `getpwuid()`. `build.sb`
+denied the `com.apple.system.opendirectoryd.libinfo` lookup, so `getpwuid()`
+returned NULL and the JVM crashed on `strlen(NULL)`. The result was exit 139
+in `:sdk:generateCommonMainRowDatabaseInterface`, in both the traced and the
+untraced root build (runs `40582874901` and `40589803471`).
+
+Evidence: a local reproduction ran Temurin 25 under the unchanged `build.sb`.
+- `env -i PATH=/usr/bin java -version` exits 139; with `HOME` set it exits 0.
+- The macOS crash report shows `_platform_strlen` called from
+  `os::init_system_properties_values`.
+- Allowing `/private/etc/passwd` alone still crashes. Allowing the libinfo
+  lookup alone passes.
+
+Decision: `build.sb`, and therefore `codeql.sb`, allows exactly
+`mach-lookup` of the `com.apple.system.opendirectoryd.libinfo` global name.
+The service answers read-only user and group record queries. File-read,
+file-write, network and all other Mach services stay denied. The owner did
+not review this narrowing of the default-deny profile before it was applied;
+reverting it requires another way to give these workers a home directory.
