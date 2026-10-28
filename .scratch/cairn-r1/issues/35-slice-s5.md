@@ -1,7 +1,7 @@
 # Slice S5: Sealed storage and store-and-forward
 
 Type: task
-Status: open
+Status: resolved
 Blocked by: 32
 
 ## Question
@@ -57,3 +57,28 @@ deletes stale keys. Nine XCTest cases pass on the iPhone 16 simulator. The
 launch self-test reports `storage=new`, then `storage=restored`, on the
 simulator and on the iPhone 12 mini (iOS 27). The SE 2020 is not in the
 signing profile. Still to do: the two-phone demonstration with commit latency.
+
+2026-10-28: two-phone demonstration on `feat/s5-device-demo`, with the
+oldest Android phone (P10 lite, API 26, TEE key) and the newest (Nothing
+Phone (2), API 36). iOS has no BLE yet, so Android↔Android is the only
+platform pair.
+
+- **Restore.** The demonstration found a bug. After a restart, the core
+  restored the contacts, but the app showed none, because `LinkDriver.start`
+  never sent `ContactsChanged`. It now does (test first). After force-stopping
+  and relaunching both phones, each shows its contact, and there is no
+  storage-reset banner.
+- **Store-and-forward.** With the Nothing stopped, the P10 sent a chat, which
+  showed "Waiting for a connection". The P10 was then force-stopped and
+  relaunched, and the Nothing started. The Nothing received the chat, and
+  the P10 committed the `DeleteQueued` row for the acknowledgement. The
+  chat view is held in memory, so after the restart the P10 no longer
+  shows the sent message.
+- **Receipts.** Live chats in both directions reached Read.
+- **Commit latency.** Each commit is one transaction, logged by
+  `TimedRows`. The P10 (TEE) took 42–115 ms, the Nothing 14–38 ms, and a
+  StrongBox Pixel 6 paired with the Nothing 34–125 ms. Commits happen once
+  per pairing or message event, not per fragment, so they stay on the main
+  looper (ADR 0035).
+
+Couriers continue in issue 54.

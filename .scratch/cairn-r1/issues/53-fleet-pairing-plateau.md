@@ -464,6 +464,35 @@ with these logs, on 28 phones:
 - So about 7% of slot time is wasted. An 8 s dial timeout would save about
   1%, less than the noise between arms. No change.
 
+## P10 and Nothing pre-auth stalls (2026-10-28)
+
+During the S5 demonstration, the P10 lite (API 26) did not pair with the
+Nothing Phone (2) (API 36) within 150 s. The receiver logged one 512 B
+fragment, then the HCI assembler message `Controller sent a starting packet
+without finishing previous packet. Drop previous one.`, and the link
+closed. A build from before `d77abae` behaved the same. Pacing
+notifications 40 ms after `onNotificationSent` and capping the MTU at 247
+looked better at first, but later runs showed that those trials were
+confounded by two problems:
+
+- Five other fleet phones were still running cairn, so the Nothing dialled
+  them instead of the P10.
+- The P10's Bluetooth stack was degraded after many force-stops. It
+  logged `enabling advertiser failed, status: 9`, and it recovered only
+  after a reboot.
+
+Before each run, the harness now force-stops cairn on every fleet phone
+and turns Bluetooth off and on on both phones. With that harness, the
+unmodified build paired 6 of 6 times in 18–43 s with no HCI drops. The P10
+still queued three notifications within 9 ms, and the central received
+all of them. So the dropped fragments came from the degraded stack, not
+from notification pacing, and the protocol does not change.
+
+Android 8 has no `svc bluetooth`, and the shell lacks `BLUETOOTH_ADMIN`.
+Our harness uses the `REQUEST_DISABLE` and `REQUEST_ENABLE` system dialogs
+there. The Pocophone's MIUI dialog was not found, so that phone was not
+reset.
+
 ## Open
 
 1. **Plateau.** Resolved. ADR 0025 ended slot exhaustion (36 to 49 pairs).
@@ -476,7 +505,8 @@ with these logs, on 28 phones:
    Fast 133s were connection requests lost on the advertising channels, and
    ADR 0028 fixed them. ADR 0031 keeps links up, and slot waste is about 7%.
 2. **Unanswered frames.** Was the notification lost over the air, or did the
-   central stall? Needs an HCI snoop on one affected pair. The `out` trace
+   central stall? On 2026-10-28, the P10 and Nothing losses went away after
+   a Bluetooth reset (see above). The fleet3 cases are not yet explained. Needs an HCI snoop on one affected pair. The `out` trace
    is logged when the fragment is queued, so `onNotificationSent` timing
    would also help.
 3. **Unmatched P0s.** Resolved: fleet4 has none with the GX6 visible.

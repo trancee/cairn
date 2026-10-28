@@ -89,8 +89,11 @@ class LinkDriver(
     private val links = LinkedHashMap<ULong, Link>()
     private val activeTimers = LinkedHashSet<ULong>()
 
-    /** Restores a fresh core; call once, first. */
-    fun start() = dispatch(restore())
+    /** Restores a fresh core and tells the app its restored contacts; call once, first. */
+    fun start() {
+        dispatch(restore())
+        listener(Notice.ContactsChanged(contacts()))
+    }
 
     override fun linkUp(role: GattRole, mtu: UShort, address: ByteArray): ULong {
         val now = clock.now()
