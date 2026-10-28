@@ -1105,6 +1105,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        miri,
+        ignore = "1024 tombstone inserts take 24 min under Miri; runs under careful (ADR 0007)"
+    )]
     fn a_tombstone_is_kept_once_and_the_earliest_expiring_goes_first_at_1024() {
         let mut core = core();
         let mut actions = Vec::new();
