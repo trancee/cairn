@@ -1,8 +1,12 @@
 package ch.trancee.cairn.android
 
+import android.os.Handler
+import android.os.Looper
 import ch.trancee.cairn.ffi.Action
 import ch.trancee.cairn.ffi.Event
 import ch.trancee.cairn.ffi.GattRole
+import ch.trancee.cairn.ffi.Persisted
+import ch.trancee.cairn.sdk.FaultKind
 import ch.trancee.cairn.sdk.Notice
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -144,4 +148,37 @@ class SessionTest {
 
         assertEquals(app.engine.contacts, app.session.model.contacts)
     }
+
+    @Test
+    fun rowsTheCoreCommitsAreRestoredAfterARestart() {
+        app.engine.respond = {
+            if (it is Event.Restore) listOf(Action.PersistDevice(Persisted(byteArrayOf(7), 2u))) else emptyList()
+        }
+        app.session
+
+        val engine = FakeEngine()
+        restart(engine)
+        val restored = engine.events.single() as Event.Restore
+
+        assertContentEquals(byteArrayOf(7), restored.device?.blob)
+        assertEquals(2u, restored.device?.version)
+    }
+
+    @Test
+    fun losingTheKeystoreKeyResetsStorageAndSaysSo() {
+        app.engine.respond = {
+            if (it is Event.Restore) listOf(Action.PersistDevice(Persisted(byteArrayOf(7), 2u))) else emptyList()
+        }
+        app.session
+        FakeAndroidKeyStore.keys.clear()
+        val engine = FakeEngine()
+
+        val session = restart(engine)
+
+        assertEquals(listOf<Event>(Event.Restore(null, emptyList(), emptyList())), engine.events)
+        assertEquals(FaultKind.STORAGE_RESET, session.model.fault)
+    }
+
+    /** A second session on the same database and keystore, as after the process restarts. */
+    private fun restart(engine: FakeEngine) = Session(app, Handler(Looper.getMainLooper()), app.openRows()) { engine }
 }

@@ -28,6 +28,7 @@ kotlin {
 dependencies {
     implementation(project(":androidBle"))
     implementation(libs.androidx.activity.compose)
+    implementation(libs.sqldelight.android.driver)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.material3)
     debugImplementation(project(":app"))
