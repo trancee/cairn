@@ -1,7 +1,7 @@
 # Courier: spec, formal model and implementation
 
 Type: task
-Status: open
+Status: resolved
 Blocked by: 35
 
 ## Question
@@ -52,3 +52,27 @@ INVENTORY, FETCH, ENVELOPE, CUSTODY and TOMB after every Resume, and stores
 carried envelopes and tombstones as courier rows. The SDK seals courier rows
 (kind 3) and exposes `LinkDriver.setCourier`. Both pass their gates at 100%
 coverage. Remaining: the fleet run.
+
+2026-10-28: step 3 done; resolved. Fleet run on `main` at `cea4a64` with
+three Android phones: A = Nothing Phone (2) (`1f1dad34`), B = Motorola edge
+30 fusion (`ZY22GCD9ST`), C = Galaxy Z Flip4 (`R5CT83ACSJX`). Bluetooth
+reset and app data cleared on all three first. The phones share a desk, so
+"out of range" means A and C never ran at the same time.
+
+1. Paired A–B, B–C and A–C, two apps at a time: 11 s, 11 s, 10 s.
+2. A alone sent "viaB" to C: one queued row, "Waiting for a connection".
+3. A and B: B stored A's envelope as a courier row 7 s after B started
+   (a 145 B DATA frame at 483 ms on the link).
+4. A stopped; B and C: C opened the envelope 8 s after C started. C stored
+   its tombstone and showed "viaB" under A's contact.
+5. B stopped; A and C: A's queued row was deleted on C's ACK 8 s after A
+   started, and A kept the tombstone of its own envelope. C showed the
+   message once.
+
+Evidence is row counts per table read from each phone's `cairn.db` with
+`run-as` (rows are sealed, so only counts), logcat frame sizes and the
+screen text. Not measured: delivery over real distance, iOS couriers, and
+the battery cost of the exchange. On the B–C link, B sent two 145 B frames:
+the FETCH answer and the halved spray copy, both decided at inventory
+completion. The spec allows this. The duplicate is answered with CUSTODY 2
+and costs one frame.
