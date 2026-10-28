@@ -358,7 +358,13 @@ class AndroidRadio(
         }
     }
 
-    private val advertiseCallback = object : AdvertiseCallback() {}
+    // A legacy advert that fails to start, such as when other apps hold every advertiser, is retried
+    // at the next window boundary (spec §10.1).
+    private val advertiseCallback = object : AdvertiseCallback() {
+        override fun onStartFailure(errorCode: Int) {
+            Log.w(TAG, "advertising failed ($errorCode)")
+        }
+    }
 
     /** Whether the radio advertises an extended set (ADR 0028); set when opened. */
     private var extended = false

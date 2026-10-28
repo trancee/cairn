@@ -94,4 +94,8 @@ The Android radio advertises extended where the controller supports it
 
 ## Open
 
-- iOS (S6): Core Bluetooth chooses its own PDUs.
+- iOS (S6): Core Bluetooth chooses its own PDUs, and it doesn't report
+  extended adverts ([ADR 0037](0037-ios-ble-adapter.md)). An extended Android
+  phone dials iOS's legacy advert; iOS can't dial it. A legacy set alongside
+  the extended one would let iOS dial too, at the cost in the dual-sets
+  option above.

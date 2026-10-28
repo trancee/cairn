@@ -16,12 +16,15 @@ import org.robolectric.util.reflector.ForType
 import org.robolectric.util.reflector.Reflector.reflector
 
 /**
- * Records the advertising mode of every legacy start, which the stock shadow drops, then starts as
+ * Records the advertising mode and callback of every legacy start, which the stock shadow drops, then starts as
  * usual; and records advertising sets, which the stock shadow neither counts nor stops.
  */
 @Implements(BluetoothLeAdvertiser::class)
 class RecordingAdvertiser : ShadowBluetoothLeAdvertiser() {
     val modes = mutableListOf<Int>()
+
+    /** The callback of every legacy start, in order. */
+    val callbacks = mutableListOf<AdvertiseCallback>()
 
     /** Every advertising set started, in order. */
     val sets = mutableListOf<Pair<AdvertisingSetParameters, AdvertisingSetCallback>>()
@@ -35,6 +38,7 @@ class RecordingAdvertiser : ShadowBluetoothLeAdvertiser() {
     @Implementation
     public override fun startAdvertising(settings: AdvertiseSettings, data: AdvertiseData, callback: AdvertiseCallback) {
         modes += settings.mode
+        callbacks += callback
         reflector(Real::class.java, real).startAdvertising(settings, data, callback)
     }
 

@@ -56,12 +56,31 @@ from the same commit. Every other phone had Cairn stopped.
   - Duplicate iPhone↔iPhone links were closed by the core (OI-17).
 
 Facts this answers:
-- In every Android↔iOS run, Android was the central. iOS never opened a second
-  link to an Android peer that was already linked to its GATT server. That is
-  consistent with CoreBluetooth giving the remote device the same identifier as
-  `CBCentral` and as `CBPeripheral`. It doesn't prove it: iOS may simply not
-  have seen Android's extended advert. OI-39 stays open.
+- In every Android↔iOS run, Android was the central, because iOS never saw
+  Android's extended advert (below).
 - The iOS permission prompt appears on first launch, from
   `NSBluetoothAlwaysUsageDescription`.
+
+2026-10-28: iOS as central (ADR 0037 Consequences, spec §10.4).
+
+- A probe build of the iPhone 12 mini scanned with no service filter for 40 s
+  and logged each device's first advert: 43 devices, none with a secondary
+  PHY, and no Cairn advert, while the Nothing advertised its extended set.
+  With the service filter it saw nothing either.
+- The Nothing, forced to legacy advertising with the unchanged payload, was
+  reported at once with its 8 B service data. The iPhone dialled it 3.5 s
+  after launch: `link 1 up CENTRAL mtu 515`, pairing (`0x00`–`0x04`), then
+  Resume (`0x10`/`0x20`/`0x30`) on both sides. iOS as central works.
+- So Core Bluetooth doesn't report Android's extended adverts, although
+  `supports(.extendedScanAndConnect)` is true. ADR 0028 stays: an extended
+  Android phone dials iOS's legacy advert whatever the beacons, so every pair
+  links; iOS dials only legacy-advertising Android peers.
+- The P30 lite's legacy advert failed with `ADVERTISE_FAILED_TOO_MANY_ADVERTISERS`
+  (2), silently. The radio now logs `advertising failed (2)`; the rotation
+  retries it at the next window.
+- The SE 2016 send test stopped at the device's "Enable UI Automation"
+  passcode prompt (`Timed out while enabling automation mode`). It needs the
+  passcode entered on the device; the SE→Android direction rests on its
+  handshake frames above.
 
 Status: done pending PR review.

@@ -135,9 +135,16 @@ hold no decisions; the device demonstration covers them.
 
 ## Consequences
 
-- Android↔iOS links come up from either side. Two links between the same
-  pair are possible when both dial at once; the core keeps at most one
-  Resume per contact in flight (OI-17).
+- Android↔iOS links come up from either side, but iOS can dial only an
+  Android peer that advertises legacy. On an iPhone 12 mini (iOS 27), whose
+  `CBCentralManager.supports(.extendedScanAndConnect)` is true, Core
+  Bluetooth reported no extended advert at all, with or without a service
+  filter, while it reported the same Android phone's legacy advert at once
+  and dialled it. An Android phone that advertises extended sees iOS's
+  legacy advert and dials it whatever the beacons (ADR 0028), so every
+  Android–iOS pair still links.
+- Two links between the same pair are possible when both dial at once; the
+  core keeps at most one Resume per contact in flight (OI-17).
 - An idle Android central linked to a closed iOS peripheral stays connected
   until it next writes or its own eviction closes it.
 - iOS↔iOS dialling has no tie-break until the beacon UUID arrives in S6;
