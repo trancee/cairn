@@ -70,19 +70,3 @@ final class KeychainRowSealer: NSObject, RowSealer {
 struct KeychainError: Error, Equatable {
     let status: OSStatus
 }
-
-extension Data {
-    var kotlin: KotlinByteArray {
-        let array = KotlinByteArray(size: Int32(count))
-        for (index, byte) in enumerated() {
-            array.set(index: Int32(index), value: Int8(bitPattern: byte))
-        }
-        return array
-    }
-}
-
-extension KotlinByteArray {
-    var data: Data {
-        Data((0 ..< size).map { UInt8(bitPattern: get(index: $0)) })
-    }
-}

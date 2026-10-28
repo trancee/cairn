@@ -14,9 +14,27 @@ item. When the database is missing, as after a reinstall, the stale key is delet
 first. The first launch reports `storage=new`, later launches report
 `storage=restored`, and a `reset` or a missing device row is a `FAIL`.
 
+## Chat over BLE
+
+Without `-selfTest`, the app opens the sealed rows and runs the S3 chat
+session (ADR 0037). It works like Android's chat screen:
+- `IosRadio` advertises and scans for the cairn service and runs both GATT
+  roles while the app is in the foreground;
+- nearby phones pair automatically;
+- the screen lists contacts, opens conversations and shows the links panel.
+
+The first launch asks for Bluetooth permission. The radio logs link events and
+fragment headers, never payloads, as `CairnRadio …` lines:
+
+```sh
+idevicesyslog -u <udid> -p CairnIos | grep CairnRadio
+```
+
 ## Unit tests
 
-`iosAppTests` holds XCTest cases for the sealer and the storage. They run
+`iosAppTests` holds XCTest cases for the sealer, the storage, the radio state
+machine (`IosRadio`, through a fake `BlePort`), the platform helpers and the
+chat model. They run
 hosted in the app on a simulator:
 
 ```sh
