@@ -344,13 +344,33 @@ final class IosRadioTests: XCTestCase {
         radio.send(link: link, fragment: Data([0x21, 0xAA]).kotlin)
         scheduler.drain()
         radio.notified(a, value: Data([]))
-        radio.disconnected(a)
+        radio.disconnected(a, error: 6)
 
         XCTAssertEqual(lines, [
             "link 1 up CENTRAL mtu 185",
             "link 1 out 0x21 2 B",
             "link 1 in 0x 0 B",
+            "link 1 lost error 6",
             "link 1 down",
+        ])
+    }
+
+    func testTraceNamesALinkTheCoreClosesAndOneThePeerEndsCleanly() {
+        var lines: [String] = []
+        radio.trace = { lines.append($0) }
+        running()
+        let first = centralLink(a)
+        let second = centralLink(b)
+
+        radio.disconnect(link: first)
+        scheduler.drain()
+        radio.disconnected(b)
+
+        XCTAssertEqual(lines.filter { !$0.contains(" up ") }, [
+            "link \(first) close requested",
+            "link \(first) down",
+            "link \(second) lost",
+            "link \(second) down",
         ])
     }
 

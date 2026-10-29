@@ -41,7 +41,7 @@ class LinkTraceTest {
         h.idle()
         advance(4_700)
 
-        h.callback(gatt).onConnectionStateChange(gatt, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED)
+        h.callback(gatt).onConnectionStateChange(gatt, 0x08, BluetoothProfile.STATE_DISCONNECTED)
         h.idle()
 
         assertEquals(
@@ -49,6 +49,7 @@ class LinkTraceTest {
                 "link 1 up CENTRAL mtu 517",
                 "link 1 out 0x00 3 B at 40 ms",
                 "link 1 in 0x81 2 B at 300 ms",
+                "link 1 lost status 0x08",
                 "link 1 down at 5000 ms",
             ),
             trace(),
@@ -75,9 +76,22 @@ class LinkTraceTest {
                 "link 1 up PERIPHERAL mtu 23",
                 "link 1 in 0x10 2 B at 0 ms",
                 "link 1 out 0x20 1 B at 0 ms",
+                "link 1 close requested",
                 "link 1 down at 0 ms",
             ),
             trace(),
         )
+    }
+
+    @Test
+    fun peripheralLinkTracesTheStatusOfAConnectionThePeerEnded() {
+        val device = h.device("00:11:22:33:44:02")
+        h.registerServer()
+        h.subscribe(device)
+
+        h.serverCallback().onConnectionStateChange(device, 0x13, BluetoothProfile.STATE_DISCONNECTED)
+        h.idle()
+
+        assertEquals(listOf("link 1 up PERIPHERAL mtu 23", "link 1 lost status 0x13", "link 1 down at 0 ms"), trace())
     }
 }
