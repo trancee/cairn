@@ -91,7 +91,7 @@ Facts this answers:
   shown with the 12 mini (ADR 0038, arm m2).
 - SE 2016 as central (2026-10-29): against a legacy-advertising Android
   phone (Redmi `2201117TY`, Android 13) both sides dial, and the SE won the
-  race in 3 of 6 trials (Android `link 1 up PERIPHERAL`, MTU 185). Over
+  race in 5 of 8 trials (Android `link 1 up PERIPHERAL`, MTU 185). Over
   such a link the chat driver received "hello from Android" and its reply
   reached `Delivered`; Android showed it and marked its message `Read`.
   Against the Pocophone (extended) the Android side was central in every
