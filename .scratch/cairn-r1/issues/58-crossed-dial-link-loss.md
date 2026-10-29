@@ -55,6 +55,33 @@ C2 ×2, C3), consistent with C2's two attempts failing.
 The logs (iPhone syslog, Android `CairnRadio`) are not committed. To
 reproduce, rerun the three trials.
 
+## Tried: park a dial that joins the peer's connection (2026-10-29, rejected)
+
+Hypothesis: when our dial connects while the same peer is already connected
+to our GATT server, the dial rides that ACL. Closing it on timeout or
+failure drops the peer's link. The patch kept such a dial open, did no GATT
+work on it, and closed it only when the server connection ended. It passed
+Robolectric tests and Kover, then ran on devices with the Mi Note 3 against
+the 12 mini (F1–F4) and the Redmi `2201117TY` against the iPhone X (R1–R3),
+45 s each:
+
+- The path fired in F2, F4 and R2 (`dial … joined the peer's connection`).
+- F1 still lost its link: the dial connected *before* the server's connect
+  callback, then failed `0x08` 5.6 s later, and the inbound link dropped in
+  the same millisecond. The ordering of server and client callbacks can't
+  be relied on.
+- F3 lost its link 1.7 s after link-up with no dial in flight, so dial
+  teardown is not the only cause.
+- R2 regressed: the parked dial held for 32 s while the iPhone's server
+  connection never became a link, and the real link came only 36 s in.
+- The iPhone's address changed during F1 (`24:6E`, then `BB:22`), so
+  address keys also miss.
+
+Not merged. Next: capture an HCI snoop log on the Android side
+(`bluetooth_hci.log`) during a reproduction, and log the core's close
+reason first (`Action::Disconnect` carries no reason; about 20 call sites
+in `core/cairn-proto/src/core.rs`).
+
 ## Done when
 
 - The close reason in C2 is identified from a log that names it.
