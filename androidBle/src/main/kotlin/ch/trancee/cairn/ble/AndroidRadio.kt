@@ -317,7 +317,12 @@ class AndroidRadio(
     }
 
     override fun disconnect(link: ULong) {
-        handler.post { links[link]?.close() }
+        handler.post {
+            links[link]?.let {
+                Log.d(TAG, "link $link close requested")
+                it.close()
+            }
+        }
     }
 
     /**
@@ -442,6 +447,11 @@ class AndroidRadio(
         listener.received(link, fragment)
     }
 
+    /** The stack reported the connection gone; [status] is its HCI or GATT reason (issue 58). */
+    private fun lost(link: ULong, status: Int) {
+        Log.d(TAG, "link $link lost status 0x%02x".format(status))
+    }
+
     private fun down(link: ULong) {
         Log.d(TAG, "link $link down at ${since(link)} ms")
         upAt.remove(link)
@@ -537,6 +547,7 @@ class AndroidRadio(
                 }, PRE_AUTH_WINDOW_MS)
                 if (!gatt.requestMtu(GattProfile.MAX_MTU)) close()
             } else {
+                if (stage == Stage.UP) lost(link, status)
                 close()
             }
         }
@@ -717,6 +728,7 @@ class AndroidRadio(
                 serverMtus.remove(address)
                 val peripheral = peripherals.remove(address)
                 if (peripheral != null) {
+                    lost(peripheral.link, status)
                     down(peripheral.link)
                 } else if (since != null) {
                     val ms = SystemClock.elapsedRealtime() - since

@@ -184,10 +184,11 @@ final class IosRadio: NSObject, Radio {
 
     func disconnect(link: UInt64) {
         scheduler.async { [self] in
-            switch links[link] {
+            guard let endpoint = links[link] else { return }
+            trace("link \(link) close requested")
+            switch endpoint {
             case let .central(peer): closeCentral(peer)
             case let .peripheral(central): closePeripheral(central)
-            case nil: break
             }
         }
     }
@@ -284,9 +285,13 @@ final class IosRadio: NSObject, Radio {
         if ok { listener.sent(link: central.link) } else { closeCentral(peer) }
     }
 
-    /// The connection ended or never came up.
-    func disconnected(_ peer: UUID) {
-        if centrals[peer] != nil { closeCentral(peer) }
+    /// The connection ended or never came up; [error] is the `CBError` code, if any (issue 58).
+    func disconnected(_ peer: UUID, error: Int? = nil) {
+        guard let central = centrals[peer] else { return }
+        if central.stage == .up {
+            trace("link \(central.link) lost" + (error.map { " error \($0)" } ?? ""))
+        }
+        closeCentral(peer)
     }
 
     func connectFailed(_ peer: UUID) {

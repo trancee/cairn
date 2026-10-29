@@ -179,7 +179,7 @@ extension CoreBluetoothPort: CBCentralManagerDelegate {
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        radio?.disconnected(peripheral.identifier)
+        radio?.disconnected(peripheral.identifier, error: (error as NSError?)?.code)
     }
 }
 

@@ -129,9 +129,13 @@ The platform-neutral `LinkDriver` in `:sdk` `commonMain` sits between
   deprecated ones.
 - **Link trace.** At debug level under `CairnRadio`, the radio logs each
   link's `up` (role and MTU), every fragment `in` and `out` (header byte,
-  size and milliseconds since `up`), and `down`. It logs no addresses and no
-  payload bytes. An `out` is logged when the fragment is queued, not when it
-  goes over the air.
+  size and milliseconds since `up`), and `down`. Before `down` it logs why:
+  `close requested` when the core asked for the disconnect, or `lost status
+  0x..` with the stack's status when the connection ended otherwise (issue
+  58). The iOS adapter logs the same lines, with the `CBError` code as `lost
+  error N`, or a bare `lost` when Core Bluetooth gives none. It logs no
+  addresses and no payload bytes. An `out` is logged when the fragment is
+  queued, not when it goes over the air.
 - **Connection priority and PHY.** On connecting, the central requests
   `CONNECTION_PRIORITY_HIGH` and prefers the LE 2M PHY both ways, so
   pre-auth fragments arrive in time under load (issue 52). Ten seconds later

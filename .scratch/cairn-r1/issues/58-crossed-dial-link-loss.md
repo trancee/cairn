@@ -82,9 +82,34 @@ Not merged. Next: capture an HCI snoop log on the Android side
 reason first (`Action::Disconnect` carries no reason; about 20 call sites
 in `core/cairn-proto/src/core.rs`).
 
+## Close-reason trace (2026-10-29)
+
+Both adapters now log why a link ended, just before `down` (ADR 0023,
+"Link trace"): `close requested` when the core asked for it, `lost status
+0x..` (Android) or `lost error N` (iOS `CBError` code) when the connection
+ended otherwise.
+
+Five 40 s runs, Mi Note 3 (API 28) with the 12 mini (T1–T5):
+- T2: the iPhone linked as central, and 2.6 s later, during pairing, it
+  logged `lost error 6`: `CBError.connectionTimeout`, a supervision
+  timeout. Android's server saw status `0x00`. No Android dial was in
+  flight: the previous one had failed 8 s earlier, and the next started
+  0.2 s after the drop.
+- T5: one `close requested` on a second iPhone-central link, the core's
+  usual duplicate-link close.
+- The other links held until the run ended. The Mi Note 3's dials to the
+  iPhone failed with `0x85` (GATT error 133) 16 times out of 16.
+
+So at least some of these losses are radio-level supervision timeouts, not
+the core closing the link and not a dial tearing down a shared ACL. The
+earlier run C (dial timeout, then link down 0.6 s later) still needs a
+trace to tell whether it was the same.
+
 ## Done when
 
-- The close reason in C2 is identified from a log that names it.
+- The close reason in C2 is identified from a log that names it. (The
+  trace now names it; C2 itself has not been rerun on an iPhone X build
+  with the trace.)
 - Pairing can't end with only one side storing the contact (the lost-P4
   case), or the issue records why it is acceptable.
 - A dial timeout or a failed crossed dial no longer drops an established
