@@ -160,4 +160,57 @@ class SealedRowStoreTest {
         val expected = Event.Restore(row(1), emptyList(), emptyList(), emptyList())
         assertEquals(key(expected), key(store.restore().event))
     }
+
+    @Test
+    fun aVersionOneDatabaseMigratesToHoldCourierRows() {
+        val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+        VERSION_ONE.forEach { driver.execute(null, it, 0) }
+        val store = SealedRowStore(driver.also { RowDatabase.Schema.migrate(it, 1, RowDatabase.Schema.version) }, FakeSealer())
+
+        store.commit(listOf(Action.PutCourier(3uL, row(1))))
+
+        assertEquals(listOf(CourierRow(3uL, row(1))).map { listOf(it.slot, key(it.state)) }, key(store.restore().event)[3])
+    }
+
+    @Test
+    fun aVersionOneDatabaseThatAlreadyHasCourierRowsKeepsThemThroughTheMigration() {
+        val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+        (VERSION_ONE + COURIER).forEach { driver.execute(null, it, 0) }
+        SealedRowStore(driver, FakeSealer()).commit(listOf(Action.PutCourier(3uL, row(1))))
+
+        RowDatabase.Schema.migrate(driver, 1, RowDatabase.Schema.version)
+
+        val restored = SealedRowStore(driver, FakeSealer()).restore().event
+        assertEquals(listOf(CourierRow(3uL, row(1))).map { listOf(it.slot, key(it.state)) }, key(restored)[3])
+    }
+
+    @Test
+    fun wipeDeletesEveryRow() {
+        val store = SealedRowStore(database(), FakeSealer())
+        store.commit(
+            listOf(
+                Action.PersistDevice(row(1)),
+                Action.PersistContact(7uL, row(2)),
+                Action.PutQueued(7uL, 1u, row(3)),
+                Action.PutCourier(0uL, row(4)),
+            ),
+        )
+
+        store.wipe()
+
+        val restored = store.restore()
+        assertEquals(key(Event.Restore(null, emptyList(), emptyList(), emptyList())), key(restored.event))
+        assertFalse(restored.reset)
+    }
 }
+
+/** The ADR 0035 schema that shipped before the courier table (`05e2777`). */
+private val VERSION_ONE = listOf(
+    "CREATE TABLE device (id INTEGER NOT NULL PRIMARY KEY CHECK (id = 0), version INTEGER NOT NULL, ciphertext BLOB NOT NULL)",
+    "CREATE TABLE contact (id INTEGER NOT NULL PRIMARY KEY, version INTEGER NOT NULL, ciphertext BLOB NOT NULL)",
+    "CREATE TABLE queued (contact INTEGER NOT NULL, msgno INTEGER NOT NULL, version INTEGER NOT NULL, " +
+        "ciphertext BLOB NOT NULL, PRIMARY KEY (contact, msgno))",
+)
+
+/** Builds between the courier table (ADR 0036) and its migration created it but stayed at version 1. */
+private const val COURIER = "CREATE TABLE courier (slot INTEGER NOT NULL PRIMARY KEY, version INTEGER NOT NULL, ciphertext BLOB NOT NULL)"

@@ -18,6 +18,7 @@ targets:
       properties:
         CFBundleDisplayName: Cairn
         UILaunchScreen: {}
+        NSBluetoothAlwaysUsageDescription: Cairn finds and talks to nearby phones over Bluetooth. It never uses your location.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ch.trancee.cairn.ios

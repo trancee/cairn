@@ -78,6 +78,18 @@ restores an empty state. The driver reports a `STORAGE_RESET` fault, and the
 app tells the user that contacts must pair again (ADR 0006, "Master-key
 loss"). There is no fallback to plaintext and no partial restore.
 
+If every row opens but the core rejects them with `InvalidBlob`, as rows
+from an older blob version do, the driver does the same: it wipes every
+row, reports `STORAGE_RESET`, and restores the core from the empty store
+([issue 55](../../.scratch/cairn-r1/issues/55-courier-table-migration.md)).
+A failed `Restore` leaves the core unrestored, so the second one succeeds.
+
+The SQL schema itself migrates. Each schema change adds a SQLDelight
+migration (`migrations/<n>.sqm`) and the previous schema
+(`migrations/<n>.db`), and `verifyMigrations` fails the build if the
+migrated schema differs from the current `.sq` one. Version 2 adds the
+`courier` table.
+
 ## Formal model
 
 No model changes. Storage at rest is outside the Dolev-Yao models. The

@@ -18,6 +18,8 @@ private class LostRows : Rows {
     override fun commit(actions: List<Action>) = Unit
 
     override fun restore(): Restored = Restored(Event.Restore(null, emptyList(), emptyList(), emptyList()))
+
+    override fun wipe() = Unit
 }
 
 class StorageCheckTest {

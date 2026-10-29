@@ -1,11 +1,15 @@
 package ch.trancee.cairn.ble
 
+import android.bluetooth.le.AdvertiseCallback
 import android.os.Looper
 import android.os.ParcelUuid
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import org.robolectric.shadow.api.Shadow
+import org.robolectric.shadows.ShadowLog
 import java.time.Duration
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -47,6 +51,19 @@ class AdvertisingTest {
         advance(300_000)
 
         assertContentEquals(next, advertised())
+    }
+
+    @Test
+    @Config(shadows = [RecordingAdvertiser::class])
+    fun logsAnAdvertThatFailsToStartAndRetriesAtTheWindowBoundary() {
+        val recorder = Shadow.extract<RecordingAdvertiser>(h.adapter.bluetoothLeAdvertiser)
+        h.radio.start()
+
+        recorder.callbacks.single().onStartFailure(AdvertiseCallback.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS)
+        advance(230_000)
+
+        assertTrue(ShadowLog.getLogsForTag("CairnRadio").any { it.msg == "advertising failed (2)" })
+        assertEquals(2, recorder.callbacks.size)
     }
 
     @Test

@@ -1,0 +1,7 @@
+-- Version 1 → 2: the courier table (ADR 0036 §3). Builds between ADR 0036 and
+-- this migration created it at version 1, so it may exist already.
+CREATE TABLE IF NOT EXISTS courier (
+    slot INTEGER NOT NULL PRIMARY KEY,
+    version INTEGER NOT NULL,
+    ciphertext BLOB NOT NULL
+);

@@ -34,9 +34,9 @@ The row actions are `PersistDevice`, `PersistContact`, `PutQueued` and
 1. **Contact blob version 3.** The contact blob adds `K_route` after the
    door keys, and one `dir` byte (`I` or `R`, its tag label) to the send chain, each
    receive chain and each skipped key. Every blob becomes version 3. r1 is
-   unreleased, so there is no migration: version-2 rows fail `Restore`
-   with `InvalidBlob`, and r1 test installs must clear their app data
-   before upgrading.
+   unreleased, so there is no blob migration: version-2 rows fail
+   `Restore` with `InvalidBlob`, and the driver wipes them and reports
+   `STORAGE_RESET` ([ADR 0035](0035-sealed-row-storage.md) §5).
 2. **Own envelopes live in the queued row.** A queued message whose
    `inner` fits 2048 B, sealed while fewer than 256 own envelopes exist,
    gets an own envelope inside its `PutQueued` blob:
