@@ -89,6 +89,14 @@ Facts this answers:
   the SE. The SE 2016 (Bluetooth 4.2) can't scan extended adverts, so it
   can't dial an extended Android phone; the iPhone-as-central direction was
   shown with the 12 mini (ADR 0038, arm m2).
+- SE 2016 as central (2026-10-29): against a legacy-advertising Android
+  phone (Redmi `2201117TY`, Android 13) both sides dial, and the SE won the
+  race in 3 of 6 trials (Android `link 1 up PERIPHERAL`, MTU 185). Over
+  such a link the chat driver received "hello from Android" and its reply
+  reached `Delivered`; Android showed it and marked its message `Read`.
+  Against the Pocophone (extended) the Android side was central in every
+  trial; the SE's `bluetoothd` scans 1M only (`ScanParams … PHYS:1`), so it
+  never sees an extended set.
   - Pitfalls: other iPhones running Cairn nearby pair first, so stop them;
     a stale app process makes XCUITest fail with "Failed to terminate", and
     `devicectl` can't kill it on iOS 15 (`pymobiledevice3 developer dvt kill`
