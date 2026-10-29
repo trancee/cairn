@@ -81,9 +81,17 @@ Facts this answers:
 - The P30 lite's legacy advert failed with `ADVERTISE_FAILED_TOO_MANY_ADVERTISERS`
   (2), silently. The radio now logs `advertising failed (2)`; the rotation
   retries it at the next window.
-- The SE 2016 send test stopped at the device's "Enable UI Automation"
-  passcode prompt (`Timed out while enabling automation mode`). It needs the
-  passcode entered on the device; the SE→Android direction rests on its
-  handshake frames above.
+- SE 2016 send test (2026-10-29, after the passcode enabled UI Automation):
+  the XCUITest chat driver on the SE received "hello from Pocophone", then
+  typed and sent "hello from iPhone SE 2016", which reached `Delivered`; the
+  Pocophone showed it and marked its own message `Read`. The Pocophone was
+  central (`link 1 up CENTRAL`) and had switched its advert to 2M on seeing
+  the SE. The SE 2016 (Bluetooth 4.2) can't scan extended adverts, so it
+  can't dial an extended Android phone; the iPhone-as-central direction was
+  shown with the 12 mini (ADR 0038, arm m2).
+  - Pitfalls: other iPhones running Cairn nearby pair first, so stop them;
+    a stale app process makes XCUITest fail with "Failed to terminate", and
+    `devicectl` can't kill it on iOS 15 (`pymobiledevice3 developer dvt kill`
+    can).
 
 Status: done pending PR review.
