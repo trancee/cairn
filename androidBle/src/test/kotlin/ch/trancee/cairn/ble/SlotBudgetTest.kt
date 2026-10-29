@@ -32,7 +32,7 @@ class SlotBudgetTest {
 
     @Test
     fun dialsAtMostOneOrTwoPeersAtOnce() {
-        (1..3).forEach { h.sight(address(it)) }
+        (1..3).forEach { h.sight(address(it), RadioHarness.PEER_BEACON) }
 
         assertEquals(List(pending) { 1 } + List(3 - pending) { 0 }, (1..3).map(::dials))
     }
@@ -44,7 +44,7 @@ class SlotBudgetTest {
         h.callback(gatt).onConnectionStateChange(gatt, 133, BluetoothProfile.STATE_DISCONNECTED)
         h.idle()
 
-        h.sight(address(9))
+        h.sight(address(9), RadioHarness.PEER_BEACON)
 
         assertEquals(1, dials(9))
     }
@@ -60,8 +60,8 @@ class SlotBudgetTest {
     @Test
     fun aDeviceConnectedBothWaysTakesOneSlot() {
         (1..slots - 1).forEach {
-            serverConnect(it)
             h.connect(h.discover(address(it))!!)
+            serverConnect(it)
         }
 
         assertNotNull(h.discover(address(9)))

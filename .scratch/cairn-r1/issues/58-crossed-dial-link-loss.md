@@ -105,6 +105,77 @@ the core closing the link and not a dial tearing down a shared ACL. The
 earlier run C (dial timeout, then link down 0.6 s later) still needs a
 trace to tell whether it was the same.
 
+## HCI snoop (2026-10-29)
+
+Mi Note 3 with the 12 mini, runs H1–H3 with the trace build. The snoop
+log came from the `BTSNOOP_LOG_SUMMARY` section of `adb shell dumpsys
+bluetooth_manager`. That section is base64 of a zlib stream (version 2: per
+record a length, packet length, µs delta and type). The full
+`btsnoop_hci.log` is unreadable without root, and the bugreport doesn't
+include it. Turn on "Bluetooth HCI snoop log" in Developer options, then
+restart Bluetooth.
+
+- Every `0x85` (133) dial is an `LE Create Connection` whose `LE Connection
+  Complete` arrives within about 30 ms. A `Disconnection Complete` with
+  reason **0x3E** follows about 300 ms later: the iPhone never answers on
+  the data channel.
+- **H2**: Android's dial linked (handle 0x00e). Then the iPhone dialled
+  (0x00c) and its core closed that duplicate. Android reported its
+  *central* link lost with `0x13`, but handle 0x00e stayed up for another
+  32 s. Bluedroid routes GATT client events by address, so two ACLs to one
+  address get mixed up.
+- **H3**: the Android dial joined the iPhone's connection ("connected after
+  15 ms"). It sent `LE Connection Update` (interval 6, then 9–12), which the
+  iPhone refused with 0x3B. 1 s after the core closed the duplicate client
+  link, the Android host sent `Disconnect` (0x13) on the shared handle.
+- **H1**: the iPhone-central link (interval 30 ms, supervision timeout
+  **720 ms**, LE 2M) ended with reason **0x08** on both sides. No Android
+  dial was in flight. The iPhone kept advertising, and Android kept
+  active-scanning it.
+
+## Android waits for iOS (2026-10-29, ADR 0039)
+
+[ADR 0039](../../../docs/adr/0039-android-waits-for-ios-to-dial.md),
+spec 0.20 [OI-41]:
+- Android dials a beacon-less (iOS) peer only 10 s, plus the spread, after
+  first seeing it.
+- It doesn't dial an address that connected to its server less than 10 s
+  ago.
+
+Results are in the ADR's Validation:
+- Mi Note 3: crossed-dial losses fell from 2 of 3 runs to 1 of 10, and
+  5 of 10 runs had no Android dial at all.
+- Redmi: no crossed-dial loss in 10 runs.
+- iPhone X with the extended Pocophone: still linked in 3 of 3, through
+  Android's dial after the wait.
+
+## Supervision timeouts (open)
+
+These remain on both Android phones: Mi Note 3 3 of 10, Redmi 2 of 10
+(R2 and R9, on links already paired and idle).
+
+Ruled out:
+- **Android scan load.** A build that stopped scanning once the iPhone
+  connected (N1–N10) still had 5 of 10 runs with one.
+- **LE 2M, untested.** Android can't test 1M on the iPhone's link: the
+  iPhone, as central, ignored Android's `LE Set PHY` for 1M and stayed on 2M.
+
+The common factor is the iPhone-central link's 720 ms supervision timeout.
+Apple's Accessory Design Guidelines allow 2–6 s. The lab has about 38 phones
+on 2.4 GHz.
+
+Next:
+- A PacketLogger capture on the iPhone, to see which side stopped
+  transmitting.
+- A run in a quiet RF environment.
+- Whether the iPhone accepts a guideline-conforming `LE Connection Update`
+  from Android. The interval-6 request above was refused. Android can send
+  one only through a GATT client on the shared ACL, which H3 shows is
+  unsafe on Android 9.
+
+Logs, the snoop dump and the decoder are kept outside the repository
+(session `files/i58-snoop`, `files/i58-logs`).
+
 ## Done when
 
 - The close reason in C2 is identified from a log that names it. (The

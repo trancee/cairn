@@ -1,5 +1,7 @@
 package ch.trancee.cairn.ble
 
+import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothProfile
 import android.os.Looper
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -10,7 +12,8 @@ import kotlin.test.assertEquals
 
 /**
  * Of two radios that advertise a beacon, only the lower one dials (ADR 0025), unless one advertises
- * extended and sees the other advertise legacy (ADR 0028).
+ * extended and sees the other advertise legacy (ADR 0028). An iOS peer, or one connected to the
+ * server, gets 10 s to dial first (ADR 0039).
  */
 @RunWith(RobolectricTestRunner::class)
 class DialRuleTest {
@@ -18,6 +21,8 @@ class DialRuleTest {
     private val address = "00:11:22:33:44:01"
 
     private fun dials() = shadowOf(h.device(address)).bluetoothGatts.size
+
+    private fun advance(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
 
     private fun extended() = shadowOf(h.adapter).setIsLeExtendedAdvertisingSupported(true)
 
@@ -66,11 +71,33 @@ class DialRuleTest {
     }
 
     @Test
-    fun dialsAPeerThatAdvertisesNoBeacon() {
+    fun dialsAPeerThatAdvertisesNoBeaconOnlyTenSecondsAfterFirstSeeingIt() {
         start(byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8))
+        h.sight(address)
+        advance(9_999)
+        h.sight(address)
+        val early = dials()
+        advance(1)
 
         h.sight(address)
 
+        assertEquals(0, early)
+        assertEquals(1, dials())
+    }
+
+    @Test
+    fun leavesAPeerThatConnectedToTheServerTenSecondsToLinkBeforeDiallingIt() {
+        start(byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8))
+        h.serverCallback().onConnectionStateChange(h.device(address), BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED)
+        h.sight(address, byteArrayOf(1, 2, 3, 4, 5, 6, 7, 9))
+        advance(9_999)
+        h.sight(address, byteArrayOf(1, 2, 3, 4, 5, 6, 7, 9))
+        val early = dials()
+        advance(1)
+
+        h.sight(address, byteArrayOf(1, 2, 3, 4, 5, 6, 7, 9))
+
+        assertEquals(0, early)
         assertEquals(1, dials())
     }
 
