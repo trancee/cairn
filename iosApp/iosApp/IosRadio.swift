@@ -95,9 +95,8 @@ final class IosRadio: NSObject, Radio {
     private final class Dial {
         var notBefore: Int64
         var failures = 0
-        /// Supervision timeouts of links up for less than the attempt interval (ADR 0040).
-        var timeouts = 0
-        var linkedAt: Int64 = 0
+        /// When a supervision timeout left the peer to dial us (ADR 0040).
+        var handedOverAt: Int64?
 
         init(notBefore: Int64) {
             self.notBefore = notBefore
@@ -107,6 +106,7 @@ final class IosRadio: NSObject, Radio {
     private struct Peripheral {
         let link: UInt64
         var mtu: Int
+        let since: Int64
     }
 
     private enum Endpoint {
@@ -224,6 +224,8 @@ final class IosRadio: NSObject, Radio {
     private static let attemptIntervalMs: Int64 = 120_000
     private static let dialTimeoutMs: Int64 = 10_000
     private static let maxDialsInFlight = 2
+    /// How long a peer whose link timed out is left to dial us (ADR 0040).
+    private static let handOverMs: Int64 = 45_000
     /// `CBError.connectionTimeout`: the link's supervision timeout expired.
     private static let connectionTimeoutError = 6
 
@@ -234,7 +236,7 @@ final class IosRadio: NSObject, Radio {
         let now = scheduler.nowMs
         let dial = dials[peer] ?? Dial(notBefore: now + random(0 ... Self.firstDialSpreadMs))
         dials[peer] = dial
-        guard now >= dial.notBefore else { return }
+        guard now >= dial.notBefore, !takenOver(dial) else { return }
         dial.notBefore = now + Self.attemptIntervalMs
         let central = Central()
         centrals[peer] = central
@@ -263,7 +265,7 @@ final class IosRadio: NSObject, Radio {
         central.stage = .up
         central.cancelTimeout()
         dials[peer]?.failures = 0
-        dials[peer]?.linkedAt = scheduler.nowMs
+        dials[peer]?.handedOverAt = nil
         central.mtu = port.writeLength(peer) + 3
         central.link = up(.central, central.mtu, peer, .central(peer))
         central.reading = true
@@ -296,11 +298,24 @@ final class IosRadio: NSObject, Radio {
         guard let central = centrals[peer] else { return }
         if central.stage == .up {
             trace("link \(central.link) lost" + (error.map { " error \($0)" } ?? ""))
-            if error == Self.connectionTimeoutError, let dial = dials[peer] {
-                timedOut(dial)
-            }
         }
         closeCentral(peer)
+        // Links the peer dials take parameters iOS keeps, so it is left to dial (ADR 0040).
+        if error == Self.connectionTimeoutError, let dial = dials[peer] {
+            dial.handedOverAt = scheduler.nowMs
+            handOver(dial)
+        }
+    }
+
+    private func handOver(_ dial: Dial) {
+        dial.notBefore = scheduler.nowMs + Self.handOverMs + random(0 ... Self.firstDialSpreadMs)
+    }
+
+    /// A central that linked after the hand-over may be the peer under another identifier, as Android
+    /// dials from another address; dialling it would cross that link (ADR 0039, ADR 0040).
+    private func takenOver(_ dial: Dial) -> Bool {
+        guard let at = dial.handedOverAt else { return false }
+        return peripherals.values.contains { $0.since >= at }
     }
 
     func connectFailed(_ peer: UUID) {
@@ -334,15 +349,6 @@ final class IosRadio: NSObject, Radio {
         }
     }
 
-    /// A link lost to a supervision timeout is redialled on the failed-dial steps (ADR 0040).
-    private func timedOut(_ dial: Dial) {
-        let now = scheduler.nowMs
-        if now - dial.linkedAt >= Self.attemptIntervalMs { dial.timeouts = 0 }
-        dial.timeouts += 1
-        dial.notBefore = now + step(dial.timeouts)
-        if dial.timeouts > 2 { dial.timeouts = 0 }
-    }
-
     private func step(_ count: Int) -> Int64 {
         switch count {
         case 1: random(1_000 ... 5_000)
@@ -357,7 +363,7 @@ final class IosRadio: NSObject, Radio {
         guard running, peripherals[central] == nil else { return }
         let mtu = port.updateLength(central) + 3
         let link = up(.peripheral, mtu, central, .peripheral(central))
-        peripherals[central] = Peripheral(link: link, mtu: mtu)
+        peripherals[central] = Peripheral(link: link, mtu: mtu, since: scheduler.nowMs)
     }
 
     /// iOS also reports this when the central disconnects.
@@ -404,5 +410,8 @@ final class IosRadio: NSObject, Radio {
         guard let peripheral = peripherals.removeValue(forKey: central) else { return }
         notifications.removeAll { $0.central == central }
         down(peripheral.link)
+        for dial in dials.values where (dial.handedOverAt.map { peripheral.since >= $0 } ?? false) {
+            handOver(dial)
+        }
     }
 }

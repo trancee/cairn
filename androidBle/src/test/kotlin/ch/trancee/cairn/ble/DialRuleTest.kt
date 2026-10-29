@@ -143,6 +143,26 @@ class DialRuleTest {
     }
 
     @Test
+    fun dialsAnIosPeerFifteenSecondsAfterItsLinkWentDownEvenAfterThreeFailedDials() {
+        start(byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8))
+        h.sight(address)
+        advance(10_000)
+        repeat(3) {
+            h.sight(address)
+            val gatt = shadowOf(h.device(address)).bluetoothGatts.last()
+            h.callback(gatt).onConnectionStateChange(gatt, 133, BluetoothProfile.STATE_DISCONNECTED)
+            h.idle()
+            advance(5_000)
+        }
+        h.subscribe(h.device(address))
+        advance(4_000)
+
+        serverDisconnected()
+
+        assertEquals(listOf(3, 4), dialsBeforeAndAt(15_000, beacon = null))
+    }
+
+    @Test
     fun anExtendedAdvertiserDialsALegacyAdvertiserWithALowerBeacon() {
         extended()
         start(byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8))

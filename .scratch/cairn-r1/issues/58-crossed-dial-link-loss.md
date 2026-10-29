@@ -224,18 +224,26 @@ Device runs (12 mini and Mi Note 3, RD1–6 and RY1; ADR 0040 §Validation):
 - RY2 onwards were invalid: the iPhone's screen locked and iOS suspended
   the app.
 
-**Open option: Android dials after a timeout.** In the H1 snoop, the
-iPhone-central drops came 2.7–3.7 s after the link moved to 2M. The
-Android-central link, h=00e, ran at a 15 ms interval with a 2 s timeout,
-which the iPhone accepted, and held. No Android-central link to an iPhone
-has dropped in any run. So after an iPhone-central link to an address
-times out, Android could dial instead and the iPhone wait. This reverses
-ADR 0039 for that address. Android's dials to iPhones often fail with 0x3E
-at first, and a pre-XS iPhone can't see an extended advert.
+**Hand-over (ADR 0040 rule 2, 2026-10-29 late).** The H1 snoop showed
+iPhone-central drops 2.7–3.7 s after the move to 2M. The one Android-central
+link (h=00e: 15 ms interval, 2 s timeout) held. So after a timeout the
+iPhone now waits 45 s and Android dials it after 15–18 s. Two fixes came
+from the device runs:
+- HO1: Android's schedule was at 2 min from failed first-contact dials, so
+  it didn't take over. A server connection that ends now restarts it.
+- HV3, HV4: Android's link held, but when the iPhone's 45 s ran out it
+  dialled the same Android, which dials from another address than it
+  advertises. The crossed dial tore the link down. The iPhone now holds
+  off while any central that linked after the hand-over is linked.
+
+HW4: Android linked 21 s after the timeout, pairing completed, and the link
+held 52 s to the end of the run. In HW1–HW3, all 23 Android dials to the
+iPhone failed with 133 (0x3E), so no link held. Android's dial success to
+an iPhone now limits recovery.
 
 Next:
-- Decide on the open option above. It needs the owner's choice.
-- Rerun RY with the iPhone's auto-lock off.
+- Find why Android's dials to an iPhone fail with 0x3E: a snoop of HW-like
+  runs, and whether the iPhone's address rotation or scan state matters.
 - A PacketLogger capture on the iPhone, to see which side stopped
   transmitting.
 - A run in a quiet RF environment.

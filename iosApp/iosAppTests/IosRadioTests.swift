@@ -320,14 +320,14 @@ final class IosRadioTests: XCTestCase {
         radio.disconnected(a, error: CBError.connectionTimeout.rawValue)
     }
 
-    func testLinkLostToASupervisionTimeoutIsRedialledAfterOneToFiveSeconds() {
+    func testLinkLostToASupervisionTimeoutLeavesThePeerFortyFiveSecondsPlusTheSpreadToDial() {
         randomPick = { $0.upperBound }
         running()
         radio.discovered(a)
         scheduler.advance(by: 3_000)
         linkThenTimeOut(upMs: 0)
 
-        scheduler.advance(by: 4_999)
+        scheduler.advance(by: 47_999)
         radio.discovered(a)
         XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 1)
         scheduler.advance(by: 1)
@@ -336,33 +336,85 @@ final class IosRadioTests: XCTestCase {
         XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 2)
     }
 
-    func testRepeatedTimeoutsWithinTwoMinutesOfLinkUpWaitFiveToFifteenSecondsThenTwoMinutes() {
+    func testSupervisionTimeoutBeforeTheLinkIsUpAlsoLeavesThePeerToDial() {
+        running()
+        radio.discovered(a)
+        radio.connected(a)
+        radio.disconnected(a, error: CBError.connectionTimeout.rawValue)
+
+        scheduler.advance(by: 44_999)
+        radio.discovered(a)
+        XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 1)
+        scheduler.advance(by: 1)
+        radio.discovered(a)
+
+        XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 2)
+    }
+
+    func testEveryTimeoutLeavesThePeerToDial() {
         running()
         linkThenTimeOut(upMs: 0)
-        scheduler.advance(by: 1_000)
-        linkThenTimeOut(upMs: 119_999)
-        scheduler.advance(by: 4_999)
+        scheduler.advance(by: 45_000)
+        linkThenTimeOut(upMs: 0)
+
+        scheduler.advance(by: 44_999)
         radio.discovered(a)
         XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 2)
         scheduler.advance(by: 1)
-        linkThenTimeOut(upMs: 0)
-
-        scheduler.advance(by: 119_999)
         radio.discovered(a)
+
         XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 3)
+    }
+
+    func testAPeerThatDialsUsAfterAHandOverIsNotDialledWhileThatLinkIsUp() {
+        running()
+        linkThenTimeOut(upMs: 0)
+        scheduler.advance(by: 20_000)
+        radio.centralSubscribed(c)
+
+        scheduler.advance(by: 100_000)
+        radio.discovered(a)
+
+        XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 1)
+    }
+
+    func testHandOverStartsAgainWhenTheLinkThePeerDialledGoesDown() {
+        running()
+        linkThenTimeOut(upMs: 0)
+        radio.centralSubscribed(c)
+        scheduler.advance(by: 60_000)
+        radio.centralUnsubscribed(c)
+
+        scheduler.advance(by: 44_999)
+        radio.discovered(a)
+        XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 1)
         scheduler.advance(by: 1)
         radio.discovered(a)
 
-        XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 4)
+        XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 2)
     }
 
-    func testTimeoutOfALinkUpForTwoMinutesStartsTheLadderAgain() {
+    func testALinkUpBeforeTheTimeoutDoesNotHoldTheDialBack() {
+        running()
+        radio.centralSubscribed(c)
+        scheduler.advance(by: 1)
+        linkThenTimeOut(upMs: 0)
+
+        scheduler.advance(by: 45_000)
+        radio.discovered(a)
+
+        XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 2)
+    }
+
+    func testOurOwnLinkEndsTheHandOver() {
         running()
         linkThenTimeOut(upMs: 0)
-        scheduler.advance(by: 1_000)
-        linkThenTimeOut(upMs: 120_000)
+        scheduler.advance(by: 45_000)
+        centralLink(a)
+        radio.centralSubscribed(c)
+        radio.disconnected(a)
 
-        scheduler.advance(by: 1_000)
+        scheduler.advance(by: 120_000)
         radio.discovered(a)
 
         XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 3)

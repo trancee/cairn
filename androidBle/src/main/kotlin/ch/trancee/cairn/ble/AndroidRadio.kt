@@ -493,12 +493,12 @@ class AndroidRadio(
 
     /**
      * Leaves a peer whose connection to the server ended [REDIAL_YIELD_MS], plus the first-dial
-     * spread, to dial again before we dial it; Android 9 reports a supervision timeout here as 0 (ADR 0040).
+     * spread, to dial again, then dials it whatever earlier dials failed: the peer is in range, and
+     * an iPhone whose link timed out waits for us (ADR 0040). Android 9 reports a timeout here as 0.
      */
     private fun yieldDial(address: String) {
         val until = SystemClock.elapsedRealtime() + REDIAL_YIELD_MS + random.nextLong(0, FIRST_DIAL_SPREAD_MS + 1)
-        val dial = dials.getOrPut(address) { Dial(until) }
-        dial.notBefore = maxOf(dial.notBefore, until)
+        dials.getOrPut(address) { Dial(until) }.restart(until)
     }
 
     /**
@@ -512,6 +512,11 @@ class AndroidRadio(
         private var failures = 0
         private var timeouts = 0
         private var linkedAt = 0L
+
+        fun restart(at: Long) {
+            failures = 0
+            notBefore = at
+        }
 
         fun linked(now: Long) {
             failures = 0
