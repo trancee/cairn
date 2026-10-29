@@ -21,7 +21,10 @@ iPhones. Apple documents it only as "The hardware supports extended scans
 and enhanced connection creation". The Accessory Design Guidelines (R32,
 §57.3) list only legacy PDUs for general accessories. They require extended
 advertising only for spatial accessories, and those must also support LE 2M
-(§19.4.5.4). No document states which extended adverts iOS reports.
+(§19.4.5.4). Apple's WWDC19 session 901 does state the rule: Core Bluetooth
+"will only scan for our extended advertisements that are transmitted in
+LE 2 Mbps", with payloads up to 124 bytes, on iPhone XS and later. It is a
+2019 talk, and the Core Bluetooth documentation says nothing of it.
 
 Controlled A/B, 2026-10-28:
 - A probe app scanned with no service filter and allowed duplicates. It never
@@ -51,9 +54,9 @@ it.
 
 Root cause: iOS reports an extended advert to apps only when its auxiliary
 packet is on LE 2M. Auxiliary packets on LE 1M never reach Core Bluetooth on
-iOS 17, 18 or 27, whatever the advert's other properties. The
-`extendedScanAndConnect` flag doesn't say this, and Apple documents neither
-the rule nor whether it changes.
+iOS 17, 18 or 27, whatever the advert's other properties. This matches
+WWDC19 session 901. The `extendedScanAndConnect` flag doesn't say it, and
+Apple doesn't document whether it changes.
 
 With a 2M auxiliary packet, the iPhone also connects to the set as central.
 On an iPhone 12 mini with its own advertising disabled, so that only iOS
@@ -104,8 +107,12 @@ advertising (P30 lite, Huawei WAS-LX1A, Mi Note 3) can't receive either form.
 - 2M has about 3 dB less sensitivity than 1M, so a scanner may hear
   `ADV_EXT_IND` at a range where it misses `AUX_ADV_IND`. Not measured: the
   fleet sits in one room.
-- iOS's rule is undocumented and could change. The legacy-dial rule keeps
-  Android dialling iOS whatever iOS reports.
+- iOS's rule comes from a 2019 talk, not the reference documentation, and
+  could change. The legacy-dial rule keeps Android dialling iOS whatever iOS
+  reports.
+- Apple's talk names iPhone XS as the first supported model. iOS 15 and 16
+  and iPhones before the XS are not measured
+  ([issue 57](../../.scratch/cairn-r1/issues/57-legacy-os-device-matrix.md)).
 
 ## Validation
 
