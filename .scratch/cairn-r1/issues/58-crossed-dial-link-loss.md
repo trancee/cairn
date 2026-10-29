@@ -164,7 +164,23 @@ The common factor is the iPhone-central link's 720 ms supervision timeout.
 Apple's Accessory Design Guidelines allow 2–6 s. The lab has about 38 phones
 on 2.4 GHz.
 
+Controls (2026-10-29, 120 s runs, no timeout in any):
+- **Android–Android** (Redmi and Pocophone): 3 of 3 runs, about 6
+  link-minutes.
+- **iPhone X central, Mi Note 3 peripheral**: 10 runs, about 20
+  link-minutes. Half used a temporary iOS build that stopped scanning while
+  a link was up (XS1–XS5), half the normal build (XB1–XB5). The only
+  losses were duplicate links from RPA rotation, closed by the core.
+- **Pocophone central, iPhone X peripheral** (X1–X3, above): 3 of 3.
+
+So far only the 12 mini, as central, has had a timeout, with two different
+Android phones. The iPhone's own `AllowDuplicates` foreground scan is still
+a suspect there: the no-scan build couldn't run on the 12 mini, which was
+locked.
+
 Next:
+- Rerun the iOS no-scan build on the 12 mini against the Mi Note 3 (5 × 120 s
+  each way).
 - A PacketLogger capture on the iPhone, to see which side stopped
   transmitting.
 - A run in a quiet RF environment.
