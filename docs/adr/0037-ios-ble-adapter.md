@@ -143,8 +143,8 @@ hold no decisions; the device demonstration covers them.
   and dialled it. An Android phone that advertises extended sees iOS's
   legacy advert and dials it whatever the beacons (ADR 0028), so every
   Android–iOS pair still links. iOS does report, and connect to, an extended
-  advert whose auxiliary packet is on LE 2M: [ADR 0038](0038-android-extended-advert-2m-secondary.md)
-  (proposed).
+  advert whose auxiliary packet is on LE 2M, and Android uses one while
+  it sees iOS: [ADR 0038](0038-android-extended-advert-2m-secondary.md).
 - Two links between the same pair are possible when both dial at once; the
   core keeps at most one Resume per contact in flight (OI-17).
 - An idle Android central linked to a closed iOS peripheral stays connected

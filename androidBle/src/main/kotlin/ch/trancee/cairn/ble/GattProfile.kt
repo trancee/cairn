@@ -54,15 +54,16 @@ object GattProfile {
         .build()
 
     /**
-     * An extended, connectable, non-scannable set on 1M PHYs (spec §10.1, ADR 0028), at the interval
-     * of the legacy [mode].
+     * An extended, connectable, non-scannable set (spec §10.1, ADR 0028), at the interval of the
+     * legacy [mode]. The primary PHY is 1M; the auxiliary packet goes on 2M where [le2M] allows,
+     * since iOS reports only those (ADR 0038).
      */
-    fun advertisingSetParameters(mode: Int): AdvertisingSetParameters = AdvertisingSetParameters.Builder()
+    fun advertisingSetParameters(mode: Int, le2M: Boolean): AdvertisingSetParameters = AdvertisingSetParameters.Builder()
         .setLegacyMode(false)
         .setConnectable(true)
         .setScannable(false)
         .setPrimaryPhy(BluetoothDevice.PHY_LE_1M)
-        .setSecondaryPhy(BluetoothDevice.PHY_LE_1M)
+        .setSecondaryPhy(if (le2M) BluetoothDevice.PHY_LE_2M else BluetoothDevice.PHY_LE_1M)
         .setInterval(
             when (mode) {
                 AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY -> AdvertisingSetParameters.INTERVAL_LOW

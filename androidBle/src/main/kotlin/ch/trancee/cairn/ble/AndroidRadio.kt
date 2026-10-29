@@ -159,6 +159,7 @@ class AndroidRadio(
         this.server = server
         this.advertiser = advertiser
         extended = adapter.isLeExtendedAdvertisingSupported
+        le2M = adapter.isLe2MPhySupported
         setCallback = SetCallback()
         scansExtended = extended
         Log.i(TAG, if (extended) "advertising extended" else "advertising legacy")
@@ -236,8 +237,11 @@ class AndroidRadio(
         val beacon = listener.beacon()
         advertisedMode = band.advertiseMode
         if (extended) {
+            val on2M = iosNearby()
+            if (on2M != advertised2M) Log.i(TAG, if (on2M) "advertising extended 2M" else "advertising extended 1M")
+            advertised2M = on2M
             advertiser.startAdvertisingSet(
-                GattProfile.advertisingSetParameters(advertisedMode), GattProfile.advertiseData(beacon), null, null, null, setCallback,
+                GattProfile.advertisingSetParameters(advertisedMode, on2M), GattProfile.advertiseData(beacon), null, null, null, setCallback,
             )
         } else {
             advertiser.startAdvertising(GattProfile.advertiseSettings(advertisedMode), GattProfile.advertiseData(beacon), advertiseCallback)
@@ -353,7 +357,10 @@ class AndroidRadio(
             val rssi = result.rssi
             handler.post {
                 peripherals[result.device.address]?.let { signals[it.link] = rssi to SystemClock.elapsedRealtime() }
-                if (server != null) connect(result.device, beacon, legacy)
+                // Null once released, like the server.
+                val advertiser = advertiser ?: return@post
+                if (beacon == null) iosSeen(advertiser)
+                connect(result.device, beacon, legacy)
             }
         }
     }
@@ -368,6 +375,28 @@ class AndroidRadio(
 
     /** Whether the radio advertises an extended set (ADR 0028); set when opened. */
     private var extended = false
+
+    /** Whether the controller can send the extended set's auxiliary packet on LE 2M; set when opened. */
+    private var le2M = false
+
+    /** Whether the running set's auxiliary packet is on LE 2M (ADR 0038). */
+    private var advertised2M = false
+
+    /** When an advert without service data, which only iOS sends (spec §10.4), was last seen. */
+    private var iosSeenAt: Long? = null
+
+    /** Whether the set should go on 2M: iOS reports only those, and was seen within a window (ADR 0038). */
+    private fun iosNearby(): Boolean =
+        le2M && iosSeenAt?.let { SystemClock.elapsedRealtime() - it < BEACON_WINDOW_MS } == true
+
+    // A set already on 2M keeps running; the next rotation rechecks the window.
+    private fun iosSeen(advertiser: BluetoothLeAdvertiser) {
+        iosSeenAt = SystemClock.elapsedRealtime()
+        if (extended && advertising && !advertised2M && le2M) {
+            stopAdvertising(advertiser)
+            advertise(advertiser)
+        }
+    }
 
     /** Whether the radio scans for extended adverts too; set when opened, kept on fallback. */
     private var scansExtended = false

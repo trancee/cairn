@@ -1,10 +1,10 @@
 ---
-status: proposed
+status: accepted
 date: 2026-10-28
 version: cairn-r1
 ---
 
-# 0038: Send Android's extended advert on the LE 2M secondary PHY
+# 0038: Move Android's extended advert to the LE 2M secondary PHY when iOS is near
 
 ## Context
 
@@ -67,55 +67,112 @@ one of the 15 phones measured with `isLeExtendedAdvertisingSupported` also
 had `isLe2MPhySupported`, on API 29 to 37. The phones without extended
 advertising (P30 lite, Huawei WAS-LX1A, Mi Note 3) can't receive either form.
 
-## Decision (proposed)
+## Decision
 
-- **Secondary PHY.** The Android radio's extended set (§10.1, ADR 0028)
-  uses LE 2M as its secondary PHY when `isLe2MPhySupported`, else LE 1M. The
-  primary PHY stays 1M, and the payload, interval, connectability and
-  fallback stay as in ADR 0028.
+- **Secondary PHY on demand.** The Android radio's extended set (§10.1,
+  ADR 0028) keeps its auxiliary packet on LE 1M until it sees an iOS peer.
+  An iOS peer is a Cairn advert without service data: Core Bluetooth can't
+  advertise service data, and every Android radio does. When the controller
+  has `isLe2MPhySupported`, such a sighting restarts the set at once with a
+  2M auxiliary packet. The set goes back to 1M at the first window rotation
+  (§10.1) that comes 300 s or more after the last sighting. The primary PHY
+  stays 1M, and the payload, interval, connectability and fallback stay as
+  in ADR 0028.
 - **iOS dial rule.** iOS dials an Android peer that advertises extended as
   it dials any other peer. The rule that an extended Android phone dials a
   legacy peer whatever the beacons stays, because iOS still advertises
   legacy.
-- **Spec.** §10.1 changes "on 1M PHYs" to "primary 1M, secondary 2M where
-  supported", and §10.4 drops "iOS dials only Android peers that advertise
-  legacy". No byte of any frame changes.
+- **Spec.** §10.1 and §10.4 follow [OI-40]. No byte of any frame changes.
 
 ## Consequences
 
-- iPhones on iOS 17 and later see and dial every Android phone with
-  extended advertising. Android↔iOS links come up from either side, as ADR
-  0037 assumed.
-- The auxiliary packet's airtime halves, which reduces secondary-channel
-  load in a crowd.
+- iPhones on iOS 17 and later in the foreground see and dial every nearby
+  Android phone with extended advertising and 2M. Android↔iOS links come up
+  from either side, as ADR 0037 assumed.
+- Without an iPhone in range, Android behaves exactly as under ADR 0028.
+  The Android↔Android cost measured below is paid only while an iPhone is
+  near.
+- Restarting the set for a first sighting takes a new advertising address,
+  as a window rotation does.
+- An iPhone in the background advertises its service UUID only in the
+  overflow area, which Android doesn't match, so nearby Android phones stay
+  on 1M. A backgrounded iPhone can't report the 2M set to the app either.
 - A scanner with extended scanning but no 2M PHY misses a 2M set. None in
   the fleet; the Bluetooth core spec doesn't require 2M with extended
-  advertising, so such a phone may exist elsewhere. It would still be
-  dialled by the 2M phone if it advertises legacy, or seen through its own
-  set otherwise. Two such phones pair through each other's 1M sets.
-- 2M has about 3 dB less sensitivity than 1M. The primary advert stays 1M,
-  so a scanner may hear `ADV_EXT_IND` at a range where it misses
-  `AUX_ADV_IND`. This narrows extended-to-extended discovery range slightly.
-- iOS's rule is undocumented and could change. The legacy-dial rule and the
-  iOS→Android direction through Android dialling stay as fallbacks.
+  advertising. Such a phone is still dialled by the 2M phone if it
+  advertises legacy, or reaches it through its own set.
+- 2M has about 3 dB less sensitivity than 1M, so a scanner may hear
+  `ADV_EXT_IND` at a range where it misses `AUX_ADV_IND`. Not measured: the
+  fleet sits in one room.
+- iOS's rule is undocumented and could change. The legacy-dial rule keeps
+  Android dialling iOS whatever iOS reports.
 
-## Validation required before acceptance
+## Validation
 
-- A fleet A/B against `main` with the [issue 53](../../.scratch/cairn-r1/issues/53-fleet-pairing-plateau.md)
-  protocol (13+ phones, two 300 s runs each). Pairs, failed dials under
-  1.5 s and dial timeouts must not regress beyond the run-to-run spread.
-- An RSSI-at-discovery comparison, 1M against 2M, for the range cost.
-- iOS 15 and 16 (SE 2016 and older iPhones without extended scanning) only
-  see legacy adverts and are unaffected. Confirm with
-  `supports(.extendedScanAndConnect)` = false on the SE 2016.
+Fleet A/B, 2026-10-29, [issue 53](../../.scratch/cairn-r1/issues/53-fleet-pairing-plateau.md)
+protocol: 22 Android phones (14 with extended advertising and 2M, the rest
+legacy), arms of 300 s interleaved over 2 h, `pm clear` before each. "Pairs"
+counts phone pairs that completed pairing; a dial times out after 10 s.
+
+| Arm | Secondary PHY | Pairs | Dial timeouts | Dials connected |
+|---|---|---|---|---|
+| a1–a4 | 1M (ADR 0028) | 43, 48, 50, 47 | 151, 112, 130, 146 | 36–39 % |
+| b1, b3, b4 | 2M always | 44, 33, 44 | 134, 215, 143 | 26–34 % |
+| c1, c2 | 2M always, initiating PHYs 1M and 2M | 43, 47 | 198, 251 | 32–38 % |
+| d1 | on demand, no iPhone | 45 | 195 | 32 % |
+| m1 | on demand, no iPhone (its app crashed) | 32 | 230 | — |
+| m2 | on demand, iPhone 12 mini in range | 32 | 126 | — |
+
+A fourth always-2M arm (b2) is excluded: a `pm grant` race left three
+phones without Bluetooth permissions, so they never advertised.
+
+Always-2M arms averaged 42 pairs against 47 on 1M, and their timeouts ran
+higher. The spread is wide: d1 behaved exactly like 1M (no phone switched)
+and still timed out 195 dials. The per-phone timeout rate rose on most
+extended diallers under always-2M, not on one controller. Setting both
+initiating PHYs didn't help, and the Core spec doesn't require it: a
+controller connecting on a PHY without parameters uses another PHY's
+parameters. So always-2M fails this ADR's acceptance rule, that pairs and
+timeouts don't regress beyond the run-to-run spread. On demand doesn't
+change Android↔Android behaviour without an iPhone, and d1 shows no false
+iOS sightings.
+
+The m arms ran later the same morning, and both scored fewer pairs than
+any earlier arm, with or without an iPhone. So the absolute numbers drifted
+and don't compare with a–d. In m2, 13 of the 14 extended phones logged
+`advertising extended 2M` within a second of starting, and the iPhone
+connected as central 17 times. After correcting the phone clocks, 16 of
+those links match a peripheral link on an Android phone within 0.35 s.
+Seven of them, to five different phones, were on extended phones, which
+advertise nothing but the extended set. So iOS found those phones through
+their 2M adverts, which it never did on 1M.
 
 ## Considered options
 
+- **2M always.** The simplest change, and the one first proposed. Measured
+  above: fewer pairs and more dial timeouts among Android phones, with no
+  iPhone to gain. Rejected for on demand.
+- **Parallel sets: 2M, 1M and legacy at once.** Android can run several
+  advertising sets if the controller has the slots. Each set adds its own
+  `ADV_EXT_IND` or `ADV_IND` on all three primary channels at every
+  interval, so advertising airtime, and with it the radio's advertising
+  energy, grows about linearly with the number of sets. A 2M auxiliary
+  packet takes about half the airtime of a 1M one, so 2M alone costs less
+  than the ADR 0028 set. Each set also takes a controller slot that other
+  apps compete for (the P30 lite already fails one legacy advert with
+  `ADVERTISE_FAILED_TOO_MANY_ADVERTISERS`), and gets its own rotating
+  address, so peers see one phone as two or three devices and dial it
+  twice. A 1M set would reach only scanners that have extended scanning
+  but no 2M PHY, and the fleet has none. A legacy set brings back the
+  primary-channel `CONNECT_IND` losses ADR 0028 removed. Rejected: one set,
+  its secondary PHY chosen by whether an iPhone is near.
 - **Dual sets: extended plus a slower legacy set.** iOS would see the legacy
   set. ADR 0028 rejected it: traffic on the crowded primary channels, and a
   second address to rotate and budget.
-- **Legacy advertising when an iOS peer is expected.** Android can't know,
-  and it would undo ADR 0028's gains.
+- **Legacy advertising when an iOS peer is near.** Android can tell iOS
+  from the missing service data, but a legacy set brings back the
+  primary-channel `CONNECT_IND` losses ADR 0028 removed. A 2M auxiliary
+  packet keeps the connection request on a secondary channel.
 - **Leave as is.** Every pair links, because Android dials iOS, but iOS can
   never reach an Android phone whose slots are full or that is out of its
   scan window. ADR 0037's "from either side" doesn't hold.
