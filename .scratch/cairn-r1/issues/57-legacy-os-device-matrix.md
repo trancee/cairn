@@ -222,14 +222,82 @@ each other) lost links that had come up.
 The collateral link loss is tracked in
 [issue 58](58-crossed-dial-link-loss.md).
 
+## Tests 4 and 5: Android 8 and 9 (2026-10-29)
+
+Phones: Huawei P10 lite (WAS-LX1A, API 26, Kirin 658/hi6250), Samsung
+Galaxy Xcover 4s (SM-G390F, API 28, Exynos 7885, 32-bit userspace only:
+abilist `armeabi-v7a,armeabi`), Xiaomi Mi Note 3 (API 28, SDM660). The
+normal app build was used (no capability probe), 60 s per run.
+
+- All three log `advertising legacy`: the adaptive advert (ADR 0038) found
+  no extended-advertising support.
+- The Xcover crashed with `UnsatisfiedLinkError libcairn_ffi.so`: debug APKs
+  package `arm64-v8a` only (`PROJECT.md`). Built with
+  `./gradlew :androidApp:assembleDebug -PandroidAbis=arm64-v8a,armeabi-v7a`,
+  it runs.
+
+Against iPhones (both dial directions allowed, fresh state):
+
+| Phone | iPhone 12 mini (iOS 27) | iPhone X (iOS 16.7) |
+|---|---|---|
+| P10 lite | paired, iOS central, MTU 185, link held | paired, MTU 185, link held |
+| Mi Note 3 | iOS central twice, MTU 515; both links dropped soon after a crossed dial (Android dial "connected after 11 ms", then failed `0x08`) | paired, MTU 517, link held 55 s |
+| Xcover 4s | run 1: MTU 515, pre-auth expiry (5 s) after one frame; run 2: one link at **MTU 23** with pre-auth expiry, a second (Android central, MTU 517) closed after 98 ms | run 1: iOS sent P4 (`0x04`), Android never received it, pre-auth expiry, so only iOS stored the contact; run 2: paired, link held |
+
+Against the Pocophone (extended 2M advert), one run per phone: the
+Pocophone was always central, and none of the three old phones ever dialled
+it. API 26–28 phones can't scan extended adverts, like pre-XS iPhones, so
+reachability is one-way and relies on the extended phone dialling.
+
+Conclusions:
+- Every pair linked, in at least one direction. The failures are
+  link-level (crossed dials, MTU 23, a lost final pairing frame) and are
+  added to [issue 58](58-crossed-dial-link-loss.md).
+- `isLe2MPhySupported` and the other capability flags were not logged;
+  the app's own advertising choice stands in for them.
+
+## Background (2026-10-29)
+
+Not a test in this issue, but asked alongside it. iPhone 12 mini (iOS 27)
+with the P10 lite or the Pocophone; the iPhone is sent to the background by
+launching Settings through `devicectl`.
+
+| Run | Build | Sequence | Result |
+|---|---|---|---|
+| BG1 | normal | iPhone backgrounded, then Android started | nothing found in 60 s |
+| BG2 | normal | linked in foreground, then backgrounded | link dropped 2 s later, never back |
+| BG3, BG4 | + `UIBackgroundModes` central/peripheral | as BG2, BG1 | same as BG2, BG1 |
+| BG5 | + background modes, radio kept | linked, then backgrounded | link held to the end of the run (65 s) |
+| BG6 | + background modes, radio kept | backgrounded, then P10 lite started | iPhone (central) linked after 6 s, paired |
+| BG7 | + background modes, radio kept | backgrounded, then Pocophone (extended 2M) started | iPhone (central) linked after 28 s, paired |
+
+- Cause of BG1–BG4: `CairnIosApp` calls `session.pause()` on `.background`,
+  which stops the radio and closes every link. This is the design in ADR
+  0037 (foreground only until S6).
+- With the radio kept and background modes on, a backgrounded iPhone keeps
+  links and still scans and dials.
+- In BG6 and BG7 neither Android phone ever dialled the backgrounded
+  iPhone (0 dial attempts). This is the first device evidence for the
+  [issue 04](04-android-ios-background-ble.md) prediction: iOS moves its
+  service UUID to the Apple overflow area, which Android's UUID-filtered
+  scan does not match.
+- So two backgrounded iPhones would not find each other, and an Android
+  phone finds a backgrounded iPhone only if the iPhone dials it.
+
+## Not tested
+
+- **Test 3, iOS 18.6.x**: no fleet iPhone runs 18.6 (the SE 2020 is on
+  18.7.8, which connected in ADR 0038). Needs a device held on 18.6.x.
+- **Test 6, range**: needs phones moved to 5, 10 and 15 m.
+
 ## Corrections to ADR 0038
 
 - Done (2026-10-29): the 2M-only rule is documented by WWDC19 session 901
   (124 B cap, iPhone XS+); ADR 0038 Context, root cause and Consequences
   now say so.
 - Done (2026-10-29): the iPhone X result (test 2), in Validation.
-- Still to add after the tests: the API 26–28, iOS 18.6.x and range
-  results.
+- Done (2026-10-29): the API 26–28 result, in Validation.
+- Still to add: the iOS 18.6.x and range results.
 
 ## Resolution
 

@@ -164,6 +164,12 @@ Pre-XS iPhones, 2026-10-29
 - Neither phone was cut off. The Pocophone dialled both through their legacy
   adverts and paired, so this ADR's rule that Android dials iOS covers them.
 
+Android 8 and 9, 2026-10-29 (issue 57, tests 4 and 5): a P10 lite (API 26),
+a Galaxy Xcover 4s and a Mi Note 3 (both API 28) all chose the legacy
+advert. None of them ever dialled the Pocophone's extended 2M advert; the
+Pocophone dialled each of them. So legacy-only Android phones are reached
+the same way as pre-XS iPhones: an extended phone must dial them.
+
 ## Considered options
 
 - **2M always.** The simplest change, and the one first proposed. Measured

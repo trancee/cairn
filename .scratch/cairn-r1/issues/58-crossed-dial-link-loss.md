@@ -36,6 +36,19 @@ started together three times.
      (`close`, `fail`). The logs don't say which one fired.
 3. **Run C3.** The link held.
 
+4. **Android 8/9 phones** ([issue 57](57-legacy-os-device-matrix.md)
+   tests 4 and 5), 2026-10-29:
+   - Mi Note 3 (API 28) with a 12 mini: two iOS-central links dropped
+     shortly after the Mi's own dial "connected after 11 ms" and then
+     failed with `0x08` (connection timeout). Same pattern as run C.
+   - Xcover 4s (API 28) with a 12 mini: one link negotiated **MTU 23**
+     (20 B fragments) and hit the 5 s pre-auth expiry; a second, Android
+     central at MTU 517, closed after 98 ms, likely the duplicate-link
+     tie-break.
+   - Xcover 4s with an iPhone X: iOS sent P4 (`0x04`, 71 B) and Android
+     never logged receiving it. Android hit the pre-auth expiry while iOS
+     stored the contact: an **asymmetric pairing**.
+
 The X showed 4 contacts after 6 pairing attempts in that session (A, B, C,
 C2 ×2, C3), consistent with C2's two attempts failing.
 
@@ -45,6 +58,8 @@ reproduce, rerun the three trials.
 ## Done when
 
 - The close reason in C2 is identified from a log that names it.
+- Pairing can't end with only one side storing the contact (the lost-P4
+  case), or the issue records why it is acceptable.
 - A dial timeout or a failed crossed dial no longer drops an established
   link. A Robolectric test is written first for the Android dial-timeout
   path.
