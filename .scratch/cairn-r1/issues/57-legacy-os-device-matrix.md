@@ -166,6 +166,25 @@ CoC as an optional measured upgrade for API 29+/iOS pairs. Add a device test
 for Android 10+↔iOS CoC (insecure channel, app-layer security as ADR 0003
 already does) before enabling the flag.
 
+## First measurement: iPhone SE 2016, iOS 15.8.8 (2026-10-29)
+
+This covers part of test 1 and the partition question. It is a phone from
+before the XS, but with a Bluetooth 4.2 radio, so it doesn't settle test 2.
+Details are in [issue 33](33-slice-s3.md).
+
+- Its `bluetoothd` scans with `ScanParams … PHYS:1` (80 of 80 lines), so it
+  scans 1M only. It never dialled an extended Android phone: against the
+  Pocophone, Android was central in every trial.
+- No partition: the Pocophone (extended, switched to 2M) dialled the SE's
+  legacy advert, and chat ran both ways (`Delivered`/`Read`).
+- Against a legacy-advertising Android phone (Redmi `2201117TY`, API 33),
+  the SE was central in 5 of 8 trials (MTU 185), with chat both ways.
+
+So an iPhone that can't see extended adverts stays reachable as long as
+Android keeps dialling iOS's legacy advert, the rule ADR 0038 keeps. It is
+stranded only between two such peers that can't scan each other, which
+can't happen while every iPhone advertises legacy.
+
 ## Corrections to ADR 0038
 
 - Done (2026-10-29): the 2M-only rule is documented by WWDC19 session 901
