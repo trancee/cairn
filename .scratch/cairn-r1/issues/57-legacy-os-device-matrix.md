@@ -124,6 +124,48 @@ Live sources, via Tavily search and extract.
     advert PHY, were their stability problems. Wi-Fi handover for bulk
     data is their answer to BLE speed; Cairn's ADR set doesn't have one.
 
+## Legacy advertise/scan, then upgrade after connect (researched 2026-10-29)
+
+This is already the shape of ADR 0003 (GATT, optional L2CAP CoC after
+Resume) plus ADR 0003's Android 2M/MTU 517 request. Findings from pages
+extracted in full:
+
+| Claim | Source | Confidence |
+|---|---|---|
+| Android `getPsm()` (and `listenUsingL2capChannel`) were added in API 29; iOS `CBL2CAPChannel` is iOS 11+. So Android 8/9 (API 26–28) can never take the CoC upgrade; GATT stays mandatory there. | developer.android.com `BluetoothServerSocket`; developer.apple.com `CBL2CAPChannel`; Ditto talk (octet-stream.net) says "iOS 11 and Android 10" | High |
+| Plain GATT reaches about 700 kbps on 1M between two nRF devices; Nordic sees no significantly higher bandwidth from raw L2CAP. WWDC17 712 quotes L2CAP+EDL+15 ms at 394 kbps on iOS. | Nordic DevZone 61028 (staff answer, 2020) | Medium (vendor, old) |
+| Ditto (a commercial BLE mesh) moved iOS from GATT to L2CAP: update latency 230 ms to 100 ms, throughput 5.56x to over 22 KB/s, stays Android-compatible, picks the fastest mode per link, keeps GATT for old phones. | ditto.com blog 2021 | Medium (vendor claim; confirms mixed-OS CoC and the fallback design) |
+| Insecure L2CAP is "fairly robust"; secure (bonded) L2CAP is "cursed" on Android and iOS; Android connect is finicky, and the PSM needs GATT first. | Kable discussion 588 (one contributor) | Low–medium |
+| 2M PHY draws more power while on air but costs less energy per byte, because the radio sleeps sooner. | PMC6749335 (measured, BLE 4.2 vs 5) | High |
+| Berty: BLE was too slow for bulk, so it hands off to Wi-Fi. | berty.tech | Medium |
+
+Not extracted (fetch failed), so unverified: Nordic 127664 (L2CAP socket
+fails with bonding), the Stack Overflow throughput thread, Renesas, and
+Apple forum 723218 (page gone).
+
+Impact by dimension:
+- **Performance:** the upgrade barely matters for Cairn's payloads (pairing
+  and ratchet at most about 2.4 KB, ADR 0003). The gain is lower per-message
+  latency and flow control, not peak rate. GATT write-without-response +
+  notify at MTU 247–517 and 2M is close. The PSM read adds a GATT round trip,
+  so tiny messages may not win.
+- **Battery:** the saving comes from shorter radio-on time (2M, bigger MTU,
+  fewer ATT headers), not from the protocol. Always-2M adverts lost in ADR
+  0038, so PHY upgrades after connect are the cheap place to spend 2M.
+- **Stability/support:** legacy discovery keeps the ADR 0028 cost: lost
+  `CONNECT_IND` on crowded primary channels gives status 133. Upgrade after
+  connect doesn't fix that; it only helps the link after it is up. CoC is
+  API 29+ only, and Android-to-iOS CoC interop is unproven in Cairn; the
+  flag stays off until tested.
+- **Peers:** an L2CAP channel still occupies one connection slot, so the
+  limit (about 7 on Android by default, ADR 0032 slots) is unchanged.
+
+Recommendation: keep legacy-compatible discovery and GATT as baseline, do
+PHY/MTU/data-length over GATT first (works on every API level), and treat
+CoC as an optional measured upgrade for API 29+/iOS pairs. Add a device test
+for Android 10+↔iOS CoC (insecure channel, app-layer security as ADR 0003
+already does) before enabling the flag.
+
 ## Corrections to ADR 0038
 
 - Done (2026-10-29): the 2M-only rule is documented by WWDC19 session 901
