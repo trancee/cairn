@@ -178,16 +178,67 @@ Android phones. The iPhone's own `AllowDuplicates` foreground scan is still
 a suspect there: the no-scan build couldn't run on the 12 mini, which was
 locked.
 
+### 12 mini runs (2026-10-29 evening)
+
+- **iPhone scan, ruled out.** The normal and the no-scan iOS builds,
+  alternated run by run against the Mi Note 3 (Mbase1–5, Mns1–5, 120 s
+  each): `CBError` 6 (connection timeout) in 3 of 5 runs with each.
+- **When.** Of 12 timeouts across all runs, 7 came 1.8–3.9 s after link-up,
+  one at 9.7 s and four at 18–63 s: mostly during pairing.
+- **Snoop, H1.** Both 0x08 links (handles 0x00a and 0x00d) were healthy
+  through PHY 2M and Data Length (251 B). Then the iPhone's acknowledgements
+  (Number of Completed Packets) slowed to one per 0.1–0.7 s on a 30 ms
+  interval, with nothing received for 1.4 s before the drop. Handle 0x00d
+  had just sent three 515 B notifications; handle 0x00a sent only small
+  GATT responses. So packet size doesn't explain it: the link is lossy for
+  over 720 ms at a time.
+- **Android can't ask for conforming parameters.** A GATT client on the
+  iPhone's link logged `onConnectionUpdated`: the iPhone uses interval 24
+  (30 ms), timeout 72 (720 ms).
+  - `requestConnectionPriority(BALANCED)` was refused with 0x3B (59). The
+    Android presets ask for a 20 s supervision timeout, and Apple allows
+    at most 6 s.
+  - `BluetoothGatt.requestLeConnectionUpdate` doesn't exist on Android 9
+    and is blocked as hidden API on Android 13 (`NoSuchMethodException`
+    on both).
+- **Recovery is slow.** After a drop, neither side redials for up to
+  2 min: §10.4 allows one attempt per address per 2 min, and a dial that
+  linked counts. A drop mid-pairing also backs pairing off for 2 min,
+  doubling (OI-30). In Mns2, the iPhone dialled again 48 s after the drop.
+
+### Faster recovery (ADR 0040, proposed)
+
+ADR 0040 proposes three rules. Each was written test-first (Rust admission,
+Android `DialPolicyTest` and `DialRuleTest`, iOS `IosRadioTests`).
+- A central redials a link lost to a supervision timeout after 1–5 s,
+  then 5–15 s, then 2 min.
+- Android doesn't dial an address for 15 s after its server connection
+  ends.
+- The first drop mid-pairing is forgiven.
+
+Device runs (12 mini and Mi Note 3, RD1–6 and RY1; ADR 0040 §Validation):
+- The iPhone redials within 5 s.
+- Android stays out of the way.
+- Recovery took 33–49 s instead of 2 min or more, because the redialled
+  links also dropped within about 2 s.
+- RY2 onwards were invalid: the iPhone's screen locked and iOS suspended
+  the app.
+
+**Open option: Android dials after a timeout.** In the H1 snoop, the
+iPhone-central drops came 2.7–3.7 s after the link moved to 2M. The
+Android-central link, h=00e, ran at a 15 ms interval with a 2 s timeout,
+which the iPhone accepted, and held. No Android-central link to an iPhone
+has dropped in any run. So after an iPhone-central link to an address
+times out, Android could dial instead and the iPhone wait. This reverses
+ADR 0039 for that address. Android's dials to iPhones often fail with 0x3E
+at first, and a pre-XS iPhone can't see an extended advert.
+
 Next:
-- Rerun the iOS no-scan build on the 12 mini against the Mi Note 3 (5 × 120 s
-  each way).
+- Decide on the open option above. It needs the owner's choice.
+- Rerun RY with the iPhone's auto-lock off.
 - A PacketLogger capture on the iPhone, to see which side stopped
   transmitting.
 - A run in a quiet RF environment.
-- Whether the iPhone accepts a guideline-conforming `LE Connection Update`
-  from Android. The interval-6 request above was refused. Android can send
-  one only through a GATT client on the shared ACL, which H3 shows is
-  unsafe on Android 9.
 
 Logs, the snoop dump and the decoder are kept outside the repository
 (session `files/i58-snoop`, `files/i58-logs`).

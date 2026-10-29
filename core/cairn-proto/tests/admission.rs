@@ -920,12 +920,15 @@ const MINUTE: u64 = 60_000;
 
 #[test]
 #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
-fn transport_failures_back_off_the_address_two_minutes_then_four() {
+fn a_first_link_drop_is_forgiven_then_transport_failures_back_off_two_minutes_then_four() {
     Seeded::seed(43);
     let mut core = restored(START);
     let t0 = START.mono_ms;
     let at = |mono_ms| Clock { mono_ms, ..START };
 
+    let (forgiven, _) = dial(&mut core, LinkId(6), t0);
+    core.handle(at(t0), Event::LinkDown { link: LinkId(6) })
+        .unwrap();
     let (first, _) = dial(&mut core, LinkId(1), t0);
     core.handle(at(t0), Event::LinkDown { link: LinkId(1) })
         .unwrap();
@@ -943,8 +946,8 @@ fn transport_failures_back_off_the_address_two_minutes_then_four() {
     let (after_four, _) = dial(&mut core, LinkId(5), t1 + 4 * MINUTE);
 
     assert_eq!(
-        [first, early, second, before_four, after_four],
-        [true, false, true, false, true],
+        [forgiven, first, early, second, before_four, after_four],
+        [true, true, false, true, false, true],
         "refused dials do not extend the back-off"
     );
 }

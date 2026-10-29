@@ -101,6 +101,47 @@ class DialRuleTest {
         assertEquals(1, dials())
     }
 
+    private fun serverDisconnected() {
+        h.serverCallback().onConnectionStateChange(h.device(address), BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED)
+        h.idle()
+    }
+
+    /** Sights the peer just before and at [ms] after now; returns the dials at each. */
+    private fun dialsBeforeAndAt(ms: Long, beacon: ByteArray?): List<Int> {
+        advance(ms - 1)
+        h.sight(address, beacon)
+        val early = dials()
+        advance(1)
+        h.sight(address, beacon)
+        return listOf(early, dials())
+    }
+
+    @Test
+    fun leavesAPeerWhoseServerConnectionEndedWithoutALinkFifteenSecondsToRedial() {
+        start(byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8))
+        h.random.pick = { _, until -> until - 1 }
+        h.serverCallback().onConnectionStateChange(h.device(address), BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED)
+        h.idle()
+
+        serverDisconnected()
+        h.sight(address, byteArrayOf(1, 2, 3, 4, 5, 6, 7, 9))
+
+        assertEquals(listOf(0, 1), dialsBeforeAndAt(18_000, byteArrayOf(1, 2, 3, 4, 5, 6, 7, 9)))
+        assertEquals(0L..3_000L, h.random.ranges.last())
+    }
+
+    @Test
+    fun leavesAnIosPeerWhosePeripheralLinkWentDownFifteenSecondsToRedial() {
+        start(byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8))
+        h.sight(address)
+        h.subscribe(h.device(address))
+        advance(20_000)
+
+        serverDisconnected()
+
+        assertEquals(listOf(0, 1), dialsBeforeAndAt(15_000, beacon = null))
+    }
+
     @Test
     fun anExtendedAdvertiserDialsALegacyAdvertiserWithALowerBeacon() {
         extended()

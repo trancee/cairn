@@ -95,6 +95,9 @@ final class IosRadio: NSObject, Radio {
     private final class Dial {
         var notBefore: Int64
         var failures = 0
+        /// Supervision timeouts of links up for less than the attempt interval (ADR 0040).
+        var timeouts = 0
+        var linkedAt: Int64 = 0
 
         init(notBefore: Int64) {
             self.notBefore = notBefore
@@ -221,6 +224,8 @@ final class IosRadio: NSObject, Radio {
     private static let attemptIntervalMs: Int64 = 120_000
     private static let dialTimeoutMs: Int64 = 10_000
     private static let maxDialsInFlight = 2
+    /// `CBError.connectionTimeout`: the link's supervision timeout expired.
+    private static let connectionTimeoutError = 6
 
     /// A scan result for [peer]; dials it when the policy allows.
     func discovered(_ peer: UUID) {
@@ -258,6 +263,7 @@ final class IosRadio: NSObject, Radio {
         central.stage = .up
         central.cancelTimeout()
         dials[peer]?.failures = 0
+        dials[peer]?.linkedAt = scheduler.nowMs
         central.mtu = port.writeLength(peer) + 3
         central.link = up(.central, central.mtu, peer, .central(peer))
         central.reading = true
@@ -290,6 +296,9 @@ final class IosRadio: NSObject, Radio {
         guard let central = centrals[peer] else { return }
         if central.stage == .up {
             trace("link \(central.link) lost" + (error.map { " error \($0)" } ?? ""))
+            if error == Self.connectionTimeoutError, let dial = dials[peer] {
+                timedOut(dial)
+            }
         }
         closeCentral(peer)
     }
@@ -320,15 +329,25 @@ final class IosRadio: NSObject, Radio {
             down(central.link)
         } else if let dial = dials[peer] {
             dial.failures += 1
-            let delay: Int64
-            switch dial.failures {
-            case 1: delay = random(1_000 ... 5_000)
-            case 2: delay = random(5_000 ... 15_000)
-            default:
-                delay = Self.attemptIntervalMs
-                dial.failures = 0
-            }
-            dial.notBefore = scheduler.nowMs + delay
+            dial.notBefore = scheduler.nowMs + step(dial.failures)
+            if dial.failures > 2 { dial.failures = 0 }
+        }
+    }
+
+    /// A link lost to a supervision timeout is redialled on the failed-dial steps (ADR 0040).
+    private func timedOut(_ dial: Dial) {
+        let now = scheduler.nowMs
+        if now - dial.linkedAt >= Self.attemptIntervalMs { dial.timeouts = 0 }
+        dial.timeouts += 1
+        dial.notBefore = now + step(dial.timeouts)
+        if dial.timeouts > 2 { dial.timeouts = 0 }
+    }
+
+    private func step(_ count: Int) -> Int64 {
+        switch count {
+        case 1: random(1_000 ... 5_000)
+        case 2: random(5_000 ... 15_000)
+        default: Self.attemptIntervalMs
         }
     }
 

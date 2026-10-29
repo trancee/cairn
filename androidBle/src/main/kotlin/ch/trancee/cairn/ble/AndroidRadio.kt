@@ -492,27 +492,53 @@ class AndroidRadio(
         signals[link]?.takeIf { (_, at) -> now - at <= RSSI_FRESH_MS }?.first
 
     /**
+     * Leaves a peer whose connection to the server ended [REDIAL_YIELD_MS], plus the first-dial
+     * spread, to dial again before we dial it; Android 9 reports a supervision timeout here as 0 (ADR 0040).
+     */
+    private fun yieldDial(address: String) {
+        val until = SystemClock.elapsedRealtime() + REDIAL_YIELD_MS + random.nextLong(0, FIRST_DIAL_SPREAD_MS + 1)
+        val dial = dials.getOrPut(address) { Dial(until) }
+        dial.notBefore = maxOf(dial.notBefore, until)
+    }
+
+    /**
      * When the central may next dial one address (spec §10.4). A dial that fails before link-up is
      * retried twice after random delays, so two devices that dialled each other at once fall out of
-     * step; a third failure, or a dial that linked, waits [ATTEMPT_INTERVAL_MS].
+     * step; a third failure, or a dial that linked, waits [ATTEMPT_INTERVAL_MS]. A link lost to a
+     * supervision timeout is redialled on the same steps, counting the timeouts of links that were up
+     * for less than [ATTEMPT_INTERVAL_MS] (ADR 0040).
      */
     private inner class Dial(var notBefore: Long) {
         private var failures = 0
+        private var timeouts = 0
+        private var linkedAt = 0L
 
-        fun linked() {
+        fun linked(now: Long) {
             failures = 0
+            linkedAt = now
+        }
+
+        /** Records a supervision timeout at [now] of the link that came up and returns the delay until the next dial. */
+        fun timedOut(now: Long): Long {
+            if (now - linkedAt >= ATTEMPT_INTERVAL_MS) timeouts = 0
+            timeouts++
+            val delay = step(timeouts).also { if (timeouts > 2) timeouts = 0 }
+            notBefore = now + delay
+            return delay
         }
 
         /** Records a failed dial at [now] and returns the delay until the next one. */
         fun failed(now: Long): Long {
             failures++
-            val delay = when (failures) {
-                1 -> random.nextLong(1_000, 5_001)
-                2 -> random.nextLong(5_000, 15_001)
-                else -> ATTEMPT_INTERVAL_MS.also { failures = 0 }
-            }
+            val delay = step(failures).also { if (failures > 2) failures = 0 }
             notBefore = now + delay
             return delay
+        }
+
+        private fun step(count: Int): Long = when (count) {
+            1 -> random.nextLong(1_000, 5_001)
+            2 -> random.nextLong(5_000, 15_001)
+            else -> ATTEMPT_INTERVAL_MS
         }
     }
 
@@ -553,9 +579,17 @@ class AndroidRadio(
                 }, PRE_AUTH_WINDOW_MS)
                 if (!gatt.requestMtu(GattProfile.MAX_MTU)) close()
             } else {
-                if (stage == Stage.UP) lost(link, status)
+                if (stage == Stage.UP) {
+                    lost(link, status)
+                    if (status == GATT_CONN_TIMEOUT) timedOut()
+                }
                 close()
             }
+        }
+
+        private fun timedOut() {
+            val delay = dial.timedOut(SystemClock.elapsedRealtime())
+            Log.i(TAG, "dial ${address.takeLast(5)} timed out after link-up; retry in $delay ms")
         }
 
         override fun onPhyUpdate(gatt: BluetoothGatt, txPhy: Int, rxPhy: Int, status: Int) = post {
@@ -595,7 +629,7 @@ class AndroidRadio(
                 close()
             } else {
                 stage = Stage.UP
-                dial.linked()
+                dial.linked(SystemClock.elapsedRealtime())
                 link = up(GattRole.CENTRAL, mtu, address)
                 links[link] = this
                 handler.postDelayed(::readRssi, RSSI_INTERVAL_MS)
@@ -736,9 +770,11 @@ class AndroidRadio(
                 if (peripheral != null) {
                     lost(peripheral.link, status)
                     down(peripheral.link)
+                    yieldDial(address)
                 } else if (since != null) {
                     val ms = SystemClock.elapsedRealtime() - since
                     Log.i(TAG, "server ${address.takeLast(5)} disconnected after $ms ms without a link")
+                    yieldDial(address)
                 }
                 budget()
             }
@@ -825,11 +861,17 @@ class AndroidRadio(
     private companion object {
         const val TAG = "CairnRadio"
 
+        /** The HCI reason a link was lost to its supervision timeout, as `onConnectionStateChange` reports it. */
+        const val GATT_CONN_TIMEOUT = 0x08
+
         /** Spec §10.4: the interval between dials to one address, outside the two fast retries. */
         const val ATTEMPT_INTERVAL_MS = 120_000L
 
         /** Spec §4.4 twice: pairing, then Resume under a fresh deadline (ADR 0022); high priority covers both. */
         const val PRE_AUTH_WINDOW_MS = 10_000L
+
+        /** ADR 0040: a peer whose server connection ended may redial this long first, past its 5–15 s retry. */
+        const val REDIAL_YIELD_MS = 15_000L
 
         /** Spec §10.4: the first dial to an address waits a random 0 to 3 s after it is first seen. */
         const val FIRST_DIAL_SPREAD_MS = 3_000L

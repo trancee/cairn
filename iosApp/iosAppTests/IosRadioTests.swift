@@ -1,4 +1,5 @@
 import CairnApp
+import CoreBluetooth
 import XCTest
 @testable import CairnIos
 
@@ -310,6 +311,61 @@ final class IosRadioTests: XCTestCase {
         radio.discovered(a)
 
         XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 2)
+    }
+
+    /// Dials [a] once allowed, keeps the link up for [upMs], then loses it to a supervision timeout.
+    private func linkThenTimeOut(upMs: Int64) {
+        centralLink(a)
+        scheduler.advance(by: upMs)
+        radio.disconnected(a, error: CBError.connectionTimeout.rawValue)
+    }
+
+    func testLinkLostToASupervisionTimeoutIsRedialledAfterOneToFiveSeconds() {
+        randomPick = { $0.upperBound }
+        running()
+        radio.discovered(a)
+        scheduler.advance(by: 3_000)
+        linkThenTimeOut(upMs: 0)
+
+        scheduler.advance(by: 4_999)
+        radio.discovered(a)
+        XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 1)
+        scheduler.advance(by: 1)
+        radio.discovered(a)
+
+        XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 2)
+    }
+
+    func testRepeatedTimeoutsWithinTwoMinutesOfLinkUpWaitFiveToFifteenSecondsThenTwoMinutes() {
+        running()
+        linkThenTimeOut(upMs: 0)
+        scheduler.advance(by: 1_000)
+        linkThenTimeOut(upMs: 119_999)
+        scheduler.advance(by: 4_999)
+        radio.discovered(a)
+        XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 2)
+        scheduler.advance(by: 1)
+        linkThenTimeOut(upMs: 0)
+
+        scheduler.advance(by: 119_999)
+        radio.discovered(a)
+        XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 3)
+        scheduler.advance(by: 1)
+        radio.discovered(a)
+
+        XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 4)
+    }
+
+    func testTimeoutOfALinkUpForTwoMinutesStartsTheLadderAgain() {
+        running()
+        linkThenTimeOut(upMs: 0)
+        scheduler.advance(by: 1_000)
+        linkThenTimeOut(upMs: 120_000)
+
+        scheduler.advance(by: 1_000)
+        radio.discovered(a)
+
+        XCTAssertEqual(port.calls.filter { $0 == "connect A" }.count, 3)
     }
 
     func testTimeoutOfALinkedDialDoesNothing() {

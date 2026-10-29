@@ -1507,8 +1507,7 @@ impl<B: CryptoBackend> Core<B> {
         }
         let link = self.remove_link(id, actions);
         if link.state.pairing() {
-            self.admission
-                .transport_failure(clock.mono_ms, &link.address);
+            self.admission.link_dropped(clock.mono_ms, &link.address);
         }
     }
 
