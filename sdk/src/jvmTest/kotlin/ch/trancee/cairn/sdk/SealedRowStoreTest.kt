@@ -173,6 +173,18 @@ class SealedRowStoreTest {
     }
 
     @Test
+    fun aVersionOneDatabaseThatAlreadyHasCourierRowsKeepsThemThroughTheMigration() {
+        val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+        (VERSION_ONE + COURIER).forEach { driver.execute(null, it, 0) }
+        SealedRowStore(driver, FakeSealer()).commit(listOf(Action.PutCourier(3uL, row(1))))
+
+        RowDatabase.Schema.migrate(driver, 1, RowDatabase.Schema.version)
+
+        val restored = SealedRowStore(driver, FakeSealer()).restore().event
+        assertEquals(listOf(CourierRow(3uL, row(1))).map { listOf(it.slot, key(it.state)) }, key(restored)[3])
+    }
+
+    @Test
     fun wipeDeletesEveryRow() {
         val store = SealedRowStore(database(), FakeSealer())
         store.commit(
@@ -199,3 +211,6 @@ private val VERSION_ONE = listOf(
     "CREATE TABLE queued (contact INTEGER NOT NULL, msgno INTEGER NOT NULL, version INTEGER NOT NULL, " +
         "ciphertext BLOB NOT NULL, PRIMARY KEY (contact, msgno))",
 )
+
+/** Builds between the courier table (ADR 0036) and its migration created it but stayed at version 1. */
+private const val COURIER = "CREATE TABLE courier (slot INTEGER NOT NULL PRIMARY KEY, version INTEGER NOT NULL, ciphertext BLOB NOT NULL)"

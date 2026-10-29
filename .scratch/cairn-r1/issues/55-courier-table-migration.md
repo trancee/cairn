@@ -38,6 +38,13 @@ Two causes, both fixed:
    (`Rows.wipe()`), reports `STORAGE_RESET` and restores an empty core, as
    for unreadable rows (ADR 0035 §5). Before, it crashed.
 
+3. **Courier-era databases.** Builds between ADR 0036 and the migration
+   created the `courier` table but stayed at version 1, so the migration
+   crashed with "table courier already exists" (seen on the iPhone 12 mini,
+   2026-10-29). `1.sqm` now uses `CREATE TABLE IF NOT EXISTS`, which keeps
+   those rows.
+
 Tests: `SealedRowStoreTest.aVersionOneDatabaseMigratesToHoldCourierRows`,
+`aVersionOneDatabaseThatAlreadyHasCourierRowsKeepsThemThroughTheMigration`,
 `wipeDeletesEveryRow` (SQLite, in-memory and iOS `RowStorageTests`), and
 `LinkDriverTest.rowsTheCoreCannotRestoreAreWipedAndReportedAsAStorageReset`.
