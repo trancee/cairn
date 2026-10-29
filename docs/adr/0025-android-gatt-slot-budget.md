@@ -63,7 +63,8 @@ On Android, the radio budgets its GATT connections (spec §10.4):
   the radio's own advertised beacon is lower, comparing the 8 bytes as an
   unsigned big-endian number; equal beacons dial. A peer that advertises
   only the service UUID, such as iOS in the background, is dialled as
-  before. This halves the dials in a crowd.
+  before; [ADR 0039](0039-android-waits-for-ios-to-dial.md) delays that dial
+  by 10 s. This halves the dials in a crowd.
 - **Beacon rotation.** The advertising set restarts at every 5-minute window
   boundary plus 0–30 s of random jitter (spec §10.1), and picks up the new
   beacon. Near a boundary the two phones may compare different windows, so

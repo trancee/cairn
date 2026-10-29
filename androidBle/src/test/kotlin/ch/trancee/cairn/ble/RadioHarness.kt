@@ -123,7 +123,7 @@ class RadioHarness {
     /** Reports [address] as a scan match and returns the GATT client the radio opened. */
     fun discover(address: String, service: BluetoothGattService? = peerService()): BluetoothGatt? {
         val device = device(address)
-        scanCallback().onScanResult(0, ScanResult(device, null, -40, 0))
+        scanCallback().onScanResult(0, ScanResult(device, advert(PEER_BEACON), -40, 0))
         idle()
         val gatt = shadowOf(device).bluetoothGatts.lastOrNull() ?: return null
         service?.let {
@@ -182,6 +182,9 @@ class RadioHarness {
                 ReflectionHelpers.ClassParameter.from(ByteArray::class.java, bytes),
             )
         }
+
+        /** A beacon above [RecordingListener]'s, so the radio dials its peer at once (ADR 0025). */
+        val PEER_BEACON = byteArrayOf(9, 9, 9, 9, 9, 9, 9, 9)
 
         /** 2027-01-15T08:01:40Z: 100 s after a window boundary, 200 s before the next one. */
         const val WALL_START = 1_800_000_100_000L

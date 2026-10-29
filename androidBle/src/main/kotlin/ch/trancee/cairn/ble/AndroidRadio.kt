@@ -328,6 +328,8 @@ class AndroidRadio(
     /**
      * Dials [device] unless both advertise a beacon and ours is the higher one (ADR 0025); an
      * extended advertiser dials a [legacy] advertiser regardless, as that one may not see it (ADR 0028).
+     * An iOS peer, which advertises no beacon, or a peer that just connected to the server, gets
+     * [IOS_DIAL_WAIT_MS] to link first (ADR 0039).
      */
     private fun connect(device: BluetoothDevice, beacon: ByteArray?, legacy: Boolean) {
         val address = device.address
@@ -336,8 +338,12 @@ class AndroidRadio(
         val waiting = address !in serverConnected && now >= (dials[address]?.notBefore ?: now)
         if (waiting && slotsInUse() >= maxSlots) evict(now, address)
         if (beacon != null && !(extended && legacy) && compareUnsigned(advertised, beacon) > 0) return
+        if (serverConnected[address]?.let { now - it < IOS_DIAL_WAIT_MS } == true) return
         if (dialsInFlight() >= maxDialsInFlight || slotsInUse() >= maxSlots) return
-        val dial = dials.getOrPut(address) { Dial(now + random.nextLong(0, FIRST_DIAL_SPREAD_MS + 1)) }
+        val dial = dials.getOrPut(address) {
+            val wait = if (beacon == null) IOS_DIAL_WAIT_MS else 0
+            Dial(now + wait + random.nextLong(0, FIRST_DIAL_SPREAD_MS + 1))
+        }
         if (now < dial.notBefore) return
         dial.notBefore = now + ATTEMPT_INTERVAL_MS
         val central = Central(address, dial, now)
@@ -839,6 +845,9 @@ class AndroidRadio(
 
         /** ADR 0031: an older RSSI reading counts as none. */
         const val RSSI_FRESH_MS = 30_000L
+
+        /** ADR 0039: how long an iOS peer, or one connected to the server, has to link before we dial it. */
+        const val IOS_DIAL_WAIT_MS = 10_000L
 
         /** ADR 0025: a dial not up by then fails and frees its slot. */
         const val DIAL_TIMEOUT_MS = 10_000L

@@ -61,7 +61,8 @@ CoreBluetooth.
   ([issue 04](../../.scratch/cairn-r1/issues/04-android-ios-background-ble.md)).
 - The peripheral advertises the fixed service UUID only. The foreground
   beacon UUID of §10.1 [OI-9] is deferred to S6, as S2 deferred Android's
-  beacon. Android therefore dials iOS whatever its own beacon.
+  beacon. Android therefore dials iOS whatever its own beacon, after giving
+  iOS 10 s to dial first ([ADR 0039](0039-android-waits-for-ios-to-dial.md)).
 - The central scans for the service UUID with duplicates allowed, so
   repeated results gate dials the way Android's scan results do.
 
@@ -146,7 +147,9 @@ hold no decisions; the device demonstration covers them.
   advert whose auxiliary packet is on LE 2M, and Android uses one while
   it sees iOS: [ADR 0038](0038-android-extended-advert-2m-secondary.md).
 - Two links between the same pair are possible when both dial at once; the
-  core keeps at most one Resume per contact in flight (OI-17).
+  core keeps at most one Resume per contact in flight (OI-17). On Android 9
+  such a second link can tear down the first, so Android waits for iOS to
+  dial ([ADR 0039](0039-android-waits-for-ios-to-dial.md)).
 - An idle Android central linked to a closed iOS peripheral stays connected
   until it next writes or its own eviction closes it.
 - iOS↔iOS dialling has no tie-break until the beacon UUID arrives in S6;

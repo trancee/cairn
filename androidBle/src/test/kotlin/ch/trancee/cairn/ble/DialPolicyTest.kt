@@ -23,7 +23,7 @@ class DialPolicyTest {
     private val address = "00:11:22:33:44:01"
 
     private fun sight() {
-        h.scanCallback().onScanResult(0, ScanResult(h.device(address), null, -40, 0))
+        h.scanCallback().onScanResult(0, ScanResult(h.device(address), RadioHarness.advert(RadioHarness.PEER_BEACON), -40, 0))
         h.idle()
     }
 
