@@ -63,13 +63,15 @@ class SealedRowStore(driver: SqlDriver, private val sealer: RowSealer) : Rows {
     /** Every row; if any fails to open, wipes all of them (ADR 0035 §5). */
     override fun restore(): Restored {
         read()?.let { return Restored(it) }
-        queries.transaction {
-            queries.wipeDevice()
-            queries.wipeContacts()
-            queries.wipeQueued()
-            queries.wipeCourier()
-        }
+        wipe()
         return Restored(Event.Restore(null, emptyList(), emptyList(), emptyList()), reset = true)
+    }
+
+    override fun wipe() = queries.transaction {
+        queries.wipeDevice()
+        queries.wipeContacts()
+        queries.wipeQueued()
+        queries.wipeCourier()
     }
 
     private fun read(): Event.Restore? {

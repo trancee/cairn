@@ -74,6 +74,7 @@ private class FakeTimers : Timers {
 private class RecordingRows(private val radio: FakeRadio, private val reset: Boolean = false) : Rows {
     val store = RowStore()
     val commits = mutableListOf<Pair<Int, List<Action>>>()
+    var wipes = 0
 
     override fun commit(actions: List<Action>) {
         commits += radio.sent.size to actions
@@ -81,19 +82,32 @@ private class RecordingRows(private val radio: FakeRadio, private val reset: Boo
     }
 
     override fun restore() = Restored(store.restore().event, reset)
+
+    override fun wipe() {
+        wipes++
+        store.wipe()
+    }
 }
 
 /** A started driver over fakes; [engines] lists every engine the driver created, in order. */
-private class Rig(resetStorage: Boolean = false) {
+private class Rig(resetStorage: Boolean = false, stored: List<Action> = emptyList(), rejectRestore: Boolean = false) {
     val engines = mutableListOf<FakeEngine>()
     val radio = FakeRadio()
     val timers = FakeTimers()
     val notices = mutableListOf<Notice>()
-    val rows = RecordingRows(radio, resetStorage)
+    val rows = RecordingRows(radio, resetStorage).also { it.store.commit(stored) }
     var now = Clock(monoMs = 1_000uL, unixS = 1_761_177_600uL)
     val driver = LinkDriver(
         rows = rows,
-        newEngine = { FakeEngine { if (it is Event.Restore) listOf(Action.PersistDevice(BLOB)) else emptyList() }.also { engines += it } },
+        newEngine = {
+            FakeEngine {
+                when {
+                    it !is Event.Restore -> emptyList()
+                    rejectRestore && it.device != null -> throw CoreException.InvalidBlob()
+                    else -> listOf(Action.PersistDevice(BLOB))
+                }
+            }.also { engines += it }
+        },
         radio = radio,
         timers = timers,
         clock = { now },
@@ -184,6 +198,20 @@ class LinkDriverTest {
 
         assertEquals(Notice.Fault(FaultKind.STORAGE_RESET), rig.startNotices.first())
         assertEquals(keys(Event.Restore(null, emptyList(), emptyList(), emptyList())), rig.engine.events)
+    }
+
+    @Test
+    fun rowsTheCoreCannotRestoreAreWipedAndReportedAsAStorageReset() {
+        val old = Persisted(byteArrayOf(9), 2u)
+        val rig = Rig(stored = listOf(Action.PersistDevice(old), Action.PersistContact(7uL, old)), rejectRestore = true)
+
+        assertEquals(Notice.Fault(FaultKind.STORAGE_RESET), rig.startNotices.first())
+        assertEquals(1, rig.rows.wipes)
+        assertEquals(
+            keys(Event.Restore(old, listOf(ContactRow(7uL, old)), emptyList(), emptyList()), Event.Restore(null, emptyList(), emptyList(), emptyList())),
+            rig.engine.events,
+        )
+        assertEquals(keys(Event.Restore(BLOB, emptyList(), emptyList(), emptyList())), keys(rig.driver.rows.restore().event))
     }
 
     @Test

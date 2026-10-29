@@ -1,0 +1,6 @@
+-- Version 1 → 2: the courier table (ADR 0036 §3).
+CREATE TABLE courier (
+    slot INTEGER NOT NULL PRIMARY KEY,
+    version INTEGER NOT NULL,
+    ciphertext BLOB NOT NULL
+);

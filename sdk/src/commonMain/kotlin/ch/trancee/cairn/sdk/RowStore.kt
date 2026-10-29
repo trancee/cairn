@@ -36,4 +36,11 @@ class RowStore : Rows {
             courier.entries.sortedBy { it.key }.map { (slot, state) -> CourierRow(slot, state) },
         ),
     )
+
+    override fun wipe() {
+        device = null
+        contacts.clear()
+        queued.clear()
+        courier.clear()
+    }
 }

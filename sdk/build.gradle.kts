@@ -50,6 +50,8 @@ sqldelight {
     databases {
         create("RowDatabase") {
             packageName = "ch.trancee.cairn.sdk.db"
+            // Every schema change ships with a migration from the previous version (issue 55).
+            verifyMigrations = true
         }
     }
 }

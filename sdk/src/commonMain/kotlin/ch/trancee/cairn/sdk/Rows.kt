@@ -10,6 +10,9 @@ interface Rows {
 
     /** Every stored row, in key order. */
     fun restore(): Restored
+
+    /** Deletes every row in one transaction (ADR 0035 §5). */
+    fun wipe()
 }
 
 /** A restore; [reset] means unreadable storage was wiped first (ADR 0035 §5). */

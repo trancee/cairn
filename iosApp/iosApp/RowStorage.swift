@@ -80,6 +80,10 @@ final class SealedRows: NSObject, Rows {
         store.restore()
     }
 
+    func wipe() {
+        store.wipe()
+    }
+
     func close() {
         driver.close()
     }

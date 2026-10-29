@@ -91,7 +91,7 @@ class LinkDriver(
 
     /** Restores a fresh core and tells the app its restored contacts; call once, first. */
     fun start() {
-        dispatch(restore())
+        run(::restoreCore)
         listener(Notice.ContactsChanged(contacts()))
     }
 
@@ -171,9 +171,11 @@ class LinkDriver(
 
     fun close() = engine.close()
 
-    private fun dispatch(event: Event, now: Clock = clock.now()) {
+    private fun dispatch(event: Event, now: Clock = clock.now()) = run { engine.handle(now, event) }
+
+    private fun run(handle: () -> List<Action>) {
         val actions = try {
-            engine.handle(now, event)
+            handle()
         } catch (e: CoreException.Crypto) {
             listener(Notice.Fault(FaultKind.CRYPTO))
             return
@@ -196,6 +198,15 @@ class LinkDriver(
         return restored.event
     }
 
+    /** ADR 0035 §5: rows that open but that the core can't decode are wiped like unreadable ones. */
+    private fun restoreCore(): List<Action> = try {
+        engine.handle(clock.now(), restore())
+    } catch (e: CoreException.InvalidBlob) {
+        rows.wipe()
+        listener(Notice.Fault(FaultKind.STORAGE_RESET))
+        engine.handle(clock.now(), restore())
+    }
+
     private fun <T> query(read: (Engine) -> T): T = try {
         read(engine)
     } catch (e: CoreException.Poisoned) {
@@ -212,7 +223,7 @@ class LinkDriver(
         activeTimers.clear()
         engine = newEngine()
         // A replacement that fails its restore propagates rather than looping.
-        execute(engine.handle(clock.now(), restore()))
+        execute(restoreCore())
         listener(Notice.Fault(FaultKind.POISONED))
     }
 

@@ -104,6 +104,15 @@ final class RowStorageTests: XCTestCase {
         XCTAssertEqual(status, "storage=reset device=stored")
     }
 
+    func testWipeDeletesTheStoredRows() throws {
+        _ = StorageCheckKt.checkStorage(rows: try open(), clock: clock)
+        let rows = try open()
+
+        rows.wipe()
+
+        XCTAssertNil(rows.restore().event.device)
+    }
+
     func testTheDatabaseDirectoryIsExcludedFromBackup() throws {
         _ = StorageCheckKt.checkStorage(rows: try open(), clock: clock)
 
