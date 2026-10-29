@@ -185,13 +185,51 @@ Android keeps dialling iOS's legacy advert, the rule ADR 0038 keeps. It is
 stranded only between two such peers that can't scan each other, which
 can't happen while every iPhone advertises legacy.
 
+## Test 2: iPhone X, iOS 16.7.16 (2026-10-29)
+
+iPhone X (iPhone10,6, Bluetooth 5.0, build 20H392), running a probe build of
+the iOS app: its own Cairn scan (service-UUID filter, duplicates allowed) logs
+each advert's `kCBAdvDataRxPrimaryPHY`/`kCBAdvDataRxSecondaryPHY` and
+`CBCentralManager.supports(.extendedScanAndConnect)`. 60 s per variant (45 s
+for the C repeats), fresh Android state, no other Cairn phone running.
+
+| Variant | Android phone | Cairn reports on the X | X central? | Link |
+|---|---|---|---|---|
+| A | Pocophone, extended, 1M secondary | 0 | no | Android central, MTU 517 |
+| B | Pocophone, extended, 2M secondary | 0 | no | Android central, MTU 517 |
+| C | Redmi `2201117TY`, legacy | 148 (PHY 0/0) | yes | MTU 517 |
+| C2, C3 | same, repeated | — | yes, 3 links | see below |
+
+- `supports(.extendedScanAndConnect)` is **false**.
+- `bluetoothd` logs `start active ThirdPartyApp scan … on 1M PHY`, and every
+  `ScanParams` line has `PHYS:1` (A 38, B 56, C 48 lines).
+- So the X never sees an extended advert, even a 2M one. This confirms
+  WWDC19 session 901: extended scanning starts at the iPhone XS, whatever
+  the radio's Bluetooth version. The 1M rule can't explain the B miss.
+- No partition: in A and B the Pocophone dialled the X's legacy advert and
+  paired with it. Pre-XS iPhones stay reachable as long as Android keeps
+  dialling iOS's legacy advert, as for the SE 2016.
+
+Side finding, against the legacy Redmi: crossed dials (both phones dialling
+each other) lost links that had come up.
+- In C, the X linked as central and the Redmi's own dial to the X then timed
+  out after 10 s. The link dropped at that moment.
+- In C2, two links closed about 0.5 s after the X received the last pairing
+  frame. The X's SDK requested the disconnect, while the Redmi's dials kept
+  failing with HCI `0x3e`.
+- The X showed 4 contacts after the 6 pairing attempts.
+
+The collateral link loss is tracked in
+[issue 58](58-crossed-dial-link-loss.md).
+
 ## Corrections to ADR 0038
 
 - Done (2026-10-29): the 2M-only rule is documented by WWDC19 session 901
   (124 B cap, iPhone XS+); ADR 0038 Context, root cause and Consequences
   now say so.
-- Still to add after the tests: the iOS 15/16, API 26–28, iPhone 8/X and
-  range results, in Validation.
+- Done (2026-10-29): the iPhone X result (test 2), in Validation.
+- Still to add after the tests: the API 26–28, iOS 18.6.x and range
+  results.
 
 ## Resolution
 

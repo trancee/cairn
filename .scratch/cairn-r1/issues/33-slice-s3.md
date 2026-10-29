@@ -101,5 +101,17 @@ Facts this answers:
     a stale app process makes XCUITest fail with "Failed to terminate", and
     `devicectl` can't kill it on iOS 15 (`pymobiledevice3 developer dvt kill`
     can).
+- iPhone to iPhone (2026-10-29): the 12 mini and the 15 dialled each other's
+  legacy adverts. Each phone was central on one link (MTU 515), and the core
+  closed the duplicate link. iOS advertises legacy only, so two iPhones
+  always see each other, whatever their model.
+- iPhone X, iOS 16.7.16 (2026-10-29, issue 57 test 2):
+  `supports(.extendedScanAndConnect)` is false. The X never reported the
+  Pocophone's extended set, at 1M or 2M, but the Pocophone dialled the X and
+  paired. Against the legacy Redmi the X was central.
+  - Pitfalls: a phone with a passcode can't get Developer Mode remotely
+    (`pymobiledevice3 amfi reveal-developer-mode` only shows the switch).
+    After installing, a free-team app won't launch until its developer is
+    trusted in Settings → General → VPN & Device Management.
 
 Status: done pending PR review.
