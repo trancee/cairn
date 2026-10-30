@@ -241,15 +241,76 @@ held 52 s to the end of the run. In HW1–HW3, all 23 Android dials to the
 iPhone failed with 133 (0x3E), so no link held. Android's dial success to
 an iPhone now limits recovery.
 
-Next:
-- Find why Android's dials to an iPhone fail with 0x3E: a snoop of HW-like
-  runs, and whether the iPhone's address rotation or scan state matters.
-- A PacketLogger capture on the iPhone, to see which side stopped
-  transmitting.
-- A run in a quiet RF environment.
+### 0x3E diagnosis (2026-10-30)
 
-Logs, the snoop dump and the decoder are kept outside the repository
-(session `files/i58-snoop`, `files/i58-logs`).
+Runs HX1–HX5 used a Mi Note 3 HCI snoop, and HX4–HX5 also captured the
+iPhone's `bluetoothd` log over USB (`pymobiledevice3 syslog live`). That
+log needs no Bluetooth logging profile. HR1–HR2 paired the 12 mini with
+the Redmi (Android 13). HW5–HW6 repeated the Mi Note 3 runs with its
+Wi-Fi off.
+
+- **Failed dials look the same at the HCI level.** The Android sends
+  LE Create Connection (interval 30–50 ms, timeout 5 s, own address
+  public, peer RPA). Connection Complete follows after 30–80 ms.
+  Disconnect 0x3E follows 280–320 ms later, which is about 6 intervals of
+  45 ms. The peer never answered the first connection events. Successful
+  dials used the same parameters and the same RPA, and saw a PHY update
+  about 1 s later.
+- **The failure happens in both directions.** In HX5 the iPhone's own dial
+  to the Mi Note 3 reported "Outgoing LE Connection complete … status 0",
+  then "LE Link disconnected … reason 762" 365 ms later. Apple's status
+  base 700 + 62 makes 762 equal to HCI 0x3E. The Mi Note 3's snoop has no
+  peripheral Connection Complete for that attempt: it never received the
+  CONNECT_IND. The iPhone logged no connection (no `Le topology` entry as
+  peripheral) for any of the 12 Android dials in HX4–HX5.
+- **Advertising-channel reception is fine.** The Mi Note 3 heard about 25
+  iPhone adverts/s at a median RSSI of −68 to −73 dBm, with no difference
+  between windows where dials failed and windows where they succeeded.
+  Only data-channel exchanges fail: the first packets after CONNECT_IND,
+  and links that do form drop with 0x08 within 2–5 s.
+- **It's specific to the Mi Note 3 pair.** With the Redmi, in the same
+  session and with the same builds, the iPhone's dials connected on the
+  first or second attempt (one 0x3E in HR1), and both links held about
+  113 s, to the end of the run, with no supervision timeout.
+- **Ruled out:**
+  - the iPhone's Wi-Fi: HX4 overlapped a 2.4 GHz "critical" window, but
+    HX5 ran entirely on 5 GHz and failed the same way;
+  - the Mi Note 3's Wi-Fi: in HW5–HW6, with Wi-Fi and Wi-Fi scanning off,
+    11 of 13 dials still failed with 0x3E;
+  - a bond or privacy filtering: there is no bond on either side;
+  - other Cairn instances: none of the farm's phones was running Cairn.
+- **A separate Android bug.** In HX1 the iPhone dialled while the Android's
+  own link was up. When the crossed link closed, Android reported its
+  central link lost with 0x13. The controller kept that ACL (h=009) for
+  another 72 s, and the next three Android dials to the same RPA each hung
+  for 10 s. This is ADR 0039 failure 2 again, seen from the dial side.
+
+Conclusion: the 0x3E failures and the early 0x08 drops are a data-channel
+radio problem between the 12 mini and the Mi Note 3 (an Android 9 phone
+on the device farm), not a dial-policy fault. The Redmi pair is clean. The
+remaining candidates are the Mi Note 3's controller or antenna, and its
+placement among about 30 farm phones. Software can't distinguish these;
+moving the phones can.
+
+Next:
+- Put the 12 mini and the Mi Note 3 about 1 m apart, away from the farm
+  hub, and rerun HW-style runs. If they pass, the cause is placement.
+  If they still fail, the cause is the Mi Note 3.
+- Install Apple's Bluetooth logging profile on the 12 mini and capture
+  with PacketLogger. That shows whether the iPhone's controller
+  ever received the Mi Note 3's CONNECT_IND, which `bluetoothd` doesn't
+  log.
+- Decide whether Android should keep the ladder's 3-attempt budget for
+  0x3E. Each attempt costs about 350 ms. In HW5–HW6 only 2 of 13 dials
+  linked: the 1st attempt (dropped with 0x08 after 1.7 s) and the 3rd
+  (held to the end of the run).
+- In HW6, after the iPhone rotated its RPA (31:7B → D9:F0), Android dialled
+  the new address three times while its link to the old address was still
+  up. Each dial failed with 0x3E, and the link held. Android doesn't know
+  that the two RPAs belong to the same peer until the handshake.
+
+Logs, the snoop dumps and the decoders are kept outside the repository
+(session `files/i58-snoop`, `files/i58-logs`, `files/i58-0x3e`).
 
 ## Done when
 
