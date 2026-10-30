@@ -91,7 +91,7 @@ class EvictionTest {
     @Test
     fun doesNotEvictForAnAddressItIsBackingOff() {
         val dropped = link(29)
-        h.callback(dropped).onConnectionStateChange(dropped, 8, BluetoothProfile.STATE_DISCONNECTED)
+        h.callback(dropped).onConnectionStateChange(dropped, 0x13, BluetoothProfile.STATE_DISCONNECTED)
         h.idle()
         fill()
         advance(30_000)

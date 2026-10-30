@@ -42,6 +42,7 @@ pub(crate) struct Admission {
 struct Failures {
     address: Vec<u8>,
     transport: u32,
+    forgiven: bool,
     refusals: u8,
     until_ms: u64,
 }
@@ -97,6 +98,17 @@ impl Admission {
         failures.until_ms = failures.until_ms.max(now_ms + back_off.min(HOUR_MS));
     }
 
+    /// A link drop mid-pairing; the first with no earlier failure is forgiven
+    /// (spec §5.6, ADR 0040).
+    pub(crate) fn link_dropped(&mut self, now_ms: u64, address: &[u8]) {
+        let failures = self.failures_of(now_ms, address);
+        if failures.transport == 0 && !failures.forgiven {
+            failures.forgiven = true;
+        } else {
+            self.transport_failure(now_ms, address);
+        }
+    }
+
     /// A malformed or invalid frame or value refuses `address` for 1 h.
     pub(crate) fn protocol_failure(&mut self, now_ms: u64, address: &[u8]) {
         self.failures_of(now_ms, address).until_ms = now_ms + HOUR_MS;
@@ -133,6 +145,7 @@ impl Admission {
                 self.failures.push(Failures {
                     address: address.into(),
                     transport: 0,
+                    forgiven: false,
                     refusals: 0,
                     until_ms: now_ms,
                 });
@@ -262,6 +275,40 @@ mod tests {
         }
 
         assert_eq!(waits, [2, 4, 8, 16, 32, 60, 60]);
+    }
+
+    #[test]
+    fn only_a_first_link_drop_with_no_earlier_failure_is_forgiven() {
+        let mut admission = Admission::default();
+        admission.link_dropped(0, ADDRESS);
+        let after_first = admission.allows(0, 0, ADDRESS);
+        admission.link_dropped(0, ADDRESS);
+        let after_second = admission.allows(BASE_BACK_OFF_MS - 1, 0, ADDRESS);
+        admission.transport_failure(0, b"addr-2");
+        admission.link_dropped(BASE_BACK_OFF_MS, b"addr-2");
+
+        let decisions = [
+            after_first,
+            after_second,
+            admission.allows(BASE_BACK_OFF_MS, 0, ADDRESS),
+            admission.allows(3 * BASE_BACK_OFF_MS - 1, 0, b"addr-2"),
+        ];
+
+        assert_eq!(decisions, [true, false, true, false]);
+    }
+
+    #[test]
+    fn a_forgiven_drop_is_forgotten_after_one_hour_or_a_pairing() {
+        let mut admission = Admission::default();
+        admission.link_dropped(0, ADDRESS);
+        admission.link_dropped(0, b"addr-2");
+        admission.paired(b"addr-2");
+
+        admission.link_dropped(HOUR_MS, ADDRESS);
+        admission.link_dropped(HOUR_MS, b"addr-2");
+
+        assert!(admission.allows(HOUR_MS, 0, ADDRESS));
+        assert!(admission.allows(HOUR_MS, 0, b"addr-2"));
     }
 
     #[test]

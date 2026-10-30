@@ -15,6 +15,10 @@ import org.robolectric.shadows.ShadowLog
 /** Spec §10.4: when the central dials an address, and how it retries a dial that fails before link-up. */
 @RunWith(RobolectricTestRunner::class)
 class DialPolicyTest {
+    private companion object {
+        const val GATT_CONN_TIMEOUT = 0x08
+    }
+
     // Drops the advert rotation's draw, so the ranges below are the dial schedule only.
     private val h = RadioHarness().also {
         it.radio.start()
@@ -128,6 +132,76 @@ class DialPolicyTest {
         assertEquals(2, early)
         assertEquals(3, dials().size)
         assertEquals(1_000L..5_000L, h.random.ranges.last())
+    }
+
+    private fun timeOut(gatt: BluetoothGatt) {
+        h.callback(gatt).onConnectionStateChange(gatt, GATT_CONN_TIMEOUT, BluetoothProfile.STATE_DISCONNECTED)
+        h.idle()
+    }
+
+    /** Dials once the address may be dialled, links, keeps the link up for [upMs], then times it out. */
+    private fun linkThenTimeOut(upMs: Long) {
+        sight()
+        timeOut(link().also { advance(upMs) })
+    }
+
+    @Test
+    fun linkLostToASupervisionTimeoutIsRedialledAfterOneToFiveSeconds() {
+        h.random.pick = { _, until -> until - 1 }
+        sight()
+        advance(3_000)
+        linkThenTimeOut(upMs = 0)
+        advance(4_999)
+        sight()
+        val early = dials().size
+
+        advance(1)
+        sight()
+
+        assertEquals(listOf(1, 2), listOf(early, dials().size))
+        assertEquals(1_000L..5_000L, h.random.ranges.last())
+    }
+
+    @Test
+    fun repeatedTimeoutsWithinTwoMinutesOfLinkUpWaitFiveToFifteenSecondsThenTwoMinutes() {
+        linkThenTimeOut(upMs = 0)
+        advance(1_000)
+        linkThenTimeOut(upMs = 119_999)
+        advance(5_000)
+        linkThenTimeOut(upMs = 0)
+        advance(119_999)
+        sight()
+        val early = dials().size
+
+        advance(1)
+        sight()
+
+        assertEquals(listOf(3, 4), listOf(early, dials().size))
+        // The advert rotation draws 0..30 s once the beacon window turns.
+        assertEquals(listOf(1_000L..5_000L, 5_000L..15_000L), h.random.ranges.subList(1, 3))
+    }
+
+    @Test
+    fun timeoutOfALinkUpForTwoMinutesStartsTheLadderAgain() {
+        linkThenTimeOut(upMs = 0)
+        advance(1_000)
+        linkThenTimeOut(upMs = 120_000)
+        advance(1_000)
+
+        sight()
+
+        assertEquals(3, dials().size)
+        assertEquals(listOf(1_000L..5_000L, 1_000L..5_000L), h.random.ranges.drop(1))
+    }
+
+    @Test
+    fun timedOutLinkIsLoggedWithTheNextDelay() {
+        linkThenTimeOut(upMs = 0)
+
+        assertEquals(
+            "dial 44:01 timed out after link-up; retry in 1000 ms",
+            ShadowLog.getLogsForTag("CairnRadio").single { "after link-up" in it.msg }.msg,
+        )
     }
 
     @Test

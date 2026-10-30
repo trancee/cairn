@@ -189,3 +189,10 @@ dropping frames.
   frames makes a peer retry the address sooner, but every retry counts
   against that budget, as before.
 - Formal models: unchanged; no model covers admission. No wire change.
+
+2026-10-29, proposed in [ADR 0040](0040-redial-after-supervision-timeout.md) (spec OI-42):
+- The first link drop with a pairing in flight is forgiven when the address
+  has no earlier failure on record: it backs nothing off, and the next
+  transport failure backs off 2 min. A missed pre-auth deadline still backs
+  off from the first. The forgiven drop is forgotten after 1 h or when a
+  pairing with the address completes.

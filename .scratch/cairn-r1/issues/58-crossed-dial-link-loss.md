@@ -178,19 +178,211 @@ Android phones. The iPhone's own `AllowDuplicates` foreground scan is still
 a suspect there: the no-scan build couldn't run on the 12 mini, which was
 locked.
 
-Next:
-- Rerun the iOS no-scan build on the 12 mini against the Mi Note 3 (5 × 120 s
-  each way).
-- A PacketLogger capture on the iPhone, to see which side stopped
-  transmitting.
-- A run in a quiet RF environment.
-- Whether the iPhone accepts a guideline-conforming `LE Connection Update`
-  from Android. The interval-6 request above was refused. Android can send
-  one only through a GATT client on the shared ACL, which H3 shows is
-  unsafe on Android 9.
+### 12 mini runs (2026-10-29 evening)
 
-Logs, the snoop dump and the decoder are kept outside the repository
-(session `files/i58-snoop`, `files/i58-logs`).
+- **iPhone scan, ruled out.** The normal and the no-scan iOS builds,
+  alternated run by run against the Mi Note 3 (Mbase1–5, Mns1–5, 120 s
+  each): `CBError` 6 (connection timeout) in 3 of 5 runs with each.
+- **When.** Of 12 timeouts across all runs, 7 came 1.8–3.9 s after link-up,
+  one at 9.7 s and four at 18–63 s: mostly during pairing.
+- **Snoop, H1.** Both 0x08 links (handles 0x00a and 0x00d) were healthy
+  through PHY 2M and Data Length (251 B). Then the iPhone's acknowledgements
+  (Number of Completed Packets) slowed to one per 0.1–0.7 s on a 30 ms
+  interval, with nothing received for 1.4 s before the drop. Handle 0x00d
+  had just sent three 515 B notifications; handle 0x00a sent only small
+  GATT responses. So packet size doesn't explain it: the link is lossy for
+  over 720 ms at a time.
+- **Android can't ask for conforming parameters.** A GATT client on the
+  iPhone's link logged `onConnectionUpdated`: the iPhone uses interval 24
+  (30 ms), timeout 72 (720 ms).
+  - `requestConnectionPriority(BALANCED)` was refused with 0x3B (59). The
+    Android presets ask for a 20 s supervision timeout, and Apple allows
+    at most 6 s.
+  - `BluetoothGatt.requestLeConnectionUpdate` doesn't exist on Android 9
+    and is blocked as hidden API on Android 13 (`NoSuchMethodException`
+    on both).
+- **Recovery is slow.** After a drop, neither side redials for up to
+  2 min: §10.4 allows one attempt per address per 2 min, and a dial that
+  linked counts. A drop mid-pairing also backs pairing off for 2 min,
+  doubling (OI-30). In Mns2, the iPhone dialled again 48 s after the drop.
+
+### Faster recovery (ADR 0040, proposed)
+
+ADR 0040 proposes three rules. Each was written test-first (Rust admission,
+Android `DialPolicyTest` and `DialRuleTest`, iOS `IosRadioTests`).
+- A central redials a link lost to a supervision timeout after 1–5 s,
+  then 5–15 s, then 2 min.
+- Android doesn't dial an address for 15 s after its server connection
+  ends.
+- The first drop mid-pairing is forgiven.
+
+Device runs (12 mini and Mi Note 3, RD1–6 and RY1; ADR 0040 §Validation):
+- The iPhone redials within 5 s.
+- Android stays out of the way.
+- Recovery took 33–49 s instead of 2 min or more, because the redialled
+  links also dropped within about 2 s.
+- RY2 onwards were invalid: the iPhone's screen locked and iOS suspended
+  the app.
+
+**Hand-over (ADR 0040 rule 2, 2026-10-29 late).** The H1 snoop showed
+iPhone-central drops 2.7–3.7 s after the move to 2M. The one Android-central
+link (h=00e: 15 ms interval, 2 s timeout) held. So after a timeout the
+iPhone now waits 45 s and Android dials it after 15–18 s. Two fixes came
+from the device runs:
+- HO1: Android's schedule was at 2 min from failed first-contact dials, so
+  it didn't take over. A server connection that ends now restarts it.
+- HV3, HV4: Android's link held, but when the iPhone's 45 s ran out it
+  dialled the same Android, which dials from another address than it
+  advertises. The crossed dial tore the link down. The iPhone now holds
+  off while any central that linked after the hand-over is linked.
+
+HW4: Android linked 21 s after the timeout, pairing completed, and the link
+held 52 s to the end of the run. In HW1–HW3, all 23 Android dials to the
+iPhone failed with 133 (0x3E), so no link held. Android's dial success to
+an iPhone now limits recovery.
+
+### 0x3E diagnosis (2026-10-30)
+
+Runs HX1–HX5 used a Mi Note 3 HCI snoop, and HX4–HX5 also captured the
+iPhone's `bluetoothd` log over USB (`pymobiledevice3 syslog live`). That
+log needs no Bluetooth logging profile. HR1–HR2 paired the 12 mini with
+the Redmi (Android 13). HW5–HW6 repeated the Mi Note 3 runs with its
+Wi-Fi off.
+
+- **Failed dials look the same at the HCI level.** The Android sends
+  LE Create Connection (interval 30–50 ms, timeout 5 s, own address
+  public, peer RPA). Connection Complete follows after 30–80 ms.
+  Disconnect 0x3E follows 280–320 ms later, which is about 6 intervals of
+  45 ms. The peer never answered the first connection events. Successful
+  dials used the same parameters and the same RPA, and saw a PHY update
+  about 1 s later.
+- **The failure happens in both directions.** In HX5 the iPhone's own dial
+  to the Mi Note 3 reported "Outgoing LE Connection complete … status 0",
+  then "LE Link disconnected … reason 762" 365 ms later. Apple's status
+  base 700 + 62 makes 762 equal to HCI 0x3E. The Mi Note 3's snoop has no
+  peripheral Connection Complete for that attempt: it never received the
+  CONNECT_IND. The iPhone logged no connection (no `Le topology` entry as
+  peripheral) for any of the 12 Android dials in HX4–HX5.
+- **Advertising-channel reception is fine.** The Mi Note 3 heard about 25
+  iPhone adverts/s at a median RSSI of −68 to −73 dBm, with no difference
+  between windows where dials failed and windows where they succeeded.
+  Only data-channel exchanges fail: the first packets after CONNECT_IND,
+  and links that do form drop with 0x08 within 2–5 s.
+- **It's specific to the Mi Note 3 pair.** With the Redmi, in the same
+  session and with the same builds, the iPhone's dials connected on the
+  first or second attempt (one 0x3E in HR1), and both links held about
+  113 s, to the end of the run, with no supervision timeout.
+- **Ruled out:**
+  - the iPhone's Wi-Fi: HX4 overlapped a 2.4 GHz "critical" window, but
+    HX5 ran entirely on 5 GHz and failed the same way;
+  - the Mi Note 3's Wi-Fi: in HW5–HW6, with Wi-Fi and Wi-Fi scanning off,
+    11 of 13 dials still failed with 0x3E;
+  - a bond or privacy filtering: there is no bond on either side;
+  - other Cairn instances: none of the farm's phones was running Cairn.
+- **A separate Android bug.** In HX1 the iPhone dialled while the Android's
+  own link was up. When the crossed link closed, Android reported its
+  central link lost with 0x13. The controller kept that ACL (h=009) for
+  another 72 s, and the next three Android dials to the same RPA each hung
+  for 10 s. This is ADR 0039 failure 2 again, seen from the dial side.
+
+Conclusion: the 0x3E failures and the early 0x08 drops are a data-channel
+radio problem between the 12 mini and the Mi Note 3 (an Android 9 phone
+on the device farm), not a dial-policy fault. The Redmi pair is clean. The
+remaining candidates are the Mi Note 3's controller or antenna, and its
+placement among about 30 farm phones. Software can't distinguish these;
+moving the phones can.
+
+**iPhone HCI capture (HP2–HP3).** With Apple's Bluetooth logging profile
+installed, `pymobiledevice3 btlogger` streams the 12 mini's HCI traffic over
+USB in PacketLogger format, with no sysdiagnose needed. The Mi Note 3 snoop
+ran at the same time; its clock is 5 h 2 min 13.4 s behind the iPhone
+capture.
+- HP3 control: the Mi Note 3's successful dial appears on the iPhone as
+  LE Enhanced Connection Complete (peripheral, 45 ms, 5 s). A PHY update to
+  2M follows, then ACL traffic, and the link held 105 s. So the capture
+  includes connection events.
+- All four failed dials (three in HP2, one in HP3) have no Connection
+  Complete on the iPhone. The Mi Note 3 reports its own Connection Complete
+  and then 0x3E. Either the iPhone's controller missed the CONNECT_IND, or
+  it reports a peripheral connection only after the first connection event,
+  which never succeeded. Either way, only the Mi Note 3 believed in the link.
+- All four dials had the same RPA, parameters and Android build. The
+  iPhone's HCI log in those windows has only advertising and vendor
+  commands.
+
+So the CONNECT_IND is lost between the two radios. Together with the
+iPhone's own dials that the Mi Note 3 never receives, this points at the
+Mi Note 3's radio: the adverts get through, but the timing-critical
+packets sent 150 µs after an advert don't.
+
+### Mi Note 3 workarounds (2026-10-30, none works)
+
+The phones were 1 m apart for all of these runs. Each row is a temporary
+Android build (source reverted) or a device change, run against the 12 mini.
+
+| Run | Change | Android dials linked |
+| --- | --- | --- |
+| RB1–RB3 | Mi Note 3 rebooted after 6 days' uptime | 0 of 9 |
+| Q1–Q3 | Stop advertising and scanning for 2 s around each dial | 0 of 9 |
+| AC1–AC3 | `connectGatt(autoConnect = true)` | 0 of 9 (each times out after 10 s) |
+| F1–F4 | Ladder of 8 retries at random 1–3 s | 1 of 45 |
+| MX1–MX3 | iPhone X instead of the 12 mini (normal build) | 2 of 5 |
+| RC1–RC2 | Redmi instead of the Mi Note 3 (control) | 1 of 1; both runs linked within seconds |
+
+Earlier experiments ruled out the 1M PHY preference (the iPhone central
+ignores it), connection-parameter requests (iOS refuses with 0x3B) and
+Android scan load.
+
+- Across HX, HW, HP and the runs above, about 1 in 5 Mi Note 3 dials to an
+  iPhone links at best, and on some days almost none do. The iPhone's
+  dials to the Mi Note 3 fail too.
+- Each failure is decided between the two radios, below the host. No
+  setting Android exposes changes the result.
+- The Redmi links with the same 12 mini at the same spot. The iPhone X also
+  links, though less reliably.
+- So the fault is in the Mi Note 3's controller (2017 hardware, Android 9).
+  Cairn can't fix it.
+
+Decision:
+- Treat the Mi Note 3 as a known-bad device.
+- Use the Redmi (Android 13) as the legacy Android peer for iPhone
+  acceptance runs.
+- Keep the ladder as it is. More retries don't help this phone, and they
+  would cost every other pair energy and add to crossed-dial collisions.
+
+Open:
+- In HW6, after the iPhone rotated its RPA (31:7B → D9:F0), Android dialled
+  the new address three times while its link to the old address was still
+  up. Each dial failed with 0x3E, and the link held. Android doesn't know
+  that the two RPAs belong to the same peer until the handshake.
+
+### Acceptance runs with the Redmi (2026-10-30, AR1–AR10)
+
+Ten 90 s runs: Redmi (Android 13) and 12 mini, 1 m apart, both on the
+branch build.
+- **Every run ended linked and paired.** Every link that came up exchanged
+  frames.
+- **Crossed dials no longer drop links.** In AR2 and AR9 the Android dialled
+  while the iPhone's link was up: twice to the same address and once to the
+  iPhone's rotated RPA. Each duplicate was closed within 100 ms of link-up,
+  and the established link held.
+- **Supervision timeouts remain (OI-42).** Three iPhone-central links ended
+  with iOS error 6 (`connectionTimeout`): AR3 after 23 s, AR8 after 60 s
+  and AR9 after 3.5 s. Android reports these as status 0x00 on its server
+  side. ADR 0040's recovery relinked each pair 5–20 s later.
+- **One rejected pairing.** In AR6 the iPhone, as central, closed the link
+  15 ms after P3 arrived instead of sending P4. The Android's P3 was 87 B,
+  the usual size. The Android relinked as central 29 s later and paired in
+  0.7 s.
+  - The core closes there only when P3 fails the commitment or MAC check,
+    or when the peer's beacon day is more than a day off.
+  - A temporary soak test ran 27,500 pairings (AwsLc, Reference and mixed
+    backends) with no failure, so a crypto edge case is unlikely.
+  - Only AR6 shows this pattern across the 89 iPhone logs. Neither app
+    logs why the core closed a link. Add that before chasing this further.
+
+Logs, the snoop dumps and the decoders are kept outside the repository
+(session `files/i58-snoop`, `files/i58-logs`, `files/i58-0x3e`).
 
 ## Done when
 

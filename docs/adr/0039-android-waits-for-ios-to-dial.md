@@ -115,3 +115,11 @@ about 30 s after link-up, with reason 0x13, is the end of a run, not a loss.
   Its retries take another 1–5 s, and pairing plus Resume take up to 10 s.
   A 10 s wait covers a first dial that fails once. A longer one only delays
   pre-XS iPhones.
+
+## Amendments
+
+2026-10-29, proposed in [ADR 0040](0040-redial-after-supervision-timeout.md) (spec OI-42):
+- After an address's connection to the GATT server ends, with or without a
+  link, Android doesn't dial it for 15 s plus the 0–3 s spread. The wait
+  applied only after first sight, so after a supervision timeout both
+  phones dialled each other again at once.
