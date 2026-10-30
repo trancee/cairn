@@ -292,14 +292,32 @@ remaining candidates are the Mi Note 3's controller or antenna, and its
 placement among about 30 farm phones. Software can't distinguish these;
 moving the phones can.
 
+**iPhone HCI capture (HP2–HP3).** With Apple's Bluetooth logging profile
+installed, `pymobiledevice3 btlogger` streams the 12 mini's HCI traffic over
+USB in PacketLogger format, with no sysdiagnose needed. The Mi Note 3 snoop
+ran at the same time; its clock is 5 h 2 min 13.4 s behind the iPhone
+capture.
+- HP3 control: the Mi Note 3's successful dial appears on the iPhone as
+  LE Enhanced Connection Complete (peripheral, 45 ms, 5 s). A PHY update to
+  2M follows, then ACL traffic, and the link held 105 s. So the capture
+  includes connection events.
+- All four failed dials (three in HP2, one in HP3) have no Connection
+  Complete on the iPhone. The Mi Note 3 reports its own Connection Complete
+  and then 0x3E. The iPhone's controller never accepted the CONNECT_IND,
+  so the Mi Note 3 was the only side that believed in the link.
+- All four dials had the same RPA, parameters and Android build. The
+  iPhone's HCI log in those windows has only advertising and vendor
+  commands.
+
+So the CONNECT_IND is lost between the two radios. Together with the
+iPhone's own dials that the Mi Note 3 never receives, this points at the
+Mi Note 3's radio: the adverts get through, but the timing-critical
+packets sent 150 µs after an advert don't.
+
 Next:
 - Put the 12 mini and the Mi Note 3 about 1 m apart, away from the farm
   hub, and rerun HW-style runs. If they pass, the cause is placement.
   If they still fail, the cause is the Mi Note 3.
-- Install Apple's Bluetooth logging profile on the 12 mini and capture
-  with PacketLogger. That shows whether the iPhone's controller
-  ever received the Mi Note 3's CONNECT_IND, which `bluetoothd` doesn't
-  log.
 - Decide whether Android should keep the ladder's 3-attempt budget for
   0x3E. Each attempt costs about 350 ms. In HW5–HW6 only 2 of 13 dials
   linked: the 1st attempt (dropped with 0x08 after 1.7 s) and the 3rd
