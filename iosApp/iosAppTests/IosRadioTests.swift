@@ -205,7 +205,7 @@ final class IosRadioTests: XCTestCase {
         running()
         let link = centralLink(a)
 
-        radio.disconnect(link: link)
+        radio.disconnect(link: link, reason: .busy)
         XCTAssertEqual(listener.downs, [])
         scheduler.drain()
 
@@ -217,7 +217,7 @@ final class IosRadioTests: XCTestCase {
         running()
 
         radio.send(link: 7, fragment: Data([1]).kotlin)
-        radio.disconnect(link: 7)
+        radio.disconnect(link: 7, reason: .busy)
         scheduler.drain()
 
         XCTAssertEqual(port.calls, [])
@@ -470,12 +470,12 @@ final class IosRadioTests: XCTestCase {
         let first = centralLink(a)
         let second = centralLink(b)
 
-        radio.disconnect(link: first)
+        radio.disconnect(link: first, reason: .busy)
         scheduler.drain()
         radio.disconnected(b)
 
         XCTAssertEqual(lines.filter { !$0.contains(" up ") }, [
-            "link \(first) close requested",
+            "link \(first) close requested (busy)",
             "link \(first) down",
             "link \(second) lost",
             "link \(second) down",
@@ -560,7 +560,7 @@ final class IosRadioTests: XCTestCase {
         radio.send(link: link, fragment: Data([1]).kotlin)
         scheduler.drain()
 
-        radio.disconnect(link: link)
+        radio.disconnect(link: link, reason: .busy)
         scheduler.drain()
         port.notifyAccepts = true
         radio.readyToUpdate()

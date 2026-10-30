@@ -6,8 +6,8 @@
 pub mod seeded;
 
 use cairn_proto::{
-    Action, Clock, ContactId, ContactRow, Core, CourierRow, Event, GattRole, LinkId, Persisted,
-    QueuedRow, TimerId,
+    Action, Clock, CloseReason, ContactId, ContactRow, Core, CourierRow, Event, GattRole, LinkId,
+    Persisted, QueuedRow, TimerId,
 };
 use seeded::Seeded;
 use std::collections::{BTreeMap, VecDeque};
@@ -201,7 +201,7 @@ impl Net {
                         );
                     }
                 }
-                Action::Disconnect { link } => {
+                Action::Disconnect { link, .. } => {
                     if let Some((peer, peer_link)) = self.ends.remove(&(device, link)) {
                         self.ends.remove(&(peer, peer_link));
                         self.inject(peer, Event::LinkDown { link: peer_link });
@@ -259,6 +259,18 @@ impl Net {
         let restore = self.devices[device].store.restore();
         self.inject(device, restore);
         self.run();
+    }
+
+    /// Every reason a device's core gave for closing a link, in order (ADR 0041).
+    pub fn close_reasons(&self, device: usize) -> Vec<CloseReason> {
+        self.devices[device]
+            .log
+            .iter()
+            .filter_map(|action| match action {
+                Action::Disconnect { reason, .. } => Some(*reason),
+                _ => None,
+            })
+            .collect()
     }
 
     pub fn is_up(&self, device: usize, link: LinkId) -> bool {

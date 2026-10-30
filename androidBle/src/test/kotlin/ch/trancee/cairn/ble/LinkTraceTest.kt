@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothProfile
 import android.os.Build
 import android.os.Looper
+import ch.trancee.cairn.sdk.DisconnectReason
 import java.time.Duration
 import kotlin.test.assertEquals
 import org.junit.Test
@@ -68,7 +69,7 @@ class LinkTraceTest {
         h.radio.send(1u, byteArrayOf(0x20))
         h.idle()
 
-        h.radio.disconnect(1u)
+        h.radio.disconnect(1u, DisconnectReason.STALE_CARD)
         h.idle()
 
         assertEquals(
@@ -76,7 +77,7 @@ class LinkTraceTest {
                 "link 1 up PERIPHERAL mtu 23",
                 "link 1 in 0x10 2 B at 0 ms",
                 "link 1 out 0x20 1 B at 0 ms",
-                "link 1 close requested",
+                "link 1 close requested (stale_card)",
                 "link 1 down at 0 ms",
             ),
             trace(),

@@ -185,10 +185,10 @@ final class IosRadio: NSObject, Radio {
         }
     }
 
-    func disconnect(link: UInt64) {
+    func disconnect(link: UInt64, reason: DisconnectReason) {
         scheduler.async { [self] in
             guard let endpoint = links[link] else { return }
-            trace("link \(link) close requested")
+            trace("link \(link) close requested (\(reason.label))")
             switch endpoint {
             case let .central(peer): closeCentral(peer)
             case let .peripheral(central): closePeripheral(central)

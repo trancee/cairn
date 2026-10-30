@@ -8,7 +8,7 @@
 use std::sync::{Mutex, MutexGuard};
 
 use cairn_crypto::AwsLc;
-pub use cairn_proto::{ChatRejection, Clock, GattRole, Persisted, Verification};
+pub use cairn_proto::{ChatRejection, Clock, CloseReason, GattRole, Persisted, Verification};
 use cairn_proto::{ContactId, Core, LinkId, TimerId};
 
 uniffi::setup_scaffolding!();
@@ -44,6 +44,21 @@ pub enum ChatRejection {
     TooLong,
     Exhausted,
     QueueFull,
+}
+
+#[uniffi::remote(Enum)]
+pub enum CloseReason {
+    Expired,
+    Busy,
+    Duplicate,
+    Unknown,
+    Malformed,
+    Unsupported,
+    Commitment,
+    Authentication,
+    Card,
+    StaleCard,
+    Exhausted,
 }
 
 // `Event`, `Action` and `ContactInfo` mirror the core types with plain `u64`
@@ -175,6 +190,7 @@ pub enum Action {
     },
     Disconnect {
         link: u64,
+        reason: CloseReason,
     },
     SetTimer {
         timer: u64,
@@ -338,7 +354,10 @@ impl From<cairn_proto::Action> for Action {
                 link: link.0,
                 fragment,
             },
-            Proto::Disconnect { link } => Self::Disconnect { link: link.0 },
+            Proto::Disconnect { link, reason } => Self::Disconnect {
+                link: link.0,
+                reason,
+            },
             Proto::SetTimer { timer, at_mono_ms } => Self::SetTimer {
                 timer: timer.0,
                 at_mono_ms,
@@ -735,8 +754,14 @@ mod tests {
                 },
             ),
             (
-                ProtoAction::Disconnect { link: LinkId(1) },
-                Action::Disconnect { link: 1 },
+                ProtoAction::Disconnect {
+                    link: LinkId(1),
+                    reason: CloseReason::Busy,
+                },
+                Action::Disconnect {
+                    link: 1,
+                    reason: CloseReason::Busy,
+                },
             ),
             (
                 ProtoAction::SetTimer {

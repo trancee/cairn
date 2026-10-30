@@ -145,7 +145,7 @@ fn drive(devices: &mut [Device; 2], from: usize, event: Event) {
                         fragment,
                     },
                 )),
-                Action::Disconnect { link } => {
+                Action::Disconnect { link, .. } => {
                     queue.push_back((peer, Event::LinkDown { link: link ^ 1 }))
                 }
                 _ => {}

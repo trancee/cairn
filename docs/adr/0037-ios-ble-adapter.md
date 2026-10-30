@@ -166,3 +166,8 @@ hold no decisions; the device demonstration covers them.
   acknowledgement that `sent` relies on, and need
   `canSendWriteWithoutResponse` flow control that Android's central path
   doesn't share.
+
+## Amendments
+
+2026-10-30, from [ADR 0041](0041-close-reasons.md): `disconnect(link:reason:)`
+logs `close requested (<reason>)`, the same line as the Android link trace.

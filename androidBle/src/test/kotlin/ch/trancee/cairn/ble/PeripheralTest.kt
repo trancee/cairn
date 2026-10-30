@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothProfile
 import android.os.Build
+import ch.trancee.cairn.sdk.DisconnectReason
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -206,7 +207,7 @@ class PeripheralTest {
     fun peripheralDisconnectCancelsTheConnectionAndReportsLinkDownOnce() {
         h.subscribe(device)
 
-        h.radio.disconnect(1u)
+        h.radio.disconnect(1u, DisconnectReason.BUSY)
         h.idle()
         h.serverCallback().onConnectionStateChange(device, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED)
         h.idle()

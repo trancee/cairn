@@ -27,7 +27,7 @@ private class Air(mtu: UShort) {
             pending.addLast { drivers[side].sent(link) }
         }
 
-        override fun disconnect(link: ULong) {
+        override fun disconnect(link: ULong, reason: DisconnectReason) {
             val peer = peerLink.getValue(side to link)
             pending.addLast { drivers[side].linkDown(link) }
             pending.addLast { drivers[1 - side].linkDown(peer) }

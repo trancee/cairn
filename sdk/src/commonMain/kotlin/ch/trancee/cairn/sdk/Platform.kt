@@ -3,6 +3,7 @@ package ch.trancee.cairn.sdk
 import ch.trancee.cairn.ffi.Action
 import ch.trancee.cairn.ffi.CairnCore
 import ch.trancee.cairn.ffi.Clock
+import ch.trancee.cairn.ffi.CloseReason
 import ch.trancee.cairn.ffi.ContactInfo
 import ch.trancee.cairn.ffi.Event
 import ch.trancee.cairn.ffi.GattRole
@@ -36,8 +37,49 @@ interface Radio {
     /** Writes or notifies one ATT value; the platform calls [LinkDriver.sent] when it can take the next. */
     fun send(link: ULong, fragment: ByteArray)
 
-    /** Closes the link; the platform still reports [LinkDriver.linkDown]. */
-    fun disconnect(link: ULong)
+    /** Closes the link and logs [reason]; the platform still reports [LinkDriver.linkDown]. */
+    fun disconnect(link: ULong, reason: DisconnectReason)
+}
+
+/** Why a link closes, for local logs only (ADR 0041): the core's [CloseReason] plus the driver's own. */
+enum class DisconnectReason {
+    EXPIRED,
+    BUSY,
+    DUPLICATE,
+    UNKNOWN,
+    MALFORMED,
+    UNSUPPORTED,
+    COMMITMENT,
+    AUTHENTICATION,
+    CARD,
+    STALE_CARD,
+    EXHAUSTED,
+
+    /** The link's send queue overflowed. */
+    BACKLOG,
+
+    /** The core was poisoned and replaced (ADR 0022 §3). */
+    POISONED,
+    ;
+
+    /** The snake-case name the radios log, e.g. `stale_card`. */
+    val label: String get() = name.lowercase()
+
+    companion object {
+        fun of(reason: CloseReason): DisconnectReason = when (reason) {
+            CloseReason.EXPIRED -> EXPIRED
+            CloseReason.BUSY -> BUSY
+            CloseReason.DUPLICATE -> DUPLICATE
+            CloseReason.UNKNOWN -> UNKNOWN
+            CloseReason.MALFORMED -> MALFORMED
+            CloseReason.UNSUPPORTED -> UNSUPPORTED
+            CloseReason.COMMITMENT -> COMMITMENT
+            CloseReason.AUTHENTICATION -> AUTHENTICATION
+            CloseReason.CARD -> CARD
+            CloseReason.STALE_CARD -> STALE_CARD
+            CloseReason.EXHAUSTED -> EXHAUSTED
+        }
+    }
 }
 
 /** What a [Radio] reports, on the driver's thread; [LinkDriver] implements it (ADR 0023 §2). */

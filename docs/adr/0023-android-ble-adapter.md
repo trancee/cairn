@@ -248,3 +248,7 @@ place of a fixed `LOW_LATENCY`.
 2026-10-25, from [ADR 0028](0028-android-extended-advertising.md) (OI-34): the
 advert is an extended connectable set where the controller supports it, and
 legacy otherwise; the scan receives both kinds.
+
+2026-10-30, from [ADR 0041](0041-close-reasons.md): `Radio.disconnect` takes
+a `DisconnectReason`, and the link trace logs it in snake case, as `close
+requested (<reason>)`, e.g. `close requested (stale_card)`.
