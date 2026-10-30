@@ -356,6 +356,31 @@ Open:
   up. Each dial failed with 0x3E, and the link held. Android doesn't know
   that the two RPAs belong to the same peer until the handshake.
 
+### Acceptance runs with the Redmi (2026-10-30, AR1–AR10)
+
+Ten 90 s runs: Redmi (Android 13) and 12 mini, 1 m apart, both on the
+branch build.
+- **Every run ended linked and paired.** Every link that came up exchanged
+  frames.
+- **Crossed dials no longer drop links.** In AR2 and AR9 the Android dialled
+  while the iPhone's link was up: twice to the same address and once to the
+  iPhone's rotated RPA. Each duplicate was closed within 100 ms of link-up,
+  and the established link held.
+- **Supervision timeouts remain (OI-42).** Three iPhone-central links ended
+  with iOS error 6 (`connectionTimeout`): AR3 after 23 s, AR8 after 60 s
+  and AR9 after 3.5 s. Android reports these as status 0x00 on its server
+  side. ADR 0040's recovery relinked each pair 5–20 s later.
+- **One rejected pairing.** In AR6 the iPhone, as central, closed the link
+  15 ms after P3 arrived instead of sending P4. The Android's P3 was 87 B,
+  the usual size. The Android relinked as central 29 s later and paired in
+  0.7 s.
+  - The core closes there only when P3 fails the commitment or MAC check,
+    or when the peer's beacon day is more than a day off.
+  - A temporary soak test ran 27,500 pairings (AwsLc, Reference and mixed
+    backends) with no failure, so a crypto edge case is unlikely.
+  - Only AR6 shows this pattern across the 89 iPhone logs. Neither app
+    logs why the core closed a link. Add that before chasing this further.
+
 Logs, the snoop dumps and the decoders are kept outside the repository
 (session `files/i58-snoop`, `files/i58-logs`, `files/i58-0x3e`).
 
