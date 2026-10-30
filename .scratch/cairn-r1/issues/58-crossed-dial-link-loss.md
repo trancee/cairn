@@ -303,8 +303,9 @@ capture.
   includes connection events.
 - All four failed dials (three in HP2, one in HP3) have no Connection
   Complete on the iPhone. The Mi Note 3 reports its own Connection Complete
-  and then 0x3E. The iPhone's controller never accepted the CONNECT_IND,
-  so the Mi Note 3 was the only side that believed in the link.
+  and then 0x3E. Either the iPhone's controller missed the CONNECT_IND, or
+  it reports a peripheral connection only after the first connection event,
+  which never succeeded. Either way, only the Mi Note 3 believed in the link.
 - All four dials had the same RPA, parameters and Android build. The
   iPhone's HCI log in those windows has only advertising and vendor
   commands.
@@ -314,14 +315,42 @@ iPhone's own dials that the Mi Note 3 never receives, this points at the
 Mi Note 3's radio: the adverts get through, but the timing-critical
 packets sent 150 µs after an advert don't.
 
-Next:
-- Put the 12 mini and the Mi Note 3 about 1 m apart, away from the farm
-  hub, and rerun HW-style runs. If they pass, the cause is placement.
-  If they still fail, the cause is the Mi Note 3.
-- Decide whether Android should keep the ladder's 3-attempt budget for
-  0x3E. Each attempt costs about 350 ms. In HW5–HW6 only 2 of 13 dials
-  linked: the 1st attempt (dropped with 0x08 after 1.7 s) and the 3rd
-  (held to the end of the run).
+### Mi Note 3 workarounds (2026-10-30, none works)
+
+The phones were 1 m apart for all of these runs. Each row is a temporary
+Android build (source reverted) or a device change, run against the 12 mini.
+
+| Run | Change | Android dials linked |
+| --- | --- | --- |
+| RB1–RB3 | Mi Note 3 rebooted after 6 days' uptime | 0 of 9 |
+| Q1–Q3 | Stop advertising and scanning for 2 s around each dial | 0 of 9 |
+| AC1–AC3 | `connectGatt(autoConnect = true)` | 0 of 9 (each times out after 10 s) |
+| F1–F4 | Ladder of 8 retries at random 1–3 s | 1 of 45 |
+| MX1–MX3 | iPhone X instead of the 12 mini (normal build) | 2 of 5 |
+| RC1–RC2 | Redmi instead of the Mi Note 3 (control) | 1 of 1; both runs linked within seconds |
+
+Earlier experiments ruled out the 1M PHY preference (the iPhone central
+ignores it), connection-parameter requests (iOS refuses with 0x3B) and
+Android scan load.
+
+- Across HX, HW, HP and the runs above, about 1 in 5 Mi Note 3 dials to an
+  iPhone links at best, and on some days almost none do. The iPhone's
+  dials to the Mi Note 3 fail too.
+- Each failure is decided between the two radios, below the host. No
+  setting Android exposes changes the result.
+- The Redmi links with the same 12 mini at the same spot. The iPhone X also
+  links, though less reliably.
+- So the fault is in the Mi Note 3's controller (2017 hardware, Android 9).
+  Cairn can't fix it.
+
+Decision:
+- Treat the Mi Note 3 as a known-bad device.
+- Use the Redmi (Android 13) as the legacy Android peer for iPhone
+  acceptance runs.
+- Keep the ladder as it is. More retries don't help this phone, and they
+  would cost every other pair energy and add to crossed-dial collisions.
+
+Open:
 - In HW6, after the iPhone rotated its RPA (31:7B → D9:F0), Android dialled
   the new address three times while its link to the old address was still
   up. Each dial failed with 0x3E, and the link held. Android doesn't know
