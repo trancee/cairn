@@ -384,15 +384,37 @@ branch build.
 Logs, the snoop dumps and the decoders are kept outside the repository
 (session `files/i58-snoop`, `files/i58-logs`, `files/i58-0x3e`).
 
+## P3 closes and one-sided pairing (2026-10-31)
+
+- **P3 closes.** In C2, AR6 and CR1, the iPhone closed the link about
+  0.5 s after P3 arrived. Each time the peer was the Redmi. Issue 59 found
+  the cause: the Redmi's controller corrupts some 512 B writes from an
+  iPhone, and the frame's MAC then fails (`authentication`). ADR 0042 checks
+  every fragment and resends a corrupted write. In runs N1–N22, 3 writes were
+  corrupted; each was rejected and resent once, and no `authentication`
+  close followed.
+- **One-sided pairing.** ADR 0043 keeps a paired contact provisional until
+  the pairing link carries a valid S2 (on B) or S1 (on A). Until then it is
+  neither persisted nor reported, and it is forgotten if the link closes
+  first.
+  - A lost P4 or S1 now leaves both sides as strangers, so the next meeting
+    pairs again.
+  - A lost first DATA frame was already recovered by ADR 0022's key
+    alternation.
+  - A lost S2 still leaves A with an orphan contact. That is
+    [issue 60](60-orphan-contact-after-lost-s2.md).
+  - Core loopback tests cover each lost frame.
+
 ## Done when
 
-- The close reason in C2 is identified from a log that names it. (The
-  trace now names it; C2 itself has not been rerun on an iPhone X build
-  with the trace.)
-- Pairing can't end with only one side storing the contact (the lost-P4
-  case), or the issue records why it is acceptable.
-- A dial timeout or a failed crossed dial no longer drops an established
+- [x] The close reason in C2 is identified from a log that names it.
+  Issue 59's logs name it: `authentication`, after a corrupted write from
+  the iPhone.
+- [x] Pairing can't end with only one side storing the contact (the lost-P4
+  case), or the issue records why it is acceptable. ADR 0043 closes the
+  lost-P4 case. Issue 60 tracks the lost-S2 case.
+- [ ] A dial timeout or a failed crossed dial no longer drops an established
   link. A Robolectric test is written first for the Android dial-timeout
   path.
-- Ten crossed-dial trials between an iPhone and a legacy Android phone keep
+- [ ] Ten crossed-dial trials between an iPhone and a legacy Android phone keep
   every link that came up.

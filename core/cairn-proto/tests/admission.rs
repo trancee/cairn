@@ -8,7 +8,7 @@ use cairn_proto::{
     TimerId, Verification,
 };
 use support::seeded::Seeded;
-use support::{Net, START, Store, checked};
+use support::{Net, START, Store, checked, silence_from};
 
 const STRANGER_BEACON: [u8; 8] = [0x5a; 8];
 
@@ -91,7 +91,7 @@ fn completing_pairing_cancels_the_pre_auth_deadline() {
 
 #[test]
 #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
-fn b_persists_the_contact_before_sending_p4() {
+fn b_persists_and_reports_the_contact_before_its_first_data_frame() {
     let mut net = Net::new(2, 3);
     let (central, _) = net.connect(0, 1);
 
@@ -99,25 +99,27 @@ fn b_persists_the_contact_before_sending_p4() {
     net.run();
 
     let log = &net.devices[0].log;
-    let p4 = log
-        .iter()
-        .position(
-            |action| matches!(action, Action::Send { fragment, .. } if fragment[0] & 0x7f == 0x04),
-        )
-        .unwrap();
-    let persists = log[..p4]
-        .iter()
-        .filter(|action| {
-            matches!(
-                action,
-                Action::PersistDevice { .. } | Action::PersistContact { .. }
+    let first = |header: u8| {
+        log.iter()
+            .position(
+                |action| matches!(action, Action::Send { fragment, .. } if fragment[0] == header),
             )
-        })
-        .count();
-    assert_eq!(
-        persists, 3,
-        "the fresh install, then the device and its contact"
+            .unwrap()
+    };
+    let (p4, data) = (first(0x04), first(0x30));
+    let persisted = log
+        .iter()
+        .position(|action| matches!(action, Action::PersistContact { .. }))
+        .unwrap();
+    let added = log
+        .iter()
+        .position(|action| matches!(action, Action::ContactAdded { .. }))
+        .unwrap();
+    assert!(
+        p4 < persisted,
+        "the contact is provisional at P4 (ADR 0043)"
     );
+    assert!(persisted < added && added < data);
 }
 
 #[test]
@@ -1043,4 +1045,74 @@ fn closed(actions: &[Action], link: LinkId) -> Option<CloseReason> {
         } if *closed == link => Some(*reason),
         _ => None,
     })
+}
+
+/// Whether `device` holds, has persisted or has reported any contact.
+fn holds_contact(net: &Net, device: usize) -> bool {
+    !net.devices[device].core.contacts().is_empty()
+        || !net.devices[device].store.contacts.is_empty()
+        || !added(net, device).is_empty()
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn a_pairing_whose_link_closes_before_a_valid_s1_leaves_no_contact() {
+    // P4 or S1 from B (ADR 0043).
+    for lost in [0x04, 0x10] {
+        let mut net = Net::new(2, 1);
+        net.intercept = Some(silence_from(0, lost));
+        let (central, _) = net.connect(0, 1);
+        read_beacon(&mut net, 0, central);
+        net.run();
+
+        net.advance(5_000);
+
+        assert!(!net.is_up(0, central), "frame {lost:#04x}: the link closed");
+        for device in [0, 1] {
+            assert!(
+                !holds_contact(&net, device),
+                "frame {lost:#04x}: device {device} kept a contact"
+            );
+        }
+    }
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn a_contact_whose_first_resume_failed_can_pair_again() {
+    let mut net = Net::new(2, 1);
+    net.intercept = Some(silence_from(0, 0x04));
+    let (first, _) = net.connect(0, 1);
+    read_beacon(&mut net, 0, first);
+    net.run();
+    net.advance(5_000);
+    net.intercept = None;
+    // A backs off the address after the expired pairing (spec §5.6).
+    net.advance(2 * 60_000);
+
+    let (again, _) = net.connect(1, 0);
+    net.read_beacon_of(1, again, 0);
+
+    assert_eq!(net.devices[0].core.contacts().len(), 1);
+    assert_eq!(net.devices[1].core.contacts().len(), 1);
+    assert!(
+        net.is_up(1, again),
+        "the second pairing completes its Resume"
+    );
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn a_contact_is_neither_persisted_nor_reported_before_a_valid_s1_or_s2() {
+    let mut net = Net::new(2, 1);
+    net.intercept = Some(silence_from(0, 0x10));
+    let (central, _) = net.connect(0, 1);
+    read_beacon(&mut net, 0, central);
+    net.run();
+
+    for device in [0, 1] {
+        assert!(!holds_contact(&net, device), "device {device}");
+    }
+    net.restart(1);
+    assert!(net.devices[1].core.contacts().is_empty());
 }

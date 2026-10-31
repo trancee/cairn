@@ -296,6 +296,16 @@ impl Net {
     }
 }
 
+/// From `device`'s first fragment of the frame with `header` on, the network
+/// drops everything `device` sends.
+pub fn silence_from(device: usize, header: u8) -> Intercept {
+    let mut silent = false;
+    Box::new(move |sender, fragment| {
+        silent |= sender == device && fragment[0] == header;
+        !(silent && sender == device)
+    })
+}
+
 /// A hand-built frame as the one checked fragment a 517-byte MTU carries (ADR 0042).
 pub fn checked(frame: &[u8]) -> Vec<u8> {
     let mut fragments = cairn_proto::fragment(frame, 517).unwrap();
