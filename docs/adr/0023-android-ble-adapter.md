@@ -258,3 +258,19 @@ answers an `rx` write request whose check fails with ATT error `0x9E`, drops
 it, and logs `write rejected (check)`. A central whose write fails with
 `0x9E` writes the same value again, up to 3 times, and logs `resend <n>
 (check)`; a fourth failure, or any other write error, closes the link.
+
+2026-10-31, [issue 58](../../.scratch/cairn-r1/issues/58-crossed-dial-link-loss.md)
+(shared link): when a dial and the peer's connection to our GATT server
+reach the same address, Android merges them into one LE link. Closing the
+dial's `BluetoothGatt` (after a dial timeout, a failed dial, or a core
+close) lets the stack disconnect the link once no app holds it, and a
+connection the peer started doesn't count the server as a holder. So before
+the radio closes a central whose address is connected to its GATT server, the
+server calls `connect(device, autoConnect = false)`, which makes it a holder.
+It skips this once the stack has reported the dial's connection gone: the
+link is gone too, and `connect` would start a new direct connection. The
+radio logs `dial <addr> closed; the server holds the shared connection`.
+This is based on AOSP's hold-link bookkeeping and on run C in issue 58: an
+inbound link dropped 0.6 s after the Redmi's dial to the same iPhone timed out.
+In trials G1–G21 the server held a live shared link three times, and all
+three links stayed up. No byte of any frame changes.

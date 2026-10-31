@@ -10,6 +10,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowLog
 
 /** Spec §10.4: when the central dials an address, and how it retries a dial that fails before link-up. */
@@ -215,5 +217,49 @@ class DialPolicyTest {
             "dial 44:01 failed CONNECTING status 0x85 after 250 ms; retry in 1000 ms",
             ShadowLog.getLogsForTag("CairnRadio").single { " failed " in it.msg }.msg,
         )
+    }
+
+    private fun serverConnects(): List<Pair<String, Boolean>> = Shadow.extract<StatusGattServer>(h.server).connects
+
+    private fun dialThenTimeOut(peerConnectsToTheServer: Boolean) {
+        h.random.pick = { from, _ -> from }
+        sight()
+        if (peerConnectsToTheServer) {
+            h.serverCallback().onConnectionStateChange(h.device(address), BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED)
+            h.idle()
+        }
+        advance(10_000)
+    }
+
+    @Test
+    @Config(shadows = [StatusGattServer::class])
+    fun dialThatTimesOutWhileThePeerIsConnectedToTheServerLetsTheServerHoldTheConnection() {
+        dialThenTimeOut(peerConnectsToTheServer = true)
+
+        assertEquals(listOf(address to false), serverConnects())
+        assertEquals(1, dials().size)
+    }
+
+    @Test
+    @Config(shadows = [StatusGattServer::class])
+    fun dialThatTimesOutWithoutAServerConnectionLeavesTheServerAlone() {
+        dialThenTimeOut(peerConnectsToTheServer = false)
+
+        assertEquals(emptyList(), serverConnects())
+    }
+
+    @Test
+    @Config(shadows = [StatusGattServer::class])
+    fun dialLostWhileThePeerIsConnectedToTheServerDoesNotRedialThroughTheServer() {
+        h.random.pick = { from, _ -> from }
+        sight()
+        h.serverCallback().onConnectionStateChange(h.device(address), BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED)
+        h.idle()
+        val gatt = link()
+
+        h.callback(gatt).onConnectionStateChange(gatt, 0x13, BluetoothProfile.STATE_DISCONNECTED)
+        h.idle()
+
+        assertEquals(emptyList(), serverConnects())
     }
 }

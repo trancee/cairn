@@ -1,7 +1,7 @@
 # Crossed dials lose a link that came up
 
 Type: bug
-Status: needs-triage
+Status: fixed (ADR 0039, ADR 0040, ADR 0041, ADR 0042, ADR 0043, ADR 0023 amendment)
 Blocked by: none
 
 ## Question
@@ -433,8 +433,35 @@ Logs are in `/tmp/pair/{a,i}_P*.log` (not committed).
 - [x] Pairing can't end with only one side storing the contact (the lost-P4
   case), or the issue records why it is acceptable. ADR 0043 closes the
   lost-P4 case. Issue 60 tracks the lost-S2 case.
-- [ ] A dial timeout or a failed crossed dial no longer drops an established
+- [x] A dial timeout or a failed crossed dial no longer drops an established
   link. A Robolectric test is written first for the Android dial-timeout
-  path.
-- [ ] Ten crossed-dial trials between an iPhone and a legacy Android phone keep
-  every link that came up.
+  path. Before the radio closes a dial whose address is connected to its GATT
+  server, the server calls `connect(device, false)` to hold the shared link
+  (ADR 0023 amendment, 2026-10-31). `DialPolicyTest` was red before the fix.
+- [x] Ten crossed-dial trials between an iPhone and a legacy Android phone keep
+  every link that came up. H1–H10 (2026-10-31, Redmi `2201117TY` on Android
+  13 and iPhone 12 mini, 60 s each) had no crossed dial: the iPhone dialled
+  first every time, as ADR 0039 intends. All 10 paired with 14 frames; H4,
+  H6 and H7 later lost the link to the iOS supervision timeout (error 6, ADR
+  0040), none after a dial. A trial-only build that skips the 10 s wait for
+  iOS forced crossed dials:
+  - X1–X10: Android dialled in 9 runs. X4 is the only live hold: the core
+    closed a duplicate central link, the server called `connect`, and the
+    shared link still dropped 1.1 s later (iOS error 7), close to the
+    stack's 1 s idle timeout for a link no app holds. It had no stack log.
+    Its cause is open; G11 below took the same path and kept the link.
+  - F3 found a bug: a dial lost with its link (here the end-of-run
+    disconnect, 0x13) still saw the address as server-connected, because
+    the client's disconnect arrives before the server's, and `connect`
+    started a direct connection to the departed peer (`btm_ble_start_auto_conn`).
+    The radio now holds only a dial the stack hasn't reported gone
+    (`DialPolicyTest`, red first).
+  - G1–G21, with that fix and the full logcat: G2 and G4 are invalid (the
+    launcher killed the iOS app with signal 15). Of the 19 valid runs,
+    Android dialled in 14, and every link that came up stayed up until
+    the run ended (49–56 s), 14 frames each. Three runs held a live shared
+    link, and all three kept it: G1 and G17, where the dial joined the
+    iPhone's link within 19–40 ms, stalled in discovery and timed out after
+    10 s, and G11, where the core closed the duplicate central link. The
+    stack logs `GATT_Connect gatt_if=<server> is_direct 1` before
+    `GATT_Disconnect` of the dial.

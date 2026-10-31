@@ -565,6 +565,7 @@ class AndroidRadio(
         private var written = ByteArray(0)
         private var resends = 0
         private var status = BluetoothGatt.GATT_SUCCESS
+        private var gone = false
 
         private fun post(block: () -> Unit) {
             handler.post { if (centrals[address] === this) block() }
@@ -588,6 +589,7 @@ class AndroidRadio(
                 }, PRE_AUTH_WINDOW_MS)
                 if (!gatt.requestMtu(GattProfile.MAX_MTU)) close()
             } else {
+                gone = true
                 if (stage == Stage.UP) {
                     lost(link, status)
                     if (status == GATT_CONN_TIMEOUT) timedOut()
@@ -736,6 +738,13 @@ class AndroidRadio(
         override fun close() {
             centrals.remove(address)
             budget()
+            // A crossed dial shares the peer's connection, and the stack drops it once no app holds it.
+            // The server is open whenever serverConnected has an entry (release clears both). Once the
+            // stack has reported the dial gone, the link is too, and a server connect would redial it.
+            if (!gone && address in serverConnected) {
+                Log.i(TAG, "dial ${address.takeLast(5)} closed; the server holds the shared connection")
+                server!!.connect(gatt.device, false)
+            }
             gatt.disconnect()
             gatt.close()
             if (stage == Stage.UP) {
