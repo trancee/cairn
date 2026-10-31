@@ -1,7 +1,7 @@
 # The radio corrupts a write payload below the host
 
 Type: bug
-Status: fix proposed (ADR 0042)
+Status: fixed (ADR 0042, accepted)
 Blocked by: none
 
 ## Question

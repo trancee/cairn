@@ -4,7 +4,7 @@ mod support;
 
 use cairn_proto::{Action, ChatRejection, CloseReason, ContactId, Core, CoreError, Event, LinkId};
 use support::seeded::Seeded;
-use support::{Intercept, Net, START, checked};
+use support::{Net, START, checked, silence_from};
 
 const STRANGER_BEACON: [u8; 8] = [0x5a; 8];
 const DAY_S: u64 = 86_400;
@@ -84,16 +84,6 @@ fn is_persist(action: &Action) -> bool {
     matches!(action, Action::PersistContact { .. })
 }
 
-/// Drops everything `silent` sends from its S2 on: an ordered link that
-/// stalls after S1, so the responder's S2 and session frames never arrive.
-fn silence_after_s2(silent: usize) -> Intercept {
-    let mut stalled = false;
-    Box::new(move |device, fragment| {
-        stalled |= device == silent && fragment[0] == 0x20;
-        !(stalled && device == silent)
-    })
-}
-
 #[test]
 #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
 fn the_central_resumes_right_after_pairing_and_confirms_with_empty_data() {
@@ -154,7 +144,10 @@ fn the_responder_persists_its_pending_key_before_s2_and_commits_on_confirmation(
     let before = log[..s2].iter().rposition(is_persist).unwrap();
     let added = position(log, |action| matches!(action, Action::ContactAdded { .. }));
 
-    assert!(added < before, "a Persist follows pairing and precedes S2");
+    assert!(
+        before < added && added < s2,
+        "A persists and reports the contact at S1, before S2 (ADR 0043)"
+    );
     assert!(log[s2..].iter().any(is_persist), "confirmation commits");
 }
 
@@ -276,7 +269,7 @@ fn an_unconfirmed_responder_alternates_its_pending_and_current_keys() {
     );
     net.run();
     net.drop_link(0, central);
-    net.intercept = Some(silence_after_s2(0));
+    net.intercept = Some(silence_from(0, 0x20));
 
     let mut answers = Vec::new();
     for attempt in 0..3 {
@@ -348,7 +341,17 @@ fn tampered_resume_or_data_frames_close_the_link_without_back_off() {
         let closed = !net.is_up(0, central);
         let (retry, _) = net.connect(0, 1);
         net.read_beacon_of(0, retry, 1);
-        chat(&mut net, 0, "ok");
+        // A tampered S1 or S2 discards the provisional contact, so the retry
+        // pairs again (ADR 0043).
+        let contact = net.devices[0].core.contacts()[0].id;
+        net.inject(
+            0,
+            Event::SendChat {
+                contact,
+                text: "ok".into(),
+            },
+        );
+        net.run();
         let reasons = [net.close_reasons(0), net.close_reasons(1)].concat();
         outcomes.push((closed, reasons, received(&net, 1).len()));
     }
@@ -363,7 +366,7 @@ fn tampered_resume_or_data_frames_close_the_link_without_back_off() {
 #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
 fn an_unanswered_s1_times_out() {
     let mut net = Net::new(2, 113);
-    net.intercept = Some(silence_after_s2(1));
+    net.intercept = Some(silence_from(1, 0x20));
     let (central, _) = net.connect(0, 1);
     net.inject(
         0,
@@ -404,7 +407,7 @@ fn a_second_link_to_a_contact_in_session_is_closed() {
 fn a_second_link_to_a_contact_mid_resume_is_closed() {
     let (mut net, central, _) = paired(120);
     net.drop_link(0, central);
-    net.intercept = Some(silence_after_s2(1));
+    net.intercept = Some(silence_from(1, 0x20));
     let (resuming, _) = net.connect(0, 1);
     net.read_beacon_of(0, resuming, 1);
 
@@ -503,4 +506,30 @@ fn the_beacon_query_needs_a_restored_core() {
     let result = core.beacon(START.unix_s);
 
     assert_eq!(result, Err(CoreError::NotRestored));
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn a_provisional_contact_is_not_resumed_on_another_link() {
+    let mut net = Net::new(2, 1);
+    net.intercept = Some(silence_from(0, 0x10));
+    let (pairing, _) = net.connect(0, 1);
+    net.inject(
+        0,
+        Event::BeaconRead {
+            link: pairing,
+            beacon: STRANGER_BEACON.to_vec(),
+        },
+    );
+    net.run();
+
+    let (other, _) = net.connect(1, 0);
+    net.read_beacon_of(1, other, 0);
+    net.advance(5_000);
+
+    assert_eq!(
+        net.close_reasons(1),
+        [CloseReason::Duplicate, CloseReason::Expired]
+    );
+    assert!(net.devices[1].core.contacts().is_empty());
 }

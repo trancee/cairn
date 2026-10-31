@@ -18,6 +18,10 @@ _Avoid_: Bond, paired device, friend
 A contact admitted automatically when it was first found in BLE range, by trust on first use, and not yet verified.
 _Avoid_: Friend, follower, member
 
+**Provisional contact**:
+A newly paired contact whose pairing link has not yet carried a valid Resume message from the peer. It is not stored or shown, and it is forgotten if that link closes first (ADR 0043).
+_Avoid_: Pending contact, half-paired contact
+
 **Stranger**:
 A peer in BLE range that matches no contact; finding one starts **admission**.
 _Avoid_: Unknown device, new node

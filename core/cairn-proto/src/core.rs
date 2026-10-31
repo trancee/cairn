@@ -369,6 +369,9 @@ struct Link {
     /// The pre-auth deadline; it leaves the timer map when it fires or a session starts.
     deadline: TimerId,
     state: LinkState,
+    /// The contact this link paired, until B gets a valid S2 or A a valid S1
+    /// on this link (ADR 0043).
+    provisional: Option<ContactId>,
 }
 
 /// The sans-IO protocol core for one device.
@@ -419,6 +422,7 @@ impl<B: CryptoBackend> Core<B> {
         self.device
             .iter()
             .flat_map(|device| &device.contacts)
+            .filter(|contact| !self.is_provisional(contact.id))
             .map(|contact| ContactInfo {
                 id: contact.id,
                 name: contact.peer.name.clone(),
@@ -574,6 +578,7 @@ impl<B: CryptoBackend> Core<B> {
                 reassembler: Reassembler::new(PRE_AUTH_FRAME_LIMIT),
                 deadline: timer,
                 state: LinkState::Fresh,
+                provisional: None,
             },
         );
         Ok(())
@@ -635,7 +640,7 @@ impl<B: CryptoBackend> Core<B> {
         contact: ContactId,
         actions: &mut Vec<Action>,
     ) -> Result<(), CoreError> {
-        if self.in_session(contact) {
+        if self.in_session(contact, id) {
             self.close(id, CloseReason::Duplicate, actions);
             return Ok(());
         }
@@ -856,15 +861,12 @@ impl<B: CryptoBackend> Core<B> {
         actions.push(Action::PersistDevice {
             state: device.row(),
         });
-        self.persist_contact(contact, actions);
-        self.links
-            .get_mut(&id)
-            .expect("admitted on a live link")
-            .state = LinkState::Admitted;
+        let link = self.links.get_mut(&id).expect("admitted on a live link");
+        link.state = LinkState::Admitted;
+        link.provisional = Some(contact);
         self.cancel_deadline(id, actions);
         let deadline = self.set_timer(id, clock.mono_ms + PRE_AUTH_LINK_MS, actions);
         self.links.get_mut(&id).expect("live link").deadline = deadline;
-        actions.push(Action::ContactAdded { contact });
         if let Some(p4) = p4 {
             self.send(id, &p4, actions);
             self.start_resume(id, contact, actions)?;
@@ -911,7 +913,7 @@ impl<B: CryptoBackend> Core<B> {
         frame: &[u8],
         actions: &mut Vec<Action>,
     ) -> Result<(), CoreError> {
-        let answer = match self.answer_s1(frame)? {
+        let answer = match self.answer_s1(id, frame)? {
             Ok(answer) => answer,
             Err(reason) => {
                 self.close(id, reason, actions);
@@ -932,7 +934,7 @@ impl<B: CryptoBackend> Core<B> {
             chain_key: keys.next_ck.clone(),
             msg_seed: keys.msg_seed.clone(),
         });
-        self.persist_contact(contact, actions);
+        self.confirm(id, contact, actions);
         self.establish(id, contact, Session::new(&keys, false), true, actions);
         self.send(id, &s2, actions);
         self.flush(contact, actions)
@@ -943,6 +945,7 @@ impl<B: CryptoBackend> Core<B> {
     #[allow(clippy::type_complexity)]
     fn answer_s1(
         &self,
+        id: LinkId,
         frame: &[u8],
     ) -> Result<Result<(ContactId, bool, resume::Keys, [u8; resume::S2_LEN]), CloseReason>, CoreError>
     {
@@ -966,7 +969,7 @@ impl<B: CryptoBackend> Core<B> {
             return Ok(Err(CloseReason::Unknown));
         };
         let (contact, pending) = candidates[index];
-        if self.in_session(contact.id) {
+        if self.in_session(contact.id, id) {
             return Ok(Err(CloseReason::Duplicate));
         }
         let (chain, initiator) = candidate(contact, pending);
@@ -1008,7 +1011,7 @@ impl<B: CryptoBackend> Core<B> {
         record.resume_index = resuming.n + 1;
         self.tries.remove(&contact);
         self.reseed(contact, &keys.msg_seed, Dir::I, actions)?;
-        self.persist_contact(contact, actions);
+        self.confirm(id, contact, actions);
         let mut session = Session::new(&keys, true);
         let confirmation = session
             .seal::<B>(&EMPTY)?
@@ -1510,6 +1513,17 @@ impl<B: CryptoBackend> Core<B> {
         actions.push(Action::CancelTimer { timer });
     }
 
+    /// Persists a contact after a valid S1 or S2; a contact paired on `id`
+    /// becomes a contact only now (ADR 0043).
+    fn confirm(&mut self, id: LinkId, contact: ContactId, actions: &mut Vec<Action>) {
+        let link = self.links.get_mut(&id).expect("live link");
+        let paired = link.provisional.take().is_some();
+        self.persist_contact(contact, actions);
+        if paired {
+            actions.push(Action::ContactAdded { contact });
+        }
+    }
+
     fn persist_contact(&self, contact: ContactId, actions: &mut Vec<Action>) {
         let row = self.contact(contact).row();
         actions.push(Action::PersistContact {
@@ -1595,6 +1609,11 @@ impl<B: CryptoBackend> Core<B> {
         if let LinkState::Session(session) = &link.state {
             self.reseal(session.contact, actions);
         }
+        if let Some(contact) = link.provisional {
+            let device = self.device.as_mut().expect("restored");
+            device.contacts.retain(|record| record.id != contact);
+            self.tries.remove(&contact);
+        }
         link
     }
 
@@ -1638,11 +1657,19 @@ impl<B: CryptoBackend> Core<B> {
             .expect("known contact")
     }
 
-    /// At most one link per contact is past S1 (spec §6, OI-17).
-    fn in_session(&self, contact: ContactId) -> bool {
+    /// At most one link per contact is past S1 (spec §6, OI-17); a
+    /// provisional contact belongs to the link that paired it (ADR 0043).
+    fn in_session(&self, contact: ContactId, asking: LinkId) -> bool {
+        self.links.iter().any(|(&id, link)| {
+            link.state.contact() == Some(contact)
+                || (id != asking && link.provisional == Some(contact))
+        })
+    }
+
+    fn is_provisional(&self, contact: ContactId) -> bool {
         self.links
             .values()
-            .any(|link| link.state.contact() == Some(contact))
+            .any(|link| link.provisional == Some(contact))
     }
 
     /// The card carries the device beacon key ratcheted to today (spec §10.2).

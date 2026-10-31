@@ -276,3 +276,6 @@ Decided while building PR 3; the owner chose the key confirmation.
 
 2026-10-30, from [ADR 0041](0041-close-reasons.md):
 - §3: `Disconnect { link, reason }` names why the core closed the link with a `CloseReason`. The reason is local diagnostics; it is never sent.
+
+2026-10-31, from [ADR 0043](0043-provisional-contact.md):
+- §3 Ordering: a new contact is persisted, then reported with `ContactAdded`, at its first Resume message on the pairing link. B does this at a valid S2, before its first DATA frame, and A at a valid S1, before S2. Neither persists it before P4. If the pairing link closes first, the contact is forgotten.
