@@ -89,7 +89,7 @@ This is the first version. These parameters are policy inside the core and SDK; 
 2026-10-25, from the fleet pairing plateau ([issue 53](../../.scratch/cairn-r1/issues/53-fleet-pairing-plateau.md), OI-30):
 - **Non-matching reads.** The 1 h back-off after 3 non-matching reads counts only reads that the admission limits refused (spec §10.4). A read refused because the address is already backed off doesn't count, so it can't turn a short [ADR 0021](0021-automatic-neighbour-admission.md) back-off into an hour.
 
-2026-10-29, proposed in [ADR 0040](0040-redial-after-supervision-timeout.md) (OI-42):
+2026-10-29, from [ADR 0040](0040-redial-after-supervision-timeout.md) (OI-42):
 - **Redial after a supervision timeout.** A link lost to a supervision timeout (HCI 0x08) is redialled after a random 1–5 s, then 5–15 s, then 2 min. A timeout counts towards the next step only if its link was up for less than 2 min. Any other loss still waits 2 min.
 
 2026-10-25, from [ADR 0025](0025-android-gatt-slot-budget.md) (OI-31):

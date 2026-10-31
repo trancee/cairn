@@ -118,7 +118,7 @@ about 30 s after link-up, with reason 0x13, is the end of a run, not a loss.
 
 ## Amendments
 
-2026-10-29, proposed in [ADR 0040](0040-redial-after-supervision-timeout.md) (spec OI-42):
+2026-10-29, from [ADR 0040](0040-redial-after-supervision-timeout.md) (spec OI-42):
 - After an address's connection to the GATT server ends, with or without a
   link, Android doesn't dial it for 15 s plus the 0–3 s spread. The wait
   applied only after first sight, so after a supervision timeout both
