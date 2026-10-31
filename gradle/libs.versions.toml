@@ -24,11 +24,12 @@ ubique-uniffi = "1.3.2"
 floor-bouncycastle = "1.86"
 floor-commons-lang3 = "3.21.0"
 floor-freemarker = "2.3.35"
+floor-guava = "33.7.2-jre"
 floor-httpcomponents = "4.5.14"
 floor-jdom2 = "2.0.6.1"
 floor-jose4j = "0.9.7"
 floor-netty = "4.1.139.Final"
-floor-opentelemetry = "1.62.0"
+floor-opentelemetry = "1.67.0"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
@@ -53,6 +54,7 @@ floor-freemarker = { module = "org.freemarker:freemarker", version.ref = "floor-
 floor-commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "floor-commons-lang3" }
 floor-httpclient = { module = "org.apache.httpcomponents:httpclient", version.ref = "floor-httpcomponents" }
 floor-httpmime = { module = "org.apache.httpcomponents:httpmime", version.ref = "floor-httpcomponents" }
+floor-guava = { module = "com.google.guava:guava", version.ref = "floor-guava" }
 floor-jdom2 = { module = "org.jdom:jdom2", version.ref = "floor-jdom2" }
 floor-jose4j = { module = "org.bitbucket.b_c:jose4j", version.ref = "floor-jose4j" }
 floor-netty-buffer = { module = "io.netty:netty-buffer", version.ref = "floor-netty" }
@@ -76,6 +78,7 @@ build-tool-floors = [
     "floor-bcutil",
     "floor-commons-lang3",
     "floor-freemarker",
+    "floor-guava",
     "floor-httpclient",
     "floor-httpmime",
     "floor-jdom2",
