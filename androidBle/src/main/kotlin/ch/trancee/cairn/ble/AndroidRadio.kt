@@ -89,6 +89,9 @@ class AndroidRadio(
     /** Devices connected to the GATT server, subscribed or not; each holds a slot (ADR 0025). */
     private val serverConnected = HashMap<String, Long>()
 
+    /** Connections the peer started, which the server holds so the stack keeps them up (issue 57). */
+    private val serverHeld = HashSet<String>()
+
     /** ADR 0025: the AOSP link-record minimum, 7 before API 35 and 8 from it, less 2. */
     private val platformSlots = if (Build.VERSION.SDK_INT >= 35) 6 else 5
 
@@ -291,6 +294,7 @@ class AndroidRadio(
         server = null
         serverMtus.clear()
         serverConnected.clear()
+        serverHeld.clear()
     }
 
     private var following = false
@@ -798,9 +802,18 @@ class AndroidRadio(
                     server.cancelConnection(device)
                 } else {
                     serverConnected[address] = SystemClock.elapsedRealtime()
+                    // The stack drops a link 4 s after its last holder leaves, such as another app's GATT
+                    // client, and a connection the peer started doesn't count the server as one. A dial
+                    // to the same address holds the link itself.
+                    if (address !in centrals) {
+                        server.connect(device, false)
+                        serverHeld += address
+                    }
                     budget()
                 }
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                // The hold may have started a direct connection if the link was already gone.
+                if (serverHeld.remove(address)) server.cancelConnection(device)
                 val since = serverConnected.remove(address)
                 serverMtus.remove(address)
                 val peripheral = peripherals.remove(address)

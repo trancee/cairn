@@ -310,10 +310,44 @@ it saw the iPhone (ADR 0038).
   - So the Pixel's Bluetooth stack ended the link, and the app didn't ask it to.
   - SE18_4 had no dial in flight, so this isn't the issue 58 pattern of a
     dial tearing down the link.
-  - The cause is open. An HCI snoop on the Pixel during a reproduction would
-    show which layer sent the disconnect.
+  - The cause was open; the next section finds it.
 
 Logs are in `/tmp/pair/{a,i}_SE18_*.log` (not committed).
+
+### Cause of the 7.6 s drops (2026-10-31, K1–K6, Q1–Q10)
+
+The Pixel 6 has no HCI snoop summary (Android 17, not rooted). But
+`dumpsys bluetooth_manager` lists each LE link's disconnect reason and its
+*ACL holders*, the apps that keep the stack from closing it.
+
+| Runs | Build | Drops at 7.4–7.8 s | Life360 joined the link |
+| --- | --- | --- | --- |
+| K1–K6 | `main` (`53a022c`) | 2 (K1, K3) | K1, K3 |
+| Q1–Q10 | inbound hold | 0 | Q10 |
+
+- **Every drop was local.** In K1 and K3, the disconnect reason was HCI
+  `0x16` (connection terminated by local host).
+- **A third-party app caused them.** Life360 (`com.life360.android.safetymapd`)
+  registered as the only ACL holder about 2 s after Cairn's link-up and left
+  about 2 s later. The stack disconnected the link about 4 s after that. The
+  earlier SE18 drop (12:53) followed the same pattern.
+- **Inbound links had no holder.** An inbound link with *No ACL holders*
+  stayed up for the whole run (46 s and 53 s in K2 and K4). The stack starts
+  its idle disconnect only when the last holder leaves.
+- **Fix:** the GATT server now holds every inbound link that has no dial of
+  ours to the same address (amendment to
+  [ADR 0023](../../../docs/adr/0023-android-ble-adapter.md)). In Q1–Q10,
+  `ch.trancee.cairn.android` was an ACL holder from link-up. All 10 links
+  held to the end of the run (50–54 s), and every teardown was the iPhone's
+  (`0x13`) at the end of the run. In Q10, Life360 joined 1.7 s after
+  link-up and left again, and the link still held for 51 s.
+- **Limits.** Only one Q run had Life360 join the link, so the fix rests on
+  one direct case, the 10 clean runs and the stack's documented holder
+  rule. A recurrence would show as a `0x16` drop with Cairn listed as a
+  holder.
+
+Logs are in `/tmp/pair/{a,i}_{K,Q}*.log` and `/tmp/pair/bm_{K,Q}*.txt` (not
+committed).
 
 ## Not tested
 
