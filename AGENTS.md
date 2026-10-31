@@ -76,3 +76,7 @@ Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-
 ### Domain docs
 
 Single-context: root `GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.md`.
+
+### Lessons
+
+Radio, fleet/device, crypto-choice, gate or proof work => R `docs/agents/lessons.md` first: concept, code map, verified commands, root causes found, rejected ideas.
