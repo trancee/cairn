@@ -1,7 +1,7 @@
 # A lost S2 leaves an orphan contact on A
 
 Type: bug
-Status: needs-triage
+Status: fixed, pending OI-45 review (ADR 0044)
 Blocked by: none
 
 ## Question
@@ -38,6 +38,17 @@ S2 is lost, the following happens:
 
 ## Done when
 
-- A contact orphaned by a lost S2 no longer blocks Resume in either
+- [x] A contact orphaned by a lost S2 no longer blocks Resume in either
   direction.
-- The user never sees two contacts for one peer from this cause.
+- [x] The user never sees two contacts for one peer from this cause.
+
+## Resolution (2026-11-01)
+
+[ADR 0044](../../../docs/adr/0044-orphan-contact-supersede.md) takes the
+first option, narrowed: a newly committed pairing deletes every other contact
+that has no message chain and no link and whose peer beacon key matches. The
+core emits a new `DeleteContact` row action, which the FFI and both SDK row
+stores handle. The loopback test
+`a_new_pairing_supersedes_the_contact_a_lost_s2_left_on_a` loses A's S2, pairs
+again from B, restarts A, and resumes from A. Until B dials, A's own Resumes
+still fail as `Unknown`.

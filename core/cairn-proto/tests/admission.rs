@@ -1116,3 +1116,44 @@ fn a_contact_is_neither_persisted_nor_reported_before_a_valid_s1_or_s2() {
     net.restart(1);
     assert!(net.devices[1].core.contacts().is_empty());
 }
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn a_new_pairing_supersedes_the_contact_a_lost_s2_left_on_a() {
+    let (a, b) = (1, 0);
+    let mut net = Net::new(2, 1);
+    net.intercept = Some(silence_from(a, 0x20));
+    let (first, _) = net.connect(b, a);
+    net.read_beacon_of(b, first, a);
+    net.advance(5_000);
+    net.intercept = None;
+    assert_eq!(
+        net.devices[a].core.contacts().len(),
+        1,
+        "A keeps the orphan"
+    );
+    assert!(!holds_contact(&net, b), "B forgets the contact");
+    // B backs off A's address after the expired pairing (spec §5.6).
+    net.advance(2 * 60_000);
+
+    let (again, _) = net.connect(b, a);
+    net.read_beacon_of(b, again, a);
+
+    assert!(
+        net.is_up(b, again),
+        "the second pairing completes its Resume"
+    );
+    assert_eq!(net.devices[a].core.contacts().len(), 1);
+    assert_eq!(net.devices[a].store.contacts.len(), 1);
+    net.drop_link(b, again);
+    net.restart(a);
+    assert_eq!(
+        net.devices[a].core.contacts().len(),
+        1,
+        "the orphan's row is gone"
+    );
+    let (dial, _) = net.connect(a, b);
+    net.read_beacon_of(a, dial, b);
+    assert!(net.is_up(a, dial), "A's Resume reaches B");
+    assert!(!net.close_reasons(b).contains(&CloseReason::Unknown));
+}

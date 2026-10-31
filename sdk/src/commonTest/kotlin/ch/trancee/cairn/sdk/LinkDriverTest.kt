@@ -439,6 +439,8 @@ class LinkDriverTest {
             Action.PersistContact(7uL, row(2)),
             Action.PersistContact(8uL, row(3)),
             Action.PersistContact(7uL, row(4)),
+            Action.PersistContact(6uL, row(11)),
+            Action.DeleteContact(6uL),
             Action.PutQueued(7uL, 2u, row(5)),
             Action.PutQueued(7uL, 1u, row(6)),
             Action.PutQueued(8uL, 1u, row(7)),

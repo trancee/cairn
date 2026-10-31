@@ -107,3 +107,8 @@ Further consequences:
   beacon key isn't secret: every contact of a peer holds it. A malicious
   contact of B could pair with A, present B's key, and replace A's real
   contact for B.
+
+## Amendments
+
+2026-11-01, from [ADR 0044](0044-orphan-contact-supersede.md):
+- Consequences, S2 loss: when B next dials and the two pair again, A deletes the orphan with the new `DeleteContact` action, so A holds one contact for B.

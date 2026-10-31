@@ -42,6 +42,7 @@ class SealedRowStore(driver: SqlDriver, private val sealer: RowSealer) : Rows {
                     action.state.version.toLong(),
                     seal(CONTACT, action.contact, 0u, action.state),
                 )
+                is Action.DeleteContact -> queries.deleteContact(action.contact.toLong())
                 is Action.PutQueued -> queries.putQueued(
                     action.contact.toLong(),
                     action.msgno.toLong(),

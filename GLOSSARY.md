@@ -22,6 +22,10 @@ _Avoid_: Friend, follower, member
 A newly paired contact whose pairing link has not yet carried a valid Resume message from the peer. It is not stored or shown, and it is forgotten if that link closes first (ADR 0043).
 _Avoid_: Pending contact, half-paired contact
 
+**Orphan contact**:
+A contact that A committed at S1 but B forgot because S2 was lost. It never completed a Resume; the next pairing with the same peer deletes it (ADR 0044).
+_Avoid_: Ghost contact, stale contact
+
 **Stranger**:
 A peer in BLE range that matches no contact; finding one starts **admission**.
 _Avoid_: Unknown device, new node

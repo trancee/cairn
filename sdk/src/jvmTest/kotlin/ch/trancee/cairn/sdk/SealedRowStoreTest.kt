@@ -62,6 +62,8 @@ class SealedRowStoreTest {
                 Action.PersistDevice(row(2, 3u)),
                 Action.PersistContact(ULong.MAX_VALUE, row(3)),
                 Action.PersistContact(7uL, row(4)),
+                Action.PersistContact(5uL, row(12)),
+                Action.DeleteContact(5uL),
                 Action.ChatSent(7uL, 1u),
                 Action.PutQueued(7uL, UInt.MAX_VALUE, row(5)),
                 Action.PutQueued(7uL, 1u, row(6)),
