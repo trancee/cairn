@@ -169,6 +169,7 @@ pub enum Action {
     },
     Disconnect {
         link: LinkId,
+        reason: CloseReason,
     },
     SetTimer {
         timer: TimerId,
@@ -220,6 +221,33 @@ pub enum Action {
         from: u32,
         to: u32,
     },
+}
+
+/// Why the core closed a link; local diagnostics, never sent (ADR 0041).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CloseReason {
+    /// The pre-auth deadline passed.
+    Expired,
+    /// A pairing in flight, admission, a BUSY answer or the P0 tie-break.
+    Busy,
+    /// The contact already has a link.
+    Duplicate,
+    /// No contact matches the S1 pseudonym.
+    Unknown,
+    /// A fragment, frame or record that doesn't parse or comes out of order.
+    Malformed,
+    /// A P1 with another version or mode.
+    Unsupported,
+    /// P3's nonce doesn't match P1's commitment.
+    Commitment,
+    /// A MAC, the card's AEAD or a session frame that fails to open.
+    Authentication,
+    /// A card that opens but doesn't decode.
+    Card,
+    /// A card for a beacon day more than one day off.
+    StaleCard,
+    /// The session can't seal another frame.
+    Exhausted,
 }
 
 /// A caller contract violation. Peer misbehaviour produces `Disconnect` instead.
@@ -571,7 +599,7 @@ impl<B: CryptoBackend> Core<B> {
         let address = link.address.clone();
         let Ok(beacon) = <&[u8; 8]>::try_from(beacon) else {
             self.admission.protocol_failure(clock.mono_ms, &address);
-            self.close(id, actions);
+            self.close(id, CloseReason::Malformed, actions);
             return Ok(());
         };
         let contacts = &mut self.device.as_mut().expect("restored").contacts;
@@ -608,7 +636,7 @@ impl<B: CryptoBackend> Core<B> {
         actions: &mut Vec<Action>,
     ) -> Result<(), CoreError> {
         if self.in_session(contact) {
-            self.close(id, actions);
+            self.close(id, CloseReason::Duplicate, actions);
             return Ok(());
         }
         self.start_resume(id, contact, actions)
@@ -623,7 +651,7 @@ impl<B: CryptoBackend> Core<B> {
         actions: &mut Vec<Action>,
     ) -> Result<(), CoreError> {
         if self.pairing_in_flight() {
-            self.close(id, actions);
+            self.close(id, CloseReason::Busy, actions);
             return Ok(());
         }
         if !self
@@ -631,7 +659,7 @@ impl<B: CryptoBackend> Core<B> {
             .allows(clock.mono_ms, self.contact_count(), address)
         {
             self.admission.refused(clock.mono_ms, address);
-            self.close(id, actions);
+            self.close(id, CloseReason::Busy, actions);
             return Ok(());
         }
         self.admission.record_attempt(clock.mono_ms);
@@ -666,7 +694,7 @@ impl<B: CryptoBackend> Core<B> {
             Ok(Some(frame)) => frame,
             Ok(None) => return Ok(()),
             Err(_) => {
-                self.abort(clock, id, actions);
+                self.abort(clock, id, CloseReason::Malformed, actions);
                 return Ok(());
             }
         };
@@ -696,7 +724,7 @@ impl<B: CryptoBackend> Core<B> {
                 self.receive_s2(id, *resuming, &frame, actions)
             }
             _ => {
-                self.fail(clock, id, pairing, actions);
+                self.fail(clock, id, pairing, CloseReason::Malformed, actions);
                 Ok(())
             }
         }
@@ -721,7 +749,7 @@ impl<B: CryptoBackend> Core<B> {
             }
             (GattRole::Central, 5, LinkState::SentP0 { attempt_ms, .. }) if frame.len() == 1 => {
                 self.admission.refund_attempt(attempt_ms);
-                self.close(id, actions);
+                self.close(id, CloseReason::Busy, actions);
                 return Ok(());
             }
             (GattRole::Central, 1, LinkState::SentP0 { .. }) => {
@@ -743,7 +771,7 @@ impl<B: CryptoBackend> Core<B> {
             Ok(Step::Advance(state, reply)) => self.advance(id, state, &reply, actions),
             Ok(Step::Admit(paired, reply)) => self.admit(clock, id, *paired, reply, actions)?,
             Err(PairingError::Crypto(error)) => return Err(error.into()),
-            Err(_) => self.fail(clock, id, pairing, actions),
+            Err(error) => self.fail(clock, id, pairing, pairing_reason(&error), actions),
         }
         Ok(())
     }
@@ -757,7 +785,7 @@ impl<B: CryptoBackend> Core<B> {
         actions: &mut Vec<Action>,
     ) -> Result<(), CoreError> {
         let Ok(incoming) = <[u8; 16]>::try_from(&frame[1..]) else {
-            self.abort(clock, id, actions);
+            self.abort(clock, id, CloseReason::Malformed, actions);
             return Ok(());
         };
         let in_flight: Vec<(LinkId, Option<[u8; 16]>)> = self
@@ -772,13 +800,13 @@ impl<B: CryptoBackend> Core<B> {
         match in_flight.as_slice() {
             [] => {}
             [(own, Some(r))] => match tie_break(r, &incoming) {
-                TieBreak::AnswerIncoming => self.close(*own, actions),
+                TieBreak::AnswerIncoming => self.close(*own, CloseReason::Busy, actions),
                 TieBreak::CloseIncoming => {
                     self.advance(id, LinkState::Refused, &BUSY, actions);
                     return Ok(());
                 }
                 TieBreak::CloseBoth => {
-                    self.close(*own, actions);
+                    self.close(*own, CloseReason::Busy, actions);
                     self.advance(id, LinkState::Refused, &BUSY, actions);
                     return Ok(());
                 }
@@ -815,7 +843,7 @@ impl<B: CryptoBackend> Core<B> {
         // The card holds the peer's current key (spec §5); an older day would
         // make every beacon read ratchet it forward again.
         if paired.peer.beacon_day.abs_diff(day(clock.unix_s)) > 1 {
-            self.fail(clock, id, true, actions);
+            self.fail(clock, id, true, CloseReason::StaleCard, actions);
             return Ok(());
         }
         self.admission.record_admitted(clock.mono_ms);
@@ -883,9 +911,12 @@ impl<B: CryptoBackend> Core<B> {
         frame: &[u8],
         actions: &mut Vec<Action>,
     ) -> Result<(), CoreError> {
-        let Some(answer) = self.answer_s1(frame)? else {
-            self.close(id, actions);
-            return Ok(());
+        let answer = match self.answer_s1(frame)? {
+            Ok(answer) => answer,
+            Err(reason) => {
+                self.close(id, reason, actions);
+                return Ok(());
+            }
         };
         let (contact, promoted, keys, s2) = answer;
         let record = self.contact_mut(contact);
@@ -908,14 +939,15 @@ impl<B: CryptoBackend> Core<B> {
     }
 
     /// The matched contact, whether it matched the pending key, the keys and S2;
-    /// `None` closes the link.
+    /// a reason closes the link.
     #[allow(clippy::type_complexity)]
     fn answer_s1(
         &self,
         frame: &[u8],
-    ) -> Result<Option<(ContactId, bool, resume::Keys, [u8; resume::S2_LEN])>, CoreError> {
+    ) -> Result<Result<(ContactId, bool, resume::Keys, [u8; resume::S2_LEN]), CloseReason>, CoreError>
+    {
         let Some(pseudonym) = s1_pseudonym(frame) else {
-            return Ok(None);
+            return Ok(Err(CloseReason::Malformed));
         };
         let contacts = &self.device.as_ref().expect("restored").contacts;
         let candidates: Vec<(&Contact, bool)> = contacts
@@ -931,16 +963,16 @@ impl<B: CryptoBackend> Core<B> {
             .iter()
             .map(|&(contact, pending)| candidate(contact, pending));
         let Some(index) = resume::find::<B>(chains, &pseudonym)? else {
-            return Ok(None);
+            return Ok(Err(CloseReason::Unknown));
         };
         let (contact, pending) = candidates[index];
         if self.in_session(contact.id) {
-            return Ok(None);
+            return Ok(Err(CloseReason::Duplicate));
         }
         let (chain, initiator) = candidate(contact, pending);
         match respond::<B>(&chain, initiator, frame) {
-            Ok((keys, s2)) => Ok(Some((contact.id, pending, keys, s2))),
-            Err(error) => peer_fault(error).map(|()| None),
+            Ok((keys, s2)) => Ok(Ok((contact.id, pending, keys, s2))),
+            Err(error) => peer_fault(error).map(Err),
         }
     }
 
@@ -956,8 +988,8 @@ impl<B: CryptoBackend> Core<B> {
         let keys = match resuming.initiator.receive_s2::<B>(frame) {
             Ok(keys) => keys,
             Err(error) => {
-                peer_fault(error)?;
-                self.close(id, actions);
+                let reason = peer_fault(error)?;
+                self.close(id, reason, actions);
                 return Ok(());
             }
         };
@@ -998,7 +1030,7 @@ impl<B: CryptoBackend> Core<B> {
         actions: &mut Vec<Action>,
     ) -> Result<(), CoreError> {
         let Some(plaintext) = opened else {
-            self.close(id, actions);
+            self.close(id, CloseReason::Authentication, actions);
             return Ok(());
         };
         if confirms {
@@ -1011,7 +1043,7 @@ impl<B: CryptoBackend> Core<B> {
             self.persist_contact(contact, actions);
         }
         let Ok(records) = parse(&plaintext) else {
-            self.close(id, actions);
+            self.close(id, CloseReason::Malformed, actions);
             return Ok(());
         };
         let sent = self.contact(contact).sent_msgno;
@@ -1020,7 +1052,7 @@ impl<B: CryptoBackend> Core<B> {
             _ => false,
         });
         if beyond {
-            self.close(id, actions);
+            self.close(id, CloseReason::Malformed, actions);
             return Ok(());
         }
         let mut shown = Vec::new();
@@ -1078,7 +1110,7 @@ impl<B: CryptoBackend> Core<B> {
         self.persist_contact(contact, actions);
         actions.extend(shown);
         if malformed {
-            self.close(id, actions);
+            self.close(id, CloseReason::Malformed, actions);
             return Ok(());
         }
         let ack = ack_due.then(|| Record::Ack(self.contact(contact).received.contiguous));
@@ -1196,7 +1228,7 @@ impl<B: CryptoBackend> Core<B> {
                 actions.push(Action::ChatSent { contact, msgno });
                 return Ok(());
             }
-            self.close(id, actions);
+            self.close(id, CloseReason::Exhausted, actions);
         }
         let now = self.now_s;
         let record = self.contact_mut(contact);
@@ -1431,7 +1463,7 @@ impl<B: CryptoBackend> Core<B> {
         for frame in frames {
             let (id, link) = self.session_mut(contact).expect("in session");
             let Some(sealed) = link.session.seal::<B>(&frame)? else {
-                self.close(id, actions);
+                self.close(id, CloseReason::Exhausted, actions);
                 return Ok(());
             };
             self.send(id, &sealed, actions);
@@ -1519,28 +1551,38 @@ impl<B: CryptoBackend> Core<B> {
             self.admission
                 .transport_failure(clock.mono_ms, &link.address);
         }
-        actions.push(Action::Disconnect { link: id });
+        actions.push(Action::Disconnect {
+            link: id,
+            reason: CloseReason::Expired,
+        });
     }
 
     /// Closes a link after a protocol failure; a failed pairing backs off the address.
-    fn abort(&mut self, clock: Clock, id: LinkId, actions: &mut Vec<Action>) {
+    fn abort(&mut self, clock: Clock, id: LinkId, reason: CloseReason, actions: &mut Vec<Action>) {
         let pairing = self.links[&id].state.pairing();
-        self.fail(clock, id, pairing, actions);
+        self.fail(clock, id, pairing, reason, actions);
     }
 
-    fn fail(&mut self, clock: Clock, id: LinkId, pairing: bool, actions: &mut Vec<Action>) {
+    fn fail(
+        &mut self,
+        clock: Clock,
+        id: LinkId,
+        pairing: bool,
+        reason: CloseReason,
+        actions: &mut Vec<Action>,
+    ) {
         let link = self.remove_link(id, actions);
         if pairing {
             self.admission
                 .protocol_failure(clock.mono_ms, &link.address);
         }
-        actions.push(Action::Disconnect { link: id });
+        actions.push(Action::Disconnect { link: id, reason });
     }
 
     /// Closes a link without counting it as a failed attempt.
-    fn close(&mut self, id: LinkId, actions: &mut Vec<Action>) {
+    fn close(&mut self, id: LinkId, reason: CloseReason, actions: &mut Vec<Action>) {
         self.remove_link(id, actions);
-        actions.push(Action::Disconnect { link: id });
+        actions.push(Action::Disconnect { link: id, reason });
     }
 
     fn remove_link(&mut self, id: LinkId, actions: &mut Vec<Action>) -> Link {
@@ -1664,11 +1706,23 @@ fn peer_role(role: PairingRole) -> PairingRole {
     }
 }
 
-/// `Ok` for a fault of the peer, which closes the link; a backend failure is local.
-fn peer_fault(error: ResumeError) -> Result<(), CoreError> {
+/// The reason for a fault of the peer, which closes the link; a backend failure is local.
+fn peer_fault(error: ResumeError) -> Result<CloseReason, CoreError> {
     match error {
         ResumeError::Crypto(error) => Err(error.into()),
-        ResumeError::Malformed | ResumeError::Authentication => Ok(()),
+        ResumeError::Malformed => Ok(CloseReason::Malformed),
+        ResumeError::Authentication => Ok(CloseReason::Authentication),
+    }
+}
+
+/// Why a pairing frame closed the link; [`PairingError::Crypto`] is local and never gets here.
+fn pairing_reason(error: &PairingError) -> CloseReason {
+    match error {
+        PairingError::Malformed | PairingError::Crypto(_) => CloseReason::Malformed,
+        PairingError::Version | PairingError::Mode => CloseReason::Unsupported,
+        PairingError::Commitment => CloseReason::Commitment,
+        PairingError::Authentication => CloseReason::Authentication,
+        PairingError::Card(_) => CloseReason::Card,
     }
 }
 
@@ -1886,7 +1940,13 @@ mod tests {
 
         let actions = receive(&mut core, frame);
 
-        assert_eq!(actions.last(), Some(&Action::Disconnect { link: LINK }));
+        assert_eq!(
+            actions.last(),
+            Some(&Action::Disconnect {
+                link: LINK,
+                reason: CloseReason::Authentication
+            })
+        );
     }
 
     #[test]
@@ -1939,7 +1999,13 @@ mod tests {
 
         let actions = receive(&mut core, frame);
 
-        assert_eq!(actions.last(), Some(&Action::Disconnect { link: LINK }));
+        assert_eq!(
+            actions.last(),
+            Some(&Action::Disconnect {
+                link: LINK,
+                reason: CloseReason::Malformed
+            })
+        );
         assert!(core.links.is_empty());
     }
 
@@ -1951,7 +2017,13 @@ mod tests {
 
         let actions = receive(&mut core, frame);
 
-        assert_eq!(actions.last(), Some(&Action::Disconnect { link: LINK }));
+        assert_eq!(
+            actions.last(),
+            Some(&Action::Disconnect {
+                link: LINK,
+                reason: CloseReason::Malformed
+            })
+        );
         assert!(core.links.is_empty());
     }
 
@@ -1980,7 +2052,10 @@ mod tests {
 
         let actions = send_chat(&mut core, CONTACT);
 
-        assert!(actions.contains(&Action::Disconnect { link: LINK }));
+        assert!(actions.contains(&Action::Disconnect {
+            link: LINK,
+            reason: CloseReason::Exhausted
+        }));
         assert_eq!(
             actions.last(),
             Some(&Action::ChatQueued {
@@ -2127,7 +2202,13 @@ mod tests {
 
         let actions = receive(&mut core, frame);
 
-        assert_eq!(actions.last(), Some(&Action::Disconnect { link: LINK }));
+        assert_eq!(
+            actions.last(),
+            Some(&Action::Disconnect {
+                link: LINK,
+                reason: CloseReason::Malformed
+            })
+        );
         assert_eq!(
             count(&actions, |a| matches!(a, Action::PersistContact { .. })),
             0
@@ -2171,7 +2252,13 @@ mod tests {
 
         let actions = receive(&mut core, frame);
 
-        assert_eq!(actions.last(), Some(&Action::Disconnect { link: LINK }));
+        assert_eq!(
+            actions.last(),
+            Some(&Action::Disconnect {
+                link: LINK,
+                reason: CloseReason::Malformed
+            })
+        );
         assert_eq!(count(&actions, |a| matches!(a, Action::Send { .. })), 0);
     }
 
@@ -2230,7 +2317,13 @@ mod tests {
         let actions = receive(&mut core, frame);
 
         assert_eq!(count(&actions, |a| matches!(a, Action::Send { .. })), 0);
-        assert_eq!(actions.last(), Some(&Action::Disconnect { link: LINK }));
+        assert_eq!(
+            actions.last(),
+            Some(&Action::Disconnect {
+                link: LINK,
+                reason: CloseReason::Exhausted
+            })
+        );
     }
 
     #[test]
@@ -2720,7 +2813,13 @@ mod tests {
         let again = core.handle(CLOCK, Event::TimerFired { timer }).unwrap();
 
         assert_eq!(mtu, 247);
-        assert_eq!(fired.last(), Some(&Action::Disconnect { link: LINK }));
+        assert_eq!(
+            fired.last(),
+            Some(&Action::Disconnect {
+                link: LINK,
+                reason: CloseReason::Expired
+            })
+        );
         assert!(again.is_empty());
     }
 
@@ -2748,9 +2847,35 @@ mod tests {
         assert_eq!(
             classified,
             [
-                Ok(()),
-                Ok(()),
+                Ok(CloseReason::Malformed),
+                Ok(CloseReason::Authentication),
                 Err(CoreError::Crypto(CryptoError::BackendFailure))
+            ]
+        );
+    }
+
+    #[test]
+    fn each_pairing_failure_names_its_close_reason() {
+        let errors = [
+            PairingError::Malformed,
+            PairingError::Version,
+            PairingError::Mode,
+            PairingError::Commitment,
+            PairingError::Authentication,
+            PairingError::Card(crate::card::CardError::Truncated),
+        ];
+
+        let reasons = errors.each_ref().map(pairing_reason);
+
+        assert_eq!(
+            reasons,
+            [
+                CloseReason::Malformed,
+                CloseReason::Unsupported,
+                CloseReason::Unsupported,
+                CloseReason::Commitment,
+                CloseReason::Authentication,
+                CloseReason::Card,
             ]
         );
     }

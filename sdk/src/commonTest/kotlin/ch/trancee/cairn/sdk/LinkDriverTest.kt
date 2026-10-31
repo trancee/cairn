@@ -3,6 +3,7 @@ package ch.trancee.cairn.sdk
 import ch.trancee.cairn.ffi.Action
 import ch.trancee.cairn.ffi.ChatRejection
 import ch.trancee.cairn.ffi.Clock
+import ch.trancee.cairn.ffi.CloseReason
 import ch.trancee.cairn.ffi.ContactInfo
 import ch.trancee.cairn.ffi.ContactRow
 import ch.trancee.cairn.ffi.CoreException
@@ -46,14 +47,14 @@ private class FakeEngine(var respond: (Event) -> List<Action> = { emptyList() })
 
 private class FakeRadio : Radio {
     val sent = mutableListOf<Pair<ULong, List<Byte>>>()
-    val disconnected = mutableListOf<ULong>()
+    val disconnected = mutableListOf<Pair<ULong, DisconnectReason>>()
 
     override fun send(link: ULong, fragment: ByteArray) {
         sent += link to fragment.toList()
     }
 
-    override fun disconnect(link: ULong) {
-        disconnected += link
+    override fun disconnect(link: ULong, reason: DisconnectReason) {
+        disconnected += link to reason
     }
 }
 
@@ -315,14 +316,14 @@ class LinkDriverTest {
             Action.Send(link, bytes(half)),
             Action.Send(link, bytes(1)),
             Action.Send(link, bytes(1)),
-            Action.Disconnect(link),
+            Action.Disconnect(link, CloseReason.BUSY),
         )
 
         rig.driver.received(link, bytes(1))
         rig.driver.sent(link)
 
         assertEquals(1, rig.radio.sent.size)
-        assertEquals(listOf(link), rig.radio.disconnected)
+        assertEquals(listOf(link to DisconnectReason.BACKLOG), rig.radio.disconnected)
     }
 
     @Test
@@ -343,20 +344,32 @@ class LinkDriverTest {
     fun disconnectDropsQueuedFragments() {
         val rig = Rig()
         val link = rig.driver.linkUp(GattRole.CENTRAL, 23u, byteArrayOf())
-        rig.answer(Event.Received(link, bytes(1)), Action.Send(link, bytes(1)), Action.Send(link, bytes(2)), Action.Disconnect(link))
+        rig.answer(Event.Received(link, bytes(1)), Action.Send(link, bytes(1)), Action.Send(link, bytes(2)), Action.Disconnect(link, CloseReason.MALFORMED))
 
         rig.driver.received(link, bytes(1))
         rig.driver.sent(link)
 
         assertEquals(listOf(link to bytes(1).toList()), rig.radio.sent)
-        assertEquals(listOf(link), rig.radio.disconnected)
+        assertEquals(listOf(link to DisconnectReason.MALFORMED), rig.radio.disconnected)
+    }
+
+    @Test
+    fun everyCoreReasonReachesTheRadioAsItsSnakeCaseLabel() {
+        val rig = Rig()
+        val reasons = CloseReason.entries
+        val links = reasons.map { rig.driver.linkUp(GattRole.CENTRAL, 23u, byteArrayOf()) }
+        reasons.zip(links).forEach { (reason, link) -> rig.answer(Event.Received(link, bytes(1)), Action.Disconnect(link, reason)) }
+
+        links.forEach { rig.driver.received(it, bytes(1)) }
+
+        assertEquals(reasons.map { it.name.lowercase() }, rig.radio.disconnected.map { it.second.label })
     }
 
     @Test
     fun linkDownForgetsTheLink() {
         val rig = Rig()
         val link = rig.driver.linkUp(GattRole.CENTRAL, 23u, byteArrayOf())
-        rig.answer(Event.LinkDown(link), Action.Send(link, bytes(1)), Action.Disconnect(link))
+        rig.answer(Event.LinkDown(link), Action.Send(link, bytes(1)), Action.Disconnect(link, CloseReason.EXPIRED))
 
         rig.driver.linkDown(link)
         rig.driver.sent(link)
@@ -500,7 +513,7 @@ class LinkDriverTest {
         val third = rig.driver.linkUp(GattRole.CENTRAL, 23u, byteArrayOf())
 
         assertTrue(poisoned.closed)
-        assertEquals(listOf(first, second), rig.radio.disconnected)
+        assertEquals(listOf(first to DisconnectReason.POISONED, second to DisconnectReason.POISONED), rig.radio.disconnected)
         assertEquals(listOf(3uL), rig.timers.cancelled)
         assertEquals(keys(Event.Restore(BLOB, emptyList(), emptyList(), emptyList()), Event.LinkUp(third, GattRole.CENTRAL, 23u, byteArrayOf())), rig.engine.events)
         assertEquals(3uL, third)

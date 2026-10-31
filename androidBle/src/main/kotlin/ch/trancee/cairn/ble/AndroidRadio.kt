@@ -33,6 +33,7 @@ import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import ch.trancee.cairn.ffi.GattRole
+import ch.trancee.cairn.sdk.DisconnectReason
 import ch.trancee.cairn.sdk.Radio
 import ch.trancee.cairn.sdk.RadioListener
 import kotlin.random.Random
@@ -316,10 +317,10 @@ class AndroidRadio(
         }
     }
 
-    override fun disconnect(link: ULong) {
+    override fun disconnect(link: ULong, reason: DisconnectReason) {
         handler.post {
             links[link]?.let {
-                Log.d(TAG, "link $link close requested")
+                Log.d(TAG, "link $link close requested (${reason.label})")
                 it.close()
             }
         }

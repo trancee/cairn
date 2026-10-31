@@ -2,7 +2,7 @@
 
 mod support;
 
-use cairn_proto::{Action, ChatRejection, ContactId, Core, CoreError, Event, LinkId};
+use cairn_proto::{Action, ChatRejection, CloseReason, ContactId, Core, CoreError, Event, LinkId};
 use support::seeded::Seeded;
 use support::{Intercept, Net, START};
 
@@ -321,10 +321,14 @@ fn tampered_resume_or_data_frames_close_the_link_without_back_off() {
         let (retry, _) = net.connect(0, 1);
         net.read_beacon_of(0, retry, 1);
         chat(&mut net, 0, "ok");
-        outcomes.push((closed, received(&net, 1).len()));
+        let reasons = [net.close_reasons(0), net.close_reasons(1)].concat();
+        outcomes.push((closed, reasons, received(&net, 1).len()));
     }
 
-    assert_eq!(outcomes, [(true, 1); 3]);
+    assert_eq!(
+        outcomes,
+        vec![(true, vec![CloseReason::Authentication], 1); 3]
+    );
 }
 
 #[test]
@@ -363,6 +367,8 @@ fn a_second_link_to_a_contact_in_session_is_closed() {
 
     assert!(!net.is_up(0, duplicate), "the central has a session");
     assert!(!net.is_up(0, stale), "the peripheral still has a session");
+    assert_eq!(net.close_reasons(0), [CloseReason::Duplicate]);
+    assert_eq!(net.close_reasons(1), [CloseReason::Duplicate]);
 }
 
 #[test]
@@ -412,10 +418,20 @@ fn an_unknown_pseudonym_or_misplaced_resume_frame_closes_the_link() {
         outcomes.push((
             first_fragment_headers(&net, device, link).is_empty(),
             net.is_up(device, link),
+            net.close_reasons(device),
         ));
     }
 
-    assert_eq!(outcomes, [(true, false); 4]);
+    let closed = |reason| (true, false, vec![reason]);
+    assert_eq!(
+        outcomes,
+        [
+            closed(CloseReason::Unknown),
+            closed(CloseReason::Malformed),
+            closed(CloseReason::Malformed),
+            closed(CloseReason::Malformed),
+        ]
+    );
 }
 
 #[test]

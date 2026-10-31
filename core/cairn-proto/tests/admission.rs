@@ -4,8 +4,8 @@ mod support;
 
 use cairn_crypto::CryptoError;
 use cairn_proto::{
-    Action, Clock, ContactId, Core, CoreError, Event, GattRole, LinkId, Persisted, TimerId,
-    Verification,
+    Action, Clock, CloseReason, ContactId, Core, CoreError, Event, GattRole, LinkId, Persisted,
+    TimerId, Verification,
 };
 use support::seeded::Seeded;
 use support::{Net, START, Store};
@@ -223,10 +223,14 @@ fn a_card_more_than_a_day_old_fails_pairing() {
         (
             net.devices[0].core.contacts().len(),
             net.devices[1].core.contacts().len(),
+            net.close_reasons(0),
         )
     });
 
-    assert_eq!(outcomes, [(1, 1), (0, 0)]);
+    assert_eq!(
+        outcomes,
+        [(1, 1, vec![]), (0, 0, vec![CloseReason::StaleCard])]
+    );
 }
 
 #[test]
@@ -295,7 +299,13 @@ fn an_unfinished_pairing_times_out_and_backs_off_the_address() {
 
     assert_eq!(deadline.1, START.mono_ms + 5_000);
     assert!(!p1.is_empty());
-    assert_eq!(expired, [Action::Disconnect { link: LinkId(1) }]);
+    assert_eq!(
+        expired,
+        [Action::Disconnect {
+            link: LinkId(1),
+            reason: CloseReason::Expired
+        }]
+    );
     assert_eq!(
         sent(&retry),
         [vec![0x05]],
@@ -596,9 +606,9 @@ fn crossing_p0s_with_equal_nonces_close_the_own_link_and_answer_busy() {
         .unwrap();
 
     assert_eq!(sent(&actions), [vec![0x05]]);
-    assert!(actions.contains(&Action::Disconnect { link: own }));
+    assert_eq!(closed(&actions, own), Some(CloseReason::Busy));
     assert!(
-        !actions.contains(&Action::Disconnect { link: incoming }),
+        closed(&actions, incoming).is_none(),
         "A waits for B to close"
     );
 }
@@ -738,7 +748,7 @@ fn a_central_does_not_send_p0_to_a_backed_off_address() {
     let retry = core.handle(START, read(LinkId(2))).unwrap();
 
     assert!(sent(&retry).is_empty());
-    assert!(retry.contains(&Action::Disconnect { link: LinkId(2) }));
+    assert_eq!(closed(&retry, LinkId(2)), Some(CloseReason::Busy));
 }
 
 #[test]
@@ -772,11 +782,14 @@ fn a_beacon_of_the_wrong_length_closes_the_link_and_backs_off_the_address() {
         short,
         Ok(vec![
             Action::CancelTimer { timer: TimerId(0) },
-            Action::Disconnect { link: LinkId(1) }
+            Action::Disconnect {
+                link: LinkId(1),
+                reason: CloseReason::Malformed
+            }
         ])
     );
     assert!(sent(&retry).is_empty());
-    assert!(retry.contains(&Action::Disconnect { link: LinkId(2) }));
+    assert_eq!(closed(&retry, LinkId(2)), Some(CloseReason::Busy));
 }
 
 #[test]
@@ -809,7 +822,7 @@ fn busy_neither_backs_off_nor_counts_against_the_attempt_limit() {
             )
             .unwrap();
         assert!(sent(&busy).is_empty());
-        assert!(busy.contains(&Action::Disconnect { link }));
+        assert_eq!(closed(&busy, link), Some(CloseReason::Busy));
     }
 
     assert_eq!(p0s, [1; 31]);
@@ -855,10 +868,16 @@ fn a_refused_link_accepts_nothing_more_and_closes_at_its_deadline_without_back_o
     let retry = core.handle(START, p0(LinkId(4))).unwrap();
 
     assert_eq!(sent(&busy), [vec![0x05]]);
-    assert!(!busy.contains(&Action::Disconnect { link: LinkId(2) }));
+    assert!(closed(&busy, LinkId(2)).is_none());
     assert!(sent(&again).is_empty());
-    assert!(again.contains(&Action::Disconnect { link: LinkId(2) }));
-    assert_eq!(expired, [Action::Disconnect { link: LinkId(3) }]);
+    assert_eq!(closed(&again, LinkId(2)), Some(CloseReason::Malformed));
+    assert_eq!(
+        expired,
+        [Action::Disconnect {
+            link: LinkId(3),
+            reason: CloseReason::Expired
+        }]
+    );
     assert!(!sent(&retry).is_empty(), "z is not backed off");
 }
 
@@ -888,7 +907,7 @@ fn busy_with_a_body_fails_the_pairing_and_backs_off_the_address() {
         .unwrap();
     let retry = core.handle(START, read(LinkId(2))).unwrap();
 
-    assert!(malformed.contains(&Action::Disconnect { link: LinkId(1) }));
+    assert_eq!(closed(&malformed, LinkId(1)), Some(CloseReason::Malformed));
     assert!(sent(&retry).is_empty());
 }
 
@@ -1013,4 +1032,15 @@ fn three_dials_refused_by_the_limits_back_off_the_address_for_one_hour() {
 
     assert_eq!(refused, [false; 3]);
     assert_eq!([budget_free, backed_off_ended], [false, true]);
+}
+
+/// Why `actions` close `link`, if they do.
+fn closed(actions: &[Action], link: LinkId) -> Option<CloseReason> {
+    actions.iter().find_map(|action| match action {
+        Action::Disconnect {
+            link: closed,
+            reason,
+        } if *closed == link => Some(*reason),
+        _ => None,
+    })
 }

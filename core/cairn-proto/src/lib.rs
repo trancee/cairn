@@ -47,8 +47,8 @@ mod state;
 mod transfer;
 
 pub use crate::core::{
-    Action, ChatRejection, Clock, ContactId, ContactInfo, Core, CoreError, Event, GattRole, LinkId,
-    TimerId, Verification,
+    Action, ChatRejection, Clock, CloseReason, ContactId, ContactInfo, Core, CoreError, Event,
+    GattRole, LinkId, TimerId, Verification,
 };
 pub use epoch::{Epoch, EpochExhausted, ObjectKind, PairingRole};
 pub use framing::{

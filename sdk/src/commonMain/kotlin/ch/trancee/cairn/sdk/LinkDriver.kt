@@ -217,7 +217,7 @@ class LinkDriver(
     /** ADR 0022 §3: a poisoned core is unusable, so every link and timer it owned goes too. */
     private fun replaceEngine() {
         engine.close()
-        links.keys.forEach(radio::disconnect)
+        links.keys.forEach { radio.disconnect(it, DisconnectReason.POISONED) }
         links.clear()
         activeTimers.forEach(timers::cancel)
         activeTimers.clear()
@@ -233,7 +233,7 @@ class LinkDriver(
             is Action.PutCourier, is Action.DeleteCourier,
             -> {}
             is Action.Send -> enqueue(action.link, action.fragment)
-            is Action.Disconnect -> links[action.link]?.let { disconnect(action.link, it) }
+            is Action.Disconnect -> links[action.link]?.let { disconnect(action.link, it, DisconnectReason.of(action.reason)) }
             is Action.SetTimer -> {
                 activeTimers += action.timer
                 timers.schedule(action.timer, action.atMonoMs)
@@ -258,7 +258,7 @@ class LinkDriver(
         val state = links[link] ?: return
         if (state.closing) return
         state.unconfirmedBytes += fragment.size
-        if (state.unconfirmedBytes > MAX_QUEUED_BYTES) return disconnect(link, state)
+        if (state.unconfirmedBytes > MAX_QUEUED_BYTES) return disconnect(link, state, DisconnectReason.BACKLOG)
         state.queue.addLast(fragment)
         if (state.inFlightBytes == 0) transmit(link, state)
     }
@@ -272,11 +272,11 @@ class LinkDriver(
     }
 
     /** Stops sending; the link stays listed until the platform reports [linkDown]. */
-    private fun disconnect(link: ULong, state: Link) {
+    private fun disconnect(link: ULong, state: Link, reason: DisconnectReason) {
         if (state.closing) return
         state.closing = true
         state.queue.clear()
-        radio.disconnect(link)
+        radio.disconnect(link, reason)
     }
 
     companion object {

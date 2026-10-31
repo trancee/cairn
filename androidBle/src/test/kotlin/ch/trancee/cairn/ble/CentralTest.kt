@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothProfile
 import android.os.Build
 import android.os.ParcelUuid
+import ch.trancee.cairn.sdk.DisconnectReason
 import java.util.UUID
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -327,7 +328,7 @@ class CentralTest {
     fun centralDisconnectReportsLinkDownOnce() {
         val gatt = up()
 
-        h.radio.disconnect(1u)
+        h.radio.disconnect(1u, DisconnectReason.BUSY)
         h.idle()
 
         assertEquals(listOf("up 1 CENTRAL 517 $address", "beacon 1 0909090909090909", "down 1"), h.listener.events)
@@ -348,7 +349,7 @@ class CentralTest {
     @Test
     fun sendAndDisconnectIgnoreUnknownLinks() {
         h.radio.send(7u, byteArrayOf(1))
-        h.radio.disconnect(7u)
+        h.radio.disconnect(7u, DisconnectReason.BUSY)
         h.idle()
 
         assertEquals(emptyList(), h.listener.events)
