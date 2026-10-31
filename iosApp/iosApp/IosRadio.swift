@@ -23,6 +23,20 @@ enum ReadAnswer: Equatable {
     case notSupported
 }
 
+/// A GATT server's answer to a batch of writes; a failed check asks the central to resend (ADR 0042).
+enum WriteAnswer: Equatable {
+    case accepted
+    case refused
+    case checkFailed
+}
+
+/// How a central's write to `rx` ended.
+enum WriteResult {
+    case ok
+    case checkFailed
+    case failed
+}
+
 struct WriteRequest {
     let characteristic: GattCharacteristic
     let offset: Int
@@ -89,6 +103,8 @@ final class IosRadio: NSObject, Radio {
         var mtu = 0
         var reading = false
         var held: Data?
+        var written = Data()
+        var resends = 0
         var cancelTimeout: () -> Void = {}
     }
 
@@ -288,9 +304,20 @@ final class IosRadio: NSObject, Radio {
         received(central.link, value)
     }
 
-    func wrote(_ peer: UUID, ok: Bool) {
+    /// A write the server rejected for its check is written again, up to `RESENDS` times (ADR 0042).
+    func wrote(_ peer: UUID, _ result: WriteResult) {
         guard let central = centrals[peer], central.stage == .up else { return }
-        if ok { listener.sent(link: central.link) } else { closeCentral(peer) }
+        switch result {
+        case .ok:
+            central.resends = 0
+            listener.sent(link: central.link)
+        case .checkFailed where central.resends < Int(FragmentCheck.shared.RESENDS):
+            central.resends += 1
+            trace("link \(central.link) resend \(central.resends) (check)")
+            port.write(peer, central.written)
+        case .checkFailed, .failed:
+            closeCentral(peer)
+        }
     }
 
     /// The connection ended or never came up; [error] is the `CBError` code, if any (issue 58).
@@ -333,6 +360,7 @@ final class IosRadio: NSObject, Radio {
             central.mtu = mtu
             listener.mtuChanged(link: central.link, mtu: UInt16(mtu))
         }
+        central.written = value
         port.write(peer, value)
     }
 
@@ -377,14 +405,18 @@ final class IosRadio: NSObject, Radio {
         return offset > value.count ? .invalidOffset : .value(value.subdata(in: offset ..< value.count))
     }
 
-    /// Returns whether the batch is accepted; an accepted batch is received in order.
-    func writeRequests(_ central: UUID, _ requests: [WriteRequest]) -> Bool {
+    /// An accepted batch is received in order; a batch with a write that fails its check is dropped.
+    func writeRequests(_ central: UUID, _ requests: [WriteRequest]) -> WriteAnswer {
         guard let peripheral = peripherals[central],
-              requests.allSatisfy({ $0.characteristic == .rx && $0.offset == 0 }) else { return false }
+              requests.allSatisfy({ $0.characteristic == .rx && $0.offset == 0 }) else { return .refused }
+        guard requests.allSatisfy({ FragmentCheck.shared.intact(value: $0.value.kotlin) }) else {
+            trace("link \(peripheral.link) write rejected (check)")
+            return .checkFailed
+        }
         for request in requests {
             received(peripheral.link, request.value)
         }
-        return true
+        return .accepted
     }
 
     /// The transmit queue has room again.

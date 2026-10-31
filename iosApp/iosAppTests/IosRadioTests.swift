@@ -131,9 +131,9 @@ final class IosRadioTests: XCTestCase {
 
         radio.send(link: link, fragment: Data([1]).kotlin)
         scheduler.drain()
-        radio.wrote(a, ok: true)
+        radio.wrote(a, .ok)
         XCTAssertEqual(listener.events.last, "sent \(link)")
-        radio.wrote(a, ok: false)
+        radio.wrote(a, .failed)
 
         XCTAssertEqual(port.calls.last, "cancel A")
         XCTAssertEqual(listener.downs, [link])
@@ -230,7 +230,7 @@ final class IosRadioTests: XCTestCase {
         radio.servicesDiscovered(a, ok: true)
         radio.subscribed(a, ok: true)
         radio.beaconRead(a, value: Data([1]))
-        radio.wrote(a, ok: true)
+        radio.wrote(a, .ok)
         radio.disconnected(a)
         radio.centralUnsubscribed(a)
 
@@ -512,16 +512,71 @@ final class IosRadioTests: XCTestCase {
 
     func testWritesAreAcceptedOnlyFromALinkedCentralToRxAtOffsetZero() {
         running()
-        let rx = WriteRequest(characteristic: .rx, offset: 0, value: Data([1]))
-        XCTAssertFalse(radio.writeRequests(a, [rx]))
+        let rx = WriteRequest(characteristic: .rx, offset: 0, value: checked(1))
+        XCTAssertEqual(radio.writeRequests(a, [rx]), .refused)
         radio.centralSubscribed(a)
         let link = listener.lastLink
 
-        XCTAssertFalse(radio.writeRequests(a, [rx, WriteRequest(characteristic: .rx, offset: 1, value: Data([2]))]))
-        XCTAssertFalse(radio.writeRequests(a, [WriteRequest(characteristic: .beacon, offset: 0, value: Data([2]))]))
-        XCTAssertTrue(radio.writeRequests(a, [rx, WriteRequest(characteristic: .rx, offset: 0, value: Data([2]))]))
+        XCTAssertEqual(radio.writeRequests(a, [rx, WriteRequest(characteristic: .rx, offset: 1, value: checked(2))]), .refused)
+        XCTAssertEqual(radio.writeRequests(a, [WriteRequest(characteristic: .beacon, offset: 0, value: checked(2))]), .refused)
+        XCTAssertEqual(radio.writeRequests(a, [rx, WriteRequest(characteristic: .rx, offset: 0, value: checked(2))]), .accepted)
 
-        XCTAssertEqual(listener.events.suffix(2), ["in \(link) 01", "in \(link) 02"])
+        XCTAssertEqual(listener.events.suffix(2), ["in \(link) \(checked(1).hex)", "in \(link) \(checked(2).hex)"])
+    }
+
+    func testABatchWithAWriteFailingItsCheckIsRefusedForAResend() {
+        running()
+        var traces: [String] = []
+        radio.trace = { traces.append($0) }
+        radio.centralSubscribed(a)
+        let link = listener.lastLink
+        var corrupted = checked(1, 2)
+        corrupted[1] = 3
+
+        let answer = radio.writeRequests(a, [
+            WriteRequest(characteristic: .rx, offset: 0, value: checked(1)),
+            WriteRequest(characteristic: .rx, offset: 0, value: corrupted),
+        ])
+
+        XCTAssertEqual(answer, .checkFailed)
+        XCTAssertFalse(listener.events.contains { $0.hasPrefix("in") })
+        XCTAssertEqual(traces.last, "link \(link) write rejected (check)")
+    }
+
+    func testACentralResendsAWriteRejectedForItsCheckThreeTimesThenCloses() {
+        running()
+        var traces: [String] = []
+        radio.trace = { traces.append($0) }
+        let link = centralLink(a)
+        radio.beaconRead(a, value: Data([9]))
+        radio.send(link: link, fragment: checked(1).kotlin)
+        scheduler.drain()
+
+        for _ in 0 ..< 4 {
+            radio.wrote(a, .checkFailed)
+        }
+
+        let writes = port.calls.filter { $0.hasPrefix("write A") }
+        XCTAssertEqual(writes, Array(repeating: "write A \(checked(1).hex)", count: 4))
+        XCTAssertEqual(traces.filter { $0.contains("resend") }, (1 ... 3).map { "link \(link) resend \($0) (check)" })
+        XCTAssertEqual(listener.downs, [link])
+    }
+
+    func testACentralCountsResendsAfreshForEachAcceptedWrite() {
+        running()
+        let link = centralLink(a)
+        radio.beaconRead(a, value: Data([9]))
+        radio.send(link: link, fragment: checked(1).kotlin)
+        scheduler.drain()
+        for _ in 0 ..< 3 {
+            radio.wrote(a, .checkFailed)
+        }
+        radio.wrote(a, .ok)
+
+        radio.wrote(a, .checkFailed)
+
+        XCTAssertEqual(listener.downs, [])
+        XCTAssertEqual(port.calls.filter { $0.hasPrefix("write A") }.count, 5)
     }
 
     func testNotificationsWaitForTheQueueToDrain() {
@@ -567,7 +622,7 @@ final class IosRadioTests: XCTestCase {
 
         XCTAssertEqual(listener.downs, [link])
         XCTAssertEqual(port.calls.filter { $0.hasPrefix("notify") }.count, 1)
-        XCTAssertFalse(radio.writeRequests(a, [WriteRequest(characteristic: .rx, offset: 0, value: Data([1]))]))
+        XCTAssertEqual(radio.writeRequests(a, [WriteRequest(characteristic: .rx, offset: 0, value: checked(1))]), .refused)
         radio.centralUnsubscribed(a)
         XCTAssertEqual(listener.downs, [link])
     }
@@ -670,4 +725,16 @@ extension Data {
 
 extension UUID {
     var bytesHex: String { Data(bytes).hex }
+}
+
+/// [bytes] as a GATT fragment: header and body, then their CRC-16/CCITT-FALSE check (ADR 0042).
+private func checked(_ bytes: UInt8...) -> Data {
+    var crc: UInt16 = 0xFFFF
+    for byte in bytes {
+        crc ^= UInt16(byte) << 8
+        for _ in 0 ..< 8 {
+            crc = crc & 0x8000 != 0 ? crc << 1 ^ 0x1021 : crc << 1
+        }
+    }
+    return Data(bytes + [UInt8(crc >> 8), UInt8(crc & 0xFF)])
 }

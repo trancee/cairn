@@ -185,3 +185,6 @@ This is the first version. Any layout change requires a new protocol version: a 
 
 2026-10-25, from [ADR 0021](0021-automatic-neighbour-admission.md) (OI-29):
 - PAIR step 5 is `BUSY = hdr` (1 B, no body), A's refusal of a P0.
+
+2026-10-31, from [ADR 0042](0042-fragment-check.md) (OI-43):
+- Every GATT fragment ends with a 2 B CRC-16/CCITT-FALSE check over its header and body. Frame layouts are unchanged; a frame needs more fragments only when the 2 B push it past a fragment boundary.

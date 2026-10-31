@@ -75,6 +75,16 @@ class FakeRandom : kotlin.random.Random() {
 
 fun ByteArray.hex(): String = joinToString("") { "%02x".format(it) }
 
+/** [bytes] as a GATT fragment: header and body, then their CRC-16/CCITT-FALSE check (ADR 0042). */
+fun checked(vararg bytes: Int): ByteArray {
+    var crc = 0xffff
+    for (byte in bytes) {
+        crc = crc xor (byte and 0xff shl 8)
+        repeat(8) { crc = (if (crc and 0x8000 != 0) crc shl 1 xor 0x1021 else crc shl 1) and 0xffff }
+    }
+    return (bytes.toList() + listOf(crc shr 8, crc and 0xff)).map(Int::toByte).toByteArray()
+}
+
 /** One radio under test on the main looper, with the Bluetooth permissions granted. */
 class RadioHarness {
     val context: Application = ApplicationProvider.getApplicationContext()

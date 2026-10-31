@@ -8,6 +8,7 @@ import android.bluetooth.BluetoothProfile
 import android.os.Build
 import android.os.ParcelUuid
 import ch.trancee.cairn.sdk.DisconnectReason
+import ch.trancee.cairn.sdk.FragmentCheck
 import java.util.UUID
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -18,6 +19,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowLog
 import org.robolectric.util.ReflectionHelpers
 
 @RunWith(RobolectricTestRunner::class)
@@ -322,6 +324,54 @@ class CentralTest {
         h.idle()
 
         assertEquals("down 1", h.listener.events.last())
+    }
+
+    private fun rejected(gatt: BluetoothGatt, times: Int) =
+        repeat(times) { h.callback(gatt).onCharacteristicWrite(gatt, rx(gatt), FragmentCheck.CHECK_FAILED) }
+
+    private fun resends() = ShadowLog.getLogsForTag("CairnRadio").map { it.msg }.filter { "resend" in it }
+
+    @Test
+    fun centralResendsAWriteTheServerRejectedForItsCheck() {
+        val gatt = up()
+        h.radio.send(1u, checked(0x0a, 0x0b))
+        h.idle()
+
+        rejected(gatt, 1)
+        h.idle()
+
+        assertEquals(listOf("sent 1", "sent 1"), h.listener.events.drop(2))
+        assertContentEquals(checked(0x0a, 0x0b), h.shadow(gatt).latestWrittenBytes)
+        assertEquals(listOf("link 1 resend 1 (check)"), resends())
+    }
+
+    @Test
+    fun centralClosesALinkWhenAFragmentFailsItsCheckAfterThreeResends() {
+        val gatt = up()
+        h.radio.send(1u, checked(0x0a, 0x0b))
+        h.idle()
+
+        rejected(gatt, FragmentCheck.RESENDS + 1)
+        h.idle()
+
+        assertEquals("down 1", h.listener.events.last())
+        assertEquals(FragmentCheck.RESENDS, resends().size)
+        assertClosed(gatt)
+    }
+
+    @Test
+    fun centralCountsResendsAfreshForEachAcceptedWrite() {
+        val gatt = up()
+        h.radio.send(1u, checked(0x0a, 0x0b))
+        h.idle()
+        rejected(gatt, FragmentCheck.RESENDS)
+        h.idle()
+
+        rejected(gatt, 1)
+        h.idle()
+
+        assertTrue("down 1" !in h.listener.events)
+        assertEquals(FragmentCheck.RESENDS + 1, resends().size)
     }
 
     @Test

@@ -34,6 +34,7 @@ import android.os.SystemClock
 import android.util.Log
 import ch.trancee.cairn.ffi.GattRole
 import ch.trancee.cairn.sdk.DisconnectReason
+import ch.trancee.cairn.sdk.FragmentCheck
 import ch.trancee.cairn.sdk.Radio
 import ch.trancee.cairn.sdk.RadioListener
 import kotlin.random.Random
@@ -561,6 +562,8 @@ class AndroidRadio(
         private lateinit var beacon: BluetoothGattCharacteristic
         private var reading = false
         private var held: ByteArray? = null
+        private var written = ByteArray(0)
+        private var resends = 0
         private var status = BluetoothGatt.GATT_SUCCESS
 
         private fun post(block: () -> Unit) {
@@ -699,16 +702,35 @@ class AndroidRadio(
             if (stage == Stage.UP) received(link, value)
         }
 
+        // ADR 0042: a write the server rejected for its check is written again, up to RESENDS times.
         override fun onCharacteristicWrite(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) =
-            post { if (status == BluetoothGatt.GATT_SUCCESS) listener.sent(link) else close() }
+            post {
+                when {
+                    status == BluetoothGatt.GATT_SUCCESS -> {
+                        resends = 0
+                        listener.sent(link)
+                    }
+                    status == FragmentCheck.CHECK_FAILED && resends < FragmentCheck.RESENDS -> {
+                        resends++
+                        Log.i(TAG, "link $link resend $resends (check)")
+                        write(written)
+                    }
+                    else -> close()
+                }
+            }
 
         // Android runs one GATT operation at a time, so a write waits for the beacon read.
         override fun send(fragment: ByteArray) {
             if (reading) {
                 held = fragment
-            } else if (!gatt.writeCompat(rx, fragment)) {
-                close()
+            } else {
+                write(fragment)
             }
+        }
+
+        private fun write(fragment: ByteArray) {
+            written = fragment
+            if (!gatt.writeCompat(rx, fragment)) close()
         }
 
         override fun close() {
@@ -816,8 +838,14 @@ class AndroidRadio(
         ) = post { server ->
             val peripheral = peripherals[device.address]
             val accepted = peripheral != null && characteristic.uuid == GattProfile.RX && !preparedWrite
-            if (responseNeeded) server.respond(device, requestId, accepted)
-            if (accepted) received(peripheral.link, value)
+            // ADR 0042: a write that can be answered and fails its check is refused, so the central resends it.
+            if (accepted && responseNeeded && !FragmentCheck.intact(value)) {
+                Log.i(TAG, "link ${peripheral.link} write rejected (check)")
+                server.sendResponse(device, requestId, FragmentCheck.CHECK_FAILED, 0, null)
+            } else {
+                if (responseNeeded) server.respond(device, requestId, accepted)
+                if (accepted) received(peripheral.link, value)
+            }
         }
 
         override fun onDescriptorWriteRequest(

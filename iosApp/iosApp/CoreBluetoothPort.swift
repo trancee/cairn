@@ -1,3 +1,4 @@
+import CairnApp
 import CoreBluetooth
 import Foundation
 
@@ -97,7 +98,7 @@ final class CoreBluetoothPort: NSObject, BlePort {
 
     func write(_ peer: UUID, _ value: Data) {
         guard let peripheral = peripherals[peer], let rx = characteristic(peripheral, GattProfile.rx) else {
-            return radio?.wrote(peer, ok: false) ?? ()
+            return radio?.wrote(peer, .failed) ?? ()
         }
         peripheral.writeValue(value, for: rx, type: .withResponse)
     }
@@ -217,7 +218,12 @@ extension CoreBluetoothPort: CBPeripheralDelegate {
 
     func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
         guard characteristic.uuid == GattProfile.rx else { return }
-        radio?.wrote(peripheral.identifier, ok: error == nil)
+        let result: WriteResult = switch error {
+        case nil: .ok
+        case let error as CBATTError where error.code.rawValue == Int(FragmentCheck.shared.CHECK_FAILED): .checkFailed
+        default: .failed
+        }
+        radio?.wrote(peripheral.identifier, result)
     }
 }
 
@@ -276,9 +282,15 @@ extension CoreBluetoothPort: CBPeripheralManagerDelegate {
                 WriteRequest(characteristic: $0, offset: request.offset, value: request.value ?? Data())
             }
         }
-        let accepted = writes.count == requests.count
-            && radio?.writeRequests(first.central.identifier, writes) == true
-        peripheral.respond(to: first, withResult: accepted ? .success : .writeNotPermitted)
+        let answer = writes.count == requests.count
+            ? radio?.writeRequests(first.central.identifier, writes) ?? .refused
+            : .refused
+        let result: CBATTError.Code = switch answer {
+        case .accepted: .success
+        case .refused: .writeNotPermitted
+        case .checkFailed: CBATTError.Code(rawValue: Int(FragmentCheck.shared.CHECK_FAILED))!
+        }
+        peripheral.respond(to: first, withResult: result)
     }
 
     func peripheralManagerIsReady(toUpdateSubscribers peripheral: CBPeripheralManager) {

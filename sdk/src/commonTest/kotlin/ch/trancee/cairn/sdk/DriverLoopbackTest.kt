@@ -15,6 +15,7 @@ private class Air(mtu: UShort) {
     private val pending = ArrayDeque<() -> Unit>()
     private val clock = ClockSource { Clock(monoMs = 1_000uL, unixS = 1_761_177_600uL) }
     val notices = listOf(mutableListOf<Notice>(), mutableListOf())
+    val fragments = mutableListOf<ByteArray>()
     private val peerLink = mutableMapOf<Pair<Int, ULong>, ULong>()
     val drivers: List<LinkDriver> = (0..1).map { side ->
         LinkDriver(RowStore(), ::CoreEngine, AirRadio(side), NoTimers, clock) { notices[side] += it }
@@ -23,6 +24,7 @@ private class Air(mtu: UShort) {
     private inner class AirRadio(private val side: Int) : Radio {
         override fun send(link: ULong, fragment: ByteArray) {
             val copy = fragment.copyOf()
+            fragments += copy
             pending.addLast { drivers[1 - side].received(peerLink.getValue(side to link), copy) }
             pending.addLast { drivers[side].sent(link) }
         }
@@ -78,5 +80,17 @@ class DriverLoopbackTest {
         assertEquals(1, air.notices[0].filterIsInstance<Notice.ChatSent>().size)
         assertEquals(listOf(1, 1), air.drivers.map { it.contacts().size })
         assertTrue(air.drivers.all { driver -> driver.links().single().fragmentsOut > 1 })
+    }
+
+    @Test
+    fun everyFragmentACoreSendsPassesTheRadiosCheck() {
+        val air = air(517u)
+        val contact = air.drivers[0].contacts().single().id
+
+        air.drivers[0].sendChat(contact, "hoi")
+        air.pump()
+
+        assertTrue(air.fragments.size > 4)
+        assertTrue(air.fragments.all(FragmentCheck::intact))
     }
 }

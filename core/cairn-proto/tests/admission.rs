@@ -8,7 +8,7 @@ use cairn_proto::{
     TimerId, Verification,
 };
 use support::seeded::Seeded;
-use support::{Net, START, Store};
+use support::{Net, START, Store, checked};
 
 const STRANGER_BEACON: [u8; 8] = [0x5a; 8];
 
@@ -265,7 +265,7 @@ fn an_unfinished_pairing_times_out_and_backs_off_the_address() {
             _ => None,
         })
         .unwrap();
-    let p0 = [&[0x00][..], &[1; 16]].concat();
+    let p0 = checked(&[&[0x00][..], &[1; 16]].concat());
     let p1 = sent(
         &core
             .handle(
@@ -308,7 +308,7 @@ fn an_unfinished_pairing_times_out_and_backs_off_the_address() {
     );
     assert_eq!(
         sent(&retry),
-        [vec![0x05]],
+        [checked(&[0x05])],
         "BUSY, not P1, to a backed-off address"
     );
 }
@@ -325,7 +325,7 @@ fn a_peripheral_answers_at_most_thirty_attempts_per_hour() {
             0,
             Event::Received {
                 link: peripheral,
-                fragment: [&[0x00][..], &[stranger as u8; 16]].concat(),
+                fragment: checked(&[&[0x00][..], &[stranger as u8; 16]].concat()),
             },
         );
         net.run();
@@ -353,7 +353,7 @@ fn malformed_or_unexpected_frames_close_the_link_without_a_reply() {
             1,
             Event::Received {
                 link: peripheral,
-                fragment: frame.to_vec(),
+                fragment: checked(frame),
             },
         );
         net.run();
@@ -557,7 +557,7 @@ fn a_raised_mtu_sends_p1_in_fewer_fragments() {
             1,
             Event::Received {
                 link: peripheral,
-                fragment: [&[0x00][..], &[1; 16]].concat(),
+                fragment: checked(&[&[0x00][..], &[1; 16]].concat()),
             },
         );
         net.run();
@@ -605,7 +605,7 @@ fn crossing_p0s_with_equal_nonces_close_the_own_link_and_answer_busy() {
         )
         .unwrap();
 
-    assert_eq!(sent(&actions), [vec![0x05]]);
+    assert_eq!(sent(&actions), [checked(&[0x05])]);
     assert_eq!(closed(&actions, own), Some(CloseReason::Busy));
     assert!(
         closed(&actions, incoming).is_none(),
@@ -625,7 +625,7 @@ fn a_frame_on_an_admitted_link_closes_it_without_back_off() {
         1,
         Event::Received {
             link: peripheral,
-            fragment: [&[0x00][..], &[1; 16]].concat(),
+            fragment: checked(&[&[0x00][..], &[1; 16]].concat()),
         },
     );
     net.run();
@@ -635,7 +635,7 @@ fn a_frame_on_an_admitted_link_closes_it_without_back_off() {
         1,
         Event::Received {
             link: retry,
-            fragment: [&[0x00][..], &[2; 16]].concat(),
+            fragment: checked(&[&[0x00][..], &[2; 16]].concat()),
         },
     );
     net.run();
@@ -817,7 +817,7 @@ fn busy_neither_backs_off_nor_counts_against_the_attempt_limit() {
                 START,
                 Event::Received {
                     link,
-                    fragment: vec![0x05],
+                    fragment: checked(&[0x05]),
                 },
             )
             .unwrap();
@@ -841,7 +841,7 @@ fn a_refused_link_accepts_nothing_more_and_closes_at_its_deadline_without_back_o
     };
     let p0 = |link| Event::Received {
         link,
-        fragment: [&[0x00][..], &[7; 16]].concat(),
+        fragment: checked(&[&[0x00][..], &[7; 16]].concat()),
     };
     core.handle(START, up(LinkId(1), b"x")).unwrap();
     core.handle(START, p0(LinkId(1))).unwrap();
@@ -867,7 +867,7 @@ fn a_refused_link_accepts_nothing_more_and_closes_at_its_deadline_without_back_o
     core.handle(START, up(LinkId(4), b"z")).unwrap();
     let retry = core.handle(START, p0(LinkId(4))).unwrap();
 
-    assert_eq!(sent(&busy), [vec![0x05]]);
+    assert_eq!(sent(&busy), [checked(&[0x05])]);
     assert!(closed(&busy, LinkId(2)).is_none());
     assert!(sent(&again).is_empty());
     assert_eq!(closed(&again, LinkId(2)), Some(CloseReason::Malformed));
@@ -899,7 +899,7 @@ fn busy_with_a_body_fails_the_pairing_and_backs_off_the_address() {
             START,
             Event::Received {
                 link: LinkId(1),
-                fragment: vec![0x05, 0],
+                fragment: checked(&[0x05, 0]),
             },
         )
         .unwrap();
@@ -982,7 +982,7 @@ fn a_protocol_failure_backs_off_the_address_for_one_hour() {
         START,
         Event::Received {
             link: LinkId(1),
-            fragment: vec![0x05, 0],
+            fragment: checked(&[0x05, 0]),
         },
     )
     .unwrap();
