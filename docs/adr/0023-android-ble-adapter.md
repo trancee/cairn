@@ -267,7 +267,10 @@ close) lets the stack disconnect the link once no app holds it, and a
 connection the peer started doesn't count the server as a holder. So before
 the radio closes a central whose address is connected to its GATT server, the
 server calls `connect(device, autoConnect = false)`, which makes it a holder.
-The radio logs `dial <addr> closed; the server holds the shared connection`.
+It skips this once the stack has reported the dial's connection gone: the
+link is gone too, and `connect` would start a new direct connection. The
+radio logs `dial <addr> closed; the server holds the shared connection`.
 This is based on AOSP's hold-link bookkeeping and on run C in issue 58: an
 inbound link dropped 0.6 s after the Redmi's dial to the same iPhone timed out.
-No byte of any frame changes.
+In trials G1–G21 the server held a live shared link three times, and all
+three links stayed up. No byte of any frame changes.
