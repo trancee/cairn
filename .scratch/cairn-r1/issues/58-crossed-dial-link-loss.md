@@ -405,6 +405,26 @@ Logs, the snoop dumps and the decoders are kept outside the repository
     [issue 60](60-orphan-contact-after-lost-s2.md).
   - Core loopback tests cover each lost frame.
 
+### Acceptance runs with ADR 0042 and 0043 (2026-10-31, P1–P10)
+
+Ten 60 s runs: Redmi (Android 13) and 12 mini, 1 m apart, both built from
+`fix/provisional-contact` and started together.
+- **Every run paired.** The iPhone linked as central, and the link carried
+  all 14 frames: pairing, Resume and the first DATA frame. No link closed
+  as `authentication` or `unknown`.
+- **ADR 0042 resent one corrupted write.** In P4 the Redmi rejected one
+  write for its check, and the resend went through.
+- **Duplicate closed, established link kept.** In P7 the iPhone opened a
+  second link 46 s in. The core closed it as `duplicate` after 162 ms, and
+  link 1 held until the run ended.
+- **Supervision timeouts remain (OI-42).** P5 and P9 lost the link with
+  iOS error 6, 45 s and 40 s after link-up, after pairing had completed.
+- **No crossed dial came up.** The Redmi never dialled; ADR 0039 has it
+  wait for the iPhone, so these runs don't exercise the Android
+  dial-timeout path.
+
+Logs are in `/tmp/pair/{a,i}_P*.log` (not committed).
+
 ## Done when
 
 - [x] The close reason in C2 is identified from a log that names it.
