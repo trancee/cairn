@@ -25,6 +25,7 @@ use alloc::vec::Vec;
 use cairn_crypto::{CryptoBackend, CryptoError};
 use cairn_wire::{FrameType, Header};
 use core::marker::PhantomData;
+use subtle::ConstantTimeEq;
 use zeroize::Zeroizing;
 
 /// A pre-authentication link must finish pairing or Resume within 5 s (spec §4.4).
@@ -154,6 +155,10 @@ pub enum Action {
     DeleteQueued {
         contact: ContactId,
         msgno: u32,
+    },
+    /// Delete one contact row; the contact has no queued rows (ADR 0044).
+    DeleteContact {
+        contact: ContactId,
     },
     /// Seal and store one courier row: a carried envelope or a tombstone.
     PutCourier {
@@ -934,7 +939,7 @@ impl<B: CryptoBackend> Core<B> {
             chain_key: keys.next_ck.clone(),
             msg_seed: keys.msg_seed.clone(),
         });
-        self.confirm(id, contact, actions);
+        self.confirm(id, contact, actions)?;
         self.establish(id, contact, Session::new(&keys, false), true, actions);
         self.send(id, &s2, actions);
         self.flush(contact, actions)
@@ -1011,7 +1016,7 @@ impl<B: CryptoBackend> Core<B> {
         record.resume_index = resuming.n + 1;
         self.tries.remove(&contact);
         self.reseed(contact, &keys.msg_seed, Dir::I, actions)?;
-        self.confirm(id, contact, actions);
+        self.confirm(id, contact, actions)?;
         let mut session = Session::new(&keys, true);
         let confirmation = session
             .seal::<B>(&EMPTY)?
@@ -1514,14 +1519,62 @@ impl<B: CryptoBackend> Core<B> {
     }
 
     /// Persists a contact after a valid S1 or S2; a contact paired on `id`
-    /// becomes a contact only now (ADR 0043).
-    fn confirm(&mut self, id: LinkId, contact: ContactId, actions: &mut Vec<Action>) {
+    /// becomes a contact only now (ADR 0043) and supersedes the contacts a
+    /// lost S2 orphaned for the same peer (ADR 0044).
+    fn confirm(
+        &mut self,
+        id: LinkId,
+        contact: ContactId,
+        actions: &mut Vec<Action>,
+    ) -> Result<(), CoreError> {
         let link = self.links.get_mut(&id).expect("live link");
         let paired = link.provisional.take().is_some();
+        if paired {
+            for orphan in self.orphans_of(contact)? {
+                self.device
+                    .as_mut()
+                    .expect("restored")
+                    .contacts
+                    .retain(|record| record.id != orphan);
+                self.tries.remove(&orphan);
+                actions.push(Action::DeleteContact { contact: orphan });
+            }
+        }
         self.persist_contact(contact, actions);
         if paired {
             actions.push(Action::ContactAdded { contact });
         }
+        Ok(())
+    }
+
+    /// The other contacts that never completed a Resume, have no link, and
+    /// hold the same peer beacon key as `contact` once both keys are ratcheted
+    /// to the later day (ADR 0044). The keys are compared in constant time.
+    fn orphans_of(&self, contact: ContactId) -> Result<Vec<ContactId>, CryptoError> {
+        let peer = &self.contact(contact).peer;
+        let mut orphans = Vec::new();
+        for record in &self.device.as_ref().expect("restored").contacts {
+            let linked = self.links.values().any(|link| {
+                link.state.contact() == Some(record.id) || link.provisional == Some(record.id)
+            });
+            if record.id == contact || record.send.is_some() || linked {
+                continue;
+            }
+            let later = peer.beacon_day.max(record.peer.beacon_day);
+            let key = |day: u32, key: &Zeroizing<[u8; 32]>| {
+                DayKey {
+                    day,
+                    key: key.clone(),
+                }
+                .at::<B>(later)
+            };
+            let theirs = key(record.peer.beacon_day, &record.peer.beacon_key)?;
+            let ours = key(peer.beacon_day, &peer.beacon_key)?;
+            if bool::from(theirs.key.ct_eq(&ours.key[..])) {
+                orphans.push(record.id);
+            }
+        }
+        Ok(orphans)
     }
 
     fn persist_contact(&self, contact: ContactId, actions: &mut Vec<Action>) {
@@ -2115,6 +2168,76 @@ mod tests {
                 reason: ChatRejection::NoSession,
             }]
         );
+    }
+
+    #[test]
+    fn only_unlinked_contacts_that_never_resumed_with_the_same_beacon_key_are_orphans() {
+        let mut core = Core::<Reference>::new();
+        core.handle(CLOCK, FRESH()).unwrap();
+        let today = day(CLOCK.unix_s);
+        let older = DayKey {
+            day: today - 1,
+            key: Zeroizing::new([7; 32]),
+        };
+        let peer = |id: u64, day: u32, key: &Zeroizing<[u8; 32]>| {
+            let mut record = contact(ContactId(id), 0, true);
+            record.peer.beacon_day = day;
+            record.peer.beacon_key = key.clone();
+            record
+        };
+        let current = older.at::<Reference>(today).unwrap();
+        let resumed = SendChain {
+            gen_: 0,
+            dir: Dir::R,
+            idx: 0,
+            key: Zeroizing::new([14; 32]),
+        };
+        let contacts = &mut core.device.as_mut().unwrap().contacts;
+        contacts.push(peer(0, today, &current.key));
+        contacts.push(peer(1, today - 1, &older.key));
+        contacts.push(Contact {
+            send: Some(resumed),
+            ..peer(2, today, &current.key)
+        });
+        contacts.push(peer(3, today, &Zeroizing::new([8; 32])));
+        contacts.push(peer(4, today, &current.key));
+        contacts.push(peer(5, today - 1, &older.key));
+        core.handle(
+            CLOCK,
+            Event::LinkUp {
+                link: LINK,
+                gatt_role: GattRole::Peripheral,
+                mtu: 185,
+                address: Vec::new(),
+            },
+        )
+        .unwrap();
+        core.links.get_mut(&LINK).unwrap().provisional = Some(ContactId(4));
+        core.device
+            .as_mut()
+            .unwrap()
+            .contacts
+            .push(peer(6, today, &current.key));
+        core.handle(
+            CLOCK,
+            Event::LinkUp {
+                link: LinkId(1),
+                gatt_role: GattRole::Peripheral,
+                mtu: 185,
+                address: Vec::new(),
+            },
+        )
+        .unwrap();
+        core.links.get_mut(&LinkId(1)).unwrap().state = LinkState::Session(Box::new(SessionLink {
+            contact: ContactId(6),
+            session: responder(),
+            unconfirmed: true,
+            exchange: couriering::Exchange::default(),
+        }));
+
+        let orphans = core.orphans_of(ContactId(5)).unwrap();
+
+        assert_eq!(orphans, [ContactId(0), ContactId(1)]);
     }
 
     #[test]

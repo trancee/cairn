@@ -150,3 +150,8 @@ compromise window ADR 0002 already accepts (500 keys for 7 days).
   7-day window.
 - **Seal every real-time CHAT at send time.** Loses nothing on a crash, but
   every acked CHAT leaves the receiver a skipped key.
+
+## Amendments
+
+2026-11-01, from [ADR 0044](0044-orphan-contact-supersede.md):
+- §1: `DeleteContact { contact }` removes one contact row. The core emits it only for a contact that never completed a Resume, which has no queued rows.

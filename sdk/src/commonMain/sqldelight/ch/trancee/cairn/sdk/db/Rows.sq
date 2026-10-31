@@ -34,6 +34,9 @@ INSERT OR REPLACE INTO device (id, version, ciphertext) VALUES (0, ?, ?);
 putContact:
 INSERT OR REPLACE INTO contact (id, version, ciphertext) VALUES (?, ?, ?);
 
+deleteContact:
+DELETE FROM contact WHERE id = ?;
+
 putQueued:
 INSERT OR REPLACE INTO queued (contact, msgno, version, ciphertext) VALUES (?, ?, ?, ?);
 

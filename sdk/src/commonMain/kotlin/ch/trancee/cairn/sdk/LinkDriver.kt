@@ -230,7 +230,7 @@ class LinkDriver(
     private fun perform(action: Action) {
         when (action) {
             is Action.PersistDevice, is Action.PersistContact, is Action.PutQueued, is Action.DeleteQueued,
-            is Action.PutCourier, is Action.DeleteCourier,
+            is Action.DeleteContact, is Action.PutCourier, is Action.DeleteCourier,
             -> {}
             is Action.Send -> enqueue(action.link, action.fragment)
             is Action.Disconnect -> links[action.link]?.let { disconnect(action.link, it, DisconnectReason.of(action.reason)) }

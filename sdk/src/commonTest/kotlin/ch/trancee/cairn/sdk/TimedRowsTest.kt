@@ -42,9 +42,10 @@ class TimedRowsTest {
                 Action.DeleteQueued(7uL, 1u),
                 Action.PutCourier(1uL, row),
                 Action.DeleteCourier(2uL),
+                Action.DeleteContact(8uL),
             ),
         )
 
-        assertEquals(listOf(4), reports)
+        assertEquals(listOf(5), reports)
     }
 }

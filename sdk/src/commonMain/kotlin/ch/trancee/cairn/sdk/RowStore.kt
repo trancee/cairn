@@ -18,6 +18,7 @@ class RowStore : Rows {
         when (action) {
             is Action.PersistDevice -> device = action.state
             is Action.PersistContact -> contacts[action.contact] = action.state
+            is Action.DeleteContact -> contacts.remove(action.contact)
             is Action.PutQueued -> queued[action.contact to action.msgno] = action.state
             is Action.DeleteQueued -> queued.remove(action.contact to action.msgno)
             is Action.PutCourier -> courier[action.slot] = action.state

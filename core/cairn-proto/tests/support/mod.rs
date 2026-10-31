@@ -77,6 +77,9 @@ impl Store {
             Action::DeleteQueued { contact, msgno } => {
                 self.queued.remove(&(*contact, *msgno));
             }
+            Action::DeleteContact { contact } => {
+                self.contacts.remove(contact);
+            }
             Action::PutCourier { slot, state } => {
                 self.courier.insert(*slot, state.clone());
             }

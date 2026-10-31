@@ -176,6 +176,10 @@ pub enum Action {
         contact: u64,
         msgno: u32,
     },
+    /// Delete one contact row; the contact has no queued rows (ADR 0044).
+    DeleteContact {
+        contact: u64,
+    },
     /// Seal and store one courier row.
     PutCourier {
         slot: u64,
@@ -348,6 +352,7 @@ impl From<cairn_proto::Action> for Action {
                 contact: contact.0,
                 msgno,
             },
+            Proto::DeleteContact { contact } => Self::DeleteContact { contact: contact.0 },
             Proto::PutCourier { slot, state } => Self::PutCourier { slot, state },
             Proto::DeleteCourier { slot } => Self::DeleteCourier { slot },
             Proto::Send { link, fragment } => Self::Send {
@@ -728,6 +733,12 @@ mod tests {
                     contact: 4,
                     msgno: 5,
                 },
+            ),
+            (
+                ProtoAction::DeleteContact {
+                    contact: ContactId(4),
+                },
+                Action::DeleteContact { contact: 4 },
             ),
             (
                 ProtoAction::PutCourier {
