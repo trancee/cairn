@@ -295,3 +295,10 @@ impl Net {
         self.run();
     }
 }
+
+/// A hand-built frame as the one checked fragment a 517-byte MTU carries (ADR 0042).
+pub fn checked(frame: &[u8]) -> Vec<u8> {
+    let mut fragments = cairn_proto::fragment(frame, 517).unwrap();
+    assert_eq!(fragments.len(), 1, "a hand-built frame fits one fragment");
+    fragments.remove(0)
+}

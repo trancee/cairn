@@ -252,3 +252,9 @@ legacy otherwise; the scan receives both kinds.
 2026-10-30, from [ADR 0041](0041-close-reasons.md): `Radio.disconnect` takes
 a `DisconnectReason`, and the link trace logs it in snake case, as `close
 requested (<reason>)`, e.g. `close requested (stale_card)`.
+
+2026-10-31, from [ADR 0042](0042-fragment-check.md) (OI-43): the GATT server
+answers an `rx` write request whose check fails with ATT error `0x9E`, drops
+it, and logs `write rejected (check)`. A central whose write fails with
+`0x9E` writes the same value again, up to 3 times, and logs `resend <n>
+(check)`; a fourth failure, or any other write error, closes the link.

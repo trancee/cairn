@@ -4,7 +4,7 @@ mod support;
 
 use cairn_proto::{Action, ChatRejection, CloseReason, ContactId, Core, CoreError, Event, LinkId};
 use support::seeded::Seeded;
-use support::{Intercept, Net, START};
+use support::{Intercept, Net, START, checked};
 
 const STRANGER_BEACON: [u8; 8] = [0x5a; 8];
 const DAY_S: u64 = 86_400;
@@ -296,14 +296,42 @@ fn an_unconfirmed_responder_alternates_its_pending_and_current_keys() {
 
 #[test]
 #[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
+fn a_fragment_corrupted_in_transit_closes_the_link_as_malformed() {
+    let mut net = Net::new(2, 110);
+    net.intercept = Some(Box::new(|device, fragment| {
+        if device == 0 && fragment[0] == 0x10 {
+            fragment[9] ^= 1;
+        }
+        true
+    }));
+    let (central, _) = net.connect(0, 1);
+    net.inject(
+        0,
+        Event::BeaconRead {
+            link: central,
+            beacon: STRANGER_BEACON.to_vec(),
+        },
+    );
+
+    net.run();
+
+    assert!(!net.is_up(0, central));
+    assert_eq!(net.close_reasons(1), [CloseReason::Malformed]);
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "RNG and key generation run under careful (ADR 0007)")]
 fn tampered_resume_or_data_frames_close_the_link_without_back_off() {
     let mut outcomes = Vec::new();
 
     for (seed, (sender, header)) in [(0, 0x10), (1, 0x20), (0, 0x30)].into_iter().enumerate() {
         let mut net = Net::new(2, 110 + seed as u64);
         net.intercept = Some(Box::new(move |device, fragment| {
+            // The tamperer recomputes the check, which is no MAC (ADR 0042).
             if device == sender && fragment[0] == header {
-                *fragment.last_mut().unwrap() ^= 1;
+                let mut frame = fragment[..fragment.len() - 2].to_vec();
+                *frame.last_mut().unwrap() ^= 1;
+                *fragment = checked(&frame);
             }
             true
         }));
@@ -395,10 +423,10 @@ fn an_unknown_pseudonym_or_misplaced_resume_frame_closes_the_link() {
     let mut s1 = vec![0x10];
     s1.extend([7; 56]);
     let frames: [(usize, Vec<u8>); 4] = [
-        (1, s1.clone()),
-        (0, s1),
-        (1, [&[0x20][..], &[7; 48]].concat()),
-        (1, vec![0x10; 5]),
+        (1, checked(&s1)),
+        (0, checked(&s1)),
+        (1, checked(&[&[0x20][..], &[7; 48]].concat())),
+        (1, checked(&[0x10; 5])),
     ];
     let mut outcomes = Vec::new();
 

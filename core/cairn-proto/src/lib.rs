@@ -53,6 +53,7 @@ pub use crate::core::{
 pub use epoch::{Epoch, EpochExhausted, ObjectKind, PairingRole};
 pub use framing::{
     MtuTooSmall, PRE_AUTH_FRAME_LIMIT, Reassembler, ReassemblyError, SESSION_FRAME_LIMIT, fragment,
+    fragment_intact,
 };
 pub use state::{ContactRow, CourierRow, Persisted, QueuedRow};
 pub use transfer::{

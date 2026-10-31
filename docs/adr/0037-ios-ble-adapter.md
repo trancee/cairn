@@ -171,3 +171,9 @@ hold no decisions; the device demonstration covers them.
 
 2026-10-30, from [ADR 0041](0041-close-reasons.md): `disconnect(link:reason:)`
 logs `close requested (<reason>)`, the same line as the Android link trace.
+
+2026-10-31, from [ADR 0042](0042-fragment-check.md) (OI-43): the GATT server
+answers a write batch with ATT error `0x9E` when any write in it fails its
+check, drops the batch, and logs `write rejected (check)`. A central whose
+write fails with `CBATTError` code `0x9E` writes the same value again, up to
+3 times, and logs `resend <n> (check)`.

@@ -1,9 +1,9 @@
 # `cairn-r1` protocol specification
 
-Status: **draft 0.21** (redial after a supervision timeout, §5.6, §10.4; 2026-10-29). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5, all four profiles of §6 and §8.1 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
+Status: **draft 0.22** (a check on every GATT fragment, §4.3; 2026-10-31). It is not frozen: the remaining formal model (*Formal model: PQ ratchet mixing*) may change §6, §7 and §9, and test vectors are pending (§12). §5, all four profiles of §6 and §8.1 are backed by verified [models](models/README.md), including Resume re-verification with public `pairID`. The composed ratchet implementation gate remains closed; [ADR 0016](../adr/0016-unexposed-epoch-transfer-core.md) waives it only for an unexposed Rust implementation of §9's epoch identifiers and object transfer.
 
 This document consolidates, and is normative over:
-- [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md), as amended by [ADR 0021](../adr/0021-automatic-neighbour-admission.md), [ADR 0025](../adr/0025-android-gatt-slot-budget.md), [ADR 0027](../adr/0027-android-energy-bands.md), [ADR 0028](../adr/0028-android-extended-advertising.md), [ADR 0030](../adr/0030-android-eviction-interval.md), [ADR 0031](../adr/0031-android-stable-slots.md), [ADR 0033](../adr/0033-courier-relaying.md), [ADR 0034](../adr/0034-store-and-forward-core.md), [ADR 0035](../adr/0035-sealed-row-storage.md), [ADR 0037](../adr/0037-ios-ble-adapter.md), [ADR 0038](../adr/0038-android-extended-advert-2m-secondary.md), [ADR 0039](../adr/0039-android-waits-for-ios-to-dial.md) and [ADR 0040](../adr/0040-redial-after-supervision-timeout.md);
+- [ADR 0001](../adr/0001-crypto-suite.md) to [ADR 0009](../adr/0009-pairing-ux.md), as amended by [ADR 0021](../adr/0021-automatic-neighbour-admission.md), [ADR 0025](../adr/0025-android-gatt-slot-budget.md), [ADR 0027](../adr/0027-android-energy-bands.md), [ADR 0028](../adr/0028-android-extended-advertising.md), [ADR 0030](../adr/0030-android-eviction-interval.md), [ADR 0031](../adr/0031-android-stable-slots.md), [ADR 0033](../adr/0033-courier-relaying.md), [ADR 0034](../adr/0034-store-and-forward-core.md), [ADR 0035](../adr/0035-sealed-row-storage.md), [ADR 0037](../adr/0037-ios-ble-adapter.md), [ADR 0038](../adr/0038-android-extended-advert-2m-secondary.md), [ADR 0039](../adr/0039-android-waits-for-ios-to-dial.md), [ADR 0040](../adr/0040-redial-after-supervision-timeout.md) and [ADR 0042](../adr/0042-fragment-check.md);
 - the [wire-format draft](../research/2026-10-05-wire-format-draft.md);
 - the [threat model](threat-model.md).
 
@@ -79,7 +79,7 @@ The peripheral is the GATT server. UUIDs are vendor 128-bit values, fixed for r1
 | Characteristic | Properties | Content |
 |---|---|---|
 | `beacon` | read | The current 8 B beacon (§10.1) |
-| `rx` | write without response | Central → peripheral fragments |
+| `rx` | write | Central → peripheral fragments, written with response (§4.3) [OI-43] |
 | `tx` | notify | Peripheral → central fragments |
 | `psm` | read | `u16` L2CAP PSM. The server MUST return an ATT error unless a Resume has completed on this connection |
 
@@ -100,13 +100,15 @@ A receiver MUST close the link without sending anything when it sees:
 
 ### 4.3 Fragmentation
 
-- One ATT value carries one fragment: the header byte plus up to `min(ATT_MTU − 4, 511)` body bytes. The 511 keeps every value within ATT's 512-byte attribute value limit (Core Vol 3 Part F §3.2.9); stacks drop longer notifications even when `ATT_MTU` is 517.
+- One ATT value carries one fragment: `header ‖ body ‖ check`, with up to `min(ATT_MTU − 6, 509)` body bytes. The limit keeps every value within ATT's 512-byte attribute value limit (Core Vol 3 Part F §3.2.9); stacks drop longer notifications even when `ATT_MTU` is 517 [OI-43].
+- `check` (2 B, big-endian) is CRC-16/CCITT-FALSE (polynomial `0x1021`, initial value `0xFFFF`, no reflection, no final XOR) over the header and the body; the check of the ASCII string `123456789` is `0x29B1`. It detects radio corruption and is not a MAC. A receiver MUST verify and remove it before reassembly; a value shorter than 3 B, or whose check fails, closes the link [OI-43].
+- A GATT server that receives a write request to `rx` whose check fails MUST answer it with ATT error `0x9E` and drop it. A central whose write fails with `0x9E` MUST write the same value again, up to 3 times for one fragment; a fourth failure closes the link. A write without response, or a notification, whose check fails closes the link [OI-43].
 - The fragments of a frame are sent back to back. Every fragment repeats the header, with MORE set on all but the last.
 - Fragments from different frames in the same direction MUST NOT interleave.
 - Reassembly concatenates the bodies. The reassembled frame is the header with MORE cleared, followed by the bodies.
 - A fragment whose header differs from the first fragment's header in anything but MORE MUST close the link.
 
-On L2CAP CoC, one SDU is exactly one frame with MORE = 0.
+On L2CAP CoC, one SDU is exactly one frame with MORE = 0, and carries no check.
 
 ### 4.4 Limits
 
@@ -502,7 +504,7 @@ door = Trunc8(HMAC(K_door_me→peer, lp("cairn-r1 door") ‖ u64(w)))
 
 ## 13. Consolidation issues (resolved 2026-10-05)
 
-OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: Resume*, OI-19 to OI-20 from *Formal model: SAS pairing*, OI-21 to OI-26 from the in-progress *Formal model: PQ ratchet mixing*, OI-27 from the owner's mesh redirection (ADR 0021), and OI-28 from the S2 device demonstration. The user accepted every proposal up to OI-41; OI-42 is proposed and awaits the owner's review. OI-4 is accepted as *provisional*, pending *Formal model: PQ ratchet mixing*; OI-22 supersedes its classical fallback. The affected ADRs carry amendment notes.
+OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: Resume*, OI-19 to OI-20 from *Formal model: SAS pairing*, OI-21 to OI-26 from the in-progress *Formal model: PQ ratchet mixing*, OI-27 from the owner's mesh redirection (ADR 0021), and OI-28 from the S2 device demonstration. The user accepted every proposal up to OI-41; OI-42 and OI-43 are proposed and await the owner's review. OI-4 is accepted as *provisional*, pending *Formal model: PQ ratchet mixing*; OI-22 supersedes its classical fallback. The affected ADRs carry amendment notes.
 
 | # | Issue | Resolution |
 |---|---|---|
@@ -546,10 +548,12 @@ OI-1 to OI-15 come from spec consolidation, OI-16 to OI-18 from *Formal model: R
 | OI-40 | iOS can't dial extended Android (2026-10-29, ADR 0038, issue 56): Core Bluetooth on iOS 17, 18 and 27 reports extended adverts only with a 2M auxiliary packet, and a fleet A/B showed an always-2M set costs Android↔Android pairs and dial timeouts | Android's extended set uses a 2M secondary PHY, where supported, only while an iOS peer (a Cairn advert without service data) was seen in the last 300 s; iOS dials extended Android peers (§10.1, §10.4). No byte of any frame changes |
 | OI-41 | Crossed dials lose links (2026-10-29, ADR 0039, issue 58): iOS and Android dial each other at once; Android's dials to iOS fail with HCI 0x3E, and on Android 9 a second ACL to one address misroutes or tears down the first | Android dials an iOS peer only 10 s after first seeing it, and doesn't dial an address that connected to its GATT server less than 10 s ago (§10.4). No byte of any frame changes |
 | OI-42 | Supervision timeouts (2026-10-29, ADR 0040, issue 58): links where an iPhone 12 mini is the central drop with HCI 0x08, mostly 2–4 s after link-up, mid-pairing. The iPhone's 720 ms timeout can't be changed by either app, and the 2 min attempt limit plus the OI-30 back-off kept the pair apart for 2 min or more | An Android central redials a link lost to a supervision timeout after 1–5 s, then 5–15 s, then 2 min; an iOS central leaves the peer 45 s plus the spread to dial instead; an Android radio doesn't dial an address for 15 s plus the spread after its server connection ends, so the central redials first (§10.4); the first link drop mid-pairing with an address that has no earlier failure doesn't back it off (§5.6). No byte of any frame changes. Proposed; awaiting the owner's review |
+| OI-43 | Corrupted writes (2026-10-31, ADR 0042, issue 59): a Redmi 2201117TY's controller sometimes hands its host a 512 B write from an iPhone with a 50–215 B block replaced, ending at the first link-layer PDU's last byte; the link-layer CRC passes, and the frame's MAC closes the link and loses the pairing in about 1 run in 12 | Every GATT fragment ends with a CRC-16/CCITT-FALSE check, so the body is at most `min(ATT_MTU − 6, 509)` B; a server answers a write that fails it with ATT error `0x9E`, and the central writes it again up to 3 times; centrals write `rx` with response (§4.1, §4.3). Every GATT fragment grows by 2 B; peers built before this change can't talk to ones built after it, and `cairn-r1` keeps its version as the protocol is pre-release. Proposed; awaiting the owner's review |
 | OI-26 | Reassembly semantics for gaps, overlaps and retransmitted chunks are unspecified | Contiguous append only; exact duplicates wholly within the stored prefix are accepted; gaps, conflicting/cross-frontier overlaps, wrong epochs and bounds violations fail closed without partial mutation (§9) (user's choice, 2026-10-05) |
 
 ## 14. Change log
 
+- 0.22 (2026-10-31): proposed OI-43: every GATT fragment ends with a 2 B CRC-16/CCITT-FALSE check, the body limit becomes `min(ATT_MTU − 6, 509)`, and a write whose check fails is answered with ATT error `0x9E` and written again up to 3 times (§4.1, §4.3, ADR 0042). Every GATT fragment grows by 2 B; L2CAP CoC frames are unchanged.
 - 0.21 (2026-10-29): proposed OI-42: an Android central redials a link lost to a supervision timeout after 1–5 s, then 5–15 s, then 2 min, an iOS central leaves the peer 45 s to dial instead, and an Android radio leaves the central 15 s to redial after its server connection ends (§10.4); the first link drop mid-pairing with an address is forgiven (§5.6, ADR 0040). No byte of any frame changes.
 - 0.20 (2026-10-29): accepted OI-41: Android waits 10 s for an iOS peer to dial it, and doesn't dial a peer in its server's pre-auth window (§10.4, ADR 0039). No byte of any frame changes.
 - 0.19 (2026-10-29): accepted OI-40: Android's extended advert moves to a 2M secondary PHY while an iOS peer is near, so iOS dials it (§10.1, §10.4, ADR 0038). No byte of any frame changes.

@@ -96,3 +96,7 @@ First version, so nothing to migrate. GATT UUIDs and the `beacon`/`rx`/`tx`/`psm
 
 2026-10-24, from the S2 device demonstration ([issue 32](../../.scratch/cairn-r1/issues/32-slice-s2.md)):
 - **Fragment size.** A fragment is at most `min(ATT_MTU − 3, 512)` B, so the body is at most `min(ATT_MTU − 4, 511)` B (spec §4.3). ATT caps an attribute value at 512 B (Core Vol 3 Part F §3.2.9), and Android stacks drop longer notifications even at ATT MTU 517.
+
+2026-10-31, from [ADR 0042](0042-fragment-check.md) (OI-43):
+- **Fragment check.** A GATT fragment is `header ‖ body ‖ check`, with a 2 B CRC-16/CCITT-FALSE check, so the body is at most `min(ATT_MTU − 6, 509)` B (spec §4.3). L2CAP CoC frames carry no check.
+- **`rx` writes.** Centrals write `rx` with response, and a GATT server answers a write whose check fails with ATT error `0x9E`, so the central writes it again.

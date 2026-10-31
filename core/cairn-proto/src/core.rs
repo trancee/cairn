@@ -1863,15 +1863,22 @@ mod tests {
         )
     }
 
-    fn receive(core: &mut Core<Reference>, fragment: Vec<u8>) -> Vec<Action> {
-        core.handle(
-            CLOCK,
-            Event::Received {
-                link: LINK,
-                fragment,
-            },
-        )
-        .unwrap()
+    /// Delivers a whole frame as the checked fragments of a 517-byte MTU (ADR 0042).
+    fn receive(core: &mut Core<Reference>, frame: Vec<u8>) -> Vec<Action> {
+        fragment(&frame, 517)
+            .unwrap()
+            .into_iter()
+            .flat_map(|fragment| {
+                core.handle(
+                    CLOCK,
+                    Event::Received {
+                        link: LINK,
+                        fragment,
+                    },
+                )
+                .unwrap()
+            })
+            .collect()
     }
 
     fn sealed(peer: &mut Session, records: &[Record]) -> Vec<u8> {

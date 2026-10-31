@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothProfile
 import android.os.Build
 import ch.trancee.cairn.sdk.DisconnectReason
+import ch.trancee.cairn.sdk.FragmentCheck
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -15,6 +16,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import org.robolectric.shadow.api.Shadow
+import org.robolectric.shadows.ShadowLog
 
 @RunWith(RobolectricTestRunner::class)
 class PeripheralTest {
@@ -145,11 +149,24 @@ class PeripheralTest {
     fun peripheralReportsRxWritesFromALinkedCentral() {
         h.subscribe(device)
 
-        write(GattProfile.RX, byteArrayOf(0x0d, 0x0e))
+        write(GattProfile.RX, checked(0x0d, 0x0e))
         write(GattProfile.RX, byteArrayOf(0x0f), responseNeeded = false)
 
-        assertEquals(listOf("received 1 0d0e", "received 1 0f"), h.listener.events.drop(1))
+        assertEquals(listOf("received 1 ${checked(0x0d, 0x0e).hex()}", "received 1 0f"), h.listener.events.drop(1))
         assertEquals(2, responses().size)
+    }
+
+    @Test
+    @Config(shadows = [StatusGattServer::class])
+    fun peripheralRejectsAWriteWhoseCheckFailsSoTheCentralResendsIt() {
+        h.subscribe(device)
+        val corrupted = checked(0x0d, 0x0e).also { it[1] = 0x0c }
+
+        write(GattProfile.RX, corrupted)
+
+        assertEquals(listOf("up 1 PERIPHERAL 23 $address"), h.listener.events)
+        assertEquals(FragmentCheck.CHECK_FAILED, Shadow.extract<StatusGattServer>(h.server).statuses.last())
+        assertTrue("link 1 write rejected (check)" in ShadowLog.getLogsForTag("CairnRadio").map { it.msg })
     }
 
     @Test

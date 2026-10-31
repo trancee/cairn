@@ -1,7 +1,7 @@
 # The radio corrupts a write payload below the host
 
 Type: bug
-Status: needs-triage
+Status: fix proposed (ADR 0042)
 Blocked by: none
 
 ## Question
@@ -77,3 +77,11 @@ often fails with `0x3e` for 15–20 s ([issue 58](58-crossed-dial-link-loss.md))
 
 Evidence is archived in the session `files/i59-corruption/` (logs, the
 iPhone `pklg` and the Redmi `btsnoop`).
+
+## Fix (2026-10-31)
+
+[ADR 0042](../../../docs/adr/0042-fragment-check.md) (spec 0.22, OI-43): every
+GATT fragment ends with a CRC-16/CCITT-FALSE check. The GATT server answers a
+write whose check fails with ATT error `0x9E` and drops it, and the central
+writes it again, up to 3 times. Each rejection and resend is logged as
+`write rejected (check)` and `resend <n> (check)`.
