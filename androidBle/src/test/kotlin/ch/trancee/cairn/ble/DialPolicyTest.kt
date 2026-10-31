@@ -247,4 +247,19 @@ class DialPolicyTest {
 
         assertEquals(emptyList(), serverConnects())
     }
+
+    @Test
+    @Config(shadows = [StatusGattServer::class])
+    fun dialLostWhileThePeerIsConnectedToTheServerDoesNotRedialThroughTheServer() {
+        h.random.pick = { from, _ -> from }
+        sight()
+        h.serverCallback().onConnectionStateChange(h.device(address), BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED)
+        h.idle()
+        val gatt = link()
+
+        h.callback(gatt).onConnectionStateChange(gatt, 0x13, BluetoothProfile.STATE_DISCONNECTED)
+        h.idle()
+
+        assertEquals(emptyList(), serverConnects())
+    }
 }
