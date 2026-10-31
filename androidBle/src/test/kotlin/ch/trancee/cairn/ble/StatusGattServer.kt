@@ -6,10 +6,17 @@ import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
 import org.robolectric.shadows.ShadowBluetoothGattServer
 
-/** Robolectric's server shadow records each response's value; this one also records its status. */
+/** Robolectric's server shadow records each response's value; this one also records its status and each `connect`. */
 @Implements(BluetoothGattServer::class)
 class StatusGattServer : ShadowBluetoothGattServer() {
     val statuses = mutableListOf<Int>()
+    val connects = mutableListOf<Pair<String, Boolean>>()
+
+    @Implementation
+    fun connect(device: BluetoothDevice, autoConnect: Boolean): Boolean {
+        connects += device.address to autoConnect
+        return true
+    }
 
     @Implementation
     override fun sendResponse(device: BluetoothDevice, requestId: Int, status: Int, offset: Int, value: ByteArray?): Boolean {

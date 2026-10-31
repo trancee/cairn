@@ -433,8 +433,15 @@ Logs are in `/tmp/pair/{a,i}_P*.log` (not committed).
 - [x] Pairing can't end with only one side storing the contact (the lost-P4
   case), or the issue records why it is acceptable. ADR 0043 closes the
   lost-P4 case. Issue 60 tracks the lost-S2 case.
-- [ ] A dial timeout or a failed crossed dial no longer drops an established
+- [x] A dial timeout or a failed crossed dial no longer drops an established
   link. A Robolectric test is written first for the Android dial-timeout
-  path.
+  path. Before the radio closes a dial whose address is connected to its GATT
+  server, the server calls `connect(device, false)` to hold the shared link
+  (ADR 0023 amendment, 2026-10-31). `DialPolicyTest` was red before the fix.
 - [ ] Ten crossed-dial trials between an iPhone and a legacy Android phone keep
-  every link that came up.
+  every link that came up. Open: in H1–H10 (2026-10-31, Redmi `2201117TY`
+  and iPhone 12 mini, 60 s each) no dial crossed. The iPhone dialled first
+  every time, as ADR 0039 intends, and the hold path never ran. All 10 paired
+  with 14 frames. H4, H6 and H7 later lost the link to the known iOS
+  supervision timeout (error 6, ADR 0040); none followed a dial. Forcing a
+  crossed dial needs a build that skips the 10 s wait.

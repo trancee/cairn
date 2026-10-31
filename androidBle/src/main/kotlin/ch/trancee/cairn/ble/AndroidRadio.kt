@@ -736,6 +736,12 @@ class AndroidRadio(
         override fun close() {
             centrals.remove(address)
             budget()
+            // A crossed dial shares the peer's connection, and the stack drops it once no app holds it.
+            // The server is open whenever serverConnected has an entry (release clears both).
+            if (address in serverConnected) {
+                Log.i(TAG, "dial ${address.takeLast(5)} closed; the server holds the shared connection")
+                server!!.connect(gatt.device, false)
+            }
             gatt.disconnect()
             gatt.close()
             if (stage == Stage.UP) {
