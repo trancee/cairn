@@ -85,3 +85,9 @@ GATT fragment ends with a CRC-16/CCITT-FALSE check. The GATT server answers a
 write whose check fails with ATT error `0x9E` and drops it, and the central
 writes it again, up to 3 times. Each rejection and resend is logged as
 `write rejected (check)` and `resend <n> (check)`.
+
+Device check (2026-10-31): Redmi `2201117TY` as peripheral. With the iPhone
+12 mini as central, 22 runs had 3 corrupted P2 writes (N3, N10, N21). The
+Redmi rejected each one, the mini resent it once, and the pairing completed.
+None of the 22 runs closed with `authentication`. Three runs with the iPhone
+15 as central were clean.
