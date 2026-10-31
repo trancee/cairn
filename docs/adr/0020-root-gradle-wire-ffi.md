@@ -201,6 +201,17 @@ freemarker `2.3.35` and opentelemetry `1.62.0`. The opentelemetry floor covers
 both `opentelemetry-api` and `opentelemetry-context`. The same removal rule
 applies, keyed to the Kover or Kotlin release.
 
+**Extension (2026-10-31).** The same submission reported two more alerts:
+
+- guava `33.4.0-jre` (GHSA-xxph-c9ww-hj94, high). It reaches the root buildscript `classpath` and
+  AGP's lint and UTP configurations through AGP `9.3.1`. No SDK or app
+  runtime classpath contains it.
+- `opentelemetry-api` up to `1.66.0` (GHSA-ccrj-gw8r-854m, medium), on the same KGP path as above.
+
+The bundle adds the floor guava `33.7.2-jre` and raises the opentelemetry
+floor to `1.67.0`. The same removal rule applies, keyed to the AGP or Kotlin
+release.
+
 **Alternatives.**
 - **Dismiss the alerts as build-only.** Rejected: that weakens the gate, and
   build tooling runs with repository access.
