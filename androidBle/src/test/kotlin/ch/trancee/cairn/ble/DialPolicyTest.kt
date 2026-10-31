@@ -6,6 +6,8 @@ import android.bluetooth.le.ScanResult
 import android.os.Looper
 import java.time.Duration
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -229,6 +231,41 @@ class DialPolicyTest {
             h.idle()
         }
         advance(10_000)
+    }
+
+    private fun serverConnection(newState: Int) {
+        h.serverCallback().onConnectionStateChange(h.device(address), BluetoothGatt.GATT_SUCCESS, newState)
+        h.idle()
+    }
+
+    @Test
+    @Config(shadows = [StatusGattServer::class])
+    fun connectionThePeerStartsMakesTheServerHoldIt() {
+        serverConnection(BluetoothProfile.STATE_CONNECTED)
+
+        assertEquals(listOf(address to false), serverConnects())
+    }
+
+    @Test
+    @Config(shadows = [StatusGattServer::class])
+    fun heldConnectionThatDropsCancelsTheServerConnect() {
+        serverConnection(BluetoothProfile.STATE_CONNECTED)
+
+        serverConnection(BluetoothProfile.STATE_DISCONNECTED)
+
+        assertTrue(shadowOf(h.server).isConnectionCancelled(h.device(address)))
+    }
+
+    @Test
+    @Config(shadows = [StatusGattServer::class])
+    fun connectionToAnAddressWeAreDiallingIsLeftToTheDial() {
+        sight()
+
+        serverConnection(BluetoothProfile.STATE_CONNECTED)
+        serverConnection(BluetoothProfile.STATE_DISCONNECTED)
+
+        assertEquals(emptyList(), serverConnects())
+        assertFalse(shadowOf(h.server).isConnectionCancelled(h.device(address)))
     }
 
     @Test

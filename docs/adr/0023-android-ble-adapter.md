@@ -274,3 +274,19 @@ This is based on AOSP's hold-link bookkeeping and on run C in issue 58: an
 inbound link dropped 0.6 s after the Redmi's dial to the same iPhone timed out.
 In trials G1–G21 the server held a live shared link three times, and all
 three links stayed up. No byte of any frame changes.
+
+2026-10-31, [issue 57](../../.scratch/cairn-r1/issues/57-legacy-os-device-matrix.md)
+(inbound hold): when a peer connects to the GATT server and the radio has no
+dial to that address, the server calls `connect(device, autoConnect = false)`
+at once, so it holds the link from the start. Before this, an inbound link
+had no holder. The stack left it up until another app's GATT client joined
+and left the link, then disconnected it locally (HCI `0x16`) about 4 s
+later. On the Pixel 6, Life360 did this about 2 s after each link-up, and 2
+of 6 trials dropped 7.4–7.8 s in. A dial to the same address holds the link
+itself, so the server doesn't hold it, and the dial-close hold above still
+applies. When the held connection drops, the server calls `cancelConnection`,
+because a hold that the radio issued after the link was gone starts a direct
+connection. A device that connects to a full server is disconnected and not
+held. In trials Q1–Q10 on the Pixel 6, all 10 inbound links held to the
+end of the run, including Q10, which Life360 joined and left. No byte of any
+frame changes.

@@ -166,6 +166,16 @@ class SlotBudgetTest {
     }
 
     @Test
+    @org.robolectric.annotation.Config(shadows = [StatusGattServer::class])
+    fun aDeviceThatConnectsToAFullServerIsNotHeld() {
+        fill()
+
+        serverConnect(20)
+
+        assertFalse(address(20) to false in org.robolectric.shadow.api.Shadow.extract<StatusGattServer>(h.server).connects)
+    }
+
+    @Test
     fun logsADeviceThatItDisconnects() {
         fill()
 
