@@ -284,10 +284,39 @@ launching Settings through `devicectl`.
 - So two backgrounded iPhones would not find each other, and an Android
   phone finds a backgrounded iPhone only if the iPhone dials it.
 
+## Test 3 on iOS 18.7.8 (2026-10-31, SE18_1–SE18_6)
+
+No fleet iPhone runs 18.6.x, so the owner chose the iPhone SE 2020 on
+iOS 18.7.8 instead. In each 60 s run, the SE ran against the Pixel 6
+(Android 17), with both phones on the `fix/provisional-contact` build. The
+Pixel advertised `extended`, then switched to `extended 2M` 5–7 s in, once
+it saw the iPhone (ADR 0038).
+
+| Run | Result |
+| --- | --- |
+| SE18_1 | Not valid: the first launch after the install ran only the self-test, and the radio never started. |
+| SE18_2 | The SE linked as central (MTU 293) and paired. The Pixel's dial then linked too, and the core closed that link as `duplicate` after 53 ms. Link 1 dropped 7.6 s after link-up. |
+| SE18_3 | The SE linked as central and paired; the link held for the rest of the run (53 s). |
+| SE18_4 | The SE linked as central and paired. The link dropped 7.6 s after link-up; the Pixel dialled 17 s later, linked and held. |
+| SE18_5 | The SE linked as central and paired; the link held (48 s). |
+| SE18_6 | The SE linked as central and paired; the link held (56 s). |
+
+- **The SE connected to the extended 2M advert in all 5 valid runs.** So
+  the 18.6.2 forum report doesn't reproduce on 18.7.8.
+- **Two links dropped 7.6 s in.** In SE18_2 and SE18_4 the link dropped after
+  pairing, Resume and DATA had all completed (17 frames). The SE logged
+  `lost error 7` (`CBError.peripheralDisconnected`), and the Pixel logged
+  `lost status 0x00` with no `close requested`.
+  - So the Pixel's Bluetooth stack ended the link, and the app didn't ask it to.
+  - SE18_4 had no dial in flight, so this isn't the issue 58 pattern of a
+    dial tearing down the link.
+  - The cause is open. An HCI snoop on the Pixel during a reproduction would
+    show which layer sent the disconnect.
+
+Logs are in `/tmp/pair/{a,i}_SE18_*.log` (not committed).
+
 ## Not tested
 
-- **Test 3, iOS 18.6.x**: no fleet iPhone runs 18.6 (the SE 2020 is on
-  18.7.8, which connected in ADR 0038). Needs a device held on 18.6.x.
 - **Test 6, range**: needs phones moved to 5, 10 and 15 m.
 
 ## Corrections to ADR 0038
@@ -297,7 +326,8 @@ launching Settings through `devicectl`.
   now say so.
 - Done (2026-10-29): the iPhone X result (test 2), in Validation.
 - Done (2026-10-29): the API 26–28 result, in Validation.
-- Still to add: the iOS 18.6.x and range results.
+- Done (2026-10-31): the iOS 18.7.8 result (test 3), in Validation.
+- Still to add: the range results.
 
 ## Resolution
 

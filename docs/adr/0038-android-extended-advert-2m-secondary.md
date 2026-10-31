@@ -170,6 +170,11 @@ advert. None of them ever dialled the Pocophone's extended 2M advert; the
 Pocophone dialled each of them. So legacy-only Android phones are reached
 the same way as pre-XS iPhones: an extended phone must dial them.
 
+iOS 18.7, 2026-10-31 (issue 57, test 3): no fleet iPhone runs 18.6.x, so
+the owner chose the SE 2020 on iOS 18.7.8 instead. Against the Pixel 6's
+extended 2M advert, the SE linked as central in all 5 valid runs and paired
+every time. So the 18.6.2 forum report doesn't reproduce on 18.7.8.
+
 ## Considered options
 
 - **2M always.** The simplest change, and the one first proposed. Measured
